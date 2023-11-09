@@ -1,0 +1,14 @@
+#!/bin/sh
+if printf '%s\n' "$*" | grep aarch64 >/dev/null 2>&1; then
+  if [ x"$(uname -m)" = x"aarch64" ] || [ x"$(uname -m)" = x"arm64" ]; then
+    exec "$@"
+  else
+    exec qemu-aarch64 "$@"
+  fi
+else
+  if [ x"$(uname -m)" = x"x86_64" ] || [ x"$(uname -m)" = x"amd64" ]; then
+    exec "$@"
+  else
+    exec qemu-x86_64 "$@"
+  fi
+fi
