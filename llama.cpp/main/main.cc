@@ -6,10 +6,9 @@
 #include "tool/args/args.h"
 #endif
 
-#include "common.h"
-
-#include "console.h"
-#include "llama.h"
+#include "llama.cpp/common.h"
+#include "llama.cpp/console.h"
+#include "llama.cpp/llama.h"
 
 #include <cassert>
 #include <cinttypes>

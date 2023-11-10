@@ -11,6 +11,6 @@ MAKEFLAGS += --no-builtin-rules
 include build/config.mk
 include build/rules.mk
 
-include llama.cpp/llama.cpp.mk
+include llama.cpp/BUILD.mk
 
 include build/deps.mk

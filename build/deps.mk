@@ -5,7 +5,7 @@ SRCS = $(foreach x,$(PKGS),$($(x)_SRCS))
 HDRS = $(foreach x,$(PKGS),$($(x)_HDRS))
 
 o/$(MODE)/depend: $(SRCS) $(HDRS)
-	$(SHELL) -c 'build/bootstrap/mkdeps.com -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS)'
+	build/mkdeps -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS)
 
 $(SRCS):
 $(HDRS):

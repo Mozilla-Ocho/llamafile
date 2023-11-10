@@ -5,9 +5,11 @@ o/$(MODE)/%.a:
 	$(AR) $(ARFLAGS) $@ $^
 
 o/$(MODE)/%.o: %.c
+	@mkdir -p $(@D)
 	$(CC) $(CCFLAGS) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 o/$(MODE)/%.o: %.cc
+	@mkdir -p $(@D)
 	$(CXX) $(CCFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 o/$(MODE)/%: o/$(MODE)/%.o

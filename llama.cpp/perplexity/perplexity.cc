@@ -1,5 +1,5 @@
-#include "common.h"
-#include "llama.h"
+#include "llama.cpp/common.h"
+#include "llama.cpp/llama.h"
 
 #include <cmath>
 #include <cstdio>

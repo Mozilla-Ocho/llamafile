@@ -33,6 +33,8 @@ For more information, please refer to <http://unlicense.org>
 #include <stdexcept>
 #include <string>
 
+#include "runtime.h"
+
 class base64_error : public std::runtime_error
 {
 public:
@@ -235,7 +237,7 @@ public:
                 ++in_begin;
 
                 if (c != '=') {
-                    throw base64_error("invalid base64 character.");
+                    ThrowRuntimeError("invalid base64 character.");
                 }
             }
         }
@@ -385,7 +387,7 @@ private:
             }
         }
 
-        throw base64_error("invalid base64 character.");
+        ThrowRuntimeError("invalid base64 character.");
     }
 };
 
