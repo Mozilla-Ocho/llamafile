@@ -571,7 +571,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             return nullptr;
         }
 
-        auto fin = std::ifstream(fname, std::ios::binary);
+        struct ggml_file * fin = ggml_file_open(fname, "r");
         if (!fin) {
             printf("cannot open model file for loading tensors\n");
             clip_free(new_clip);
@@ -586,17 +586,17 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             ggml_set_name(cur, name);
 
             const size_t offset = gguf_get_data_offset(ctx) + gguf_get_tensor_offset(ctx, i);
-            fin.seekg(offset, std::ios::beg);
+            ggml_file_seek(fin, offset, SEEK_SET);
             if (!fin) {
                 printf("%s: failed to seek for tensor %s\n", __func__, name);
                 clip_free(new_clip);
                 return nullptr;
             }
 
-            fin.read(reinterpret_cast<char *>(cur->data), ggml_nbytes(t));
+            ggml_file_read(fin, reinterpret_cast<void *>(cur->data), ggml_nbytes(t));
         }
 
-        fin.close();
+        ggml_file_close(fin);
     }
 
     // vision model

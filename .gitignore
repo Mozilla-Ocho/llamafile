@@ -1,3 +1,9 @@
+# -*- conf -*-
+
 /o
 /TAGS
 /HTAGS
+/perf.data
+/perf.data.old
+
+/*.log

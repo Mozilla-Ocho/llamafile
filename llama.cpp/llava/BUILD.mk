@@ -3,7 +3,7 @@
 
 PKGS += LLAMA_CPP_LLAVA
 
-LLAMA_CPP_LLAVA_FILES := $(wildcard llama.cpp/*)
+LLAMA_CPP_LLAVA_FILES := $(wildcard llama.cpp/llava/*)
 LLAMA_CPP_LLAVA_HDRS = $(filter %.h,$(LLAMA_CPP_LLAVA_FILES))
 LLAMA_CPP_LLAVA_SRCS = $(filter %.cc,$(LLAMA_CPP_LLAVA_FILES))
 

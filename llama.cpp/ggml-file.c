@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include "ggml.h"
 #include "zip.h"

@@ -8,7 +8,7 @@ CC = $(PREFIX)cc
 CXX = $(PREFIX)c++
 
 ARFLAGS = rcsD
-CCFLAGS = -O3 -Xx86_64,-msse3,-mavx,-mavx2,-mf16c,-mfma
+CCFLAGS = -g -O3 -Xx86_64,-msse3,-mavx,-mavx2,-mf16c,-mfma
 CPPFLAGS += -iquote.
 
 TMPDIR = o//tmp
