@@ -1,2 +1,2 @@
 #!/bin/sh
-exec build/bootstrap/mkdeps.com "$@"
+exec build/bootstrap/mkdeps "$@"

@@ -1,0 +1,78 @@
+#!/bin/sh
+#-*-mode:sh;indent-tabs-mode:nil;tab-width:2;coding:utf-8-*-┐
+#───vi: set net ft=sh ts=2 sts=2 fenc=utf-8 :vi─────────────┘
+#
+# OVERVIEW
+#
+#   Header Symbol Index Generator
+#
+# DESCRIPTION
+#
+#   This is a static source analyzer that lets us configure Emacs
+#   keybindings to insert #include lines.
+#
+# EXAMPLES
+#
+#   build/htags -o HTAGS $(find . -name \*.h)
+#
+#   (defun jart-add-include ()
+#     (interactive)
+#     (let* ((tag-file "HTAGS")
+#            (case-fold-search nil)
+#            (search (thing-at-point 'symbol))
+#            (buffer (find-file-noselect (format "%s/%s"
+#                                                (locate-dominating-file
+#                                                 (buffer-name) tag-file)
+#                                                tag-file)))
+#            (header (with-current-buffer buffer
+#                      (save-excursion
+#                        (goto-char 0)
+#                        (when (re-search-forward
+#                               (concat "\177" search "\001") nil t)
+#                          (when (re-search-backward "\f\n\\([^,]*\\)," nil t)
+#                            (match-string 1)))))))
+#       (when header
+#         (save-excursion
+#           (goto-char 0)
+#           (re-search-forward "#include")
+#           (re-search-forward "^$")
+#           (insert (concat "#include \"" header "\"\n"))))))
+#   (defun jart-c-mode-common-hook ()
+#     (define-key c-mode-base-map (kbd "C-c C-h") 'jart-add-include))
+#   (eval-after-load 'markdown-mode
+#     '(progn
+#        (add-hook 'c-mode-common-hook 'jart-c-mode-common-hook)))
+
+TAGS="$1"
+shift
+
+# ctags doesn't understand atomics, e.g.
+#   extern char **environ;
+set -- --regex-c='/_Atomic(\([^)]*\))/\1/b' "$@"
+
+# ctags doesn't understand variable prototypes, e.g.
+#   extern char **environ;
+set -- --regex-c='/^\(\(hidden\|extern\|const\) \)*[_[:alpha:]][_[:alnum:]]*[ *][ *]*\([_[:alpha:]][_[:alnum:]]*[ *][ *]*\)*\([_[:alpha:]][_$[:alnum:]]*\)/\4/b' "$@"
+
+# ctags doesn't understand function prototypes, e.g.
+#   bool isheap(void *p) dontthrow nocallback;
+set -- --regex-c='/^[_[:alpha:]][_[:alnum:]]*[ *][ *]*\([_[:alpha:]][_[:alnum:]]*[ *][ *]*\)*\([_[:alpha:]][_$[:alnum:]]*\)(.*/\2/b' "$@"
+
+# ctags doesn't understand function pointers, e.g.
+#   extern int32_t (*const SetEvent)(int64_t hEvent) wincall;
+set -- --regex-c='/^extern [^(]*(\*const \([^)]*\))(/\1/b' "$@"
+
+# ctags doesn't understand forward declarations, e.g.
+#   struct WorstSoftwareEver;
+set -- --regex-c='/^struct.*;$/uehocruehcroue/b' "$@"
+
+exec $TAGS                                                        \
+     -e                                                           \
+     --langmap=c:.c.h                                             \
+     --exclude=libc/nt/struct/imagefileheader.internal.h          \
+     --exclude=libc/nt/struct/imageseparatedebugheader.internal.h \
+     --exclude=libc/nt/struct/importobjectheader.h                \
+     --exclude=libc/nt/struct/nonpageddebuginfo.h                 \
+     --exclude=libc/nt/struct/ansistring.h                        \
+     --exclude=libc/nt/struct/filesegmentelement.h                \
+     "$@"

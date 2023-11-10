@@ -14,3 +14,4 @@ include build/rules.mk
 include llama.cpp/BUILD.mk
 
 include build/deps.mk
+include build/tags.mk
