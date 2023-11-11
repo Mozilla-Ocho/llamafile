@@ -1,9 +1,7 @@
-#ifndef _COSMO_SOURCE
-#define _COSMO_SOURCE
-#endif
-#ifdef __COSMOPOLITAN__
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
+#include "ggml.h"
 #include <cosmo.h>
-#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -13,7 +11,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include "ggml.h"
 #include "zip.h"
 
 #define Min(a, b) ((a) < (b) ? (a) : (b))
@@ -80,12 +77,8 @@ struct ggml_file *ggml_file_open(const char * fname, const char * mode) {
     }
 
     // try opening from this executable's zip store
-#ifdef __COSMOPOLITAN__
     const char *prog = GetProgramExecutableName();
-#else
-    const char *prog = program_invocation_name;
-#endif
-    if ((fd = open(prog, O_RDONLY)) == -1) {
+    if ((fd = open(prog, O_RDONLY | O_CLOEXEC)) == -1) {
         errno = ENOENT;
         goto Failure;
     }

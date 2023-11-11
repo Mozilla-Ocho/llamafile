@@ -16958,7 +16958,7 @@ struct ggml_cgraph ggml_graph_import(const char * fname, struct ggml_context ** 
 
     // read file into data
     {
-        FILE * fin = fopen(fname, "rb");
+        FILE * fin = fopen(fname, "rbe");
         if (!fin) {
             fprintf(stderr, "%s: failed to open %s\n", __func__, fname);
             return result;

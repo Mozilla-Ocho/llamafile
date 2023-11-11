@@ -110,7 +110,7 @@ LLAVA_API struct llava_image_embed * llava_image_embed_make_with_bytes(struct cl
 }
 
 static bool load_file_to_bytes(const char* path, unsigned char** bytesOut, long *sizeOut) {
-    auto file = fopen(path, "rb");
+    auto file = fopen(path, "rbe");
     if (file == NULL) {
         fprintf(stderr, "%s: can't read file %s\n", __func__, path);
         return false;

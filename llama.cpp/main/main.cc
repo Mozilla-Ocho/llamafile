@@ -225,7 +225,7 @@ int main(int argc, char ** argv) {
         LOG_TEE("%s: attempting to load saved session from '%s'\n", __func__, path_session.c_str());
 
         // fopen to check for existing session
-        FILE * fp = std::fopen(path_session.c_str(), "rb");
+        FILE * fp = std::fopen(path_session.c_str(), "rbe");
         if (fp != NULL) {
             std::fclose(fp);
 

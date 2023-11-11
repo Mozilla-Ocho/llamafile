@@ -23,6 +23,7 @@ endif
 
 LC_ALL = C
 SOURCE_DATE_EPOCH = 0
+export MODE
 export TMPDIR
 export LC_ALL
 export SOURCE_DATE_EPOCH

@@ -1697,7 +1697,7 @@ struct llama_model_loader {
     struct gguf_context * ctx_gguf = NULL;
     struct ggml_context * ctx_meta = NULL;
 
-    llama_model_loader(const std::string & fname, bool use_mmap) : file(fname.c_str(), "rb") {
+    llama_model_loader(const std::string & fname, bool use_mmap) : file(fname.c_str(), "rbe") {
         struct gguf_init_params params = {
             /*.no_alloc = */ true,
             /*.ctx      = */ &ctx_meta,
@@ -8797,7 +8797,7 @@ size_t llama_set_state_data(struct llama_context * ctx, uint8_t * src) {
 }
 
 static bool llama_load_session_file_internal(struct llama_context * ctx, const char * path_session, llama_token * tokens_out, size_t n_token_capacity, size_t * n_token_count_out) {
-    llama_file file(path_session, "rb");
+    llama_file file(path_session, "rbe");
 
     // sanity checks
     {

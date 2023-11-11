@@ -463,7 +463,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
     struct ggml_file * file;
     struct gguf_context * ctx;
-    file = ggml_file_open(fname, "r");
+    file = ggml_file_open(fname, "rbe");
     if (file) ctx = gguf_init_from_file(file, params);
     if (file) ggml_file_close(file);
     if (!file || !ctx) {
@@ -571,7 +571,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             return nullptr;
         }
 
-        struct ggml_file * fin = ggml_file_open(fname, "r");
+        struct ggml_file * fin = ggml_file_open(fname, "rbe");
         if (!fin) {
             printf("cannot open model file for loading tensors\n");
             clip_free(new_clip);

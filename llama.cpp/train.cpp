@@ -827,7 +827,7 @@ size_t tokenize_file(
         std::vector<llama_token> & out_tokens,
         std::vector<size_t>      & out_samples_begin,
         std::vector<size_t>      & out_samples_size) {
-    struct llama_file f(filename, "rb");
+    struct llama_file f(filename, "rbe");
 
     if (f.size == 0) {
         out_tokens.clear();

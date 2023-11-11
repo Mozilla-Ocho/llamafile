@@ -1,13 +1,13 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
-#ifdef __COSMOPOLITAN__
+#include <cosmo.h>
 #include "tool/args/args.h"
-#endif
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
 #include "llama.cpp/grammar-parser.h"
 #include "llama.cpp/llava/clip.h"
 #include "llama.cpp/cpucheck.h"
+#include "llama.cpp/server/lib/lib.h"
 #include "llama.cpp/stb_image.h"
 
 #ifndef NDEBUG
@@ -18,6 +18,8 @@
 #include "httplib.h"
 #include "json.h"
 
+#include <unistd.h>
+#include <cstdio>
 #include <cstddef>
 #include <thread>
 #include <mutex>
@@ -36,6 +38,7 @@ struct server_params
     int32_t port = 8080;
     int32_t read_timeout = 600;
     int32_t write_timeout = 600;
+    bool nobrowser;
 };
 
 static bool server_verbose = false;
@@ -1805,6 +1808,7 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("    -spf FNAME, --system-prompt-file FNAME\n");
     printf("                        Set a file to load a system prompt (initial prompt of all slots), this is useful for chat applications.\n");
     printf("  --mmproj MMPROJ_FILE  path to a multimodal projector file for LLaVA.\n");
+    printf("  --nobrowser           Do not attempt to open a web browser tab at startup.\n");
     printf("\n");
 }
 
@@ -2158,6 +2162,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 break;
             }
             params.mmproj = argv[i];
+        }
+        else if (arg == "--nobrowser")
+        {
+            sparams.nobrowser = true;
         }
         else
         {
@@ -2528,8 +2536,17 @@ int main(int argc, char **argv)
     // Set the base directory for serving static files
     svr.set_base_dir(sparams.public_path);
 
-    // to make it ctrl+clickable:
     LOG_TEE("\nllama server listening at http://%s:%d\n\n", sparams.hostname.c_str(), sparams.port);
+
+    if (!sparams.nobrowser) {
+        char url[128];
+        snprintf(url, sizeof(url), "http://%s:%d/",
+                 sparams.hostname == "0.0.0.0" ? "127.0.0.1" : sparams.hostname.c_str(),
+                 sparams.port);
+        LaunchBrowser(url);
+    }
+
+    tinyprint(2, "loading weights...\n", NULL);
 
     LOG_INFO("HTTP server listening", {
                                           {"hostname", sparams.hostname},

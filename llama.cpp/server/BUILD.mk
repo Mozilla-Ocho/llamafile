@@ -13,6 +13,7 @@ LLAMA_CPP_SERVER_ASSETS :=					\
 
 LLAMA_CPP_SERVER_LINKARGS =					\
 	o/$(MODE)/llama.cpp/server/server.o			\
+	o/$(MODE)/llama.cpp/server/lib/lib.a			\
 	o/$(MODE)/llama.cpp/llava/llava.a			\
 	o/$(MODE)/llama.cpp/llama.cpp.a
 
@@ -23,6 +24,9 @@ o/$(MODE)/llama.cpp/server/server:				\
 	cd llama.cpp/server && zip -q ../../$@.com $(LLAMA_CPP_SERVER_ASSETS:llama.cpp/server/%=%)
 	mv -f $@.com $@
 
+include llama.cpp/server/lib/BUILD.mk
+
 .PHONY: o/$(MODE)/llama.cpp/server
 o/$(MODE)/llama.cpp/server:					\
-		o/$(MODE)/llama.cpp/server/server
+		o/$(MODE)/llama.cpp/server/server		\
+		o/$(MODE)/llama.cpp/server/lib
