@@ -27,3 +27,7 @@ o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/server		\
 		o/$(MODE)/llama.cpp/quantize		\
 		o/$(MODE)/llama.cpp/perplexity
+
+o/$(MODE)/llama.cpp/ggml-metal.dylib: 			\
+		llama.cpp/ggml-metal.m
+	cc -shared -ffunction-sections -fdata-sections -fvisibility=hidden -I. -Icommon -DTARGET_OS_OSX -DNDEBUG -std=c11 -fPIC -O3 -pthread $^ -o $@ -framework Foundation -framework Metal -framework MetalKit
