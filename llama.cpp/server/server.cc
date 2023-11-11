@@ -1,3 +1,5 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #ifdef __COSMOPOLITAN__
 #include "tool/args/args.h"
 #endif
@@ -5,6 +7,7 @@
 #include "llama.cpp/llama.h"
 #include "llama.cpp/grammar-parser.h"
 #include "llama.cpp/llava/clip.h"
+#include "llama.cpp/cpucheck.h"
 #include "llama.cpp/stb_image.h"
 
 #ifndef NDEBUG
@@ -14,12 +17,6 @@
 
 #include "httplib.h"
 #include "json.h"
-
-// auto generated files (update with ./deps.sh)
-#include "index.html.h"
-#include "index.js.h"
-#include "completion.js.h"
-#include "json-schema-to-grammar.mjs.h"
 
 #include <cstddef>
 #include <thread>
@@ -35,7 +32,7 @@ using json = nlohmann::json;
 struct server_params
 {
     std::string hostname = "127.0.0.1";
-    std::string public_path = "examples/server/public";
+    std::string public_path = "/zip/public";
     int32_t port = 8080;
     int32_t read_timeout = 600;
     int32_t write_timeout = 600;
@@ -2252,6 +2249,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
 
 int main(int argc, char **argv)
 {
+    llama_cpucheck();
 
 #ifdef __COSMOPOLITAN__
     LoadZipArgs(&argc, &argv);
@@ -2297,31 +2295,9 @@ int main(int argc, char **argv)
                              {"Access-Control-Allow-Origin", "*"},
                              {"Access-Control-Allow-Headers", "content-type"}});
 
-    // this is only called if no index.html is found in the public --path
-    svr.Get("/", [](const httplib::Request &, httplib::Response &res)
+    svr.Get("/statusz", [](const httplib::Request &, httplib::Response &res)
             {
-                res.set_content(reinterpret_cast<const char*>(&index_html), index_html_len, "text/html");
-                return false;
-            });
-
-    // this is only called if no index.js is found in the public --path
-    svr.Get("/index.js", [](const httplib::Request &, httplib::Response &res)
-            {
-                res.set_content(reinterpret_cast<const char *>(&index_js), index_js_len, "text/javascript");
-                return false;
-            });
-
-    // this is only called if no index.html is found in the public --path
-    svr.Get("/completion.js", [](const httplib::Request &, httplib::Response &res)
-            {
-                res.set_content(reinterpret_cast<const char*>(&completion_js), completion_js_len, "application/javascript");
-                return false;
-            });
-
-    // this is only called if no index.html is found in the public --path
-    svr.Get("/json-schema-to-grammar.mjs", [](const httplib::Request &, httplib::Response &res)
-            {
-                res.set_content(reinterpret_cast<const char*>(&json_schema_to_grammar_mjs), json_schema_to_grammar_mjs_len, "application/javascript");
+                res.set_content("todo\r\n", strlen("todo\r\n"), "text/html");
                 return false;
             });
 

@@ -1,5 +1,5 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
-// vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8 :vi
+// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #define _CRT_SECURE_NO_DEPRECATE // Disables ridiculous "unsafe" warnigns on Windows
 #define _USE_MATH_DEFINES // For M_PI on MSVC
 

@@ -1,5 +1,5 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
-// vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8 :vi
+// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #pragma once
 
 //
