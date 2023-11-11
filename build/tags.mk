@@ -12,11 +12,11 @@ tags: TAGS HTAGS
 
 TAGS: o/$(MODE)/tags-srcs.txt $(SRCS)
 	@rm -f $@
-	build/ctags $(TAGSFLAGS) -L $< -o $@
+	ctags $(TAGSFLAGS) -L $< -o $@
 
 HTAGS: o/$(MODE)/tags-hdrs.txt $(HDRS)
 	@rm -f $@
-	build/htags build/ctags -L $< -o $@
+	build/htags ctags -L $< -o $@
 
 o/$(MODE)/tags-srcs.txt: $(call uniq,$(foreach x,$(SRCS),$(dir $(x))))
 	@mkdir -p $(@D)

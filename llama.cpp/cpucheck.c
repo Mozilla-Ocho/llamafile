@@ -26,6 +26,9 @@ static int on_missing_feature(const char *name) {
  * microarchitecture flags only get passed to that specific object
  */
 void llama_cpucheck(void) {
+    if (X86_NEED(SSE3) && !X86_CHECK(SSE3)) {
+        on_missing_feature("SSE3");
+    }
     if (X86_NEED(SSSE3) && !X86_CHECK(SSSE3)) {
         on_missing_feature("SSSE3");
     }
@@ -37,9 +40,6 @@ void llama_cpucheck(void) {
     }
     if (X86_NEED(FMA) && !X86_CHECK(FMA)) {
         on_missing_feature("FMA");
-    }
-    if (X86_NEED(SSE3) && !X86_CHECK(SSE3)) {
-        on_missing_feature("SSE3");
     }
     if (X86_NEED(F16C) && !X86_CHECK(F16C)) {
         on_missing_feature("F16C");
