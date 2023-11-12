@@ -5,6 +5,7 @@ SRCS = $(foreach x,$(PKGS),$($(x)_SRCS))
 HDRS = $(foreach x,$(PKGS),$($(x)_HDRS))
 
 o/$(MODE)/depend: $(SRCS) $(HDRS)
+	@mkdir -p $(@D)
 	mkdeps -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS)
 
 $(SRCS):
@@ -15,4 +16,4 @@ $(HDRS):
 	@echo
 	rm -f o/$(MODE)/depend
 
--include o//depend
+-include o/$(MODE)/depend
