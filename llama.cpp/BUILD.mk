@@ -3,14 +3,16 @@
 
 PKGS += LLAMA_CPP
 
-LLAMA_CPP_FILES := $(wildcard llama.cpp/*)
+LLAMA_CPP_FILES := $(wildcard llama.cpp/*.*)
 LLAMA_CPP_HDRS = $(filter %.h,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS_C = $(filter %.c,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS_CC = $(filter %.cc,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS = $(LLAMA_CPP_SRCS_C) $(LLAMA_CPP_SRCS_CC)
-LLAMA_CPP_OBJS = $(LLAMA_CPP_SRCS_C:%.c=o/$(MODE)/%.o) $(LLAMA_CPP_SRCS_CC:%.cc=o/$(MODE)/%.o)
 
-.PHONY: tool/args/args.h
+LLAMA_CPP_OBJS =					\
+	$(LLAMA_CPP_SRCS_C:%.c=o/$(MODE)/%.o)		\
+	$(LLAMA_CPP_SRCS_CC:%.cc=o/$(MODE)/%.o)		\
+	$(LLAMA_CPP_FILES:%=o/$(MODE)/%.zip.o)
 
 o/$(MODE)/llama.cpp/llama.cpp.a: $(LLAMA_CPP_OBJS)
 
@@ -27,7 +29,3 @@ o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/server		\
 		o/$(MODE)/llama.cpp/quantize		\
 		o/$(MODE)/llama.cpp/perplexity
-
-o/$(MODE)/llama.cpp/ggml-metal.dylib: 			\
-		llama.cpp/ggml-metal.m
-	cc -shared -ffunction-sections -fdata-sections -fvisibility=hidden -I. -Icommon -DTARGET_OS_OSX -DNDEBUG -std=c11 -fPIC -O3 -pthread $^ -o $@ -framework Foundation -framework Metal -framework MetalKit

@@ -1,4 +1,4 @@
-// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "ggml.h"
 #include <cosmo.h>

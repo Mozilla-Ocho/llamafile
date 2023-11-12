@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+void llama_has_gpu(void);
 void llama_cpucheck(void);
 
 #ifdef __cplusplus

@@ -2156,6 +2156,8 @@ extern "C" {
 
     GGML_API ggml_type_traits_t ggml_internal_get_type_traits(enum ggml_type type);
 
+    GGML_API bool ggml_extract(const char *zip, const char *to);
+
 #ifdef  __cplusplus
 }
 #endif

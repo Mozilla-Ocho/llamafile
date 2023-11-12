@@ -1,5 +1,9 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
-// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
+// vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
+#define _COSMO_SOURCE
+#include <cosmo.h>
+
 #define LLAMA_API_INTERNAL
 #include "llama.h"
 
@@ -9,6 +13,7 @@
 #include "ggml.h"
 
 #include "ggml-alloc.h"
+#include "ggml-metal.h"
 
 #ifdef GGML_USE_CUBLAS
 #  include "ggml-cuda.h"
@@ -16,9 +21,6 @@
 #  include "ggml-opencl.h"
 #endif
 
-#ifdef GGML_USE_METAL
-#  include "ggml-metal.h"
-#endif
 #ifdef GGML_USE_MPI
 #  include "ggml-mpi.h"
 #endif
@@ -614,35 +616,19 @@ static void ggml_graph_compute_helper(std::vector<uint8_t> & buf, ggml_cgraph * 
 //
 
 inline void * llama_host_malloc(size_t n) {
-#ifdef GGML_USE_CUBLAS
-    if (ggml_cublas_loaded()) {
-        return ggml_cuda_host_malloc(n);
+    if (ggml_metal_supported()) {
+        return ggml_metal_host_malloc(n);
     } else {
         return malloc(n);
     }
-#elif GGML_USE_METAL
-    return ggml_metal_host_malloc(n);
-#elif GGML_USE_CPU_HBM
-    return hbw_malloc(n);
-#else
-    return malloc(n);
-#endif
 }
 
 inline void llama_host_free(void * ptr) {
-#ifdef GGML_USE_CUBLAS
-    if (ggml_cublas_loaded()) {
-        return ggml_cuda_host_free(ptr);
+    if (ggml_metal_supported()) {
+        return ggml_metal_host_free(ptr);
     } else {
         return free(ptr);
     }
-#elif GGML_USE_METAL
-    return ggml_metal_host_free(ptr);
-#elif GGML_USE_CPU_HBM
-    return hbw_free(ptr);
-#else
-    return free(ptr);
-#endif
 }
 
 #if defined(_WIN32)
@@ -668,7 +654,7 @@ struct llama_buffer {
     bool fallback = false;
 
     void resize(size_t n) {
-        llama_host_free(data);
+        release();
 
         data = llama_host_malloc(n);
         if (!data) {
@@ -682,7 +668,7 @@ struct llama_buffer {
         size = n;
     }
 
-    ~llama_buffer() {
+    void release(void) {
         if (data) {
             if (fallback) { // NOLINT
                 free(data);
@@ -690,8 +676,11 @@ struct llama_buffer {
                 llama_host_free(data);
             }
         }
-
         data = NULL;
+    }
+
+    ~llama_buffer() {
+        release();
     }
 };
 
@@ -1345,11 +1334,9 @@ struct llama_model {
 struct llama_context {
     llama_context(const llama_model & model) : model(model), t_start_us(model.t_start_us), t_load_us(model.t_load_us) {}
     ~llama_context() {
-#ifdef GGML_USE_METAL
         if (ctx_metal) {
             ggml_metal_free(ctx_metal);
         }
-#endif
         if (alloc) {
             ggml_allocr_free(alloc);
         }
@@ -1392,9 +1379,7 @@ struct llama_context {
     llama_buffer buf_alloc;
     ggml_allocr * alloc = NULL;
 
-#ifdef GGML_USE_METAL
     ggml_metal_context * ctx_metal = NULL;
-#endif
 
 #ifdef GGML_USE_MPI
     ggml_mpi_context * ctx_mpi = NULL;
@@ -5221,16 +5206,12 @@ static int llama_decode_internal(
     ggml_mpi_graph_compute_pre(lctx.ctx_mpi, gf, n_layer);
 #endif
 
-#ifdef GGML_USE_METAL
     if (lctx.ctx_metal) {
         ggml_metal_set_n_cb     (lctx.ctx_metal, n_threads);
         ggml_metal_graph_compute(lctx.ctx_metal, gf);
     } else {
         ggml_graph_compute_helper(lctx.work_buffer, gf, n_threads);
     }
-#else
-    ggml_graph_compute_helper(lctx.work_buffer, gf, n_threads);
-#endif
 
 #if GGML_USE_MPI
     ggml_mpi_graph_compute_post(lctx.ctx_mpi, gf, n_layer);
@@ -8006,9 +7987,9 @@ struct llama_model_params llama_model_default_params() {
         /*.use_mlock                   =*/ false,
     };
 
-#ifdef GGML_USE_METAL
-    result.n_gpu_layers = 1;
-#endif
+    if (ggml_metal_supported()) {
+        result.n_gpu_layers = 1;
+    }
 
     return result;
 }
@@ -8221,11 +8202,8 @@ struct llama_context * llama_new_context_with_model(
             llama_token token = llama_token_bos(&ctx->model); // not actually used by llama_build_graph, but required to choose between token and embedding inputs graph
             ggml_cgraph * gf = llama_build_graph(*ctx, llama_batch_get_one(&token, n_tokens, n_past, 0));
 
-#ifdef GGML_USE_METAL
-            if (model->n_gpu_layers > 0) {
-                ggml_metal_log_set_callback(llama_log_callback_default, NULL);
-
-                ctx->ctx_metal = ggml_metal_init(1);
+            if (ggml_metal_supported() && model->n_gpu_layers > 0) {
+                ctx->ctx_metal = ggml_metal_init(1, NULL);
                 if (!ctx->ctx_metal) {
                     LLAMA_LOG_ERROR("%s: ggml_metal_init() failed\n", __func__);
                     llama_free(ctx);
@@ -8234,7 +8212,6 @@ struct llama_context * llama_new_context_with_model(
                 //ggml_metal_graph_find_concurrency(ctx->ctx_metal, gf, false);
                 //ggml_allocr_set_parse_seq(ctx->alloc, ggml_metal_get_concur_list(ctx->ctx_metal), ggml_metal_if_optimized(ctx->ctx_metal));
             }
-#endif
             // measure memory requirements for the graph
             size_t alloc_size = ggml_allocr_alloc_graph(ctx->alloc, gf) + tensor_alignment;
 
@@ -8245,11 +8222,9 @@ struct llama_context * llama_new_context_with_model(
 
             ctx->buf_alloc.resize(alloc_size);
             ctx->alloc = ggml_allocr_new(ctx->buf_alloc.data, ctx->buf_alloc.size, tensor_alignment);
-#ifdef GGML_USE_METAL
             if (ctx->ctx_metal) {
                 //ggml_allocr_set_parse_seq(ctx->alloc, ggml_metal_get_concur_list(ctx->ctx_metal), ggml_metal_if_optimized(ctx->ctx_metal));
             }
-#endif
 #ifdef GGML_USE_CUBLAS
             ggml_cuda_set_scratch_size(alloc_size);
             LLAMA_LOG_INFO("%s: VRAM scratch buffer: %.2f MB\n", __func__, alloc_size / 1024.0 / 1024.0);
@@ -8279,8 +8254,7 @@ struct llama_context * llama_new_context_with_model(
 #endif
         }
 
-#ifdef GGML_USE_METAL
-        if (model->n_gpu_layers > 0) {
+        if (ggml_metal_supported() && model->n_gpu_layers > 0) {
             // this allocates all Metal resources and memory buffers
 
             void * data_ptr  = NULL;
@@ -8310,7 +8284,6 @@ struct llama_context * llama_new_context_with_model(
             LLAMA_METAL_CHECK_BUF(ggml_metal_add_buffer(ctx->ctx_metal, "alloc", ctx->buf_alloc.data, ctx->buf_alloc.size, 0));
 #undef LLAMA_METAL_CHECK_BUF
         }
-#endif
     }
 
 #ifdef GGML_USE_MPI
@@ -9252,8 +9225,5 @@ static void llama_log_internal(ggml_log_level level, const char * format, ...) {
 }
 
 static void llama_log_callback_default(ggml_log_level level, const char * text, void * user_data) {
-    (void) level;
-    (void) user_data;
-    fputs(text, stderr);
-    fflush(stderr);
+    write(2, text, strlen(text));
 }

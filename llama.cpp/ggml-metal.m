@@ -1,10 +1,9 @@
-#import "ggml-metal.h"
-
-#import "ggml.h"
-
+// -*- mode:objc;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #import <Foundation/Foundation.h>
-
 #import <Metal/Metal.h>
+#include "ggml-metal.h"
+#include "ggml-quants.h"
 
 #undef MIN
 #undef MAX
@@ -16,10 +15,156 @@
 #define GGML_METAL_LOG_WARN(...)
 #define GGML_METAL_LOG_ERROR(...)
 #else
-#define GGML_METAL_LOG_INFO(...)  ggml_metal_log(GGML_LOG_LEVEL_INFO, __VA_ARGS__)
-#define GGML_METAL_LOG_WARN(...)  ggml_metal_log(GGML_LOG_LEVEL_WARN, __VA_ARGS__)
-#define GGML_METAL_LOG_ERROR(...) ggml_metal_log(GGML_LOG_LEVEL_ERROR, __VA_ARGS__)
+#define GGML_METAL_LOG_INFO(...)  fprintf(stderr, __VA_ARGS__)
+#define GGML_METAL_LOG_WARN(...)  fprintf(stderr, __VA_ARGS__)
+#define GGML_METAL_LOG_ERROR(...) fprintf(stderr, __VA_ARGS__)
 #endif
+
+#define GGML_METAL_MAX_BUFFERS 16
+#define GGML_METAL_MAX_COMMAND_BUFFERS 32
+
+////////////////////////////////////////////////////////////////////////////////
+// BEGIN: COPIED FROM GGML.C
+
+#define ggml_blck_size ggml_blck_size_
+static int ggml_blck_size(enum ggml_type type) {
+    switch (type) {
+        case GGML_TYPE_I8:
+            return 1;
+        case GGML_TYPE_I16:
+            return 1;
+        case GGML_TYPE_I32:
+            return 1;
+        case GGML_TYPE_F32:
+            return 1;
+        case GGML_TYPE_F16:
+            return 1;
+        case GGML_TYPE_Q4_0:
+            return QK4_0;
+        case GGML_TYPE_Q4_1:
+            return QK4_1;
+        case GGML_TYPE_Q5_0:
+            return QK5_0;
+        case GGML_TYPE_Q5_1:
+            return QK5_1;
+        case GGML_TYPE_Q8_0:
+            return QK8_0;
+        case GGML_TYPE_Q8_1:
+            return QK8_1;
+        case GGML_TYPE_Q2_K:
+            return QK_K;
+        case GGML_TYPE_Q3_K:
+            return QK_K;
+        case GGML_TYPE_Q4_K:
+            return QK_K;
+        case GGML_TYPE_Q5_K:
+            return QK_K;
+        case GGML_TYPE_Q6_K:
+            return QK_K;
+        case GGML_TYPE_Q8_K:
+            return QK_K;
+        default:
+            return 0;
+    }
+}
+
+#define ggml_type_size ggml_type_size_
+static size_t ggml_type_size(enum ggml_type type) {
+    switch (type) {
+        case GGML_TYPE_I8:
+            return sizeof(int8_t);
+        case GGML_TYPE_I16:
+            return sizeof(int16_t);
+        case GGML_TYPE_I32:
+            return sizeof(int32_t);
+        case GGML_TYPE_F32:
+            return sizeof(float);
+        case GGML_TYPE_F16:
+            return sizeof(ggml_fp16_t);
+        case GGML_TYPE_Q4_0:
+            return sizeof(block_q4_0);
+        case GGML_TYPE_Q4_1:
+            return sizeof(block_q4_1);
+        case GGML_TYPE_Q5_0:
+            return sizeof(block_q5_0);
+        case GGML_TYPE_Q5_1:
+            return sizeof(block_q5_1);
+        case GGML_TYPE_Q8_0:
+            return sizeof(block_q8_0);
+        case GGML_TYPE_Q8_1:
+            return sizeof(block_q8_1);
+        case GGML_TYPE_Q2_K:
+            return sizeof(block_q2_K);
+        case GGML_TYPE_Q3_K:
+            return sizeof(block_q3_K);
+        case GGML_TYPE_Q4_K:
+            return sizeof(block_q4_K);
+        case GGML_TYPE_Q5_K:
+            return sizeof(block_q5_K);
+        case GGML_TYPE_Q6_K:
+            return sizeof(block_q6_K);
+        case GGML_TYPE_Q8_K:
+            return sizeof(block_q8_K);
+        default:
+            return 0;
+    }
+}
+
+#define ggml_nbytes ggml_nbytes_
+static size_t ggml_nbytes(const struct ggml_tensor * tensor) {
+    size_t nbytes;
+    size_t blck_size = ggml_blck_size(tensor->type);
+    if (blck_size == 1) {
+        nbytes = ggml_type_size(tensor->type);
+        for (int i = 0; i < GGML_MAX_DIMS; ++i) {
+            nbytes += (tensor->ne[i] - 1)*tensor->nb[i];
+        }
+    }
+    else {
+        nbytes = tensor->ne[0]*tensor->nb[0]/blck_size;
+        for (int i = 1; i < GGML_MAX_DIMS; ++i) {
+            nbytes += (tensor->ne[i] - 1)*tensor->nb[i];
+        }
+    }
+    return nbytes;
+}
+
+#define ggml_is_transposed ggml_is_transposed_
+static bool ggml_is_transposed(const struct ggml_tensor * tensor) {
+    return tensor->nb[0] > tensor->nb[1];
+}
+
+#define ggml_is_contiguous ggml_is_contiguous_
+static bool ggml_is_contiguous(const struct ggml_tensor * tensor) {
+    static_assert(GGML_MAX_DIMS == 4, "GGML_MAX_DIMS is not 4 - update this function");
+    return
+        tensor->nb[0] == ggml_type_size(tensor->type) &&
+        tensor->nb[1] == (tensor->nb[0]*tensor->ne[0])/ggml_blck_size(tensor->type) &&
+        tensor->nb[2] == tensor->nb[1]*tensor->ne[1] &&
+        tensor->nb[3] == tensor->nb[2]*tensor->ne[2];
+}
+
+#define ggml_nrows ggml_nrows_
+static int64_t ggml_nrows(const struct ggml_tensor * tensor) {
+    return tensor->ne[1]*tensor->ne[2]*tensor->ne[3];
+}
+
+#define ggml_nelements ggml_nelements_
+static int64_t ggml_nelements(const struct ggml_tensor * tensor) {
+    return tensor->ne[0]*tensor->ne[1]*tensor->ne[2]*tensor->ne[3];
+}
+
+static int32_t ggml_get_op_params_i32(const struct ggml_tensor * tensor, uint32_t i) {
+    return ((const int32_t *)(tensor->op_params))[i];
+}
+
+#define ggml_get_unary_op ggml_get_unary_op_
+static enum ggml_unary_op ggml_get_unary_op(const struct ggml_tensor * tensor) {
+    return (enum ggml_unary_op) ggml_get_op_params_i32(tensor, 0);
+}
+
+// END: COPIED FROM GGML.C
+////////////////////////////////////////////////////////////////////////////////
 
 #define UNUSED(x) (void)(x)
 
@@ -133,36 +278,7 @@ static NSString * const msl_library_source = @"see metal.metal";
 @implementation GGMLMetalClass
 @end
 
-ggml_log_callback ggml_metal_log_callback = NULL;
-void * ggml_metal_log_user_data = NULL;
-
-void ggml_metal_log_set_callback(ggml_log_callback log_callback, void * user_data) {
-    ggml_metal_log_callback  = log_callback;
-    ggml_metal_log_user_data = user_data;
-}
-
-static void ggml_metal_log(enum ggml_log_level level, const char* format, ...){
-    if (ggml_metal_log_callback != NULL) {
-        va_list args;
-        va_start(args, format);
-        char buffer[128];
-        int len = vsnprintf(buffer, 128, format, args);
-        if (len < 128) {
-            ggml_metal_log_callback(level, buffer, ggml_metal_log_user_data);
-        } else {
-            char* buffer2 = malloc(len+1);
-            vsnprintf(buffer2, len+1, format, args);
-            buffer2[len] = 0;
-            ggml_metal_log_callback(level, buffer2, ggml_metal_log_user_data);
-            free(buffer2);
-        }
-        va_end(args);
-    }
-}
-
-
-
-struct ggml_metal_context * ggml_metal_init(int n_cb) {
+struct ggml_metal_context * ggml_metal_init(int n_cb, const char *metalPath) {
     GGML_METAL_LOG_INFO("%s: allocating\n", __func__);
 
     id <MTLDevice> device;
@@ -211,8 +327,7 @@ struct ggml_metal_context * ggml_metal_init(int n_cb) {
 
             NSString * sourcePath = [bundle pathForResource:@"ggml-metal" ofType:@"metal"];
             if (sourcePath == nil) {
-                GGML_METAL_LOG_WARN("%s: error: could not use bundle path to find ggml-metal.metal, falling back to trying cwd\n", __func__);
-                sourcePath = @"ggml-metal.metal";
+                sourcePath = [NSString stringWithUTF8String:metalPath];
             }
             GGML_METAL_LOG_INFO("%s: loading '%s'\n", __func__, [sourcePath UTF8String]);
             NSString * src = [NSString stringWithContentsOfFile:sourcePath encoding:NSUTF8StringEncoding error:&error];
@@ -328,7 +443,7 @@ struct ggml_metal_context * ggml_metal_init(int n_cb) {
     // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
     for (int i = MTLGPUFamilyApple1 + 20; i >= MTLGPUFamilyApple1; --i) {
         if ([ctx->device supportsFamily:i]) {
-            GGML_METAL_LOG_INFO("%s: GPU family: MTLGPUFamilyApple%d (%d)\n", __func__, i - MTLGPUFamilyApple1 + 1, i);
+            GGML_METAL_LOG_INFO("%s: GPU family: MTLGPUFamilyApple%ld (%d)\n", __func__, i - MTLGPUFamilyApple1 + 1, i);
             break;
         }
     }
@@ -566,7 +681,7 @@ bool ggml_metal_add_buffer(
                 ctx->device.recommendedMaxWorkingSetSize / 1024.0 / 1024.0);
 
         if (ctx->device.currentAllocatedSize > ctx->device.recommendedMaxWorkingSetSize) {
-            GGML_METAL_LOG_WARN(", warning: current allocated size is greater than the recommended max working set size\n", __func__);
+            GGML_METAL_LOG_WARN(", warning: current allocated size is greater than the recommended max working set size\n");
         } else {
             GGML_METAL_LOG_INFO("\n");
         }
@@ -984,7 +1099,7 @@ void ggml_metal_graph_compute(
                                 } break;
                             default:
                                 {
-                                    GGML_METAL_LOG_WARN("%s: node %3d, op = %8s not implemented\n", __func__, i, ggml_op_name(dst->op));
+                                    GGML_METAL_LOG_WARN("%s: node %3d, op = %d not implemented\n", __func__, i, dst->op);
                                     GGML_ASSERT(false);
                                 }
                         } break;
@@ -1501,7 +1616,7 @@ void ggml_metal_graph_compute(
                         } break;
                     default:
                         {
-                            GGML_METAL_LOG_ERROR("%s: error: node %3d, op = %8s not implemented\n", __func__, i, ggml_op_name(dst->op));
+                            GGML_METAL_LOG_ERROR("%s: error: node %3d, op = %d not implemented\n", __func__, i, dst->op);
                             GGML_ASSERT(false);
                         }
                 }
@@ -1532,141 +1647,4 @@ void ggml_metal_graph_compute(
     }
 
     }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-// backend interface
-
-static const char * ggml_backend_metal_name(ggml_backend_t backend) {
-    return "Metal";
-
-    UNUSED(backend);
-}
-
-static void ggml_backend_metal_free(ggml_backend_t backend) {
-    struct ggml_metal_context * ctx = (struct ggml_metal_context *)backend->context;
-    ggml_metal_free(ctx);
-    free(backend);
-}
-
-static void * ggml_backend_metal_buffer_get_base(ggml_backend_buffer_t buffer) {
-    return (void *)buffer->context;
-}
-
-static void ggml_backend_metal_buffer_free_buffer(ggml_backend_buffer_t buffer) {
-    free(buffer->context);
-    UNUSED(buffer);
-}
-
-static struct ggml_backend_buffer_i metal_backend_buffer_i = {
-    /* .free_buffer    = */ ggml_backend_metal_buffer_free_buffer,
-    /* .get_base       = */ ggml_backend_metal_buffer_get_base,
-    /* .get_alloc_size = */ NULL, // defaults to ggml_nbytes
-    /* .init_tensor    = */ NULL, // no initialization required
-    /* .free_tensor    = */ NULL, // no cleanup required
-};
-
-static ggml_backend_buffer_t ggml_backend_metal_alloc_buffer(ggml_backend_t backend, size_t size) {
-    struct ggml_metal_context * ctx = (struct ggml_metal_context *)backend->context;
-
-    void * data = ggml_metal_host_malloc(size);
-
-    // TODO: set proper name of the buffers
-    ggml_metal_add_buffer(ctx, "backend", data, size, 0);
-
-    return ggml_backend_buffer_init(backend, metal_backend_buffer_i, data, size);
-}
-
-static size_t ggml_backend_metal_get_alignment(ggml_backend_t backend) {
-    return 32;
-    UNUSED(backend);
-}
-
-static void ggml_backend_metal_set_tensor_async(ggml_backend_t backend, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
-    GGML_ASSERT(offset + size <= ggml_nbytes(tensor) && "tensor write out of bounds");
-    GGML_ASSERT(tensor->data != NULL && "tensor not allocated");
-
-    memcpy((char *)tensor->data + offset, data, size);
-
-    UNUSED(backend);
-}
-
-static void ggml_backend_metal_get_tensor_async(ggml_backend_t backend, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
-    GGML_ASSERT(offset + size <= ggml_nbytes(tensor) && "tensor read out of bounds");
-    GGML_ASSERT(tensor->data != NULL && "tensor not allocated");
-
-    memcpy(data, (const char *)tensor->data + offset, size);
-
-    UNUSED(backend);
-}
-
-static void ggml_backend_metal_synchronize(ggml_backend_t backend) {
-    UNUSED(backend);
-}
-
-static void ggml_backend_metal_cpy_tensor_from(ggml_backend_t backend, struct ggml_tensor * src, struct ggml_tensor * dst) {
-    ggml_backend_tensor_get(src, dst->data, 0, ggml_nbytes(src));
-
-    UNUSED(backend);
-}
-
-static void ggml_backend_metal_cpy_tensor_to(ggml_backend_t backend, struct ggml_tensor * src, struct ggml_tensor * dst) {
-    ggml_backend_tensor_set_async(dst, src->data, 0, ggml_nbytes(src));
-
-    UNUSED(backend);
-}
-
-static void ggml_backend_metal_graph_compute(ggml_backend_t backend, struct ggml_cgraph * cgraph) {
-    struct ggml_metal_context * metal_ctx = (struct ggml_metal_context *)backend->context;
-
-    ggml_metal_graph_compute(metal_ctx, cgraph);
-}
-
-static bool ggml_backend_metal_supports_op(ggml_backend_t backend, const struct ggml_tensor * op) {
-    return true;
-    UNUSED(backend);
-    UNUSED(op);
-}
-
-static struct ggml_backend_i metal_backend_i = {
-    /* .get_name            = */ ggml_backend_metal_name,
-    /* .free                = */ ggml_backend_metal_free,
-    /* .alloc_buffer        = */ ggml_backend_metal_alloc_buffer,
-    /* .get_alignment       = */ ggml_backend_metal_get_alignment,
-    /* .set_tensor_async    = */ ggml_backend_metal_set_tensor_async,
-    /* .get_tensor_async    = */ ggml_backend_metal_get_tensor_async,
-    /* .synchronize         = */ ggml_backend_metal_synchronize,
-    /* .cpy_tensor_from     = */ ggml_backend_metal_cpy_tensor_from,
-    /* .cpy_tensor_to       = */ ggml_backend_metal_cpy_tensor_to,
-    /* .graph_plan_create   = */ NULL, // the metal implementation does not require creating graph plans atm
-    /* .graph_plan_free     = */ NULL,
-    /* .graph_plan_compute  = */ NULL,
-    /* .graph_compute       = */ ggml_backend_metal_graph_compute,
-    /* .supports_op         = */ ggml_backend_metal_supports_op,
-};
-
-ggml_backend_t ggml_backend_metal_init(void) {
-    struct ggml_metal_context * ctx = malloc(sizeof(struct ggml_metal_context));
-
-    ctx = ggml_metal_init(GGML_DEFAULT_N_THREADS);
-
-    ggml_backend_t metal_backend = malloc(sizeof(struct ggml_backend));
-
-    *metal_backend = (struct ggml_backend) {
-        /* .interface = */ metal_backend_i,
-        /* .context   = */ ctx,
-    };
-
-    return metal_backend;
-}
-
-bool ggml_backend_is_metal(ggml_backend_t backend) {
-    return backend->iface.get_name == ggml_backend_metal_name;
-}
-
-void ggml_backend_metal_set_n_cb(ggml_backend_t backend, int n_cb) {
-    struct ggml_metal_context * ctx = (struct ggml_metal_context *)backend->context;
-
-    ggml_metal_set_n_cb(ctx, n_cb);
 }

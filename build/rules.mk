@@ -18,3 +18,8 @@ o/$(MODE)/%.o: %.cc
 
 o/$(MODE)/%: o/$(MODE)/%.o
 	$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
+
+o/$(MODE)/%.zip.o: %
+	@mkdir -p $(dir $@)/.aarch64
+	zipobj $(ZIPOBJ_FLAGS) -a x86_64 -o $@ $<
+	zipobj $(ZIPOBJ_FLAGS) -a aarch64 -o $(dir $@)/.aarch64/$(notdir $@) $<

@@ -1,11 +1,10 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
-// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
+// vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
-#ifdef __COSMOPOLITAN__
+#define _COSMO_SOURCE
 #include <cosmo.h>
 #include "llama.cpp/cpucheck.h"
 #include "tool/args/args.h"
-#endif
 
 #include "llama.cpp/common.h"
 #include "llama.cpp/console.h"
@@ -110,11 +109,8 @@ static void sigint_handler(int signo) {
 
 int main(int argc, char ** argv) {
     llama_cpucheck();
-
-#ifdef __COSMOPOLITAN__
     LoadZipArgs(&argc, &argv);
-    // ShowCrashReports();
-#endif
+    ShowCrashReports();
 
     gpt_params params;
     g_params = &params;
