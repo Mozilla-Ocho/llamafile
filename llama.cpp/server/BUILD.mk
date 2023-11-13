@@ -11,18 +11,15 @@ LLAMA_CPP_SERVER_ASSETS :=					\
 	$(wildcard llama.cpp/server/public/*)			\
 	llama.cpp/server/.args
 
-LLAMA_CPP_SERVER_LINKARGS =					\
-	o/$(MODE)/llama.cpp/server/server.o			\
-	o/$(MODE)/llama.cpp/server/lib/lib.a			\
-	o/$(MODE)/llama.cpp/llava/llava.a			\
-	o/$(MODE)/llama.cpp/llama.cpp.a
-
 o/$(MODE)/llama.cpp/server/server:				\
-		$(LLAMA_CPP_SERVER_LINKARGS)			\
-		$(LLAMA_CPP_SERVER_ASSETS)
-	$(LINK.o) $(LLAMA_CPP_SERVER_LINKARGS) $(LOADLIBES) $(LDLIBS) -o $@.com
-	cd llama.cpp/server && zip -q ../../$@.com $(LLAMA_CPP_SERVER_ASSETS:llama.cpp/server/%=%)
-	mv -f $@.com $@
+		o/$(MODE)/llama.cpp/server/server.o		\
+		o/$(MODE)/llama.cpp/server/lib/lib.a		\
+		o/$(MODE)/llama.cpp/llava/llava.a		\
+		o/$(MODE)/llama.cpp/llama.cpp.a			\
+		$(LLAMA_CPP_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)
+
+# strip llama.cpp/server/ directory prefix off name in zip archive
+o/$(MODE)/llama.cpp/server/.args.zip.o: private ZIPOBJ_FLAGS += -B
 
 include llama.cpp/server/lib/BUILD.mk
 

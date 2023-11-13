@@ -280,6 +280,7 @@ static void llava_free(struct llava_context * ctx_llava) {
 }
 
 int main(int argc, char ** argv) {
+    ggml_check_cpu();
     ggml_time_init();
 
     gpt_params params;

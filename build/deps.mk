@@ -3,13 +3,15 @@
 
 SRCS = $(foreach x,$(PKGS),$($(x)_SRCS))
 HDRS = $(foreach x,$(PKGS),$($(x)_HDRS))
+INCS = $(foreach x,$(PKGS),$($(x)_INCS))
 
-o/$(MODE)/depend: $(SRCS) $(HDRS)
+o/$(MODE)/depend: $(SRCS) $(HDRS) $(INCS)
 	@mkdir -p $(@D)
-	mkdeps -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS)
+	mkdeps -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS) $(INCS)
 
 $(SRCS):
 $(HDRS):
+$(INCS):
 .DEFAULT:
 	@echo
 	@echo NOTE: deleting o/$(MODE)/depend because of an unspecified prerequisite: $@

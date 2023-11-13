@@ -6,7 +6,6 @@
 #include "llama.cpp/llama.h"
 #include "llama.cpp/grammar-parser.h"
 #include "llama.cpp/llava/clip.h"
-#include "llama.cpp/cpucheck.h"
 #include "llama.cpp/server/lib/lib.h"
 #include "llama.cpp/stb_image.h"
 
@@ -34,7 +33,7 @@ using json = nlohmann::json;
 struct server_params
 {
     std::string hostname = "127.0.0.1";
-    std::string public_path = "/zip/public";
+    std::string public_path = "/zip/llama.cpp/server/public";
     int32_t port = 8080;
     int32_t read_timeout = 600;
     int32_t write_timeout = 600;
@@ -2257,7 +2256,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
 
 int main(int argc, char **argv)
 {
-    llama_cpucheck();
+    ggml_check_cpu();
 
 #ifdef __COSMOPOLITAN__
     LoadZipArgs(&argc, &argv);

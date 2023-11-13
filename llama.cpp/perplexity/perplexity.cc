@@ -1,7 +1,6 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "llama.cpp/common.h"
-#include "llama.cpp/cpucheck.h"
 #include "llama.cpp/llama.h"
 
 #include <cmath>
@@ -683,7 +682,7 @@ static void hellaswag_score(llama_context * ctx, const gpt_params & params) {
 int main(int argc, char ** argv) {
     gpt_params params;
 
-    llama_cpucheck();
+    ggml_check_cpu();
 
     params.n_batch = 512;
     if (!gpt_params_parse(argc, argv, params)) {

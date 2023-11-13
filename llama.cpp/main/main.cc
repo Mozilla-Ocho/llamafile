@@ -3,7 +3,6 @@
 
 #define _COSMO_SOURCE
 #include <cosmo.h>
-#include "llama.cpp/cpucheck.h"
 #include "tool/args/args.h"
 
 #include "llama.cpp/common.h"
@@ -108,7 +107,7 @@ static void sigint_handler(int signo) {
 #endif
 
 int main(int argc, char ** argv) {
-    llama_cpucheck();
+    ggml_check_cpu();
     LoadZipArgs(&argc, &argv);
     ShowCrashReports();
 

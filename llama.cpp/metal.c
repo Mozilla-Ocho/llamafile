@@ -23,6 +23,18 @@ __static_yoink("llama.cpp/ggml-metal.h");
 __static_yoink("llama.cpp/ggml-quants.h");
 __static_yoink("llama.cpp/ggml-metal.metal");
 
+static const struct Source {
+    const char *zip;
+    const char *name;
+} srcs[] = {
+    {"/zip/llama.cpp/ggml.h", "ggml.h"},
+    {"/zip/llama.cpp/ggml-impl.h", "ggml-impl.h"},
+    {"/zip/llama.cpp/ggml-metal.h", "ggml-metal.h"},
+    {"/zip/llama.cpp/ggml-quants.h", "ggml-quants.h"},
+    {"/zip/llama.cpp/ggml-metal.metal", "ggml-metal.metal"},
+    {"/zip/llama.cpp/ggml-metal.m", "ggml-metal.m"}, // must come last
+};
+
 static struct Metal {
     bool supported;
     atomic_uint once;
@@ -45,67 +57,19 @@ static const char *Dlerror(void) {
     return msg;
 }
 
-static const char *GetTmpDir(void) {
-    const char *tmpdir;
-    if (!(tmpdir = getenv("TMPDIR")) || !*tmpdir) {
-        if (!(tmpdir = getenv("HOME")) || !*tmpdir) {
-            tmpdir = ".";
-        }
-    }
-    return tmpdir;
-}
-
-static void GetAppDir(char path[PATH_MAX]) {
-    strlcpy(path, GetTmpDir(), PATH_MAX);
-    strlcat(path, "/.llamafile/", PATH_MAX);
-}
-
-static bool IsNewerThan(const char *path, const char *other) {
-    struct stat st1, st2;
-    if (stat(path, &st1) == -1) {
-        // PATH should always exist when calling this function
-        perror(path);
-        return false;
-    }
-    if (stat(other, &st2) == -1) {
-        if (errno == ENOENT) {
-            // PATH should replace OTHER because OTHER doesn't exist yet
-            return true;
-        } else {
-            // some other error happened, so we can't do anything
-            perror(path);
-            return false;
-        }
-    }
-    // PATH should replace OTHER if PATH was modified more recently
-    return timespec_cmp(st1.st_mtim, st2.st_mtim) > 0;
-}
-
-static const struct Source {
-    const char *zip;
-    const char *name;
-} srcs[] = {
-    {"/zip/llama.cpp/ggml.h", "ggml.h"},
-    {"/zip/llama.cpp/ggml-impl.h", "ggml-impl.h"},
-    {"/zip/llama.cpp/ggml-metal.h", "ggml-metal.h"},
-    {"/zip/llama.cpp/ggml-quants.h", "ggml-quants.h"},
-    {"/zip/llama.cpp/ggml-metal.metal", "ggml-metal.metal"},
-    {"/zip/llama.cpp/ggml-metal.m", "ggml-metal.m"}, // must come last
-};
-
 static bool ImportMetalImpl(void) {
 
     // extract source code
     char src[PATH_MAX];
     bool needs_rebuild = false;
     for (int i = 0; i < sizeof(srcs) / sizeof(*srcs); ++i) {
-        GetAppDir(src);
+        ggml_get_app_dir(src, PATH_MAX);
         if (!i && mkdir(src, 0755) && errno != EEXIST) {
             perror(src);
             return false;
         }
         strlcat(src, srcs[i].name, sizeof(src));
-        if (IsNewerThan(srcs[i].zip, src)) {
+        if (ggml_is_newer_than(srcs[i].zip, src)) {
             needs_rebuild = true;
             if (!ggml_extract(srcs[i].zip, src)) {
                 return false;
@@ -115,9 +79,9 @@ static bool ImportMetalImpl(void) {
 
     // compile dynamic shared object
     char dso[PATH_MAX];
-    GetAppDir(dso);
+    ggml_get_app_dir(dso, PATH_MAX);
     strlcat(dso, "ggml-metal.dylib", sizeof(dso));
-    if (needs_rebuild || IsNewerThan(src, dso)) {
+    if (needs_rebuild || ggml_is_newer_than(src, dso)) {
         tinyprint(2, "building ggml-metal.dylib with xcode...\n", NULL);
         int fd;
         char tmpdso[PATH_MAX];
@@ -200,15 +164,16 @@ static bool ImportMetalImpl(void) {
 }
 
 static void ImportMetal(void) {
-    if (ImportMetalImpl()) {
-        ggml_metal.supported = true;
-    } else {
-        tinyprint(2, "couldn't import metal gpu support\n", NULL);
+    if (IsXnuSilicon()) {
+        if (ImportMetalImpl()) {
+            ggml_metal.supported = true;
+        } else {
+            tinyprint(2, "couldn't import metal gpu support\n", NULL);
+        }
     }
 }
 
 bool ggml_metal_supported(void) {
-    if (!IsXnuSilicon()) return false;
     cosmo_once(&ggml_metal.once, ImportMetal);
     return ggml_metal.supported;
 }
@@ -227,7 +192,7 @@ struct ggml_metal_context *ggml_metal_init(int n_cb, const char *metalPath) {
     char path[PATH_MAX];
     if (!ggml_metal_supported()) return NULL;
     if (!metalPath) {
-        GetAppDir(path);
+        ggml_get_app_dir(path, PATH_MAX);
         strlcat(path, "ggml-metal.metal", sizeof(path));
         metalPath = path;
     }

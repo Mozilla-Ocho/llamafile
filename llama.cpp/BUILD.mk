@@ -5,6 +5,7 @@ PKGS += LLAMA_CPP
 
 LLAMA_CPP_FILES := $(wildcard llama.cpp/*.*)
 LLAMA_CPP_HDRS = $(filter %.h,$(LLAMA_CPP_FILES))
+LLAMA_CPP_INCS = $(filter %.inc,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS_C = $(filter %.c,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS_CC = $(filter %.cc,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS = $(LLAMA_CPP_SRCS_C) $(LLAMA_CPP_SRCS_CC)

@@ -2,6 +2,7 @@
 // vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "common.h"
 #include "llama.h"
+#include "ggml-cuda.h"
 #include "ggml-metal.h"
 #include "runtime.h"
 
@@ -517,7 +518,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-            if (ggml_metal_supported()) {
+            if (ggml_metal_supported() || ggml_cuda_supported()) {
                 params.n_gpu_layers = std::stoi(argv[i]);
             } else {
                 fprintf(stderr, "warning: GPU offload not supported on this platform, --n-gpu-layers option will be ignored\n");
@@ -528,7 +529,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-            if (ggml_metal_supported()) {
+            if (ggml_metal_supported() || ggml_cuda_supported()) {
                 params.n_gpu_layers_draft = std::stoi(argv[i]);
             } else {
                 fprintf(stderr, "warning: GPU offload not supported on this platform, --n-gpu-layers-draft option will be ignored\n");
@@ -539,17 +540,17 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-#ifdef GGML_USE_CUBLAS
-            params.main_gpu = std::stoi(argv[i]);
-#else
-            fprintf(stderr, "warning: llama.cpp was compiled without cuBLAS. It is not possible to set a main GPU.\n");
-#endif
+            if (ggml_cuda_supported()) {
+                params.main_gpu = std::stoi(argv[i]);
+            } else {
+                fprintf(stderr, "warning: cuBLAS GPU couldn't be supported on this system. It is not possible to set a main GPU.\n");
+            }
         } else if (arg == "--tensor-split" || arg == "-ts") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-#ifdef GGML_USE_CUBLAS
+            if (ggml_cuda_supported()) {
             std::string arg_next = argv[i];
 
             // split string by , and /
@@ -565,15 +566,15 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                     params.tensor_split[i] = 0.0f;
                 }
             }
-#else
-            fprintf(stderr, "warning: llama.cpp was compiled without cuBLAS. It is not possible to set a tensor split.\n");
-#endif // GGML_USE_CUBLAS
+            } else {
+            fprintf(stderr, "warning: cuBLAS GPU couldn't be supported on this system. It is not possible to set a tensor split.\n");
+            }
         } else if (arg == "--no-mul-mat-q" || arg == "-nommq") {
-#ifdef GGML_USE_CUBLAS
-            params.mul_mat_q = false;
-#else
-            fprintf(stderr, "warning: llama.cpp was compiled without cuBLAS. Disabling mul_mat_q kernels has no effect.\n");
-#endif // GGML_USE_CUBLAS
+            if (ggml_cuda_supported()) {
+                params.mul_mat_q = false;
+            } else {
+                fprintf(stderr, "warning: cuBLAS GPU couldn't be supported on this system. Disabling mul_mat_q kernels has no effect.\n");
+            }
         } else if (arg == "--no-mmap") {
             params.use_mmap = false;
         } else if (arg == "--numa") {
@@ -840,7 +841,7 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  --numa                attempt optimizations that help on some NUMA systems\n");
     printf("                        if run without this previously, it is recommended to drop the system page cache before using this\n");
     printf("                        see https://github.com/ggerganov/llama.cpp/issues/1437\n");
-    if (ggml_metal_supported()) {
+    if (ggml_metal_supported() || ggml_cuda_supported()) {
     printf("  -ngl N, --n-gpu-layers N\n");
     printf("                        number of layers to store in VRAM\n");
     printf("  -ngld N, --n-gpu-layers-draft N\n");
@@ -848,11 +849,11 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  -ts SPLIT --tensor-split SPLIT\n");
     printf("                        how to split tensors across multiple GPUs, comma-separated list of proportions, e.g. 3,1\n");
     printf("  -mg i, --main-gpu i   the GPU to use for scratch and small tensors\n");
-#ifdef GGML_USE_CUBLAS
+    if (ggml_cuda_supported()) {
     printf("  -nommq, --no-mul-mat-q\n");
     printf("                        use " GGML_CUBLAS_NAME " instead of custom mul_mat_q " GGML_CUDA_NAME " kernels.\n");
     printf("                        Not recommended since this is both slower and uses more VRAM.\n");
-#endif // GGML_USE_CUBLAS
+    }
     }
     printf("  --verbose-prompt      print prompt before generation\n");
     printf("  --simple-io           use basic IO for better compatibility in subprocesses and limited consoles\n");

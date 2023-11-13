@@ -230,6 +230,9 @@ inline static void * ggml_aligned_malloc(size_t size) {
 #include "ggml-opencl.h"
 #endif
 
+#include "ggml-cuda.h"
+#include "ggml-metal.h"
+
 // floating point type used to accumulate sums
 typedef double ggml_float;
 
@@ -2185,9 +2188,9 @@ struct ggml_context * ggml_init(struct ggml_init_params params) {
             GGML_PRINT_DEBUG("%s: g_state initialized in %f ms\n", __func__, (t_end - t_start)/1000.0f);
         }
 
-#if defined(GGML_USE_CUBLAS)
         ggml_init_cublas();
-#elif defined(GGML_USE_CLBLAST)
+
+#if defined(GGML_USE_CLBLAST)
         ggml_cl_init();
 #endif
 
@@ -19655,11 +19658,7 @@ int ggml_cpu_has_arm_fma(void) {
 }
 
 int ggml_cpu_has_metal(void) {
-#if defined(GGML_USE_METAL)
-    return 1;
-#else
-    return 0;
-#endif
+    return ggml_metal_supported();
 }
 
 int ggml_cpu_has_f16c(void) {
@@ -19695,11 +19694,7 @@ int ggml_cpu_has_blas(void) {
 }
 
 int ggml_cpu_has_cublas(void) {
-#if defined(GGML_USE_CUBLAS)
-    return 1;
-#else
-    return 0;
-#endif
+    return ggml_cuda_supported();
 }
 
 int ggml_cpu_has_clblast(void) {

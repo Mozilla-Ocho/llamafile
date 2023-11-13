@@ -14,7 +14,7 @@ TAGS: o/$(MODE)/tags-srcs.txt $(SRCS)
 	@rm -f $@
 	ctags $(TAGSFLAGS) -L $< -o $@
 
-HTAGS: o/$(MODE)/tags-hdrs.txt $(HDRS)
+HTAGS: o/$(MODE)/tags-hdrs.txt $(HDRS) $(INCS)
 	@rm -f $@
 	build/htags ctags -L $< -o $@
 
