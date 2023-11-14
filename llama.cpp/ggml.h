@@ -2158,6 +2158,7 @@ extern "C" {
 
     GGML_API void ggml_check_cpu(void);
     GGML_API void ggml_get_app_dir(char *path, size_t size);
+    GGML_API void ggml_schlep(const void *data, size_t size);
     GGML_API bool ggml_extract(const char *zip, const char *to);
     GGML_API bool ggml_is_newer_than(const char *path, const char *other);
 

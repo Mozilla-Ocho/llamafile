@@ -765,14 +765,14 @@ struct llama_mmap {
 #ifdef __linux__
         if (prefetch) { flags |= MAP_POPULATE; }
 #endif
-        addr = mmap(NULL, ggml_file_size(file->file), PROT_READ, flags, fd, 0);
+        addr = mmap(NULL, size, PROT_READ, flags, fd, 0);
         if (addr == MAP_FAILED) {
             ThrowRuntimeError(format("mmap failed: %s", strerror(errno)));
         }
 
         if (prefetch > 0) {
             // Advise the kernel to preload the mapped memory
-            if (posix_madvise(addr, std::min(ggml_file_size(file->file), prefetch), POSIX_MADV_WILLNEED)) {
+            if (posix_madvise(addr, std::min(size, prefetch), POSIX_MADV_WILLNEED)) {
                 fprintf(stderr, "warning: posix_madvise(.., POSIX_MADV_WILLNEED) failed: %s\n",
                         strerror(errno));
             }
@@ -780,11 +780,14 @@ struct llama_mmap {
         if (numa) {
             // advise the kernel not to use readahead
             // (because the next page might not belong on the same node)
-            if (posix_madvise(addr, ggml_file_size(file->file), POSIX_MADV_RANDOM)) {
+            if (posix_madvise(addr, size, POSIX_MADV_RANDOM)) {
                 fprintf(stderr, "warning: posix_madvise(.., POSIX_MADV_RANDOM) failed: %s\n",
                         strerror(errno));
             }
         }
+
+        // report terminal progress of loading weights
+        ggml_schlep(addr, size);
     }
 
     ~llama_mmap() {
