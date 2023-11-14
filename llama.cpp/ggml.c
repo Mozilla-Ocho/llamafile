@@ -18691,7 +18691,11 @@ struct gguf_context * gguf_init_from_file(struct ggml_file * file, struct gguf_i
 
         for (uint32_t i = 0; i < sizeof(magic); i++) {
             if (magic[i] != GGUF_MAGIC[i]) {
-                fprintf(stderr, "%s: invalid magic characters %s.\n", __func__, magic);
+                fprintf(stderr, "%s: invalid magic characters: %c%c%c%c.\n", __func__,
+                        isgraph(magic[0]) ? magic[0] : '?',
+                        isgraph(magic[1]) ? magic[1] : '?',
+                        isgraph(magic[2]) ? magic[2] : '?',
+                        isgraph(magic[3]) ? magic[3] : '?');
                 return NULL;
             }
         }

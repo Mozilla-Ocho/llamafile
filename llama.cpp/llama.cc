@@ -753,8 +753,11 @@ struct llama_mmap {
     llama_mmap(struct llama_file * file, size_t prefetch = (size_t) -1 /* -1 = max value */, bool numa = false) {
         size = ggml_file_size(file->file);
         if (!ggml_file_fp(file->file)) {
+            // file is an uncompressed zip asset
+            // therefore it's already mapped
             is_owned = false;
             addr = ggml_file_content(file->file);
+            ggml_schlep(addr, size);
             return;
         }
         is_owned = true;

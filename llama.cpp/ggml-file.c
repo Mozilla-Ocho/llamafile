@@ -1,6 +1,6 @@
 // -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
-#include "ggml.h"
+#define _COSMO_SOURCE
 #include <cosmo.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include "ggml.h"
 #include "zip.h"
 
 #define Min(a, b) ((a) < (b) ? (a) : (b))
@@ -162,6 +163,10 @@ struct ggml_file *ggml_file_open(const char * fname, const char * mode) {
          entry_index < cnt && entry_offset + kZipCfileHdrMinSize <= cdirsize &&
                        entry_offset + ZIP_CFILE_HDRSIZE(cdirdata + entry_offset) <= cdirsize;
          ++entry_index, entry_offset += ZIP_CFILE_HDRSIZE(cdirdata + entry_offset)) {
+        if (ZIP_CFILE_MAGIC(cdirdata + entry_offset) != kZipCfileHdrMagic) {
+            fprintf(stderr, "error: corrupted zip central directory entry magic\n");
+            goto Failure;
+        }
         if (fname_len == ZIP_CFILE_NAMESIZE(cdirdata + entry_offset) &&
             !memcmp(fname, ZIP_CFILE_NAME(cdirdata + entry_offset), fname_len)) {
             off = GetZipCfileOffset(cdirdata + entry_offset);
@@ -182,7 +187,11 @@ struct ggml_file *ggml_file_open(const char * fname, const char * mode) {
     // this is needed to determine offset of file content
     uint8_t lfile[kZipLfileHdrMinSize];
     if (pread(fd, lfile, kZipLfileHdrMinSize, off) != kZipLfileHdrMinSize) {
-        fprintf(stderr, "warning: failed to pread lfile: %s\n", prog);
+        fprintf(stderr, "error: failed to pread lfile: %s\n", prog);
+        goto Failure;
+    }
+    if (ZIP_LFILE_MAGIC(lfile) != kZipLfileHdrMagic) {
+        fprintf(stderr, "error: corrupted zip local file magic\n");
         goto Failure;
     }
     off += ZIP_LFILE_HDRSIZE(lfile);
