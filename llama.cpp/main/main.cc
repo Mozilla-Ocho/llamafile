@@ -9,7 +9,6 @@
 #include "llama.cpp/console.h"
 #include "llama.cpp/llama.h"
 
-#include <cassert>
 #include <cinttypes>
 #include <cmath>
 #include <cstdio>
@@ -20,31 +19,34 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
 #include <signal.h>
 #include <unistd.h>
-#elif defined (_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <signal.h>
-#endif
 
-#if defined(_MSC_VER)
-#pragma warning(disable: 4244 4267) // possible loss of data
-#endif
+static bool is_terminal;
+static gpt_params * g_params;
+static volatile bool is_terminated;
+static volatile bool is_interacting;
 
-static llama_context           ** g_ctx;
-static llama_model             ** g_model;
-static gpt_params               * g_params;
-static std::vector<llama_token> * g_input_tokens;
-static std::ostringstream       * g_output_ss;
-static std::vector<llama_token> * g_output_tokens;
-static bool is_interacting = false;
+static void acknowledge_shutdown(void) {
+    if (is_terminal) {
+        write(2, "^C", 2);
+    }
+}
 
+static void sigint_handler(int signo) {
+    if (g_params->interactive && !is_interacting) {
+        // if we're in interactive mode, ctrl-c may be used to get the
+        // llm to stop generating text and start accepting input again
+        is_interacting = true;
+    } else {
+        // 1. if we're in interactive mode, then pressing ctrl-c when
+        //    waiting for user input will end the program like an eof
+        // 2. if we're using a purely generative mode then ctrl-c can
+        //    be used to gracefully halt the text generation process.
+        is_terminated = true;
+        acknowledge_shutdown();
+    }
+}
 
 static void write_logfile(
     const llama_context * ctx, const gpt_params & params, const llama_model * model,
@@ -90,26 +92,21 @@ static void write_logfile(
     fclose(logfile);
 }
 
-#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__)) || defined (_WIN32)
-static void sigint_handler(int signo) {
-    if (signo == SIGINT) {
-        if (!is_interacting) {
-            is_interacting = true;
-        } else {
-            console::cleanup();
-            printf("\n");
-            llama_print_timings(*g_ctx);
-            write_logfile(*g_ctx, *g_params, *g_model, *g_input_tokens, g_output_ss->str(), *g_output_tokens);
-            _exit(130);
-        }
-    }
+static int Eval(struct llama_context * ctx, struct llama_batch batch) {
+    int rc;
+    sigset_t ss, oldss;
+    sigemptyset(&ss);
+    sigaddset(&ss, SIGINT);
+    sigprocmask(SIG_BLOCK, &ss, &oldss);
+    rc = llama_decode(ctx, batch);
+    sigprocmask(SIG_SETMASK, &oldss, 0);
+    return rc;
 }
-#endif
 
 int main(int argc, char ** argv) {
     ggml_check_cpu();
-    LoadZipArgs(&argc, &argv);
     ShowCrashReports();
+    LoadZipArgs(&argc, &argv);
 
     gpt_params params;
     g_params = &params;
@@ -132,6 +129,7 @@ int main(int argc, char ** argv) {
     // (note for later: this is a slightly awkward choice)
     console::init(params.simple_io, params.use_color);
     atexit([]() { console::cleanup(); });
+    is_terminal = isatty(2);
 
     if (params.logits_all) {
         printf("\n************\n");
@@ -182,8 +180,6 @@ int main(int argc, char ** argv) {
     llama_model * model;
     llama_context * ctx;
     llama_context * ctx_guidance = NULL;
-    g_model = &model;
-    g_ctx = &ctx;
 
     // load the model and apply lora adapter, if any
     LOG("%s: load the model and apply lora adapter, if any\n", __func__);
@@ -372,20 +368,13 @@ int main(int argc, char ** argv) {
         LOG_TEE("\n");
     }
 
-    if (params.interactive) {
-#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
-        struct sigaction sigint_action;
-        sigint_action.sa_handler = sigint_handler;
-        sigemptyset (&sigint_action.sa_mask);
-        sigint_action.sa_flags = 0;
-        sigaction(SIGINT, &sigint_action, NULL);
-#elif defined (_WIN32)
-        auto console_ctrl_handler = +[](DWORD ctrl_type) -> BOOL {
-            return (ctrl_type == CTRL_C_EVENT) ? (sigint_handler(SIGINT), true) : false;
-        };
-        SetConsoleCtrlHandler(reinterpret_cast<PHANDLER_ROUTINE>(console_ctrl_handler), true);
-#endif
+    struct sigaction sa;
+    sa.sa_handler = sigint_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
 
+    if (params.interactive) {
         LOG_TEE("%s: interactive mode on.\n", __func__);
 
         if (!params.antiprompt.empty()) {
@@ -457,9 +446,9 @@ int main(int argc, char ** argv) {
     int n_session_consumed = 0;
     int n_past_guidance    = 0;
 
-    std::vector<int>   input_tokens;  g_input_tokens  = &input_tokens;
-    std::vector<int>   output_tokens; g_output_tokens = &output_tokens;
-    std::ostringstream output_ss;     g_output_ss     = &output_ss;
+    std::vector<int>   input_tokens;
+    std::vector<int>   output_tokens;
+    std::ostringstream output_ss;
 
     // the first thing we will do is to output the prompt, so set color accordingly
     console::set_display(console::prompt);
@@ -469,7 +458,7 @@ int main(int argc, char ** argv) {
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(sparams);
 
-    while ((n_remain != 0 && !is_antiprompt) || params.interactive) {
+    while (!is_terminated && ((n_remain != 0 && !is_antiprompt) || params.interactive)) {
         // predict
         if (!embd.empty()) {
             // Note: n_ctx - 4 here is to match the logic for commandline prompt handling via
@@ -573,7 +562,7 @@ int main(int argc, char ** argv) {
 
                 for (int i = 0; i < input_size; i += params.n_batch) {
                     int n_eval = std::min(input_size - i, params.n_batch);
-                    if (llama_decode(ctx_guidance, llama_batch_get_one(input_buf + i, n_eval, n_past_guidance, 0))) {
+                    if (Eval(ctx_guidance, llama_batch_get_one(input_buf + i, n_eval, n_past_guidance, 0))) {
                         LOG_TEE("%s : failed to eval\n", __func__);
                         return 1;
                     }
@@ -590,7 +579,7 @@ int main(int argc, char ** argv) {
 
                 LOG("eval: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, embd).c_str());
 
-                if (llama_decode(ctx, llama_batch_get_one(&embd[i], n_eval, n_past, 0))) {
+                if (Eval(ctx, llama_batch_get_one(&embd[i], n_eval, n_past, 0))) {
                     LOG_TEE("%s : failed to eval\n", __func__);
                     return 1;
                 }

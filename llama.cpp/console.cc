@@ -1,3 +1,5 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "console.h"
 #include <vector>
 #include <iostream>
@@ -197,6 +199,7 @@ namespace console {
         }
 
 #if WCHAR_MAX == 0xFFFF
+#error hi
         if ((wc >= 0xD800) && (wc <= 0xDBFF)) { // Check if wc is a high surrogate
             wchar_t low_surrogate = getwchar();
             if ((low_surrogate >= 0xDC00) && (low_surrogate <= 0xDFFF)) { // Check if the next wchar is a low surrogate
