@@ -5,7 +5,7 @@ PKGS += LLAMA_CPP_SERVER
 
 LLAMA_CPP_SERVER_FILES := $(wildcard llama.cpp/server/*)
 LLAMA_CPP_SERVER_HDRS = $(filter %.h,$(LLAMA_CPP_SERVER_FILES))
-LLAMA_CPP_SERVER_SRCS = $(filter %.cc,$(LLAMA_CPP_SERVER_FILES))
+LLAMA_CPP_SERVER_SRCS = $(filter %.cpp,$(LLAMA_CPP_SERVER_FILES))
 
 LLAMA_CPP_SERVER_ASSETS :=					\
 	$(wildcard llama.cpp/server/public/*)			\

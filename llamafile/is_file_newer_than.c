@@ -15,8 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define _COSMO_SOURCE
-#include <cosmo.h>
+#include <time.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
@@ -24,27 +23,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include "ggml.h"
+#include "llamafile.h"
 
-static const char *ggml_get_tmp_dir(void) {
-    const char *tmpdir;
-    if (!(tmpdir = getenv("TMPDIR")) || !*tmpdir) {
-        if (!(tmpdir = getenv("HOME")) || !*tmpdir) {
-            tmpdir = ".";
-        }
-    }
-    return tmpdir;
-}
-
-/**
- * Returns path of directory for app-specific files.
- */
-void ggml_get_app_dir(char *path, size_t size) {
-    strlcpy(path, ggml_get_tmp_dir(), size);
-    strlcat(path, "/.llamafile/", size);
-}
-
-static int ggml_is_file_newer_than_time(const char *path, const char *other) {
+static int is_file_newer_than_time(const char *path, const char *other) {
     struct stat st1, st2;
     if (stat(path, &st1)) {
         // PATH should always exist when calling this function
@@ -65,7 +46,7 @@ static int ggml_is_file_newer_than_time(const char *path, const char *other) {
     return timespec_cmp(st1.st_mtim, st2.st_mtim) > 0;
 }
 
-static int ggml_is_file_newer_than_bytes(const char *path, const char *other) {
+static int is_file_newer_than_bytes(const char *path, const char *other) {
     int other_fd;
     if ((other_fd = open(other, O_RDONLY | O_CLOEXEC)) == -1) {
         if (errno == ENOENT) {
@@ -135,65 +116,12 @@ static int ggml_is_file_newer_than_bytes(const char *path, const char *other) {
  * source code file (which may reside under `/zip/...`, and `other`
  * would be the generated artifact that's dependent on `path`.
  */
-int ggml_is_file_newer_than(const char *path, const char *other) {
+int llamafile_is_file_newer_than(const char *path, const char *other) {
     if (startswith(path, "/zip/")) {
         // to keep builds deterministic, embedded zip files always have
         // the same timestamp from back in 2022 when it was implemented
-        return ggml_is_file_newer_than_bytes(path, other);
+        return is_file_newer_than_bytes(path, other);
     } else {
-        return ggml_is_file_newer_than_time(path, other);
+        return is_file_newer_than_time(path, other);
     }
-}
-
-/**
- * Returns true if `zip` was successfully copied to `to`.
- *
- * Copying happens atomically. The `zip` argument is a file system path,
- * which may reside under `/zip/...` to relocate a compressed executable
- * asset to the local filesystem.
- */
-bool ggml_extract(const char *zip, const char *to) {
-    int fdin, fdout;
-    char stage[PATH_MAX];
-    tinyprint(2, "extracting ", zip, " to ", to, "\n", NULL);
-    strlcpy(stage, to, sizeof(stage));
-    if (strlcat(stage, ".XXXXXX", sizeof(stage)) >= sizeof(stage)) {
-        errno = ENAMETOOLONG;
-        perror(to);
-        return false;
-    }
-    if ((fdout = mkostemp(stage, O_CLOEXEC)) == -1) {
-        perror(stage);
-        return false;
-    }
-    if ((fdin = open(zip, O_RDONLY | O_CLOEXEC)) == -1) {
-        perror(zip);
-        close(fdout);
-        unlink(stage);
-        return false;
-    }
-    if (copyfd(fdin, fdout, -1) == -1) {
-        perror(zip);
-        close(fdin);
-        close(fdout);
-        unlink(stage);
-        return false;
-    }
-    if (close(fdout)) {
-        perror(to);
-        close(fdin);
-        unlink(stage);
-        return false;
-    }
-    if (close(fdin)) {
-        perror(zip);
-        unlink(stage);
-        return false;
-    }
-    if (rename(stage, to)) {
-        perror(to);
-        unlink(stage);
-        return false;
-    }
-    return true;
 }

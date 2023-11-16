@@ -15,7 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define _COSMO_SOURCE
 #include <cosmo.h>
 #include <time.h>
 #include <dlfcn.h>
@@ -29,9 +28,10 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdatomic.h>
-#include "ggml-metal.h"
+#include "llama.cpp/ggml-metal.h"
 
 __static_yoink("llama.cpp/ggml.h");
+__static_yoink("llamafile/llamafile.h");
 __static_yoink("llama.cpp/ggml-impl.h");
 __static_yoink("llama.cpp/ggml-metal.m");
 __static_yoink("llama.cpp/ggml-metal.h");
@@ -43,6 +43,7 @@ static const struct Source {
     const char *name;
 } srcs[] = {
     {"/zip/llama.cpp/ggml.h", "ggml.h"},
+    {"/zip/llamafile/llamafile.h", "llamafile.h"},
     {"/zip/llama.cpp/ggml-impl.h", "ggml-impl.h"},
     {"/zip/llama.cpp/ggml-metal.h", "ggml-metal.h"},
     {"/zip/llama.cpp/ggml-quants.h", "ggml-quants.h"},
@@ -78,20 +79,20 @@ static bool ImportMetalImpl(void) {
     char src[PATH_MAX];
     bool needs_rebuild = false;
     for (int i = 0; i < sizeof(srcs) / sizeof(*srcs); ++i) {
-        ggml_get_app_dir(src, PATH_MAX);
+        llamafile_get_app_dir(src, PATH_MAX);
         if (!i && mkdir(src, 0755) && errno != EEXIST) {
             perror(src);
             return false;
         }
         strlcat(src, srcs[i].name, sizeof(src));
-        switch (ggml_is_file_newer_than(srcs[i].zip, src)) {
+        switch (llamafile_is_file_newer_than(srcs[i].zip, src)) {
             case -1:
                 return false;
             case 0:
                 break;
             case 1:
                 needs_rebuild = true;
-                if (!ggml_extract(srcs[i].zip, src)) {
+                if (!llamafile_extract(srcs[i].zip, src)) {
                     return false;
                 }
                 break;
@@ -102,10 +103,10 @@ static bool ImportMetalImpl(void) {
 
     // determine if we need to build
     char dso[PATH_MAX];
-    ggml_get_app_dir(dso, PATH_MAX);
+    llamafile_get_app_dir(dso, PATH_MAX);
     strlcat(dso, "ggml-metal.dylib", sizeof(dso));
     if (!needs_rebuild) {
-        switch (ggml_is_file_newer_than(src, dso)) {
+        switch (llamafile_is_file_newer_than(src, dso)) {
             case -1:
                 return false;
             case 0:
@@ -230,7 +231,7 @@ struct ggml_metal_context *ggml_metal_init(int n_cb, const char *metalPath) {
     char path[PATH_MAX];
     if (!ggml_metal_supported()) return NULL;
     if (!metalPath) {
-        ggml_get_app_dir(path, PATH_MAX);
+        llamafile_get_app_dir(path, PATH_MAX);
         strlcat(path, "ggml-metal.metal", sizeof(path));
         metalPath = path;
     }

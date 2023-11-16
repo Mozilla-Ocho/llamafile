@@ -1,5 +1,5 @@
-// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
-// vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+// -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
 // Copyright 2023 Mozilla Foundation
 //
@@ -15,18 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "llama.cpp/ggml.h"
-#include "clip.h"
+#include "llamafile.h"
+#include <string.h>
 
-int main(int argc, char *argv[]) {
-    ggml_check_cpu();
-    if (argc != 4) {
-        fprintf(stderr, "Usage: %s INPUT OUTPUT FORMAT\n");
-        exit(1);
-    }
-    if (!clip_model_quantize(argv[1], argv[2], atoi(argv[3]))) {
-        exit(1);
-    }
+/**
+ * Returns path of directory for app-specific files.
+ */
+void llamafile_get_app_dir(char *path, size_t size) {
+    strlcpy(path, llamafile_get_tmp_dir(), size);
+    strlcat(path, "/.llamafile/", size);
 }

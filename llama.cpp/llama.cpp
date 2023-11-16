@@ -1,7 +1,6 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
-#define _COSMO_SOURCE
 #include <cosmo.h>
 
 #define LLAMA_API_INTERNAL
@@ -687,28 +686,28 @@ struct llama_buffer {
 };
 
 struct llama_file {
-    struct ggml_file * file;
+    struct llamafile * file;
 
     llama_file(const char * fname, const char * mode) {
-        file = ggml_file_open(fname, mode);
+        file = llamafile_open(fname, mode);
         if (!file) {
             ThrowRuntimeError(format("failed to open %s: %s", fname, strerror(errno)));
         }
     }
 
     size_t tell() const {
-        return ggml_file_tell(file);
+        return llamafile_tell(file);
     }
 
     void seek(size_t offset, int whence) {
-        return ggml_file_seek(file, offset, whence);
+        return llamafile_seek(file, offset, whence);
     }
 
     void read_raw(void * ptr, size_t len) const {
         if (len == 0) {
             return;
         }
-        long rc = ggml_file_read(file, ptr, len);
+        long rc = llamafile_read(file, ptr, len);
         if (rc == -1) {
             ThrowRuntimeError(format("read error: %s", strerror(errno)));
         }
@@ -725,7 +724,7 @@ struct llama_file {
 
     void write_raw(const void * ptr, size_t len) const {
         errno = 0;
-        long rc = ggml_file_write(file, ptr, len);
+        long rc = llamafile_write(file, ptr, len);
         if (rc == -1) {
             ThrowRuntimeError(format("write error: %s", strerror(errno)));
         }
@@ -736,7 +735,7 @@ struct llama_file {
     }
 
     ~llama_file() {
-        ggml_file_close(file);
+        llamafile_close(file);
     }
 };
 
@@ -751,17 +750,17 @@ struct llama_mmap {
     static constexpr bool SUPPORTED = true;
 
     llama_mmap(struct llama_file * file, size_t prefetch = (size_t) -1 /* -1 = max value */, bool numa = false) {
-        size = ggml_file_size(file->file);
-        if (!ggml_file_fp(file->file)) {
+        size = llamafile_size(file->file);
+        if (!llamafile_fp(file->file)) {
             // file is an uncompressed zip asset
             // therefore it's already mapped
             is_owned = false;
-            addr = ggml_file_content(file->file);
-            ggml_schlep(addr, size);
+            addr = llamafile_content(file->file);
+            llamafile_schlep(addr, size);
             return;
         }
         is_owned = true;
-        int fd = fileno(ggml_file_fp(file->file));
+        int fd = fileno(llamafile_fp(file->file));
         int flags = MAP_SHARED;
         // prefetch/readahead impairs performance on NUMA systems
         if (numa) { prefetch = 0; }
@@ -790,7 +789,7 @@ struct llama_mmap {
         }
 
         // report terminal progress of loading weights
-        ggml_schlep(addr, size);
+        llamafile_schlep(addr, size);
     }
 
     ~llama_mmap() {
@@ -1692,7 +1691,7 @@ struct llama_model_loader {
         if (!ctx_gguf) {
             ThrowRuntimeError(format("%s: failed to load model from %s\n", __func__, fname.c_str()));
         }
-        ggml_file_seek(file.file, 0, SEEK_SET);
+        llamafile_seek(file.file, 0, SEEK_SET);
 
         n_kv      = gguf_get_n_kv(ctx_gguf);
         n_tensors = gguf_get_n_tensors(ctx_gguf);
@@ -8768,7 +8767,7 @@ static bool llama_load_session_file_internal(struct llama_context * ctx, const c
 
     // restore the context state
     {
-        const size_t n_state_size_cur = ggml_file_size(file.file) - file.tell();
+        const size_t n_state_size_cur = llamafile_size(file.file) - file.tell();
         const size_t n_state_size_max = llama_get_state_size(ctx);
 
         if (n_state_size_cur > n_state_size_max) {

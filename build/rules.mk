@@ -16,6 +16,10 @@ o/$(MODE)/%.o: %.cc
 	@mkdir -p $(@D)
 	$(COMPILE.cc) -o $@ $<
 
+o/$(MODE)/%.o: %.cpp
+	@mkdir -p $(@D)
+	$(COMPILE.cc) -o $@ $<
+
 o/$(MODE)/%: o/$(MODE)/%.o
 	$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
 

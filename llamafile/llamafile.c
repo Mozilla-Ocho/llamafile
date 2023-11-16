@@ -15,28 +15,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define _COSMO_SOURCE
 #include <cosmo.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <assert.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include "ggml.h"
+#include "llamafile.h"
 #include "zip.h"
 
 #define Min(a, b) ((a) < (b) ? (a) : (b))
 
-struct ggml_file {
-    FILE * fp;
+struct llamafile {
+    FILE *fp;
     size_t size;
-    char * content;
+    char *content;
     size_t position;
-    void * mapping;
+    void *mapping;
     size_t mapsize;
 };
 
@@ -70,22 +70,22 @@ static uint64_t GetZipCfileCompressedSize(const uint8_t *z) {
     return x;
 }
 
-struct ggml_file *ggml_file_open(const char * fname, const char * mode) {
+struct llamafile *llamafile_open(const char *fname, const char *mode) {
     int fd = -1;
-    uint8_t * bufdata = NULL;
+    uint8_t *bufdata = NULL;
     size_t cdirsize = 0;
-    uint8_t * cdirdata = NULL;
-    struct ggml_file * file = NULL;
+    uint8_t *cdirdata = NULL;
+    struct llamafile *file = NULL;
 
-    if (!(file = malloc(sizeof(struct ggml_file)))) {
+    if (!(file = malloc(sizeof(struct llamafile)))) {
         goto Failure;
     }
 
     // open from the filesystem if it exists
     if ((file->fp = fopen(fname, mode))) {
-        ggml_file_seek(file, 0, SEEK_END);
-        file->size = ggml_file_tell(file);
-        ggml_file_seek(file, 0, SEEK_SET);
+        llamafile_seek(file, 0, SEEK_END);
+        file->size = llamafile_tell(file);
+        llamafile_seek(file, 0, SEEK_SET);
         return file;
     }
     if (errno != ENOENT) {
@@ -222,10 +222,6 @@ struct ggml_file *ggml_file_open(const char * fname, const char * mode) {
                 fname, prog, strerror(errno));
         goto Failure;
     }
-    if (ggml_is_numa() && posix_madvise(file->mapping, file->mapsize, POSIX_MADV_RANDOM)) {
-        fprintf(stderr, "warning: posix_madvise(.., POSIX_MADV_RANDOM) failed: %s\n",
-                strerror(errno));
-    }
 
     // setup our synthetic file
     file->position = 0;
@@ -247,19 +243,19 @@ Failure:
     return 0;
 }
 
-FILE * ggml_file_fp(struct ggml_file * file) {
+FILE *llamafile_fp(struct llamafile *file) {
     return file->fp;
 }
 
-size_t ggml_file_size(struct ggml_file * file) {
+size_t llamafile_size(struct llamafile *file) {
     return file->size;
 }
 
-void * ggml_file_content(struct ggml_file * file) {
+void *llamafile_content(struct llamafile *file) {
     return file->content;
 }
 
-size_t ggml_file_tell(struct ggml_file * file) {
+size_t llamafile_tell(struct llamafile *file) {
     if (!file->fp) {
         return file->position;
     }
@@ -268,11 +264,11 @@ size_t ggml_file_tell(struct ggml_file * file) {
 #else
     long ret = ftell(file->fp);
 #endif
-    GGML_ASSERT(ret != -1); // this really shouldn't fail
+    unassert(ret != -1); // this really shouldn't fail
     return (size_t) ret;
 }
 
-void ggml_file_seek(struct ggml_file * file, size_t offset, int whence) {
+void llamafile_seek(struct llamafile *file, size_t offset, int whence) {
     if (!file->fp) {
         switch (whence) {
             case SEEK_SET:
@@ -287,15 +283,10 @@ void ggml_file_seek(struct ggml_file * file, size_t offset, int whence) {
         }
         return;
     }
-#ifdef _WIN32
-    int ret = _fseeki64(file->fp, (__int64) offset, whence);
-#else
-    int ret = fseek(file->fp, (long) offset, whence);
-#endif
-    GGML_ASSERT(ret == 0); // same
+    unassert(!fseek(file->fp, (long) offset, whence));
 }
 
-long ggml_file_read(struct ggml_file * file, void * ptr, size_t len) {
+long llamafile_read(struct llamafile *file, void *ptr, size_t len) {
     if (len == 0) {
         return 0;
     }
@@ -320,7 +311,7 @@ long ggml_file_read(struct ggml_file * file, void * ptr, size_t len) {
     return len;
 }
 
-long ggml_file_write(struct ggml_file * file, const void * ptr, size_t len) {
+long llamafile_write(struct llamafile *file, const void *ptr, size_t len) {
     if (len == 0) {
         return 0;
     }
@@ -339,7 +330,7 @@ long ggml_file_write(struct ggml_file * file, const void * ptr, size_t len) {
     return len;
 }
 
-void ggml_file_close(struct ggml_file * file) {
+void llamafile_close(struct llamafile *file) {
     if (file->fp) {
         fclose(file->fp);
     }

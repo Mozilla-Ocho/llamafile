@@ -4,18 +4,10 @@ DESCRIPTION
 
 LICENSE
 
-  llama.cpp is licensed MIT and in our repository it includes files
-  released under the Apache 2.0 license. Files that are licensed as
-  such are clearly documented at the top of each file.
+  MIT
 
 ORIGIN
 
   https://github.com/ggerganov/llama.cpp
   e9c1cecb9d7d743d30b4a29ecd56a411437def0a
   Tue Nov 7 09:04:51 2023 +0100
-
-LOCAL CHANGES
-
-  - Added #ifdef guards around C++ exception usage
-  - Unified weights i/o by introducing ggml_file interface
-  - Added ability to mmap() weights directly from ZIP file

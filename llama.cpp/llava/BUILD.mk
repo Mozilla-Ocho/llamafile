@@ -5,7 +5,7 @@ PKGS += LLAMA_CPP_LLAVA
 
 LLAMA_CPP_LLAVA_FILES := $(wildcard llama.cpp/llava/*)
 LLAMA_CPP_LLAVA_HDRS = $(filter %.h,$(LLAMA_CPP_LLAVA_FILES))
-LLAMA_CPP_LLAVA_SRCS = $(filter %.cc,$(LLAMA_CPP_LLAVA_FILES))
+LLAMA_CPP_LLAVA_SRCS = $(filter %.cpp,$(LLAMA_CPP_LLAVA_FILES))
 
 .PHONY: tool/args/args.h
 

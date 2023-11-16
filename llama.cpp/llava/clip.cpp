@@ -461,11 +461,11 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         /*.ctx      = */ &meta,
     };
 
-    struct ggml_file * file;
+    struct llamafile * file;
     struct gguf_context * ctx;
-    file = ggml_file_open(fname, "rbe");
+    file = llamafile_open(fname, "rbe");
     if (file) ctx = gguf_init_from_file(file, params);
-    if (file) ggml_file_close(file);
+    if (file) llamafile_close(file);
     if (!file || !ctx) {
       OpenFailed:
         ThrowRuntimeError(format("%s: failed to load CLIP model from %s. Does this file exist?\n", __func__, fname));
@@ -571,7 +571,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             return nullptr;
         }
 
-        struct ggml_file * fin = ggml_file_open(fname, "rbe");
+        struct llamafile * fin = llamafile_open(fname, "rbe");
         if (!fin) {
             printf("cannot open model file for loading tensors\n");
             clip_free(new_clip);
@@ -586,17 +586,17 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             ggml_set_name(cur, name);
 
             const size_t offset = gguf_get_data_offset(ctx) + gguf_get_tensor_offset(ctx, i);
-            ggml_file_seek(fin, offset, SEEK_SET);
+            llamafile_seek(fin, offset, SEEK_SET);
             if (!fin) {
                 printf("%s: failed to seek for tensor %s\n", __func__, name);
                 clip_free(new_clip);
                 return nullptr;
             }
 
-            ggml_file_read(fin, reinterpret_cast<void *>(cur->data), ggml_nbytes(t));
+            llamafile_read(fin, reinterpret_cast<void *>(cur->data), ggml_nbytes(t));
         }
 
-        ggml_file_close(fin);
+        llamafile_close(fin);
     }
 
     // vision model

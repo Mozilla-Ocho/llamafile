@@ -1,7 +1,6 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
-#define _COSMO_SOURCE
 #include <cosmo.h>
 #include "tool/args/args.h"
 
@@ -104,7 +103,7 @@ static int Eval(struct llama_context * ctx, struct llama_batch batch) {
 }
 
 int main(int argc, char ** argv) {
-    ggml_check_cpu();
+    llamafile_check_cpu();
     ShowCrashReports();
     LoadZipArgs(&argc, &argv);
 

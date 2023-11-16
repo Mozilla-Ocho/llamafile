@@ -15,7 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define _COSMO_SOURCE
 #include <cosmo.h>
 #include <stdio.h>
 #include <errno.h>
@@ -23,7 +22,7 @@
 #include <pthread.h>
 #include <sys/auxv.h>
 #include <stdatomic.h>
-#include "ggml.h"
+#include "llama.cpp/ggml.h"
 
 #define FPS 24
 
@@ -67,7 +66,7 @@ static void *ProgressReporter(void *arg) {
 /**
  * Loads memory off disk while reporting progress.
  */
-void ggml_schlep(const void *data, size_t size) {
+void llamafile_schlep(const void *data, size_t size) {
 
     // don't bother if memory is small
     if (size < 128 * 1024 * 1024) {

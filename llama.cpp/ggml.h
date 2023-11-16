@@ -209,6 +209,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "llamafile.h"
 
 #define GGML_FILE_MAGIC   0x67676d6c // "ggml"
 #define GGML_FILE_VERSION 1
@@ -1968,22 +1969,6 @@ extern "C" {
     GGML_API size_t ggml_quantize_chunk(enum ggml_type type, const float * src, void * dst, int start, int n, int64_t * hist);
 
     //
-    // file
-    //
-
-    struct ggml_file;
-    struct ggml_file *ggml_file_open(const char * fname, const char * mode);
-    void ggml_file_close(struct ggml_file * file);
-    long ggml_file_read(struct ggml_file * file, void * ptr, size_t len);
-    long ggml_file_write(struct ggml_file * file, const void * ptr, size_t len);
-    void ggml_file_seek(struct ggml_file * file, size_t offset, int whence);
-    void * ggml_file_content(struct ggml_file * file);
-    size_t ggml_file_tell(struct ggml_file * file);
-    size_t ggml_file_size(struct ggml_file * file);
-    size_t ggml_file_size(struct ggml_file * file);
-    FILE * ggml_file_fp(struct ggml_file * file);
-
-    //
     // gguf
     //
 
@@ -2014,7 +1999,7 @@ extern "C" {
     };
 
     GGML_API struct gguf_context * gguf_init_empty(void);
-    GGML_API struct gguf_context * gguf_init_from_file(struct ggml_file * file, struct gguf_init_params params);
+    GGML_API struct gguf_context * gguf_init_from_file(struct llamafile * file, struct gguf_init_params params);
     //GGML_API struct gguf_context * gguf_init_from_buffer(..);
 
     GGML_API void gguf_free(struct gguf_context * ctx);
@@ -2098,7 +2083,7 @@ extern "C" {
     //
 
     // write the entire context to a binary file
-    GGML_API void gguf_write_to_file(const struct gguf_context * ctx, struct ggml_file * file, bool only_meta);
+    GGML_API void gguf_write_to_file(const struct gguf_context * ctx, struct llamafile * file, bool only_meta);
 
     // get the size in bytes of the meta data (header, kv pairs, tensor info) including padding
     GGML_API size_t gguf_get_meta_size(const struct gguf_context * ctx);
@@ -2155,12 +2140,6 @@ extern "C" {
     } ggml_type_traits_t;
 
     GGML_API ggml_type_traits_t ggml_internal_get_type_traits(enum ggml_type type);
-
-    GGML_API void ggml_check_cpu(void);
-    GGML_API void ggml_get_app_dir(char *path, size_t size);
-    GGML_API void ggml_schlep(const void *data, size_t size);
-    GGML_API bool ggml_extract(const char *zip, const char *to);
-    GGML_API int ggml_is_file_newer_than(const char *path, const char *other);
 
 #ifdef  __cplusplus
 }

@@ -94,7 +94,7 @@ static void usage(const char * executable) {
 }
 
 int main(int argc, char ** argv) {
-    ggml_check_cpu();
+    llamafile_check_cpu();
 
     if (argc < 3) {
         usage(argv[0]);

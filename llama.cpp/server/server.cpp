@@ -2256,7 +2256,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
 
 int main(int argc, char **argv)
 {
-    ggml_check_cpu();
+    llamafile_check_cpu();
 
 #ifdef __COSMOPOLITAN__
     LoadZipArgs(&argc, &argv);

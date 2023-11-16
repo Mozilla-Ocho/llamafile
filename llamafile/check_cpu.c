@@ -15,10 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define _COSMO_SOURCE
+#include <errno.h>
 #include <cosmo.h>
 #include <stdlib.h>
-#include <errno.h>
 
 static int on_missing_feature(const char *name) {
     tinyprint(2, program_invocation_name, ": fatal error: the cpu feature ", name,
@@ -39,7 +38,7 @@ static int on_missing_feature(const char *name) {
  * written to use runtime dispatching should be configured so that
  * microarchitecture flags only get passed to that specific object
  */
-void ggml_check_cpu(void) {
+void llamafile_check_cpu(void) {
     if (X86_NEED(SSE3) && !X86_CHECK(SSE3)) {
         on_missing_feature("SSE3");
     }

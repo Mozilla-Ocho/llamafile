@@ -18637,14 +18637,14 @@ struct gguf_context {
     void * data;
 };
 
-static bool gguf_fread_el(struct ggml_file * file, void * dst, size_t size, size_t * offset) {
-    const size_t n = ggml_file_read(file, dst, size);
+static bool gguf_fread_el(struct llamafile * file, void * dst, size_t size, size_t * offset) {
+    const size_t n = llamafile_read(file, dst, size);
     *offset += n;
     return n == size;
 }
 
 // NOTE: temporary handling of GGUFv1 >> remove after Oct 2023
-static bool gguf_fread_str(struct ggml_file * file, struct gguf_str * p, size_t * offset) {
+static bool gguf_fread_str(struct llamafile * file, struct gguf_str * p, size_t * offset) {
     p->n    = 0;
     p->data = NULL;
 
@@ -18676,7 +18676,7 @@ struct gguf_context * gguf_init_empty(void) {
     return ctx;
 }
 
-struct gguf_context * gguf_init_from_file(struct ggml_file * file, struct gguf_init_params params) {
+struct gguf_context * gguf_init_from_file(struct llamafile * file, struct gguf_init_params params) {
 
     // offset from start of file
     size_t offset = 0;
@@ -18718,7 +18718,7 @@ struct gguf_context * gguf_init_from_file(struct ggml_file * file, struct gguf_i
 
         if (ctx->header.version == 1) {
             fprintf(stderr, "%s: GGUFv1 is no longer supported. please use a more up-to-date version\n", __func__);
-            ggml_file_close(file);
+            llamafile_close(file);
             gguf_free(ctx);
             return NULL;
         }
@@ -18844,7 +18844,7 @@ struct gguf_context * gguf_init_from_file(struct ggml_file * file, struct gguf_i
 
         if (offset_pad != 0) {
             offset += ctx->alignment - offset_pad;
-            ggml_file_seek(file, offset, SEEK_SET);
+            llamafile_seek(file, offset, SEEK_SET);
         }
     }
 
@@ -19386,12 +19386,12 @@ void gguf_set_tensor_data(struct gguf_context * ctx, const char * name, const vo
     }
 }
 
-//static void gguf_fwrite_str(struct ggml_file * file, const struct gguf_str * val) {
+//static void gguf_fwrite_str(struct llamafile * file, const struct gguf_str * val) {
 //    fwrite(&val->n,   sizeof(val->n),    1, file);
 //    fwrite(val->data, sizeof(char), val->n, file);
 //}
 //
-//static void gguf_fwrite_el(struct ggml_file * file, const void * val, size_t size) {
+//static void gguf_fwrite_el(struct llamafile * file, const void * val, size_t size) {
 //    fwrite(val, sizeof(char), size, file);
 //}
 
@@ -19564,12 +19564,12 @@ static void gguf_write_to_buf(const struct gguf_context * ctx, struct gguf_buf *
     }
 }
 
-void gguf_write_to_file(const struct gguf_context * ctx, struct ggml_file * file, bool only_meta) {
+void gguf_write_to_file(const struct gguf_context * ctx, struct llamafile * file, bool only_meta) {
     struct gguf_buf buf = gguf_buf_init(16*1024);
 
     gguf_write_to_buf(ctx, &buf, only_meta);
 
-    ggml_file_write(file, buf.data, buf.offset);
+    llamafile_write(file, buf.data, buf.offset);
 
     gguf_buf_free(buf);
 }
