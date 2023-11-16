@@ -4,7 +4,9 @@ DESCRIPTION
 
 LICENSE
 
-  MIT
+  llama.cpp is licensed MIT and in our repository it includes files
+  released under the Apache 2.0 license. Files that are licensed as
+  such are clearly documented at the top of each file.
 
 ORIGIN
 
