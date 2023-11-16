@@ -8,8 +8,15 @@
 int main(int argc, char *argv[]) {
     llamafile_check_cpu();
     if (argc != 4) {
-        fprintf(stderr, "Usage: %s INPUT OUTPUT FORMAT\n");
-        exit(1);
+        fprintf(stderr,
+                "Usage: %s INPUT OUTPUT FORMAT\n"
+                "  - 2 is Q4_0\n"
+                "  - 3 is Q4_1\n"
+                "  - 6 is Q5_0\n"
+                "  - 7 is Q5_1\n"
+                "  - 8 is Q8_0\n",
+                argv[0]);
+        return 1;
     }
     if (!clip_model_quantize(argv[1], argv[2], atoi(argv[3]))) {
         exit(1);

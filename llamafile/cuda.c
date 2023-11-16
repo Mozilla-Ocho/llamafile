@@ -32,7 +32,7 @@
 #include "llama.cpp/ggml-cuda.h"
 
 __static_yoink("llama.cpp/ggml.h");
-__static_yoink("llamafile/compcat.cu");
+__static_yoink("llamafile/compcap.cu");
 __static_yoink("llamafile/llamafile.h");
 __static_yoink("llama.cpp/ggml-cuda.h");
 __static_yoink("llama.cpp/ggml-cuda.cu");
@@ -57,7 +57,7 @@ static const struct Source {
     const char *name;
 } srcs[] = {
     {"/zip/llama.cpp/ggml.h", "ggml.h"},
-    {"/zip/llamafile/compcat.cu", "compcat.cu"},
+    {"/zip/llamafile/compcap.cu", "compcap.cu"},
     {"/zip/llamafile/llamafile.h", "llamafile.h"},
     {"/zip/llama.cpp/ggml-cuda.h", "ggml-cuda.h"},
     {"/zip/llama.cpp/ggml-cuda.cu", "ggml-cuda.cu"}, // must come last
@@ -195,7 +195,7 @@ static dontinline bool GetNvccArchFlag(char *nvcc, char flag[static 32]) {
     // create path of exe
     char exe[PATH_MAX];
     llamafile_get_app_dir(exe, sizeof(exe));
-    strlcat(exe, "compcat", PATH_MAX);
+    strlcat(exe, "compcap", PATH_MAX);
 
     // get path of sauce
     char src[PATH_MAX];
