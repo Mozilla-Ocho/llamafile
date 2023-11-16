@@ -24,9 +24,8 @@ static char Peek(volatile const char *ptr) {
 char (*pPeek)(volatile const char *) = Peek;
 
 static void FormatPercent(char sbuf[static 8], double x) {
-    x *= 100000.5;
-    int n = x;
     char *p = sbuf;
+    int n = x * 100000.5;
     if (n >= 100000) *p++ = '0' + n / 100000 % 10;
     if (n >= 10000) *p++ = '0' + n / 10000 % 10;
     *p++ = '0' + n / 1000 % 10;

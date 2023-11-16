@@ -69,19 +69,42 @@ static bool ImportMetalImpl(void) {
             return false;
         }
         strlcat(src, srcs[i].name, sizeof(src));
-        if (ggml_is_newer_than(srcs[i].zip, src)) {
-            needs_rebuild = true;
-            if (!ggml_extract(srcs[i].zip, src)) {
+        switch (ggml_is_file_newer_than(srcs[i].zip, src)) {
+            case -1:
                 return false;
-            }
+            case 0:
+                break;
+            case 1:
+                needs_rebuild = true;
+                if (!ggml_extract(srcs[i].zip, src)) {
+                    return false;
+                }
+                break;
+            default:
+                __builtin_unreachable();
+        }
+    }
+
+    // determine if we need to build
+    char dso[PATH_MAX];
+    ggml_get_app_dir(dso, PATH_MAX);
+    strlcat(dso, "ggml-metal.dylib", sizeof(dso));
+    if (!needs_rebuild) {
+        switch (ggml_is_file_newer_than(src, dso)) {
+            case -1:
+                return false;
+            case 0:
+                return true;
+            case 1:
+                needs_rebuild = true;
+                break;
+            default:
+                __builtin_unreachable();
         }
     }
 
     // compile dynamic shared object
-    char dso[PATH_MAX];
-    ggml_get_app_dir(dso, PATH_MAX);
-    strlcat(dso, "ggml-metal.dylib", sizeof(dso));
-    if (needs_rebuild || ggml_is_newer_than(src, dso)) {
+    if (needs_rebuild) {
         tinyprint(2, "building ggml-metal.dylib with xcode...\n", NULL);
         int fd;
         char tmpdso[PATH_MAX];

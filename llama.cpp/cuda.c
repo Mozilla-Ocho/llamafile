@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <signal.h>
 #include <pthread.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -20,16 +21,33 @@ __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llama.cpp/ggml-cuda.h");
 __static_yoink("llama.cpp/ggml-cuda.cu");
 
+#define NVCC_LIBS "-lcublas"
+
+#define NVCC_FLAGS "--shared",                                          \
+        "--forward-unknown-to-host-compiler",                           \
+        "-use_fast_math",                                               \
+        "-arch=compute_87",                                             \
+        "--compiler-options", "-fPIC -O3 -march=native -mtune=native",  \
+        "-DNDEBUG",                                                     \
+        "-DGGML_BUILD=1",                                               \
+        "-DGGML_SHARED=1",                                              \
+        "-DGGML_CUDA_DMMV_X=32",                                        \
+        "-DGGML_CUDA_MMV_Y=1",                                          \
+        "-DK_QUANTS_PER_ITERATION=2",                                   \
+        "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
+        "-DGGML_USE_CUBLAS"
+
 static const struct Source {
     const char *zip;
     const char *name;
 } srcs[] = {
     {"/zip/llama.cpp/ggml.h", "ggml.h"},
-    {"/zip/llama.cpp/ggml-impl.h", "ggml-cuda.h"},
+    {"/zip/llama.cpp/ggml-cuda.h", "ggml-cuda.h"},
     {"/zip/llama.cpp/ggml-cuda.cu", "ggml-cuda.cu"}, // must come last
 };
 
 static struct Cuda {
+    bool disabled;
     bool supported;
     atomic_uint once;
     typeof(ggml_init_cublas) *init;
@@ -71,19 +89,98 @@ static const char *GetDsoExtension(void) {
     }
 }
 
+static bool FileExists(const char *path) {
+    struct stat st;
+    return !stat(path, &st);
+}
+
+static bool IsExecutable(const char *path) {
+    struct stat st;
+    return !stat(path, &st) &&
+            (st.st_mode & 0111) &&
+            !S_ISDIR(st.st_mode);
+}
+
+static bool CreateTempPath(const char *path, char tmp[static PATH_MAX]) {
+    int fd;
+    strlcpy(tmp, path, PATH_MAX);
+    strlcat(tmp, ".XXXXXX", PATH_MAX);
+    if ((fd = mkstemp(tmp)) != -1) {
+        close(fd);
+        return true;
+    } else {
+        perror(tmp);
+        return false;
+    }
+}
+
+static bool Compile(const char *src,
+                    const char *tmp,
+                    const char *out,
+                    char *args[]) {
+    int pid, ws;
+    errno_t err = posix_spawnp(&pid, args[0], NULL, NULL, args, environ);
+    if (err) {
+        perror(args[0]);
+        unlink(tmp);
+        return false;
+    }
+    while (waitpid(pid, &ws, 0) == -1) {
+        if (errno != EINTR) {
+            perror(args[0]);
+            unlink(tmp);
+            return false;
+        }
+    }
+    if (ws) {
+        tinyprint(2, args[0], ": returned nonzero exit status\n", NULL);
+        unlink(tmp);
+        return false;
+    }
+    if (rename(tmp, out)) {
+        perror(out);
+        unlink(tmp);
+        return false;
+    }
+    return true;
+}
+
+// finds nvidia compiler
+//
+//   1. $CUDA_PATH/bin/nvcc
+//   2. nvcc on $PATH environ
+//   3. /opt/cuda/bin/nvcc
+//   4. /usr/local/cuda/bin/nvcc
+//
+// set $CUDA_PATH to empty string to disable cuda
+static bool GetNvccPath(char path[static PATH_MAX]) {
+    const char *cuda_path;
+    if ((cuda_path = getenv("CUDA_PATH"))) {
+        if (!*cuda_path) return false;
+        strlcpy(path, cuda_path, PATH_MAX);
+        strlcat(path, "/bin/", PATH_MAX);
+    } else if (commandv(IsWindows() ? "nvcc.exe" : "nvcc", path, PATH_MAX)) {
+        return true;
+    } else if (FileExists("/opt/cuda")) {
+        strlcpy(path, "/opt/cuda/bin/", PATH_MAX);
+    } else {
+        strlcpy(path, "/usr/local/cuda/bin/", PATH_MAX);
+    }
+    strlcat(path, "nvcc", PATH_MAX);
+    if (IsWindows()) {
+        strlcat(path, ".exe", PATH_MAX);
+    }
+    return IsExecutable(path);
+}
+
 static bool CompileNativeCuda(char dso[static PATH_MAX]) {
 
-    // find path of nvidia compiler
+    // find full path of nvidia compiler
     char nvcc[PATH_MAX];
-    const char *cuda_path;
-    nvcc[0] = 0;
-    if ((cuda_path = getenv("CUDA_PATH"))) {
-        strlcat(nvcc, cuda_path, sizeof(nvcc));
-        strlcat(nvcc, "/bin/", sizeof(nvcc));
-    }
-    strlcat(nvcc, "nvcc", sizeof(nvcc));
-    if (IsWindows()) {
-        strlcat(nvcc, ".exe", sizeof(nvcc));
+    if (!GetNvccPath(nvcc)) {
+        tinyprint(2, "warning: couldn't find nvcc (nvidia c compiler) "
+                     "try setting $CUDA_PATH if it's installed\n", NULL);
+        return false;
     }
 
     // extract source code
@@ -96,63 +193,53 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
             return false;
         }
         strlcat(src, srcs[i].name, sizeof(src));
-        if (ggml_is_newer_than(srcs[i].zip, src)) {
-            needs_rebuild = true;
-            if (!ggml_extract(srcs[i].zip, src)) {
+        switch (ggml_is_file_newer_than(srcs[i].zip, src)) {
+            case -1:
                 return false;
-            }
+            case false:
+                break;
+            case true:
+                needs_rebuild = true;
+                if (!ggml_extract(srcs[i].zip, src)) {
+                    return false;
+                }
+                break;
+            default:
+                __builtin_unreachable();
         }
     }
 
-    // compile dynamic shared object
+    // check if dso is already compiled
     ggml_get_app_dir(dso, PATH_MAX);
     strlcat(dso, "ggml-cuda.", PATH_MAX);
     strlcat(dso, GetDsoExtension(), PATH_MAX);
-    if (needs_rebuild || ggml_is_newer_than(src, dso)) {
-        tinyprint(2, "building ggml-cuda with nvcc...\n", NULL);
-        int fd;
-        char tmpdso[PATH_MAX];
-        strlcpy(tmpdso, dso, sizeof(tmpdso));
-        strlcat(tmpdso, ".XXXXXX", sizeof(tmpdso));
-        if ((fd = mkstemp(tmpdso)) != -1) {
-            close(fd);
-        } else {
-            perror(tmpdso);
-            return false;
-        }
-        char *args[] = {
-            nvcc,
-            "--shared",
-            "-arch=native",
-            "-DGGML_BUILD=1",
-            "-DGGML_SHARED=1",
-            "-o", tmpdso,
-            src,
-            "-lcublas",
-            NULL,
-        };
-        int pid, ws;
-        errno_t err = posix_spawnp(&pid, nvcc, NULL, NULL, args, environ);
-        if (err) {
-            perror(nvcc);
-            return false;
-        }
-        while (waitpid(pid, &ws, 0) == -1) {
-            if (errno != EINTR) {
-                perror(nvcc);
+    if (!needs_rebuild) {
+        switch (ggml_is_file_newer_than(src, dso)) {
+            case -1:
                 return false;
-            }
-        }
-        if (ws) {
-            tinyprint(2, nvcc, ": returned nonzero exit status\n", NULL);
-            return false;
-        }
-        if (rename(tmpdso, dso)) {
-            perror(dso);
-            return false;
+            case false:
+                return true;
+            case true:
+                break;
+            default:
+                __builtin_unreachable();
         }
     }
 
+    // create temporary output path for atomicity
+    char tmpdso[PATH_MAX];
+    if (!CreateTempPath(dso, tmpdso)) {
+        return false;
+    }
+
+    // try building dso with host nvidia microarchitecture
+    tinyprint(2, "building ggml-cuda with nvcc...\n", NULL);
+    if (!Compile(src, tmpdso, dso, (char *[]){
+                nvcc, NVCC_FLAGS, "-o", tmpdso, src, NVCC_LIBS, NULL})) {
+        return false;
+    }
+
+    // we're good!
     return true;
 }
 
@@ -166,7 +253,6 @@ static bool ImportCudaImpl(void) {
 
     // runtime link dynamic shared object
     void *lib;
-    tinyprint(2, "OPENING: ", dso, "\n", NULL);
     lib = cosmo_dlopen(dso, RTLD_LAZY);
     if (!lib) {
         tinyprint(2, Dlerror(), ": failed to load library\n", NULL);
@@ -205,12 +291,19 @@ static bool ImportCudaImpl(void) {
 }
 
 static void ImportCuda(void) {
+    if (ggml_cuda.disabled) {
+        return;
+    }
     if (ImportCudaImpl()) {
         ggml_cuda.supported = true;
         tinyprint(2, "NVIDIA cuBLAS GPU supported locked and loaded\n", NULL);
     } else {
         tinyprint(2, "warning: couldn't load Nvidia CUDA GPU support\n", NULL);
     }
+}
+
+void ggml_cuda_disable(void) {
+    ggml_cuda.disabled = true;
 }
 
 bool ggml_cuda_supported(void) {

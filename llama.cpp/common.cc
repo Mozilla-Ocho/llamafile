@@ -143,6 +143,7 @@ bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
 bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
     bool invalid_param = false;
     std::string arg;
+    bool passed_gpu_flags = false;
     const std::string arg_prefix = "--";
     llama_sampling_params & sparams = params.sparams;
 
@@ -514,43 +515,32 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
         } else if (arg == "--mlock") {
             params.use_mlock = true;
         } else if (arg == "--gpu-layers" || arg == "-ngl" || arg == "--n-gpu-layers") {
+            passed_gpu_flags = true;
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            if (ggml_metal_supported() || ggml_cuda_supported()) {
-                params.n_gpu_layers = std::stoi(argv[i]);
-            } else {
-                fprintf(stderr, "warning: GPU offload not supported on this platform, --n-gpu-layers option will be ignored\n");
-                fprintf(stderr, "warning: see main README.md for information on enabling GPU BLAS support\n");
-            }
+            params.n_gpu_layers = std::stoi(argv[i]);
         } else if (arg == "--gpu-layers-draft" || arg == "-ngld" || arg == "--n-gpu-layers-draft") {
+            passed_gpu_flags = true;
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            if (ggml_metal_supported() || ggml_cuda_supported()) {
-                params.n_gpu_layers_draft = std::stoi(argv[i]);
-            } else {
-                fprintf(stderr, "warning: GPU offload not supported on this platform, --n-gpu-layers-draft option will be ignored\n");
-                fprintf(stderr, "warning: see main README.md for information on enabling GPU BLAS support\n");
-            }
+            params.n_gpu_layers_draft = std::stoi(argv[i]);
         } else if (arg == "--main-gpu" || arg == "-mg") {
+            passed_gpu_flags = true;
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            if (ggml_cuda_supported()) {
-                params.main_gpu = std::stoi(argv[i]);
-            } else {
-                fprintf(stderr, "warning: cuBLAS GPU couldn't be supported on this system. It is not possible to set a main GPU.\n");
-            }
+            params.main_gpu = std::stoi(argv[i]);
         } else if (arg == "--tensor-split" || arg == "-ts") {
+            passed_gpu_flags = true;
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            if (ggml_cuda_supported()) {
             std::string arg_next = argv[i];
 
             // split string by , and /
@@ -566,15 +556,9 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                     params.tensor_split[i] = 0.0f;
                 }
             }
-            } else {
-            fprintf(stderr, "warning: cuBLAS GPU couldn't be supported on this system. It is not possible to set a tensor split.\n");
-            }
         } else if (arg == "--no-mul-mat-q" || arg == "-nommq") {
-            if (ggml_cuda_supported()) {
-                params.mul_mat_q = false;
-            } else {
-                fprintf(stderr, "warning: cuBLAS GPU couldn't be supported on this system. Disabling mul_mat_q kernels has no effect.\n");
-            }
+            passed_gpu_flags = true;
+            params.mul_mat_q = false;
         } else if (arg == "--no-mmap") {
             params.use_mmap = false;
         } else if (arg == "--numa") {
@@ -737,6 +721,23 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
         process_escapes(sparams.cfg_negative_prompt);
         for (auto & antiprompt : params.antiprompt) {
             process_escapes(antiprompt);
+        }
+    }
+
+    if (passed_gpu_flags) {
+        // user is tuning their gpu
+        if (!ggml_metal_supported() && !ggml_cuda_supported()) {
+            fprintf(stderr, "warning: GPU offload not supported on this platform; GPU related options will be ignored\n");
+            fprintf(stderr, "warning: you might need to install xcode (macos) or cuda (windows, linux, etc.) check the output above to see why support wasn't linked\n");
+        }
+    } else {
+        // no gpu flags were passed
+        if (ggml_metal_supported()) {
+            // apple metal gpu doesn't require explicit flags to enable
+        } else {
+            // avoid the >1 second cuda startup latency if cuda isn't being used
+            fprintf(stderr, "protip: pass the --n-gpu-layers N flag to link NVIDIA cuBLAS support\n");
+            ggml_cuda_disable();
         }
     }
 

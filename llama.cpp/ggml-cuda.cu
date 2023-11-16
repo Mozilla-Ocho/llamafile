@@ -4134,7 +4134,7 @@ template <bool need_check> static __global__ void
         (vx, vy, dst, ncols_x, nrows_x, ncols_y, nrows_y, nrows_dst);
 #else
     (void) vec_dot_q8_0_q8_1_mul_mat;
-    assert(false);
+    assert((__CUDA_ARCH__, 0));
 #endif // __CUDA_ARCH__ >= CC_VOLTA
 }
 

@@ -14322,14 +14322,12 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
         return;
     }
 
-#ifdef GGML_USE_CUBLAS
     bool skip_cpu = ggml_cuda_compute_forward(params, tensor);
     if (skip_cpu) {
         return;
     }
     GGML_ASSERT(tensor->src[0] == NULL || tensor->src[0]->backend == GGML_BACKEND_CPU);
     GGML_ASSERT(tensor->src[1] == NULL || tensor->src[1]->backend == GGML_BACKEND_CPU);
-#endif // GGML_USE_CUBLAS
 
     switch (tensor->op) {
         case GGML_OP_DUP:
