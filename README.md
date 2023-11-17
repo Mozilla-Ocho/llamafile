@@ -30,6 +30,56 @@ archive. It enables quantized weights distributed online to be prefixed
 with a compatible version of the llama.cpp software, thereby ensuring
 its originally observed behaviors can be reproduced indefinitely.
 
+## Binary Instructions
+
+You can download and run `llamafile` from the release page in your
+terminal or command prompt.
+
+```sh
+curl https://foo.example/llamafile >llamafile
+chmod +x llamafile
+./llamafile
+```
+
+On MacOS Arm64 you need to have xcode installed for llamafile to be able
+to bootstrap itself.
+
+On Windows, you may need to rename `llamafile` to `llamafile.exe` in
+order for it to run.
+
+If you use zsh and have trouble running llamafile, try saying `sh -c
+./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
+is the case for Python `subprocess`, old versions of Fish, etc.
+
+On Linux `binfmt_misc` has been known to cause problems. You can fix
+that by installing the actually portable executable interpreter.
+
+```sh
+sudo wget -O /usr/bin/ape https://cosmo.zip/pub/cosmos/bin/ape-$(uname -m).elf
+sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
+sudo sh -c "echo ':APE-jart:M::jartsr::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
+```
+
+### GPU Support
+
+On Apple Arm64, everything should just work if xcode is installed.
+
+On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
+you have the `cc` compiler installed, (2) you pass the `--n-gpu-layers
+35` flag (or whatever value is appropriate) to enable GPU, and (3) the
+CUDA developer toolkit is installed on your machine and the `nvcc`
+compiler is on your path.
+
+On Windows, that usually means you need to open up the MSVC x64 native
+command prompt and run llamafile there, for the first invocation, so it
+can build a DLl with native GPU support. After that, `$CUDA_PATH/bin`
+still usually needs to be on the `$PATH` so the GGML DLL can find its
+other CUDA dependencies.
+
+In the event that GPU support couldn't be compiled and dynamically
+linked on the fly for any reason, llamafile will fall back to CPU
+inference.
+
 ## Build Instructions
 
 First, you need the cosmocc toolchain, which is a fat portable binary
@@ -65,18 +115,22 @@ o//llama.cpp/main/main \
 ```
 
 Here's an example of how to run the HTTP server. This example includes
-its own `.args` file which, by default, assumes
-`llava-v1.5-7b-Q8_0.gguf` and `llava-v1.5-7b-mmproj-Q8_0.gguf` have been
-added to either (1) the current directory, or (2) placed inside the
-PKZIP file structure of the executable. It's important that weights be
-stored without compression, so they can be mapped directly from the
-executable into memory, without delay.
+its own [`.args` file](llama.cpp/server/.args) which, by default,
+assumes `llava-v1.5-7b-Q8_0.gguf` and `llava-v1.5-7b-mmproj-Q8_0.gguf`
+have been added to either (1) the current directory, or (2) placed
+inside the PKZIP file structure of the executable. It's important that
+you add large files to your zip executable archive using a tool we wrote
+called `zipalign`. Our command goes 10x faster than the `zip` command.
+It also inserts the weights without compression so they're aligned on a
+page size boundary. That way, the metal GPU is able to map your weights
+directly from the ZIP archive.
 
 ```sh
-make -j8 o//llama.cpp/server/server
-zip -0 o//llama.cpp/server/server \
-  llava-v1.5-7b-Q8_0.gguf \
-  llava-v1.5-7b-mmproj-Q8_0.gguf
+make -j8
+o//llamafile/zipalign -j \
+  o//llama.cpp/server/server \
+  ~/weights/llava-v1.5-7b-Q8_0.gguf \
+  ~/weights/llava-v1.5-7b-mmproj-Q8_0.gguf
 o//llama.cpp/server/server
 ```
 

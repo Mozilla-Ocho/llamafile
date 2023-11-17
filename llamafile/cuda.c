@@ -164,20 +164,20 @@ static bool Compile(const char *src,
 
 // finds nvidia compiler
 //
-//   1. $CUDA_PATH/bin/nvcc
-//   2. nvcc on $PATH environ
+//   1. nvcc on $PATH environ
+//   2. $CUDA_PATH/bin/nvcc
 //   3. /opt/cuda/bin/nvcc
 //   4. /usr/local/cuda/bin/nvcc
 //
 // set $CUDA_PATH to empty string to disable cuda
 static bool GetNvccPath(char path[static PATH_MAX]) {
     const char *cuda_path;
-    if ((cuda_path = getenv("CUDA_PATH"))) {
+    if (commandv(IsWindows() ? "nvcc.exe" : "nvcc", path, PATH_MAX)) {
+        return true;
+    } else if ((cuda_path = getenv("CUDA_PATH"))) {
         if (!*cuda_path) return false;
         strlcpy(path, cuda_path, PATH_MAX);
         strlcat(path, "/bin/", PATH_MAX);
-    } else if (commandv(IsWindows() ? "nvcc.exe" : "nvcc", path, PATH_MAX)) {
-        return true;
     } else if (FileExists("/opt/cuda")) {
         strlcpy(path, "/opt/cuda/bin/", PATH_MAX);
     } else {
