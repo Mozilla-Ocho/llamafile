@@ -11,5 +11,10 @@ LLAMAFILE_OBJS =					\
 	$(LLAMAFILE_SRCS:%.c=o/$(MODE)/%.o)		\
 	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)
 
+o/$(MODE)/llamafile/zipalign:				\
+		o/$(MODE)/llamafile/zipalign.o
+
 .PHONY: o/$(MODE)/llamafile
-o/$(MODE)/llamafile: $(LLAMAFILE_OBJS)
+o/$(MODE)/llamafile:					\
+		$(LLAMAFILE_OBJS)			\
+		o/$(MODE)/llamafile/zipalign

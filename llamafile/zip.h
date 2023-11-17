@@ -118,45 +118,56 @@
 
 #define kZipCfileMagic "PK\001\002"
 
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define ZIP_READ16(P)                  \
-  (__extension__({                     \
-    uint16_t __x;                      \
-    __builtin_memcpy(&__x, P, 16 / 8); \
-    __x;                               \
-  }))
-#define ZIP_READ32(P)                  \
-  (__extension__({                     \
-    uint32_t __x;                      \
-    __builtin_memcpy(&__x, P, 32 / 8); \
-    __x;                               \
-  }))
-#define ZIP_READ64(P)                  \
-  (__extension__({                     \
-    uint64_t __x;                      \
-    __builtin_memcpy(&__x, P, 64 / 8); \
-    __x;                               \
-  }))
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define ZIP_SWAP16_(P) __builtin_bswap16(P)
+#define ZIP_SWAP32_(P) __builtin_bswap32(P)
+#define ZIP_SWAP64_(P) __builtin_bswap64(P)
 #else
-#define ZIP_READ16(P)                  \
-  (__extension__({                     \
-    uint16_t __x;                      \
-    __builtin_memcpy(&__x, P, 16 / 8); \
-    __builtin_bswap16(__x);            \
-  }))
-#define ZIP_READ32(P)                  \
-  (__extension__({                     \
-    uint32_t __x;                      \
-    __builtin_memcpy(&__x, P, 32 / 8); \
-    __builtin_bswap32(__x);            \
-  }))
-#define ZIP_READ64(P)                  \
-  (__extension__({                     \
-    uint64_t __x;                      \
-    __builtin_memcpy(&__x, P, 64 / 8); \
-    __builtin_bswap64(__x);            \
-  }))
+#define ZIP_SWAP16_(P) (P)
+#define ZIP_SWAP32_(P) (P)
+#define ZIP_SWAP64_(P) (P)
 #endif
+
+#define ZIP_READ16(P)                           \
+  (__extension__({                              \
+      uint16_t __x;                             \
+      __builtin_memcpy(&__x, P, 16 / 8);        \
+      ZIP_SWAP16_(__x);                         \
+    }))
+#define ZIP_READ32(P)                           \
+  (__extension__({                              \
+      uint32_t __x;                             \
+      __builtin_memcpy(&__x, P, 32 / 8);        \
+      ZIP_SWAP32_(__x);                         \
+    }))
+#define ZIP_READ64(P)                           \
+  (__extension__({                              \
+      uint64_t __x;                             \
+      __builtin_memcpy(&__x, P, 64 / 8);        \
+      ZIP_SWAP64_(__x);                         \
+    }))
+
+#define ZIP_WRITE16(P, X)                       \
+  (__extension__({                              \
+      __typeof__(&(P)[0]) __p = (P);            \
+      uint16_t __x = ZIP_SWAP16_(X);            \
+      __builtin_memcpy(__p, &__x, 16 / 8);      \
+      __p + 16 / 8;                             \
+    }))
+#define ZIP_WRITE32(P, X)                       \
+  (__extension__({                              \
+      __typeof__(&(P)[0]) __p = (P);            \
+      uint32_t __x = ZIP_SWAP32_(X);            \
+      __builtin_memcpy(__p, &__x, 32 / 8);      \
+      __p + 32 / 8;                             \
+    }))
+#define ZIP_WRITE64(P, X)                       \
+  (__extension__({                              \
+      __typeof__(&(P)[0]) __p = (P);            \
+      uint64_t __x = ZIP_SWAP64_(X);            \
+      __builtin_memcpy(__p, &__x, 64 / 8);      \
+      __p + 64 / 8;                             \
+    }))
 
 /* end of central directory record */
 #define ZIP_CDIR_MAGIC(P)         ZIP_READ32(P)

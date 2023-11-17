@@ -128,7 +128,7 @@ struct llamafile *llamafile_open(const char *fname, const char *mode) {
     // the eocd (cdir) says where the central directory (cfile) array is located
     // we consistency check some legacy fields, to be extra sure that it is eocd
     unsigned cnt = 0;
-    for (int i = amt - Min(kZipCdirHdrMinSize, kZipCdir64LocatorSize); i; --i) {
+    for (int i = amt - Min(kZipCdirHdrMinSize, kZipCdir64LocatorSize); i >= 0; --i) {
         uint32_t magic = ZIP_READ32(bufdata + i);
         if (magic == kZipCdir64LocatorMagic && i + kZipCdir64LocatorSize <= amt &&
             pread(fd, bufdata, kZipCdir64HdrMinSize,
