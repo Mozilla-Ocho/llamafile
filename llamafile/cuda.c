@@ -366,7 +366,6 @@ static bool ImportCudaImpl(void) {
 
     // runtime link dynamic shared object
     void *lib;
-    tinyprint(2, "linking ", dso, "...\n", NULL);
     lib = cosmo_dlopen(dso, RTLD_LAZY);
     if (!lib) {
         tinyprint(2, Dlerror(), ": failed to load library\n", NULL);

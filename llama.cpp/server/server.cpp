@@ -6,13 +6,10 @@
 #include "llama.cpp/llama.h"
 #include "llama.cpp/grammar-parser.h"
 #include "llama.cpp/llava/clip.h"
-#include "llama.cpp/server/lib/lib.h"
 #include "llama.cpp/stb_image.h"
+#include "llamafile/llamafile.h"
 
-#ifndef NDEBUG
-// crash the server in debug mode, otherwise send an http 500 error
 #define CPPHTTPLIB_NO_EXCEPTIONS 1
-#endif
 
 #include "httplib.h"
 #include "json.h"
@@ -2542,7 +2539,7 @@ int main(int argc, char **argv)
         snprintf(url, sizeof(url), "http://%s:%d/",
                  sparams.hostname == "0.0.0.0" ? "127.0.0.1" : sparams.hostname.c_str(),
                  sparams.port);
-        LaunchBrowser(url);
+        llamafile_launch_browser(url);
     }
 
     tinyprint(2, "loading weights...\n", NULL);
