@@ -110,7 +110,7 @@ static bool ImportMetalImpl(void) {
             case -1:
                 return false;
             case 0:
-                return true;
+                break;
             case 1:
                 needs_rebuild = true;
                 break;
@@ -203,12 +203,9 @@ static bool ImportMetalImpl(void) {
 }
 
 static void ImportMetal(void) {
-    if (IsXnuSilicon()) {
-        if (ImportMetalImpl()) {
-            ggml_metal.supported = true;
-        } else {
-            tinyprint(2, "couldn't import metal gpu support\n", NULL);
-        }
+    if (IsXnuSilicon() && ImportMetalImpl()) {
+        ggml_metal.supported = true;
+        tinyprint(2, "Apple Metal GPU support successfully loaded\n", NULL);
     }
 }
 

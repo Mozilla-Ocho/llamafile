@@ -405,14 +405,9 @@ static bool ImportCudaImpl(void) {
 }
 
 static void ImportCuda(void) {
-    if (ggml_cuda.disabled) {
-        return;
-    }
-    if (ImportCudaImpl()) {
+    if (!ggml_cuda.disabled && ImportCudaImpl()) {
         ggml_cuda.supported = true;
-        tinyprint(2, "NVIDIA cuBLAS GPU supported locked and loaded\n", NULL);
-    } else {
-        tinyprint(2, "warning: couldn't load Nvidia CUDA GPU support\n", NULL);
+        tinyprint(2, "NVIDIA cuBLAS GPU support successfully loaded\n", NULL);
     }
 }
 
