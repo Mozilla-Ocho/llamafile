@@ -25,8 +25,8 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include <sys/uio.h>
+#include <getopt.h>
 #include <third_party/zlib/zlib.h>
-#include <third_party/getopt/cosmo.h>
 #include "zip.h"
 
 #define USAGE \

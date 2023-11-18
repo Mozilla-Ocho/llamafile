@@ -9,7 +9,7 @@ CXX = $(PREFIX)c++
 
 ARFLAGS = rcsD
 CCFLAGS = -g -O3
-TARGET_ARCH = -Xx86_64,-mssse3
+TARGET_ARCH = -Xx86_64-mssse3
 CPPFLAGS += -iquote. -mcosmo
 
 TMPDIR = o//tmp
