@@ -1,8 +1,6 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
-#include <cosmo.h>
-
 #define LLAMA_API_INTERNAL
 #include "llama.h"
 
@@ -41,22 +39,13 @@
 #endif
 #endif
 
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <io.h>
-#include <stdio.h> // for _fseeki64
-#endif
-
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cinttypes>
 #include <climits>
 #include <cmath>
+#include <cosmo.h>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>
@@ -79,10 +68,6 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
-
-#if defined(_MSC_VER)
-#pragma warning(disable: 4244 4267) // possible loss of data
-#endif
 
 #ifdef __GNUC__
 #ifdef __MINGW32__
@@ -632,20 +617,6 @@ inline void llama_host_free(void * ptr) {
     }
 }
 
-#if defined(_WIN32)
-static std::string llama_format_win_err(DWORD err) {
-    LPSTR buf;
-    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                 NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
-    if (!size) {
-        return "FormatMessageA failed";
-    }
-    std::string ret(buf, size);
-    LocalFree(buf);
-    return ret;
-}
-#endif
-
 struct llama_buffer {
     void * data = NULL;
     size_t size = 0;
@@ -746,7 +717,6 @@ struct llama_mmap {
 
     llama_mmap(const llama_mmap &) = delete;
 
-#ifdef _POSIX_MAPPED_FILES
     static constexpr bool SUPPORTED = true;
 
     llama_mmap(struct llama_file * file, size_t prefetch = (size_t) -1 /* -1 = max value */, bool numa = false) {
@@ -761,13 +731,9 @@ struct llama_mmap {
         }
         is_owned = true;
         int fd = fileno(llamafile_fp(file->file));
-        int flags = MAP_SHARED;
         // prefetch/readahead impairs performance on NUMA systems
         if (numa) { prefetch = 0; }
-#ifdef __linux__
-        if (prefetch) { flags |= MAP_POPULATE; }
-#endif
-        addr = mmap(NULL, size, PROT_READ, flags, fd, 0);
+        addr = mmap(NULL, size, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, 0);
         if (addr == MAP_FAILED) {
             ThrowRuntimeError(format("mmap failed: %s", strerror(errno)));
         }
@@ -797,69 +763,6 @@ struct llama_mmap {
             munmap(addr, size);
         }
     }
-#elif defined(_WIN32)
-    static constexpr bool SUPPORTED = true;
-
-    llama_mmap(struct llama_file * file, bool prefetch = true, bool numa = false) {
-        (void) numa;
-
-        size = file->size;
-
-        HANDLE hFile = (HANDLE) _get_osfhandle(_fileno(file->fp));
-
-        HANDLE hMapping = CreateFileMappingA(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-        DWORD error = GetLastError();
-
-        if (hMapping == NULL) {
-            ThrowRuntimeError(format("CreateFileMappingA failed: %s", llama_format_win_err(error).c_str()));
-        }
-
-        addr = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-        error = GetLastError();
-        CloseHandle(hMapping);
-
-        if (addr == NULL) {
-            ThrowRuntimeError(format("MapViewOfFile failed: %s", llama_format_win_err(error).c_str()));
-        }
-
-        if (prefetch) {
-            // PrefetchVirtualMemory is only present on Windows 8 and above, so we dynamically load it
-            BOOL (WINAPI *pPrefetchVirtualMemory) (HANDLE, ULONG_PTR, PWIN32_MEMORY_RANGE_ENTRY, ULONG);
-            HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
-
-            // may fail on pre-Windows 8 systems
-            pPrefetchVirtualMemory = reinterpret_cast<decltype(pPrefetchVirtualMemory)> (GetProcAddress(hKernel32, "PrefetchVirtualMemory"));
-
-            if (pPrefetchVirtualMemory) {
-                // advise the kernel to preload the mapped memory
-                WIN32_MEMORY_RANGE_ENTRY range;
-                range.VirtualAddress = addr;
-                range.NumberOfBytes = (SIZE_T)size;
-                if (!pPrefetchVirtualMemory(GetCurrentProcess(), 1, &range, 0)) {
-                    fprintf(stderr, "warning: PrefetchVirtualMemory failed: %s\n",
-                            llama_format_win_err(GetLastError()).c_str());
-                }
-            }
-        }
-    }
-
-    ~llama_mmap() {
-        if (!UnmapViewOfFile(addr)) {
-            fprintf(stderr, "warning: UnmapViewOfFile failed: %s\n",
-                    llama_format_win_err(GetLastError()).c_str());
-        }
-    }
-#else
-    static constexpr bool SUPPORTED = false;
-
-    llama_mmap(struct llama_file * file, bool prefetch = true, bool numa = false) {
-        (void) file;
-        (void) prefetch;
-        (void) numa;
-
-        ThrowRuntimeError(std::string("mmap not supported"));
-    }
-#endif
 };
 
 // Represents some region of memory being locked using mlock or VirtualLock;
@@ -7413,11 +7316,7 @@ static void llama_model_quantize_internal(const std::string & fname_inp, const s
 
     // mmap consistently increases speed Linux, and also increases speed on Windows with
     // hot cache. It may cause a slowdown on macOS, possibly related to free memory.
-#if defined(__linux__) || defined(_WIN32)
-    constexpr bool use_mmap = true;
-#else
-    constexpr bool use_mmap = false;
-#endif
+    bool use_mmap = !IsXnu();
 
     llama_model_loader ml(fname_inp, use_mmap);
     if (ml.use_mmap) {

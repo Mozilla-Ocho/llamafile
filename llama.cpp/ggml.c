@@ -1,106 +1,36 @@
 // -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set net ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
-#define _CRT_SECURE_NO_DEPRECATE // Disables ridiculous "unsafe" warnigns on Windows
-#define _USE_MATH_DEFINES // For M_PI on MSVC
-
 #include "ggml.h"
 #include "ggml-impl.h"
 #include "ggml-quants.h"
+#include "ggml-cuda.h"
+#include "ggml-metal.h"
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
-#include <malloc.h> // using malloc.h with MSC/MINGW
-#elif !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__)
-#include <alloca.h>
-#endif
-
-#include <cosmo.h>
-#include <fcntl.h>
 #include <assert.h>
+#include <cosmo.h>
 #include <errno.h>
-#include <time.h>
+#include <fcntl.h>
+#include <float.h>
+#include <inttypes.h>
+#include <limits.h>
 #include <math.h>
+#include <pthread.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdatomic.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <float.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <signal.h>
+#include <sys/auxv.h>
 #include <sys/mman.h>
-
-#ifdef GGML_USE_METAL
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
-#endif
-
-#if defined(_MSC_VER)
-// disable "possible loss of data" to avoid hundreds of casts
-// we should just be careful :)
-#pragma warning(disable: 4244 4267)
-
-// disable POSIX deprecation warnigns
-// these functions are never going away, anyway
-#pragma warning(disable: 4996)
-#endif
-
-#if defined(_WIN32)
-
-#include <windows.h>
-
-typedef volatile LONG atomic_int;
-typedef atomic_int atomic_bool;
-
-static void atomic_store(atomic_int * ptr, LONG val) {
-    InterlockedExchange(ptr, val);
-}
-static LONG atomic_load(atomic_int * ptr) {
-    return InterlockedCompareExchange(ptr, 0, 0);
-}
-static LONG atomic_fetch_add(atomic_int * ptr, LONG inc) {
-    return InterlockedExchangeAdd(ptr, inc);
-}
-static LONG atomic_fetch_sub(atomic_int * ptr, LONG dec) {
-    return atomic_fetch_add(ptr, -(dec));
-}
-
-typedef HANDLE pthread_t;
-
-typedef DWORD thread_ret_t;
-static int pthread_create(pthread_t * out, void * unused, thread_ret_t(*func)(void *), void * arg) {
-    (void) unused;
-    HANDLE handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) func, arg, 0, NULL);
-    if (handle == NULL)
-    {
-        return EAGAIN;
-    }
-
-    *out = handle;
-    return 0;
-}
-
-static int pthread_join(pthread_t thread, void * unused) {
-    (void) unused;
-    int ret = (int) WaitForSingleObject(thread, INFINITE);
-    CloseHandle(thread);
-    return ret;
-}
-
-static int sched_yield (void) {
-    Sleep (0);
-    return 0;
-}
-#else
-#include <pthread.h>
-#include <stdatomic.h>
 
 typedef void * thread_ret_t;
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#endif
 
 #ifdef GGML_USE_CPU_HBM
 #include <hbwmalloc.h>
@@ -146,52 +76,23 @@ typedef void * thread_ret_t;
 // end of logging block
 //
 
-#ifdef GGML_USE_ACCELERATE
-// uncomment to use vDSP for soft max computation
-// note: not sure if it is actually faster
-//#define GGML_SOFT_MAX_ACCELERATE
-#endif
-
-#if defined(_MSC_VER) || defined(__MINGW32__)
-#define GGML_ALIGNED_MALLOC(size) _aligned_malloc(size, GGML_MEM_ALIGN)
-#define GGML_ALIGNED_FREE(ptr)    _aligned_free(ptr)
-#else
-inline static void * ggml_aligned_malloc(size_t size) {
+static void * ggml_aligned_malloc(size_t size) {
     if (size == 0) {
         GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_aligned_malloc!\n");
         return NULL;
     }
     void * aligned_memory = NULL;
-#ifdef GGML_USE_CPU_HBM
-    int result = hbw_posix_memalign(&aligned_memory, 16, size);
-#elif GGML_USE_METAL
-    int result = posix_memalign(&aligned_memory, sysconf(_SC_PAGESIZE), size);
-#else
-    int result = posix_memalign(&aligned_memory, GGML_MEM_ALIGN, size);
-#endif
-    if (result != 0) {
-        // Handle allocation failure
-        const char *error_desc = "unknown allocation error";
-        switch (result) {
-            case EINVAL:
-                error_desc = "invalid alignment value";
-                break;
-            case ENOMEM:
-                error_desc = "insufficient memory";
-                break;
-        }
-        GGML_PRINT("%s: %s (attempted to allocate %6.2f MB)\n", __func__, error_desc, size/(1024.0*1024.0));
+    errno_t err = posix_memalign(&aligned_memory, getauxval(AT_PAGESZ), size);
+    if (err) {
+        GGML_PRINT("%s: %s (attempted to allocate %6.2f MB)\n", __func__, strerror(err), size/(1024.0*1024.0));
         return NULL;
     }
     return aligned_memory;
 }
-#define GGML_ALIGNED_MALLOC(size) ggml_aligned_malloc(size)
-#ifdef GGML_USE_CPU_HBM
-#define GGML_ALIGNED_FREE(ptr)    if(NULL != ptr) hbw_free(ptr)
-#else
-#define GGML_ALIGNED_FREE(ptr)    free(ptr)
-#endif
-#endif
+
+static void ggml_aligned_free(void *p) {
+    free(p);
+}
 
 #define UNUSED GGML_UNUSED
 #define SWAP(x, y, T) do { T SWAP = x; x = y; y = SWAP; } while (0)
@@ -213,26 +114,6 @@ inline static void * ggml_aligned_malloc(size_t size) {
     GGML_TENSOR_LOCALS(size_t,  nb1, src1, nb) \
     GGML_TENSOR_LOCALS(int64_t, ne,  dst,  ne) \
     GGML_TENSOR_LOCALS(size_t,  nb,  dst,  nb)
-
-#if defined(GGML_USE_ACCELERATE)
-#include <Accelerate/Accelerate.h>
-#if defined(GGML_USE_CLBLAST) // allow usage of CLBlast alongside Accelerate functions
-#include "ggml-opencl.h"
-#endif
-#elif defined(GGML_USE_OPENBLAS)
-#if defined(GGML_BLAS_USE_MKL)
-#include <mkl.h>
-#else
-#include <cblas.h>
-#endif
-#elif defined(GGML_USE_CUBLAS)
-#include "ggml-cuda.h"
-#elif defined(GGML_USE_CLBLAST)
-#include "ggml-opencl.h"
-#endif
-
-#include "ggml-cuda.h"
-#include "ggml-metal.h"
 
 // floating point type used to accumulate sums
 typedef double ggml_float;
@@ -304,31 +185,8 @@ void ggml_fp32_to_fp16_row(const float * x, ggml_fp16_t * y, int n) {
 // timing
 //
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
-static int64_t timer_freq, timer_start;
-void ggml_time_init(void) {
-    LARGE_INTEGER t;
-    QueryPerformanceFrequency(&t);
-    timer_freq = t.QuadPart;
-
-    // The multiplication by 1000 or 1000000 below can cause an overflow if timer_freq
-    // and the uptime is high enough.
-    // We subtract the program start time to reduce the likelihood of that happening.
-    QueryPerformanceCounter(&t);
-    timer_start = t.QuadPart;
-}
-int64_t ggml_time_ms(void) {
-    LARGE_INTEGER t;
-    QueryPerformanceCounter(&t);
-    return ((t.QuadPart-timer_start) * 1000) / timer_freq;
-}
-int64_t ggml_time_us(void) {
-    LARGE_INTEGER t;
-    QueryPerformanceCounter(&t);
-    return ((t.QuadPart-timer_start) * 1000000) / timer_freq;
-}
-#else
 void ggml_time_init(void) {}
+
 int64_t ggml_time_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -340,7 +198,6 @@ int64_t ggml_time_us(void) {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (int64_t)ts.tv_sec*1000000 + (int64_t)ts.tv_nsec/1000;
 }
-#endif
 
 int64_t ggml_cycles(void) {
     return clock();
@@ -1844,7 +1701,10 @@ void ggml_numa_init(void) {
         return;
     }
 
-#ifdef __linux__
+    if (!IsLinux()) {
+        return;  // todo
+    }
+
     struct stat st;
     char path[256];
     int rv;
@@ -1897,9 +1757,6 @@ void ggml_numa_init(void) {
             fclose(fptr);
         }
     }
-#else
-    // TODO
-#endif
 }
 
 bool ggml_is_numa(void) {
@@ -2239,7 +2096,7 @@ struct ggml_context * ggml_init(struct ggml_init_params params) {
 
     *ctx = (struct ggml_context) {
         /*.mem_size           =*/ mem_size,
-        /*.mem_buffer         =*/ params.mem_buffer ? params.mem_buffer : GGML_ALIGNED_MALLOC(mem_size),
+        /*.mem_buffer         =*/ params.mem_buffer ? params.mem_buffer : ggml_aligned_malloc(mem_size),
         /*.mem_buffer_owned   =*/ params.mem_buffer ? false : true,
         /*.no_alloc           =*/ params.no_alloc,
         /*.no_alloc_save      =*/ params.no_alloc,
@@ -2275,7 +2132,7 @@ void ggml_free(struct ggml_context * ctx) {
                     __func__, i, ggml_used_mem(ctx));
 
             if (ctx->mem_buffer_owned) {
-                GGML_ALIGNED_FREE(ctx->mem_buffer);
+                ggml_aligned_free(ctx->mem_buffer);
             }
 
             found = true;
@@ -15880,64 +15737,7 @@ size_t ggml_graph_overhead(void) {
 // I tried using spin locks, but not sure how to use them correctly - the things I tried were slower than busy loops
 //
 
-#ifdef __APPLE__
-
-//#include <os/lock.h>
-//
-//typedef os_unfair_lock ggml_lock_t;
-//
-//#define ggml_lock_init(x)    UNUSED(x)
-//#define ggml_lock_destroy(x) UNUSED(x)
-//#define ggml_lock_lock       os_unfair_lock_lock
-//#define ggml_lock_unlock     os_unfair_lock_unlock
-//
-//#define GGML_LOCK_INITIALIZER OS_UNFAIR_LOCK_INIT
-
-typedef int ggml_lock_t;
-
-#define ggml_lock_init(x)    UNUSED(x)
-#define ggml_lock_destroy(x) UNUSED(x)
-#define ggml_lock_lock(x)    UNUSED(x)
-#define ggml_lock_unlock(x)  UNUSED(x)
-
-#define GGML_LOCK_INITIALIZER 0
-
-typedef pthread_t ggml_thread_t;
-
-#define ggml_thread_create pthread_create
-#define ggml_thread_join   pthread_join
-
-#else
-
-//typedef pthread_spinlock_t ggml_lock_t;
-
-//#define ggml_lock_init(x) pthread_spin_init(x, PTHREAD_PROCESS_PRIVATE)
-//#define ggml_lock_destroy pthread_spin_destroy
-//#define ggml_lock_lock    pthread_spin_lock
-//#define ggml_lock_unlock  pthread_spin_unlock
-
-typedef int ggml_lock_t;
-
-#define ggml_lock_init(x)    UNUSED(x)
-#define ggml_lock_destroy(x) UNUSED(x)
-#if defined(__x86_64__) || (defined(_MSC_VER) && defined(_M_AMD64))
-#define ggml_lock_lock(x)    _mm_pause()
-#else
-#define ggml_lock_lock(x)    UNUSED(x)
-#endif
-#define ggml_lock_unlock(x)  UNUSED(x)
-
-#define GGML_LOCK_INITIALIZER 0
-
-typedef pthread_t ggml_thread_t;
-
-#define ggml_thread_create pthread_create
-#define ggml_thread_join   pthread_join
-
-#endif
-
 // Android's libc implementation "bionic" does not support setting affinity
-#if defined(__linux__) && !defined(__BIONIC__)
 static void set_numa_thread_affinity(int thread_n, int n_threads) {
     if (!ggml_is_numa()) {
         return;
@@ -15984,12 +15784,6 @@ static void clear_numa_thread_affinity(void) {
 
     CPU_FREE(cpus);
 }
-#else
-// TODO: Windows etc.
-// (the linux implementation may also work on BSD, someone should test)
-static void set_numa_thread_affinity(int thread_n, int n_threads) { UNUSED(thread_n); UNUSED(n_threads);  }
-static void clear_numa_thread_affinity(void) {}
-#endif
 
 struct ggml_compute_state_shared {
     const struct ggml_cgraph * cgraph;
@@ -16009,7 +15803,7 @@ struct ggml_compute_state_shared {
 };
 
 struct ggml_compute_state {
-    ggml_thread_t thrd;
+    pthread_t thrd;
     int ith;
     struct ggml_compute_state_shared * shared;
 };
@@ -16657,7 +16451,7 @@ int ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cplan * cplan) {
                 .shared = &state_shared,
             };
 
-            const int rc = ggml_thread_create(&workers[j].thrd, NULL, ggml_graph_compute_thread, &workers[j]);
+            const int rc = pthread_create(&workers[j].thrd, NULL, ggml_graph_compute_thread, &workers[j]);
             GGML_ASSERT(rc == 0);
             UNUSED(rc);
         }
@@ -16678,7 +16472,7 @@ int ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cplan * cplan) {
     // join or kill thread pool
     if (n_threads > 1) {
         for (int j = 1; j < n_threads; j++) {
-            const int rc = ggml_thread_join(workers[j].thrd, NULL);
+            const int rc = pthread_join(workers[j].thrd, NULL);
             GGML_ASSERT(rc == 0);
         }
     }
@@ -18667,7 +18461,7 @@ static bool gguf_fread_str(struct llamafile * file, struct gguf_str * p, size_t 
 }
 
 struct gguf_context * gguf_init_empty(void) {
-    struct gguf_context * ctx = GGML_ALIGNED_MALLOC(sizeof(struct gguf_context));
+    struct gguf_context * ctx = ggml_aligned_malloc(sizeof(struct gguf_context));
 
     memcpy(ctx->header.magic, GGUF_MAGIC, sizeof(ctx->header.magic));
     ctx->header.version   = GGUF_VERSION;
@@ -18711,7 +18505,7 @@ struct gguf_context * gguf_init_from_file(struct llamafile * file, struct gguf_i
 
     bool ok = true;
 
-    struct gguf_context * ctx = GGML_ALIGNED_MALLOC(sizeof(struct gguf_context));
+    struct gguf_context * ctx = ggml_aligned_malloc(sizeof(struct gguf_context));
 
     // read the header
     {
@@ -19019,7 +18813,7 @@ void gguf_free(struct gguf_context * ctx) {
         free(ctx->infos);
     }
 
-    GGML_ALIGNED_FREE(ctx);
+    ggml_aligned_free(ctx);
 }
 
 const char * gguf_type_name(enum gguf_type type) {

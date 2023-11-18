@@ -216,7 +216,7 @@ struct llamafile *llamafile_open(const char *fname, const char *mode) {
     off_t mapoff = off & -pagesz;
     long skew = off - mapoff;
     file->mapsize = skew + file->size;
-    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED, fd, mapoff);
+    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, mapoff);
     if (file->mapping == MAP_FAILED) {
         fprintf(stderr, "warning: failed to map %s from %s: %s\n",
                 fname, prog, strerror(errno));

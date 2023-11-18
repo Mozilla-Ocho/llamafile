@@ -1778,7 +1778,6 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
         printf("  --no-mmap             do not memory-map model (slower load but may reduce pageouts if not using mlock)\n");
     }
     printf("  --numa                attempt optimizations that help on some NUMA systems\n");
-#ifdef LLAMA_SUPPORTS_GPU_OFFLOAD
     printf("  -ngl N, --n-gpu-layers N\n");
     printf("                        number of layers to store in VRAM\n");
     printf("  -ts SPLIT --tensor-split SPLIT\n");
@@ -1787,7 +1786,6 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("  -nommq, --no-mul-mat-q\n");
     printf("                        use cuBLAS instead of custom mul_mat_q CUDA kernels.\n");
     printf("                        Not recommended since this is both slower and uses more VRAM.\n");
-#endif
     printf("  -m FNAME, --model FNAME\n");
     printf("                        model path (default: %s)\n", params.model.c_str());
     printf("  -a ALIAS, --alias ALIAS\n");
@@ -1990,13 +1988,7 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 invalid_param = true;
                 break;
             }
-#ifdef LLAMA_SUPPORTS_GPU_OFFLOAD
             params.n_gpu_layers = std::stoi(argv[i]);
-#else
-            LOG_WARNING("Not compiled with GPU offload support, --n-gpu-layers option will be ignored. "
-                        "See main README.md for information on enabling GPU BLAS support",
-                        {{"n_gpu_layers", params.n_gpu_layers}});
-#endif
         }
         else if (arg == "--tensor-split" || arg == "-ts")
         {
@@ -2005,7 +1997,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 invalid_param = true;
                 break;
             }
-#ifdef GGML_USE_CUBLAS
             std::string arg_next = argv[i];
 
             // split string by , and /
@@ -2025,17 +2016,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                     params.tensor_split[i_device] = 0.0f;
                 }
             }
-#else
-            LOG_WARNING("llama.cpp was compiled without cuBLAS. It is not possible to set a tensor split.\n", {});
-#endif // GGML_USE_CUBLAS
         }
         else if (arg == "--no-mul-mat-q" || arg == "-nommq")
         {
-#ifdef GGML_USE_CUBLAS
             params.mul_mat_q = false;
-#else
-            LOG_WARNING("warning: llama.cpp was compiled without cuBLAS. Disabling mul_mat_q kernels has no effect.\n", {});
-#endif // GGML_USE_CUBLAS
         }
         else if (arg == "--main-gpu" || arg == "-mg")
         {
@@ -2044,11 +2028,7 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 invalid_param = true;
                 break;
             }
-#ifdef GGML_USE_CUBLAS
             params.main_gpu = std::stoi(argv[i]);
-#else
-            LOG_WARNING("llama.cpp was compiled without cuBLAS. It is not possible to set a main GPU.", {});
-#endif
         }
         else if (arg == "--lora")
         {
