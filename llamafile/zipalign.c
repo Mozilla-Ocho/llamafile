@@ -24,17 +24,26 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <libgen.h>
-#include <sys/uio.h>
 #include <getopt.h>
+#include <stdbool.h>
+#include <sys/uio.h>
 #include <third_party/zlib/zlib.h>
 #include "zip.h"
 
 #define USAGE \
   " ZIP FILE...\n\
 \n\
-SYNOPSIS\n\
+DESCRIPTION\n\
 \n\
-  Adds aligned uncompressed files to PKZIP archives.\n\
+  Adds aligned uncompressed files to PKZIP archive\n\
+\n\
+  This tool is designed to concatenate gigabytes of LLM weights to an\n\
+  executable. This command goes 10x faster than `zip -j0`. Unlike zip\n\
+  you are not required to use the .com file extension for it to work.\n\
+  But most importantly, this tool has a flag that lets you insert zip\n\
+  files that are aligned on a specific boundary. The result is things\n\
+  like GPUs that have specific memory alignment requirements will now\n\
+  be able to perform math directly on the zip file's mmap()'d weights\n\
 \n\
 FLAGS\n\
 \n\
@@ -42,6 +51,7 @@ FLAGS\n\
   -N        nondeterministic mode\n\
   -a INT    alignment (default 65536)\n\
   -j        strip directory components\n\
+  -0        store uncompressed (currently default)\n\
 \n"
 
 #define Min(a, b) ((a) < (b) ? (a) : (b))
@@ -51,9 +61,9 @@ FLAGS\n\
   ((HOUR) << 11 | (MINUTE) << 5 | (SECOND) >> 1)
 
 static const char *prog;
-static int alignment = 65536;
-static bool nondeterministic;
-static int strip_directory_components;
+static int FLAG_junk;
+static int FLAG_alignment = 65536;
+static bool FLAG_nondeterministic;
 
 static wontreturn void Die(const char *thing, const char *reason) {
     tinyprint(2, thing, ": ", reason, "\n", NULL);
@@ -87,35 +97,8 @@ static void *Realloc(void *p, size_t n) {
 }
 
 static wontreturn void PrintUsage(int fd, int rc) {
-    tinyprint(fd, "USAGE\n\n  ", prog, USAGE, NULL);
+    tinyprint(fd, "SYNOPSIS\n\n  ", prog, USAGE, NULL);
     exit(rc);
-}
-
-static void GetOpts(int argc, char *argv[]) {
-    int opt;
-    while ((opt = getopt(argc, argv, "hjNa:")) != -1) {
-        switch (opt) {
-            case 'N':
-                nondeterministic = true;
-                break;
-            case 'j':
-                strip_directory_components = true;
-                break;
-            case 'a':
-                alignment = atoi(optarg);
-                if (alignment < 1) {
-                    Die(prog, "alignment must be at least 1");
-                }
-                if (alignment & (alignment - 1)) {
-                    Die(prog, "alignment must be two power");
-                }
-                break;
-            case 'h':
-                PrintUsage(1, 0);
-            default:
-                PrintUsage(2, 1);
-        }
-    }
 }
 
 static void GetDosLocalTime(int64_t utcunixts,
@@ -134,9 +117,34 @@ int main(int argc, char *argv[]) {
     if (!prog) prog = "zipalign";
 
     // parse flags
-    GetOpts(argc, argv);
+    int opt;
+    while ((opt = getopt(argc, argv, "hj0Na:")) != -1) {
+        switch (opt) {
+            case '0':
+                break;
+            case 'j':
+                FLAG_junk = true;
+                break;
+            case 'N':
+                FLAG_nondeterministic = true;
+                break;
+            case 'a':
+                FLAG_alignment = atoi(optarg);
+                if (FLAG_alignment < 1) {
+                    Die(prog, "FLAG_alignment must be at least 1");
+                }
+                if (FLAG_alignment & (FLAG_alignment - 1)) {
+                    Die(prog, "FLAG_alignment must be two power");
+                }
+                break;
+            case 'h':
+                PrintUsage(1, 0);
+            default:
+                PrintUsage(2, 1);
+        }
+    }
     if (optind == argc) {
-        Die(prog, "missing output zip");
+        Die(prog, "missing output argument");
     }
 
     // open output file
@@ -160,7 +168,7 @@ int main(int argc, char *argv[]) {
         off = zsize - 65536;
         amt = zsize - off;
     }
-    char *last64 = Malloc(amt);
+    static char last64[65536];
     if (pread(zfd, last64, amt, off) != amt) {
         DieSys(zpath);
     }
@@ -195,7 +203,6 @@ int main(int argc, char *argv[]) {
     if (!cnt) {
         amt = 0;
     }
-    free(last64);
 
     // read central directory
     uint8_t *cdir = Malloc(amt);
@@ -205,13 +212,12 @@ int main(int argc, char *argv[]) {
 
     // get time
     struct timespec now;
-    if (nondeterministic) {
+    uint16_t mtime, mdate;
+    if (FLAG_nondeterministic) {
         now = timespec_real();
     } else {
         now = timespec_fromseconds(1700000000);
     }
-    int64_t ft = (now.tv_sec + 11644473600) * 10000000;
-    uint16_t mtime, mdate;
     GetDosLocalTime(now.tv_sec, &mtime, &mdate);
 
     // add inputs
@@ -230,15 +236,19 @@ int main(int argc, char *argv[]) {
 
         // construct zip entry name
         char *name = StrDup(path);
-        if (strip_directory_components) {
+        if (FLAG_junk) {
             name = basename(name);
+        } else {
+            while (*name == '/') {
+                ++name;
+            }
         }
 
         // determine size and alignment of local file header
         size_t namlen = strlen(name);
-        size_t extlen = (2 + 2 + 8 + 8) + (2 + 2 + 4 + 2 + 2 + 8 + 8 + 8);
+        size_t extlen = (2 + 2 + 8 + 8);
         size_t hdrlen = kZipLfileHdrMinSize + namlen + extlen;
-        while ((zsize + hdrlen) & (alignment - 1)) ++zsize;
+        while ((zsize + hdrlen) & (FLAG_alignment - 1)) ++zsize;
 
         // copy file
         ssize_t rc;
@@ -265,8 +275,8 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE16(p, mtime);
         p = ZIP_WRITE16(p, mdate);
         p = ZIP_WRITE32(p, crc);
-        p = ZIP_WRITE32(p, Min(size, 0xffffffffu));  // compressed size
-        p = ZIP_WRITE32(p, Min(size, 0xffffffffu));  // uncompressed size
+        p = ZIP_WRITE32(p, 0xffffffffu);  // compressed size
+        p = ZIP_WRITE32(p, 0xffffffffu);  // uncompressed size
         p = ZIP_WRITE16(p, namlen);
         p = ZIP_WRITE16(p, extlen);
         p = mempcpy(p, name, namlen);
@@ -276,15 +286,6 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE64(p, size);  // uncompressed size
         p = ZIP_WRITE64(p, size);  // compressed size
 
-        p = ZIP_WRITE16(p, kZipExtraNtfs);
-        p = ZIP_WRITE16(p, 4 + 2 + 2 + 8 + 8 + 8);
-        p = ZIP_WRITE32(p, 0);          // reserved
-        p = ZIP_WRITE16(p, 1);          // attribute tag
-        p = ZIP_WRITE16(p, 8 + 8 + 8);  // size of attribute
-        p = ZIP_WRITE64(p, ft);         // modified time
-        p = ZIP_WRITE64(p, ft);         // access time
-        p = ZIP_WRITE64(p, ft);         // creation time
-
         unassert(p == lochdr + hdrlen);
         if (pwrite(zfd, lochdr, hdrlen, zsize) != hdrlen) {
             DieSys(zpath);
@@ -292,7 +293,7 @@ int main(int argc, char *argv[]) {
         free(lochdr);
 
         // create central directory entry
-        extlen = (2 + 2 + 8 + 8 + 8) + (2 + 2 + 4 + 2 + 2 + 8 + 8 + 8);
+        extlen = (2 + 2 + 8 + 8 + 8);
         hdrlen = kZipCfileHdrMinSize + namlen + extlen;
         cdir = Realloc(cdir, amt + hdrlen);
         uint8_t *cdirhdr = cdir + amt;
@@ -307,15 +308,15 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE16(p, mtime);
         p = ZIP_WRITE16(p, mdate);
         p = ZIP_WRITE32(p, crc);
-        p = ZIP_WRITE32(p, Min(size, 0xffffffffu));  // compressed size
-        p = ZIP_WRITE32(p, Min(size, 0xffffffffu));  // uncompressed size
+        p = ZIP_WRITE32(p, 0xffffffffu);  // compressed size
+        p = ZIP_WRITE32(p, 0xffffffffu);  // uncompressed size
         p = ZIP_WRITE16(p, namlen);
         p = ZIP_WRITE16(p, extlen);
         p = ZIP_WRITE16(p, 0);  // comment length
         p = ZIP_WRITE16(p, 0);  // disk number start
         p = ZIP_WRITE16(p, kZipIattrBinary);
         p = ZIP_WRITE32(p, 0100644u << 16);  // external file attributes
-        p = ZIP_WRITE32(p, Min(zsize, 0xffffffffu));
+        p = ZIP_WRITE32(p, 0xffffffffu); // lfile offset
         p = mempcpy(p, name, namlen);
 
         p = ZIP_WRITE16(p, kZipExtraZip64);
@@ -323,16 +324,6 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE64(p, size);   // uncompressed size
         p = ZIP_WRITE64(p, size);   // compressed size
         p = ZIP_WRITE64(p, zsize);  // lfile offset
-
-        p = ZIP_WRITE16(p, kZipExtraNtfs);
-        p = ZIP_WRITE16(p, 4 + 2 + 2 + 8 + 8 + 8);
-        p = ZIP_WRITE32(p, 0);          // reserved
-        p = ZIP_WRITE16(p, 1);          // attribute tag
-        p = ZIP_WRITE16(p, 8 + 8 + 8);  // size of attribute
-        p = ZIP_WRITE64(p, ft);         // modified time
-        p = ZIP_WRITE64(p, ft);         // access time
-        p = ZIP_WRITE64(p, ft);         // creation time
-
         unassert(p == cdirhdr + hdrlen);
 
         // finish up
@@ -343,30 +334,17 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // write out the central directory
+    // write out central directory
     if (pwrite(zfd, cdir, amt, zsize) != amt) {
         DieSys(zpath);
     }
     free(cdir);
 
-    char eocd[kZipCdirHdrMinSize];
-    char *p = eocd;
-    p = ZIP_WRITE32(p, kZipCdirHdrMagic);
-    p = ZIP_WRITE16(p, 0);  // number of this disk
-    p = ZIP_WRITE16(p, 0);  // number of disks
-    p = ZIP_WRITE16(p, cnt);  // number of records on disk
-    p = ZIP_WRITE16(p, cnt);  // number of records
-    p = ZIP_WRITE32(p, amt);  // size of central directory
-    p = ZIP_WRITE32(p, Min(zsize, 0xffffffffu));  // offset of central directory
-    p = ZIP_WRITE16(p, 0);  // comment length
-    if (pwrite(zfd, eocd, kZipCdirHdrMinSize, zsize + amt) != kZipCdirHdrMinSize) {
-        DieSys(zpath);
-    }
-
-    char eocd64[kZipCdir64HdrMinSize];
-    p = eocd64;
+    // write out end of central directory
+    uint8_t eocd[kZipCdirHdrMinSize + kZipCdir64HdrMinSize + kZipCdir64LocatorSize];
+    uint8_t *p = eocd;
     p = ZIP_WRITE32(p, kZipCdir64HdrMagic);
-    p = ZIP_WRITE64(p, sizeof(eocd64) - 12);  // size of eocd64
+    p = ZIP_WRITE64(p, kZipCdir64HdrMinSize - 12);  // size of eocd64
     p = ZIP_WRITE16(p, kZipOsUnix << 8 | kZipEra2001);  // version made by
     p = ZIP_WRITE16(p, kZipEra2001);  // version needed to extract
     p = ZIP_WRITE32(p, 0);  // number of this disk
@@ -375,17 +353,20 @@ int main(int argc, char *argv[]) {
     p = ZIP_WRITE64(p, cnt);  // number of records
     p = ZIP_WRITE64(p, amt);  // size of central directory
     p = ZIP_WRITE64(p, zsize);  // offset of start of central directory
-    if (pwrite(zfd, eocd64, kZipCdir64HdrMinSize, zsize + amt + kZipCdirHdrMinSize) != kZipCdir64HdrMinSize) {
-        DieSys(zpath);
-    }
-
-    char locate64[kZipCdir64LocatorSize];
-    p = locate64;
     p = ZIP_WRITE32(p, kZipCdir64LocatorMagic);
     p = ZIP_WRITE32(p, 0);  // number of disk with eocd64
     p = ZIP_WRITE64(p, zsize + amt);  // offset of eocd64
     p = ZIP_WRITE32(p, 1);  // total number of disks
-    if (pwrite(zfd, locate64, kZipCdir64LocatorSize, zsize + amt + kZipCdirHdrMinSize + kZipCdir64HdrMinSize) != kZipCdir64LocatorSize) {
+    p = ZIP_WRITE32(p, kZipCdirHdrMagic);
+    p = ZIP_WRITE16(p, 0);  // number of this disk
+    p = ZIP_WRITE16(p, 0);  // number of disks
+    p = ZIP_WRITE16(p, cnt);  // number of records on disk
+    p = ZIP_WRITE16(p, cnt);  // number of records
+    p = ZIP_WRITE32(p, amt);  // size of central directory
+    p = ZIP_WRITE32(p, 0xffffffffu);  // offset of central directory
+    p = ZIP_WRITE16(p, 0);  // comment length
+    unassert(p == eocd + sizeof(eocd));
+    if (pwrite(zfd, eocd, sizeof(eocd), zsize + amt) != sizeof(eocd)) {
         DieSys(zpath);
     }
 

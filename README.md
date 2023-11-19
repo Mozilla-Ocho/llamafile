@@ -89,7 +89,7 @@ it to your path.
 ```sh
 mkdir -p cosmocc
 cd cosmocc
-curl https://cosmo.zip/pub/cosmocc/cosmocc.zip >cosmocc.zip
+curl https://github.com/jart/cosmopolitan/releases/download/3.1/cosmocc-3.1.zip >cosmocc.zip
 unzip cosmocc.zip
 cd ..
 export PATH="$PWD/cosmocc/bin:$PATH"
@@ -114,26 +114,183 @@ o//llama.cpp/main/main \
   -p $'```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
-Here's an example of how to run the HTTP server. This example includes
-its own [`.args` file](llama.cpp/server/.args) which, by default,
-assumes `llava-v1.5-7b-Q8_0.gguf` and `llava-v1.5-7b-mmproj-Q8_0.gguf`
-have been added to either (1) the current directory, or (2) placed
-inside the PKZIP file structure of the executable. It's important that
-you add large files to your zip executable archive using a tool we wrote
-called `zipalign`. Our command goes 10x faster than the `zip` command.
-It also inserts the weights without compression so they're aligned on a
-page size boundary. That way, the metal GPU is able to map your weights
-directly from the ZIP archive.
+Here's an example of how to run the HTTP server in such a way that the
+weights are embedded inside the executable.
 
 ```sh
 make -j8
-o//llamafile/zipalign -j \
+
+o//llamafile/zipalign -j0 \
   o//llama.cpp/server/server \
   ~/weights/llava-v1.5-7b-Q8_0.gguf \
   ~/weights/llava-v1.5-7b-mmproj-Q8_0.gguf
-o//llama.cpp/server/server
+
+o//llama.cpp/server/server \
+  -m llava-v1.5-7b-Q8_0.gguf \
+  --mmproj llava-v1.5-7b-mmproj-Q8_0.gguf \
+  --host 0.0.0.0
 ```
 
 The above command will launch a browser tab on your personal computer to
-display a web interface that lets you chat with your LLM and upload
+display a web interface. It lets you chat with your LLM and upload
 images to it.
+
+If you want to be able to just say:
+
+```
+./server
+```
+
+And have it run the web server without having to specify arguments (for
+the paths you already know are in there), then you can add a special
+`.args` to the zip archive, which specifies the default arguments. In
+this case, we're going to try our luck with the normal `zip` command,
+which requires we temporarily rename the file. First, let's create the
+arguments file:
+
+```
+cat <<EOF >.args
+-m
+llava-v1.5-7b-Q8_0.gguf
+--mmproj
+llava-v1.5-7b-mmproj-Q8_0.gguf
+--host
+0.0.0.0
+...
+EOF
+```
+
+As we can see above, there's one argument per line. The `...` argument
+optionally specifies where any additional CLI arguments passed by the
+user are to be inserted. Next, we'll add the argument file to the
+executable:
+
+```
+mv o//llama.cpp/server/server server.com
+zip server.com .args
+mv server.com server
+./server
+```
+
+Congratulations. You've just made your own LLM server that's easy to
+share with your friends.
+
+## zipalign documentation
+
+```
+SYNOPSIS
+
+  o//llamafile/zipalign ZIP FILE...
+
+DESCRIPTION
+
+  Adds aligned uncompressed files to PKZIP archive
+
+  This tool is designed to concatenate gigabytes of LLM weights to an
+  executable. This command goes 10x faster than `zip -j0`. Unlike zip
+  you are not required to use the .com file extension for it to work.
+  But most importantly, this tool has a flag that lets you insert zip
+  files that are aligned on a specific boundary. The result is things
+  like GPUs that have specific memory alignment requirements will now
+  be able to perform math directly on the zip file's mmap()'d weights
+
+FLAGS
+
+  -h        help
+  -N        nondeterministic mode
+  -a INT    alignment (default 65536)
+  -j        strip directory components
+  -0        store uncompressed (currently default)
+```
+
+## Technical Details
+
+Here is a succinct overview of the tricks we used to create the fattest
+executable format ever. The long story short is llamafile is a shell
+script that launches itself and runs inference on embedded weights in
+milliseconds without needing to be copied or installed. What makes that
+possible is mmap(). Both the llama.cpp executable and the weights are
+concatenated onto the shell script. A tiny loader program is then
+extracted by the shell script, which maps the executable into memory.
+The llama.cpp executable then opens the shell script again as a file,
+and calls mmap() again to pull the weights into memory and make them
+directly accessible to both the CPU and GPU.
+
+### ZIP Weights Embedding
+
+The trick to embedding weights inside llama.cpp executables is to ensure
+the local file is aligned on a page size boundary. That way, assuming
+the zip file is uncompressed, once it's mmap()'d into memory we can pass
+pointers directly to GPUs like Apple Metal, which require that data be
+page size aligned. Since no existing ZIP archiving tool has an alignment
+flag, we had to write about [400 lines of code](llamafile/zipalign.c) to
+insert the ZIP files ourselves. However, once there, every existing ZIP
+program should be able to read them, provided they support ZIP64. This
+makes the weights much more easily accessible than they otherwise would
+have been, had we invented our own file format for concatenated files.
+
+### Microarchitectural Portability
+
+On Intel and AMD microprocessors, llama.cpp spends most of its time in
+the matmul quants, which are usually written thrice for SSSE3, AVX, and
+AVX2. llamafile pulls each of these functions out into a separate file
+that can be `#include`ed multiple times, with varying
+`__attribute__((__target__("arch")))` function attributes. Then, a
+wrapper function is added which uses Cosmopolitan's `X86_HAVE(FOO)`
+feature to runtime dispatch to the appropriate implementation.
+
+### Architecture Portability
+
+llamafile solves architecture portability by building llama.cpp twice:
+once for AMD64 and again for ARM64. It then wraps them with a shell
+script which has an MZ prefix. On Windows, it'll run as a native binary.
+On Linux, it'll extract a small 8kb executable called [APE
+Loader](https://github.com/jart/cosmopolitan/blob/master/ape/loader.c)
+to `${TMPDIR:-${HOME:-.}}/.ape` that'll map the binary portions of the
+shell script into memory. It's possible to avoid this process by running
+the
+[`assimilate`](https://github.com/jart/cosmopolitan/blob/master/tool/build/assimilate.c)
+program that comes included with the `cosmocc` compiler. What the
+`assimilate` program does, is it turns the shell script executable into
+the host platform's native executable format. This guarantees a fallback
+path exists for traditonal release processes when it's needed.
+
+### GPU Support
+
+Cosmopolitan Libc uses static linking, since that's the only way to get
+the same executable to run on six OSes. This presents a challenge for
+llama.cpp, because it's not possible to statically link GPU support. The
+way we solve that is by checking if a compiler is installed on the host
+system. For Apple, that would be xcode, and for other platforms, that
+would be `nvcc`. llama.cpp has a single file implementation of each GPU
+module, named `ggml-metal.m` (Objective C) and `ggml-cuda.cu` (Nvidia
+C). llamafile embeds those source files within the zip archive and asks
+the platform compiler to build them at runtime, targeting the native GPU
+microarchitecture. If it works, then it's linked with platform C library
+dlopen() implementation. See [llamafile/cuda.c](llamafile/cuda.c) and
+[llamafile/metal.c](llamafile/metal.c).
+
+In order to use the platform-specific dlopen() function, we need to ask
+the platform-specific compiler to build a small executable that exposes
+these interfaces. On ELF platforms, Cosmopolitan Libc maps this helper
+executable into memory along with the platform's ELF interpreter. The
+platform C library then takes care of linking all the GPU libraries, and
+then runs the helper program which longjmp()'s back into Cosmopolitan.
+The executable program is now in a weird hybrid state where two separate
+C libraries exist which have different ABIs. For example, thread local
+storage works differently on each operating system, and programs will
+crash if the TLS register doesn't point to the appropriate memory. The
+way Cosmopolitan Libc solves that is by JITing a trampoline around each
+dlsym() import, which blocks signals using `sigprocmask()` and changes
+the TLS register using `arch_prctl()`. Under normal circumstances,
+aspecting each function call with four additional system calls would be
+prohibitively expensive, but for llama.cpp that cost is infinitesimal
+compared to the amount of compute used for LLM inference. Our technique
+has no noticeable slowdown. The major tradeoff is that, right now, you
+can't pass callback pointers to the dlopen()'d module. Only one such
+function needed to be removed from the llama.cpp codebase, which was an
+API intended for customizing logging. In the future, Cosmoplitan will
+just trampoline signal handlers and code morph the TLS instructions to
+avoid these tradeoffs entirely. See
+[cosmopolitan/dlopen.c](https://github.com/jart/cosmopolitan/blob/master/libc/dlopen/dlopen.c)
+for further details.

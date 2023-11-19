@@ -98,6 +98,7 @@
 
 #define kZipLfileHdrMagic                ZM_(0x04034b50) /* PK♥♦ "PK\3\4" */
 #define kZipLfileHdrMinSize              30
+#define kZipLfileOffsetVersionNeeded     4
 #define kZipLfileOffsetGeneralflag       6
 #define kZipLfileOffsetCompressionmethod 8
 #define kZipLfileOffsetLastmodifiedtime  10

@@ -40,34 +40,43 @@ struct llamafile {
     size_t mapsize;
 };
 
-static uint64_t GetZipCfileOffset(const uint8_t *z) {
-    uint64_t x;
-    const uint8_t *p, *pe;
-    if ((x = ZIP_CFILE_OFFSET(z)) == 0xFFFFFFFF) {
-        for (p = ZIP_CFILE_EXTRA(z), pe = p + ZIP_CFILE_EXTRASIZE(z); p < pe;
-             p += ZIP_EXTRA_SIZE(p)) {
-            if (ZIP_EXTRA_HEADERID(p) == kZipExtraZip64 &&
-                16 + 8 <= ZIP_EXTRA_CONTENTSIZE(p)) {
-                return ZIP_READ64(ZIP_EXTRA_CONTENT(p) + 16);
+static int64_t GetZipCfileCompressedSize(const uint8_t *z) {
+    if (ZIP_CFILE_COMPRESSEDSIZE(z) != 0xFFFFFFFFu) {
+        return ZIP_CFILE_COMPRESSEDSIZE(z);
+    }
+    const uint8_t *p = ZIP_CFILE_EXTRA(z);
+    const uint8_t *pe = p + ZIP_CFILE_EXTRASIZE(z);
+    for (; p + ZIP_EXTRA_SIZE(p) <= pe; p += ZIP_EXTRA_SIZE(p)) {
+        if (ZIP_EXTRA_HEADERID(p) == kZipExtraZip64) {
+            if (8 <= ZIP_EXTRA_CONTENTSIZE(p)) {
+                return ZIP_READ64(ZIP_EXTRA_CONTENT(p));
             }
         }
     }
-    return x;
+    return -1;
 }
 
-static uint64_t GetZipCfileCompressedSize(const uint8_t *z) {
-    uint64_t x;
-    const uint8_t *p, *pe;
-    if ((x = ZIP_CFILE_COMPRESSEDSIZE(z)) == 0xFFFFFFFF) {
-        for (p = ZIP_CFILE_EXTRA(z), pe = p + ZIP_CFILE_EXTRASIZE(z); p < pe;
-             p += ZIP_EXTRA_SIZE(p)) {
-            if (ZIP_EXTRA_HEADERID(p) == kZipExtraZip64 &&
-                8 + 8 <= ZIP_EXTRA_CONTENTSIZE(p)) {
-                return ZIP_READ64(ZIP_EXTRA_CONTENT(p) + 8);
+static int64_t GetZipCfileOffset(const uint8_t *z) {
+    if (ZIP_CFILE_OFFSET(z) != 0xFFFFFFFFu) {
+        return ZIP_CFILE_OFFSET(z);
+    }
+    const uint8_t *p = ZIP_CFILE_EXTRA(z);
+    const uint8_t *pe = p + ZIP_CFILE_EXTRASIZE(z);
+    for (; p + ZIP_EXTRA_SIZE(p) <= pe; p += ZIP_EXTRA_SIZE(p)) {
+        if (ZIP_EXTRA_HEADERID(p) == kZipExtraZip64) {
+            int offset = 0;
+            if (ZIP_CFILE_COMPRESSEDSIZE(z) == 0xFFFFFFFFu) {
+                offset += 8;
+            }
+            if (ZIP_CFILE_UNCOMPRESSEDSIZE(z) == 0xFFFFFFFFu) {
+                offset += 8;
+            }
+            if (offset + 8 <= ZIP_EXTRA_CONTENTSIZE(p)) {
+                return ZIP_READ64(ZIP_EXTRA_CONTENT(p) + offset);
             }
         }
     }
-    return x;
+    return -1;
 }
 
 struct llamafile *llamafile_open(const char *fname, const char *mode) {
@@ -108,7 +117,7 @@ struct llamafile *llamafile_open(const char *fname, const char *mode) {
     // read the last 64kb of file
     // the zip file format magic can be anywhere in there
     int amt;
-    off_t off;
+    uint64_t off;
     if (file->size <= 65536) {
         off = 0;
         amt = file->size;
@@ -216,7 +225,7 @@ struct llamafile *llamafile_open(const char *fname, const char *mode) {
     off_t mapoff = off & -pagesz;
     long skew = off - mapoff;
     file->mapsize = skew + file->size;
-    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, mapoff);
+    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED, fd, mapoff);
     if (file->mapping == MAP_FAILED) {
         fprintf(stderr, "warning: failed to map %s from %s: %s\n",
                 fname, prog, strerror(errno));
@@ -259,12 +268,8 @@ size_t llamafile_tell(struct llamafile *file) {
     if (!file->fp) {
         return file->position;
     }
-#ifdef _WIN32
-    __int64 ret = _ftelli64(file->fp);
-#else
     long ret = ftell(file->fp);
-#endif
-    unassert(ret != -1); // this really shouldn't fail
+    unassert(ret != -1);  // shouldn't fail because we seeked earlier
     return (size_t) ret;
 }
 

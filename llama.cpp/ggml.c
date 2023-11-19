@@ -19400,19 +19400,11 @@ void gguf_get_meta_data(const struct gguf_context * ctx, void * data) {
 ////////////////////////////////////////////////////////////////////////////////
 
 int ggml_cpu_has_avx(void) {
-#if defined(__AVX__)
-    return 1;
-#else
-    return 0;
-#endif
+    return X86_HAVE(AVX);
 }
 
 int ggml_cpu_has_avx2(void) {
-#if defined(__AVX2__)
-    return 1;
-#else
-    return 0;
-#endif
+    return X86_HAVE(AVX2);
 }
 
 int ggml_cpu_has_avx512(void) {
@@ -19440,11 +19432,7 @@ int ggml_cpu_has_avx512_vnni(void) {
 }
 
 int ggml_cpu_has_fma(void) {
-#if defined(__FMA__)
-    return 1;
-#else
-    return 0;
-#endif
+    return X86_HAVE(FMA);
 }
 
 int ggml_cpu_has_neon(void) {
@@ -19468,11 +19456,7 @@ int ggml_cpu_has_metal(void) {
 }
 
 int ggml_cpu_has_f16c(void) {
-#if defined(__F16C__)
-    return 1;
-#else
-    return 0;
-#endif
+    return X86_HAVE(F16C);
 }
 
 int ggml_cpu_has_fp16_va(void) {
@@ -19516,19 +19500,11 @@ int ggml_cpu_has_gpublas(void) {
 }
 
 int ggml_cpu_has_sse3(void) {
-#if defined(__SSE3__)
-    return 1;
-#else
-    return 0;
-#endif
+    return X86_HAVE(SSE3);
 }
 
 int ggml_cpu_has_ssse3(void) {
-#if defined(__SSSE3__)
-    return 1;
-#else
-    return 0;
-#endif
+    return X86_HAVE(SSSE3);
 }
 
 int ggml_cpu_has_vsx(void) {
