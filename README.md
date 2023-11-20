@@ -329,7 +329,7 @@ to llama.cpp are licensed under MIT (just like the llama.cpp project
 itself) so as to remain compatible and upstreamable in the future,
 should that be desired.
 
-The llamafile logo on this page was generated with the assistance of DALL·E e.
+The llamafile logo on this page was generated with the assistance of DALL·E 3.
 
 ## Known Issues
 
