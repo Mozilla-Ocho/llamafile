@@ -1,11 +1,13 @@
 # llamafile
 
-llamafile lets you distribute LLMs as a single file.
+llamafile lets you distribute and run LLMs with a single file.
 
 Our goal is to make the "build once anywhere, run anywhere" dream come
-true for AI developers. We're doing that by combining llama.cpp with
-Cosmopolitan Libc into one framework that lets you build apps for LLMs
-as a single-file artifact that runs locally on most PCs and servers.
+true for AI developers. We're doing that by combining [llama.cpp]
+(https://github.com/ggerganov/llama.cpp) with [Cosmopolitan Libc]
+(https://github.com/jart/cosmopolitan) into one framework that lets
+you build apps for LLMs as a single-file artifact that runs locally on
+most PCs and servers.
 
 First, your llamafiles can run on multiple CPU microarchitectures. We
 added runtime dispatching to llama.cpp that lets new Intel systems use
@@ -17,11 +19,12 @@ launches the appropriate one. Our file format is compatible with WIN32
 and most UNIX shells. It's also able to be easily converted (by either
 you or your users) to the platform-native format, whenever required.
 
-Thirdly, your llamafiles can run on six OSes. You'll only need to build
-your code once, using a Linux-style toolchain. The GCC-based compiler we
-provide is itself an Actually Portable Executable, so you can build your
-software for all six OSes from the comfort of whichever one you prefer
-most for development.
+Thirdly, your llamafiles can run on six OSes (macOS, Windows, Linux,
+FreeBSD, OpenBSD, and NetBSD). You'll only need to build your code once,
+using a Linux-style toolchain. The GCC-based compiler we provide is
+itself an Actually Portable Executable, so you can build your software
+for all six OSes from the comfort of whichever one you prefer most for
+development.
 
 Lastly, the weights for your LLM can be embedded within your llamafile.
 We added support for PKZIP to the GGML library. This lets uncompressed
@@ -41,7 +44,7 @@ chmod +x llamafile
 ./llamafile
 ```
 
-On MacOS Arm64 you need to have xcode installed for llamafile to be able
+On macOS with Apple Silicon you need to have Xcode installed for llamafile to be able
 to bootstrap itself.
 
 On Windows, you may need to rename `llamafile` to `llamafile.exe` in
@@ -62,7 +65,7 @@ sudo sh -c "echo ':APE-jart:M::jartsr::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/
 
 ### GPU Support
 
-On Apple Arm64, everything should just work if xcode is installed.
+On Apple Silicon, everything should just work if Xcode is installed.
 
 On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
 you have the `cc` compiler installed, (2) you pass the `--n-gpu-layers
@@ -102,8 +105,9 @@ make -j8
 ```
 
 Here's an example of how to generate code for a libc function using the
-llama.cpp command line interface using WizardCoder weights from Hugging
-Face.
+llama.cpp command line interface, utilizing [WizardCoder-Python-13B](https://huggingface.co/TheBloke/WizardCoder-Python-13B-V1.0-GGUF)
+(license: [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/))
+weights.
 
 ```sh
 make -j8 o//llama.cpp/main/main
@@ -114,8 +118,13 @@ o//llama.cpp/main/main \
   -p $'```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
-Here's an example of how to run the HTTP server in such a way that the
-weights are embedded inside the executable.
+Here's an example of how to run llama.cpp's built-in HTTP server in such
+a way that the weights are embedded inside the executable. This example
+uses [LLaVA v1.5-7B]() (license: [LLaMA](https://github.com/facebookresearch/llama/blob/main/MODEL_CARD.md), 
+[OpenAI](https://openai.com/policies/terms-of-use), 
+[ShareGPT](https://chrome.google.com/webstore/detail/sharegpt-share-your-chatg/daiacboceoaocpibfodeljbdfacokfjb)),
+a multimodal LLM that works with llama.cpp's recently-added support for
+image inputs.
 
 ```sh
 make -j8
@@ -141,7 +150,7 @@ If you want to be able to just say:
 ./server
 ```
 
-And have it run the web server without having to specify arguments (for
+...and have it run the web server without having to specify arguments (for
 the paths you already know are in there), then you can add a special
 `.args` to the zip archive, which specifies the default arguments. In
 this case, we're going to try our luck with the normal `zip` command,
@@ -172,8 +181,12 @@ mv server.com server
 ./server
 ```
 
-Congratulations. You've just made your own LLM server that's easy to
+Congratulations. You've just made your own LLM executable that's easy to
 share with your friends.
+
+(Note that the examples provided above are not endorsements or
+recommendations of specific models, licenses, or data sets on the part
+of Mozilla.)
 
 ## zipalign documentation
 
@@ -251,7 +264,7 @@ shell script into memory. It's possible to avoid this process by running
 the
 [`assimilate`](https://github.com/jart/cosmopolitan/blob/master/tool/build/assimilate.c)
 program that comes included with the `cosmocc` compiler. What the
-`assimilate` program does, is it turns the shell script executable into
+`assimilate` program does is turn the shell script executable into
 the host platform's native executable format. This guarantees a fallback
 path exists for traditonal release processes when it's needed.
 
@@ -261,7 +274,7 @@ Cosmopolitan Libc uses static linking, since that's the only way to get
 the same executable to run on six OSes. This presents a challenge for
 llama.cpp, because it's not possible to statically link GPU support. The
 way we solve that is by checking if a compiler is installed on the host
-system. For Apple, that would be xcode, and for other platforms, that
+system. For Apple, that would be Xcode, and for other platforms, that
 would be `nvcc`. llama.cpp has a single file implementation of each GPU
 module, named `ggml-metal.m` (Objective C) and `ggml-cuda.cu` (Nvidia
 C). llamafile embeds those source files within the zip archive and asks
@@ -294,3 +307,10 @@ just trampoline signal handlers and code morph the TLS instructions to
 avoid these tradeoffs entirely. See
 [cosmopolitan/dlopen.c](https://github.com/jart/cosmopolitan/blob/master/libc/dlopen/dlopen.c)
 for further details.
+
+## Licensing
+
+While the llamafile project is Apache 2.0-licensed, our changes
+to llama.cpp are licensed under MIT (just like the llama.cpp project
+itself) so as to remain compatible and upstreamable in the future,
+should that be desired.
