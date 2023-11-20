@@ -3,11 +3,10 @@
 llamafile lets you distribute and run LLMs with a single file.
 
 Our goal is to make the "build once anywhere, run anywhere" dream come
-true for AI developers. We're doing that by combining [llama.cpp]
-(https://github.com/ggerganov/llama.cpp) with [Cosmopolitan Libc]
-(https://github.com/jart/cosmopolitan) into one framework that lets
-you build apps for LLMs as a single-file artifact that runs locally on
-most PCs and servers.
+true for AI developers. We're doing that by combining [llama.cpp](https://github.com/ggerganov/llama.cpp) 
+with [Cosmopolitan Libc](https://github.com/jart/cosmopolitan) into one 
+framework that lets you build apps for LLMs as a single-file artifact 
+that runs locally on most PCs and servers.
 
 First, your llamafiles can run on multiple CPU microarchitectures. We
 added runtime dispatching to llama.cpp that lets new Intel systems use
