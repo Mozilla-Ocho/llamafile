@@ -117,11 +117,23 @@ o//llama.cpp/main/main \
   -p $'```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
+Here's a similar example that instead utilizes [Mistral-7B-Instruct](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF) 
+(license: [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/)) weights.
+
+```sh
+make -j8 o//llama.cpp/main/main
+o//llama.cpp/main/main \
+  -m ~/weights/mistral-7b-instruct-v0.1.Q4_K_M.gguf \
+  --temp 0.7 \
+  -r $'```\n' \
+  -p $'```c\n### Instruction: Write a story about llamas\n### Response:\n'
+```
+
+
 Here's an example of how to run llama.cpp's built-in HTTP server in such
 a way that the weights are embedded inside the executable. This example
-uses [LLaVA v1.5-7B]() (license: [LLaMA](https://github.com/facebookresearch/llama/blob/main/MODEL_CARD.md), 
-[OpenAI](https://openai.com/policies/terms-of-use), 
-[ShareGPT](https://chrome.google.com/webstore/detail/sharegpt-share-your-chatg/daiacboceoaocpibfodeljbdfacokfjb)),
+uses [LLaVA v1.5-7B]() (license: [LLaMA](https://github.com/facebookresearch/llama/blob/main/LICENSE), 
+[OpenAI](https://openai.com/policies/terms-of-use)),
 a multimodal LLM that works with llama.cpp's recently-added support for
 image inputs.
 
@@ -316,6 +328,7 @@ should that be desired.
 
 ## Known Issues
 
-- Windows has a 2GB file size limit. While llamafile will work fine on
-  Windows with the weights as a separate file, you'll get an error if
-  you load them into the executable itself.
+- The 64-bit version of Windows has a 2GB file size limit. While
+llamafile will work fine on Windows with the weights as a separate
+file, you'll get an error if you load them into the executable itself
+and try to run it.
