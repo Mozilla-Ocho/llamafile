@@ -1,6 +1,9 @@
 # llamafile
 
-llamafile lets you distribute and run LLMs with a single file.
+![llamafile-250](https://github.com/Mozilla-Ocho/llamafile/assets/42821/5253c5fd-e03d-4ddd-943f-adff27d648cf)
+
+
+**llamafile lets you distribute and run LLMs with a single file.**
 
 Our goal is to make the "build once anywhere, run anywhere" dream come
 true for AI developers. We're doing that by combining [llama.cpp](https://github.com/ggerganov/llama.cpp) 
@@ -325,6 +328,8 @@ While the llamafile project is Apache 2.0-licensed, our changes
 to llama.cpp are licensed under MIT (just like the llama.cpp project
 itself) so as to remain compatible and upstreamable in the future,
 should that be desired.
+
+The llamafile logo on this page was generated with the assistance of DALL·E e.
 
 ## Known Issues
 
