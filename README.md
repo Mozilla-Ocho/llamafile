@@ -41,13 +41,13 @@ You can download and run `llamafile` from the release page in your
 terminal or command prompt.
 
 ```sh
-curl https://foo.example/llamafile >llamafile
+curl https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1 >llamafile
 chmod +x llamafile
-./llamafile
+./llamafile --help
 ```
 
-On macOS with Apple Silicon you need to have Xcode installed for llamafile to be able
-to bootstrap itself.
+On macOS with Apple Silicon you need to have Xcode installed for
+llamafile to be able to bootstrap itself.
 
 On Windows, you may need to rename `llamafile` to `llamafile.exe` in
 order for it to run.
