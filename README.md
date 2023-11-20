@@ -36,11 +36,11 @@ its originally observed behaviors can be reproduced indefinitely.
 
 ## Binary Instructions
 
-You can download and run `llamafile` from the release page in your
-terminal or command prompt.
+You can download and run `llamafile` from the release page, or directly
+in your terminal or command prompt.
 
 ```sh
-curl https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1 >llamafile
+curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1 >llamafile
 chmod +x llamafile
 ./llamafile --help
 ```
