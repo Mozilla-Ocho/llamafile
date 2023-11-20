@@ -104,7 +104,7 @@ make -j8
 ```
 
 Here's an example of how to generate code for a libc function using the
-llama.cpp command line interface, utilizing [WizardCoder-Python-13B](https://huggingface.co/TheBloke/WizardCoder-Python-13B-V1.0-GGUF)
+llama.cpp command line interface, utilizing [WizardCoder-Python-13B](https://huggingface.co/TheBloke/WizardCoder-Python-13B-V1.0-GGUF/tree/main)
 (license: [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/))
 weights.
 
@@ -117,7 +117,7 @@ o//llama.cpp/main/main \
   -p $'```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
-Here's a similar example that instead utilizes [Mistral-7B-Instruct](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF) 
+Here's a similar example that instead utilizes [Mistral-7B-Instruct](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/tree/main) 
 (license: [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/)) weights.
 
 ```sh
@@ -132,7 +132,7 @@ o//llama.cpp/main/main \
 
 Here's an example of how to run llama.cpp's built-in HTTP server in such
 a way that the weights are embedded inside the executable. This example
-uses [LLaVA v1.5-7B]() (license: [LLaMA](https://github.com/facebookresearch/llama/blob/main/LICENSE), 
+uses [LLaVA v1.5-7B](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/tree/main) (license: [LLaMA](https://github.com/facebookresearch/llama/blob/main/LICENSE), 
 [OpenAI](https://openai.com/policies/terms-of-use)),
 a multimodal LLM that works with llama.cpp's recently-added support for
 image inputs.
@@ -329,6 +329,6 @@ should that be desired.
 ## Known Issues
 
 - The 64-bit version of Windows has a 2GB file size limit. While
-llamafile will work fine on Windows with the weights as a separate
+llamafile will work fine on 64-bit Windows with the weights as a separate
 file, you'll get an error if you load them into the executable itself
 and try to run it.
