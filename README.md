@@ -313,3 +313,9 @@ While the llamafile project is Apache 2.0-licensed, our changes
 to llama.cpp are licensed under MIT (just like the llama.cpp project
 itself) so as to remain compatible and upstreamable in the future,
 should that be desired.
+
+## Known Issues
+
+- Windows has a 2GB file size limit. While llamafile will work fine on
+  Windows with the weights as a separate file, you'll get an error if
+  you load them into the executable itself.
