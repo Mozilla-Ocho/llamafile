@@ -1,6 +1,6 @@
 # llamafile
 
-![llamafile-250](https://github.com/Mozilla-Ocho/llamafile/assets/42821/ab65f21d-2465-4a56-b4c0-7454358c7c7f)
+![llamafile-250](llamafile/llamafile.png)
 
 **llamafile lets you distribute and run LLMs with a single file.**
 
