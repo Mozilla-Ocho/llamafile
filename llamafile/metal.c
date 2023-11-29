@@ -15,8 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cosmo.h>
 #include <time.h>
+#include <cosmo.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <spawn.h>
@@ -126,7 +126,7 @@ static bool ImportMetalImpl(void) {
         char tmpdso[PATH_MAX];
         strlcpy(tmpdso, dso, sizeof(tmpdso));
         strlcat(tmpdso, ".XXXXXX", sizeof(tmpdso));
-        if ((fd = mkstemp(tmpdso)) != -1) {
+        if ((fd = mkostemp(tmpdso, O_CLOEXEC)) != -1) {
             close(fd);
         } else {
             perror(tmpdso);
