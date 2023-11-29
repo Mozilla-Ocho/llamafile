@@ -65,9 +65,10 @@ On macOS with Apple Silicon you need to have Xcode installed for
 llamafile to be able to bootstrap itself.
 
 On Windows, you may need to rename `llamafile` to `llamafile.exe` in
-order for it to run. Windows also has a maximum file size limit of 2GB
-for executables. You need to have llamafile and your weights be separate
-files on the Windows platform.
+order for it to run. Windows also has a maximum file size limit of 4GB
+for executables. The LLaVA server executable above is just 30MB shy of
+that limit, so it'll work on Windows, but with larger models like
+WizardCoder 13B, you need to store the weights in a separate file.
 
 If you use zsh and have trouble running llamafile, try saying `sh -c
 ./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
@@ -350,7 +351,7 @@ The llamafile logo on this page was generated with the assistance of DALL·E 3.
 
 ## Known Issues
 
-- The 64-bit version of Windows has a 2GB file size limit. While
-llamafile will work fine on 64-bit Windows with the weights as a separate
-file, you'll get an error if you load them into the executable itself
-and try to run it.
+- The 64-bit version of Windows has a 4GB file size limit. While
+  llamafile will work fine on 64-bit Windows with the weights as a
+  separate file, you'll get an error if you load them into the
+  executable itself and try to run it.
