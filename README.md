@@ -104,7 +104,7 @@ it to your path.
 ```sh
 mkdir -p cosmocc
 cd cosmocc
-curl -L https://github.com/jart/cosmopolitan/releases/download/3.1/cosmocc-3.1.zip >cosmocc.zip
+curl -L https://github.com/jart/cosmopolitan/releases/download/3.1.1/cosmocc-3.1.1.zip >cosmocc.zip
 unzip cosmocc.zip
 cd ..
 export PATH="$PWD/cosmocc/bin:$PATH"
