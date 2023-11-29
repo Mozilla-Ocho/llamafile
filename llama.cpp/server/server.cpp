@@ -34,7 +34,7 @@ struct server_params
     int32_t port = 8080;
     int32_t read_timeout = 600;
     int32_t write_timeout = 600;
-    bool nobrowser;
+    bool nobrowser = false;
 };
 
 static bool server_verbose = false;
