@@ -36,20 +36,38 @@ its originally observed behaviors can be reproduced indefinitely.
 
 ## Binary Instructions
 
-You can download and run `llamafile` from the release page, or directly
-in your terminal or command prompt.
+We provide example binaries that embed several different models. You can
+download these from Hugging Face via the links below. "Command-line
+binaries" run from the command line, just as if you were invoking
+llama.cpp's "main" function manually. "Server binaries" launch a local
+web server (at 127.0.0.1:8080) that provides a web-based chatbot.
+
+| Model | Command-line binary | Server binary |
+| --- | --- | --- |
+| Mistral-7B-Instruct | [mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile (4.4 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile?download=true) | [mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile (4.4 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile?download=true) |
+| LLaVA 1.5 | (Not provided because this model's features are best utilized via the web UI) | **[llava-v1.5-7b-q4-server.llamafile (4.3 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true)** |
+| WizardCoder-Python-13B | [wizardcoder-python-13b-main.llamafile (7.9 GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true) | [wizardcoder-python-13b-server.llamafile (7.9GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-server.llamafile?download=true) |
+
+You can also also download *just* the llamafile software (without any
+weights included) from our releases page, or directly in your terminal
+or command prompt. This is mandatory currently on Windows.
 
 ```sh
 curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1 >llamafile
 chmod +x llamafile
 ./llamafile --help
+./llamafile -m ~/weights/foo.gguf
 ```
+
+### Gotchas
 
 On macOS with Apple Silicon you need to have Xcode installed for
 llamafile to be able to bootstrap itself.
 
 On Windows, you may need to rename `llamafile` to `llamafile.exe` in
-order for it to run.
+order for it to run. Windows also has a maximum file size limit of 2GB
+for executables. You need to have llamafile and your weights be separate
+files on the Windows platform.
 
 If you use zsh and have trouble running llamafile, try saying `sh -c
 ./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
@@ -63,17 +81,6 @@ sudo wget -O /usr/bin/ape https://cosmo.zip/pub/cosmos/bin/ape-$(uname -m).elf
 sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
 sudo sh -c "echo ':APE-jart:M::jartsr::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
 ```
-### Example wrapped weights
-
-We also provide example binaries that embed several different models. You can download these from Hugging Face via the links below. "Command-line binaries" run from the command line, just as if you were invoking llama.cpp's "main" function manually. "Server binaries" launch a local web server (at 127.0.0.1:8080) that provides a web-based chatbot UI.
-
-| Model | Command-line binary | Server binary |
-| --- | --- | --- |
-| Mistral-7B-Instruct | [mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile (4.4 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile?download=true) | [mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile (4.4 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile?download=true) |
-| LLaVA 1.5 | (Not provided because this model's features are best utilized via the web UI) | [llava-v1.5-7b-q4-server.llamafile (4.3 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true) |
-| WizardCoder-Python-13B | [wizardcoder-python-13b-main.llamafile (7.9 GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true) | [wizardcoder-python-13b-server.llamafile (7.9GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-server.llamafile?download=true) |
-
-
 
 ### GPU Support
 
@@ -87,7 +94,7 @@ compiler is on your path.
 
 On Windows, that usually means you need to open up the MSVC x64 native
 command prompt and run llamafile there, for the first invocation, so it
-can build a DLl with native GPU support. After that, `$CUDA_PATH/bin`
+can build a DLL with native GPU support. After that, `$CUDA_PATH/bin`
 still usually needs to be on the `$PATH` so the GGML DLL can find its
 other CUDA dependencies.
 
