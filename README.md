@@ -102,11 +102,11 @@ In the event that GPU support couldn't be compiled and dynamically
 linked on the fly for any reason, llamafile will fall back to CPU
 inference.
 
-## Build Instructions
+## Source Instructions
 
-First, you need the cosmocc toolchain, which is a fat portable binary
-version of GCC. Here's how you can download the latest release and add
-it to your path.
+Here's how to build llamafile from source. First, you need the cosmocc
+toolchain, which is a fat portable binary version of GCC. Here's how you
+can download the latest release and add it to your path.
 
 ```sh
 mkdir -p cosmocc
