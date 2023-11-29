@@ -2,7 +2,7 @@
 
 ![llamafile-250](llamafile/llamafile.png)
 
-**llamafile lets you distribute and run LLMs with a single file.**
+**llamafile lets you distribute and run LLMs with a single file ([blog post](https://hacks.mozilla.org/2023/11/introducing-llamafile/))**
 
 Our goal is to make the "build once anywhere, run anywhere" dream come
 true for AI developers. We're doing that by combining [llama.cpp](https://github.com/ggerganov/llama.cpp) 
