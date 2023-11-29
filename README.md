@@ -145,8 +145,8 @@ make -j8 o//llama.cpp/main/main
 o//llama.cpp/main/main \
   -m ~/weights/mistral-7b-instruct-v0.1.Q4_K_M.gguf \
   --temp 0.7 \
-  -r $'```\n' \
-  -p $'```c\n### Instruction: Write a story about llamas\n### Response:\n'
+  -r $'\n' \
+  -p $'### Instruction: Write a story about llamas\n### Response:\n'
 ```
 
 
