@@ -64,12 +64,6 @@ chmod +x llamafile
 On macOS with Apple Silicon you need to have Xcode installed for
 llamafile to be able to bootstrap itself.
 
-On Windows, you may need to rename `llamafile` to `llamafile.exe` in
-order for it to run. Windows also has a maximum file size limit of 4GB
-for executables. The LLaVA server executable above is just 30MB shy of
-that limit, so it'll work on Windows, but with larger models like
-WizardCoder 13B, you need to store the weights in a separate file.
-
 If you use zsh and have trouble running llamafile, try saying `sh -c
 ./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
 is the case for Python `subprocess`, old versions of Fish, etc.
@@ -84,8 +78,22 @@ sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/regis
 sudo sh -c "echo ':APE-jart:M::jartsr::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
 ```
 
-If your llamafile process is immediately killed, check if you have
-CrowdStrike and ask if you can be whitelisted.
+On Windows, you may need to rename `llamafile` to `llamafile.exe` in
+order for it to run. Windows also has a maximum file size limit of 4GB
+for executables. The LLaVA server executable above is just 30MB shy of
+that limit, so it'll work on Windows, but with larger models like
+WizardCoder 13B, you need to store the weights in a separate file.
+Here's an example of how to do that. Let's say you want to try Mistral.
+In that case you can open PowerShell and run these commands:
+
+```
+curl -Lo llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1
+curl -Lo mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
+.\llamafile.exe -m mistral.gguf
+```
+
+On any platform, if your llamafile process is immediately killed, check
+if you have CrowdStrike and then ask to be whitelisted.
 
 ### GPU Support
 
