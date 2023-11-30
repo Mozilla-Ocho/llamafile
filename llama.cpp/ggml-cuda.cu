@@ -6485,6 +6485,7 @@ static int64_t get_row_rounding(ggml_type type) {
         case GGML_TYPE_Q8_0:
             return max_compute_capability >= CC_RDNA2 ? 128 : 64;
         case GGML_TYPE_F16:
+        case GGML_TYPE_F32:
             return 1;
         case GGML_TYPE_Q2_K:
             return max_compute_capability >= CC_RDNA2 ? 128 : 32;
@@ -6507,6 +6508,7 @@ static int64_t get_row_rounding(ggml_type type) {
         case GGML_TYPE_Q8_0:
             return 64;
         case GGML_TYPE_F16:
+        case GGML_TYPE_F32:
             return 1;
         case GGML_TYPE_Q2_K:
         case GGML_TYPE_Q3_K:
