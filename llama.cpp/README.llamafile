@@ -8,6 +8,27 @@ LICENSE
 
 ORIGIN
 
-  https://github.com/ggerganov/llama.cpp
-  e9c1cecb9d7d743d30b4a29ecd56a411437def0a
-  Tue Nov 7 09:04:51 2023 +0100
+  Sources were initially imported from:
+
+    https://github.com/ggerganov/llama.cpp
+    e9c1cecb9d7d743d30b4a29ecd56a411437def0a
+    Tue Nov 7 09:04:51 2023 +0100
+
+  Since then, we've cherry-picked a number of small changes which fix
+  bugs and add features. The changes we haven't cherry-picked yet are
+  Georgi and Slaren's active development work, improving tensor graph
+  allocation, scheduling, backends, etc. So far, we've curated up to:
+
+    https://github.com/ggerganov/llama.cpp
+    af19d3573481d409b3c4e55494810eb1f65a9aae
+    Sat Nov 25 11:29:06 2023 +0200
+
+  See the llamafile git history re: cherry-picks for further details.
+
+LOCAL MODIFICATIONS
+
+  - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
+  - Add support to main() programs for Cosmo /zip/.args files
+  - Remove log callback pointer API from Metal GPU module
+  - Use runtime dispatching for matmul quants
+  - Remove operating system #ifdef statements
