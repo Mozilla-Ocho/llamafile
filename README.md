@@ -298,7 +298,7 @@ the
 program that comes included with the `cosmocc` compiler. What the
 `assimilate` program does is turn the shell script executable into
 the host platform's native executable format. This guarantees a fallback
-path exists for traditonal release processes when it's needed.
+path exists for traditional release processes when it's needed.
 
 ### GPU Support
 
