@@ -84,6 +84,9 @@ sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/regis
 sudo sh -c "echo ':APE-jart:M::jartsr::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
 ```
 
+If your llamafile process is immediately killed, check if you have
+CrowdStrike and ask if you can be whitelisted.
+
 ### GPU Support
 
 On Apple Silicon, everything should just work if Xcode is installed.
