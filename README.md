@@ -351,7 +351,7 @@ The llamafile logo on this page was generated with the assistance of DALL·E 3.
 
 ## Known Issues
 
-- The 64-bit version of Windows has a 4GB file size limit. While
+- The 32-bit version of Windows has a 4GB file size limit. While
   llamafile will work fine on 64-bit Windows with the weights as a
   separate file, you'll get an error if you load them into the
   executable itself and try to run it.
