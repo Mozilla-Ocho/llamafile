@@ -181,6 +181,7 @@ void ggml_fp16_to_fp32_row(const ggml_fp16_t * x, float * y, int n) {
 }
 
 #if defined(__x86_64__) && !defined(__F16C__)
+#define UNDEF_F16C
 #pragma GCC push_options
 #pragma GCC target("f16c")
 #endif
@@ -204,7 +205,8 @@ void ggml_fp32_to_fp16_row(const float * x, ggml_fp16_t * y, int n) {
         y[i] = GGML_FP32_TO_FP16(x[i]);
     }
 }
-#if defined(__x86_64__) && !defined(__F16C__)
+#ifdef UNDEF_F16C
+#undef UNDEF_F16C
 #pragma GCC pop_options
 #endif
 
@@ -474,6 +476,26 @@ ggml_type_traits_t ggml_internal_get_type_traits(enum ggml_type type) {
 //   number of elements to fit in a single register
 //
 
+#define GGML_F32x8_REDUCE_AVX(res, x)                             \
+do {                                                              \
+    int offset = (16/4) >> 1;                                     \
+    for (int i = 0; i < offset; ++i) {                            \
+        x[i] = _mm256_add_ps(x[i], x[offset+i]);                  \
+    }                                                             \
+    offset >>= 1;                                                 \
+    for (int i = 0; i < offset; ++i) {                            \
+        x[i] = _mm256_add_ps(x[i], x[offset+i]);                  \
+    }                                                             \
+    offset >>= 1;                                                 \
+    for (int i = 0; i < offset; ++i) {                            \
+        x[i] = _mm256_add_ps(x[i], x[offset+i]);                  \
+    }                                                             \
+    const __m128 t0 = _mm_add_ps(_mm256_castps256_ps128(x[0]),    \
+                                 _mm256_extractf128_ps(x[0], 1)); \
+    const __m128 t1 = _mm_hadd_ps(t0, t0);                        \
+    res = _mm_cvtss_f32(_mm_hadd_ps(t1, t1));                     \
+} while (0)
+
 #if defined(__ARM_NEON) && defined(__ARM_FEATURE_FMA)
 
 #define GGML_SIMD
@@ -610,25 +632,7 @@ ggml_type_traits_t ggml_internal_get_type_traits(enum ggml_type type) {
 #endif
 #define GGML_F32x8_ADD     _mm256_add_ps
 #define GGML_F32x8_MUL     _mm256_mul_ps
-#define GGML_F32x8_REDUCE(res, x)                                 \
-do {                                                              \
-    int offset = GGML_F32_ARR >> 1;                               \
-    for (int i = 0; i < offset; ++i) {                            \
-        x[i] = _mm256_add_ps(x[i], x[offset+i]);                  \
-    }                                                             \
-    offset >>= 1;                                                 \
-    for (int i = 0; i < offset; ++i) {                            \
-        x[i] = _mm256_add_ps(x[i], x[offset+i]);                  \
-    }                                                             \
-    offset >>= 1;                                                 \
-    for (int i = 0; i < offset; ++i) {                            \
-        x[i] = _mm256_add_ps(x[i], x[offset+i]);                  \
-    }                                                             \
-    const __m128 t0 = _mm_add_ps(_mm256_castps256_ps128(x[0]),    \
-                                 _mm256_extractf128_ps(x[0], 1)); \
-    const __m128 t1 = _mm_hadd_ps(t0, t0);                        \
-    res = _mm_cvtss_f32(_mm_hadd_ps(t1, t1));                     \
-} while (0)
+#define GGML_F32x8_REDUCE(res, x) GGML_F32x8_REDUCE_AVX(res, x)
 // TODO: is this optimal ?
 
 #define GGML_F32_VEC        GGML_F32x8
@@ -1038,7 +1042,41 @@ static void ggml_vec_dot_f32(const int n, float * restrict s, const float * rest
     *s = sumf;
 }
 
+#ifdef __x86_64__
+#pragma GCC push_options
+#pragma GCC target("avx")
+#pragma GCC target("f16c")
+#pragma GCC target("fma")
+static void ggml_vec_dot_f16_avx(const int n, float * restrict s, ggml_fp16_t * restrict x, ggml_fp16_t * restrict y) {
+    ggml_float sumf = 0.0;
+    int np = (n & ~(32 - 1));
+    __m256 ax[(32/8)], ay[(32/8)], sum[(32/8)] = { _mm256_setzero_ps() };
+    for (int i = 0; i < np; i += 32) {
+        for (int j = 0; j < (32/8); j++) {
+            ax[j] = _mm256_cvtph_ps(_mm_loadu_si128((__m128i *)(x + i + j*8)));
+            ay[j] = _mm256_cvtph_ps(_mm_loadu_si128((__m128i *)(y + i + j*8)));
+            sum[j] = _mm256_fmadd_ps(ax[j], ay[j], sum[j]);
+        }
+    }
+    // reduce sum0..sum3 to sum0
+    GGML_F32x8_REDUCE_AVX(sumf, sum);
+    for (int i = np; i < n; ++i) {
+        sumf += (ggml_float)(ggml_lookup_fp16_to_fp32(x[i]) *
+                             ggml_lookup_fp16_to_fp32(y[i]));
+    }
+    *s = sumf;
+}
+#pragma GCC pop_options
+#endif /* __x86_64__ */
+
 static void ggml_vec_dot_f16(const int n, float * restrict s, ggml_fp16_t * restrict x, ggml_fp16_t * restrict y) {
+
+#ifdef __x86_64__
+    if (X86_HAVE(AVX) && X86_HAVE(F16C) && X86_HAVE(FMA)) {
+        return ggml_vec_dot_f16_avx(n, s, x, y);
+    }
+#endif
+
     ggml_float sumf = 0.0;
 
 #if defined(GGML_SIMD)
