@@ -68,8 +68,9 @@ If you use zsh and have trouble running llamafile, try saying `sh -c
 ./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
 is the case for Python `subprocess`, old versions of Fish, etc.
 
-On Linux `binfmt_misc` has been known to cause problems. You can fix
-that by installing the actually portable executable interpreter.
+On some Linux systems, you might get errors relating to `run-detectors`
+or WINE. This is due to `binfmt_misc` registrations. You can fix that by
+adding an additional registration for APE file format llamafile uses:
 
 ```sh
 sudo wget -O /usr/bin/ape https://cosmo.zip/pub/cosmos/bin/ape-$(uname -m).elf
@@ -90,6 +91,12 @@ In that case you can open PowerShell and run these commands:
 curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1
 curl -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
 .\llamafile.exe -m mistral.gguf
+```
+
+On WSL, it's recommended that the WIN32 interop feature be disabled:
+
+```sh
+sudo sh -c "echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop"
 ```
 
 On any platform, if your llamafile process is immediately killed, check
