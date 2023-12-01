@@ -504,6 +504,8 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             params.instruct = true;
         } else if (arg == "--infill") {
             params.infill = true;
+        } else if (arg == "--unsecure") {
+            params.unsecure = true;
         } else if (arg == "--multiline-input") {
             params.multiline_input = true;
         } else if (arg == "--simple-io") {
@@ -863,6 +865,7 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("                        draft model for speculative decoding (default: %s)\n", params.model.c_str());
     printf("  -ld LOGDIR, --logdir LOGDIR\n");
     printf("                        path under which to save YAML logs (no logging if unset)\n");
+    printf("  --unsecure            disables pledge() sandboxing on Linux and OpenBSD\n");
     printf("\n");
 #ifndef LOG_DISABLE_LOGS
     log_print_usage();

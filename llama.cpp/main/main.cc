@@ -130,6 +130,29 @@ int main(int argc, char ** argv) {
     atexit([]() { console::cleanup(); });
     is_terminal = isatty(2);
 
+    if (!params.unsecure) {
+        // Enable pledge() security on Linux and OpenBSD.
+        // - We do this *after* opening the log file for writing.
+        // - We do this *before* loading any weights or graphdefs.
+        // In effect, what this does is:
+        // - We'll no longer be able to talk to the network going forward.
+        // - We'll no longer be able to change the filesystem going forward.
+        // Cosmopolitan Libc implements pledge() on Linux using SECCOMP.
+        const char *promises;
+        if (!params.path_prompt_cache.empty() && !params.prompt_cache_ro) {
+            // TODO(jart): Open prompt cache in RW mode before pledge()
+            promises = "stdio rpath tty cpath wpath";
+        } else {
+            promises = "stdio rpath tty";
+        }
+        if (pledge(0, 0)) {
+            LOG_TEE("warning: this OS doesn't support pledge() security\n");
+        } else if (pledge(promises, 0)) {
+            perror("pledge");
+            exit(1);
+        }
+    }
+
     if (params.logits_all) {
         printf("\n************\n");
         printf("%s: please use the 'perplexity' tool for perplexity calculations\n", __func__);

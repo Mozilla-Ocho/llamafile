@@ -358,6 +358,11 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
 
 static bool ImportCudaImpl(void) {
 
+    // No dynamic linking support on OpenBSD yet.
+    if (IsOpenbsd()) {
+        return false;
+    }
+
     // get native cuda dll if possible
     char dso[PATH_MAX];
     if (!CompileNativeCuda(dso)) {

@@ -38,6 +38,7 @@ struct server_params
     int32_t read_timeout = 600;
     int32_t write_timeout = 600;
     bool nobrowser = false;
+    bool unsecure = false;
 };
 
 static bool server_verbose = false;
@@ -1842,6 +1843,7 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("                        Set a file to load a system prompt (initial prompt of all slots), this is useful for chat applications.\n");
     printf("  --mmproj MMPROJ_FILE  path to a multimodal projector file for LLaVA.\n");
     printf("  --nobrowser           Do not attempt to open a web browser tab at startup.\n");
+    printf("  --unsecure            disables pledge() sandboxing on Linux and OpenBSD\n");
     printf("\n");
 }
 
@@ -2182,6 +2184,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             sparams.nobrowser = true;
         }
+        else if (arg == "--unsecure")
+        {
+            sparams.unsecure = true;
+        }
         else
         {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
@@ -2500,10 +2506,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
 int main(int argc, char **argv)
 {
     llamafile_check_cpu();
-
-#ifdef __COSMOPOLITAN__
     LoadZipArgs(&argc, &argv);
-#endif
 
     // own arguments required by this example
     gpt_params params;
@@ -2880,6 +2883,31 @@ int main(int argc, char **argv)
         llamafile_launch_browser(url);
     }
 
+    if (!sparams.unsecure) {
+        // Enables pledge() security on Linux and OpenBSD.
+        // - We do this *after* binding the server socket.
+        // - We do this *after* opening the log file for writing.
+        // - We do this *after* opening a tab in the user browser.
+        // - We do this *before* loading any weights or graphdefs.
+        // In effect, what this does is:
+        // - Filesystem access is disabled entirely (except ZipOS).
+        // - On Linux, network access is restricted to accept() only.
+        // Cosmopolitan Libc implements pledge() on Linux using SECCOMP.
+        const char *promises;
+        if (IsOpenbsd()) {
+            promises = "stdio inet";
+        } else {
+            promises = "stdio anet";
+        }
+        __pledge_mode = PLEDGE_PENALTY_RETURN_EPERM;
+        if (pledge(0, 0)) {
+            LOG_TEE("warning: this OS doesn't support pledge() security\n");
+        } else if (pledge(promises, 0)) {
+            perror("pledge");
+            exit(1);
+        }
+    }
+
     tinyprint(2, "loading weights...\n", NULL);
 
     LOG_INFO("HTTP server listening", {
@@ -2888,8 +2916,10 @@ int main(int argc, char **argv)
                                       });
 
     // run the HTTP server in a thread - see comment below
+    fprintf(stderr, "run listen thread...\n");
     std::thread t([&]()
             {
+                fprintf(stderr, "listen_after_bind...\n");
                 if (!svr.listen_after_bind())
                 {
                     return 1;

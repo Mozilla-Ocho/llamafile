@@ -30,6 +30,7 @@ LOCAL MODIFICATIONS
   - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
   - Add support to main() programs for Cosmo /zip/.args files
   - Use condition variables for server rather than busy loop
+  - Introduce pledge() SECCOMP sandboxing to improve security
   - Remove log callback pointer API from Metal GPU module
   - Use runtime dispatching for matmul quants
   - Remove operating system #ifdef statements

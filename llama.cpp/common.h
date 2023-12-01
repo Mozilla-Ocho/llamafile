@@ -122,6 +122,8 @@ struct gpt_params {
     bool verbose_prompt    = false; // print prompt tokens before generation
     bool infill            = false; // use infill mode
 
+    bool unsecure          = false; // disable pledge() sandboxing
+
     // multimodal models (see examples/llava)
     std::string mmproj = ""; // path to multimodal projector
     std::string image = ""; // path to an image file
