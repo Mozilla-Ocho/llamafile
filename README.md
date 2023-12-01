@@ -69,7 +69,7 @@ If you use zsh and have trouble running llamafile, try saying `sh -c
 is the case for Python `subprocess`, old versions of Fish, etc.
 
 On Linux when WINE is installed some systems are configured to 
-launch MZ executables under WINE will cause problems. 
+launch MZ executables under WINE this will cause problems. 
 You can fix that by installing the actually portable executable interpreter.
 
 ```sh
