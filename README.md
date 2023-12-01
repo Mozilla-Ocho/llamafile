@@ -53,7 +53,7 @@ weights included) from our releases page, or directly in your terminal
 or command prompt. This is mandatory currently on Windows.
 
 ```sh
-curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1 >llamafile
+curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.2/llamafile-server-0.2 >llamafile
 chmod +x llamafile
 ./llamafile --help
 ./llamafile -m ~/weights/foo.gguf
@@ -89,7 +89,7 @@ Here's an example of how to do that. Let's say you want to try Mistral.
 In that case you can open PowerShell and run these commands:
 
 ```
-curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile-server-0.1
+curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.2/llamafile-server-0.2
 curl -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
 .\llamafile.exe -m mistral.gguf
 ```
