@@ -3039,10 +3039,8 @@ int main(int argc, char **argv)
                                       });
 
     // run the HTTP server in a thread - see comment below
-    fprintf(stderr, "run listen thread...\n");
     std::thread t([&]()
             {
-                fprintf(stderr, "listen_after_bind...\n");
                 if (!svr.listen_after_bind())
                 {
                     return 1;
