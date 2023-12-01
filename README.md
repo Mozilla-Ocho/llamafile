@@ -68,14 +68,23 @@ If you use zsh and have trouble running llamafile, try saying `sh -c
 ./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
 is the case for Python `subprocess`, old versions of Fish, etc.
 
-On Linux `binfmt_misc` has been known to cause problems. You can fix
-that by installing the actually portable executable interpreter.
+On Linux when WINE is installed some systems are configured to 
+launch MZ executables under WINE will cause problems. 
+You can fix that by installing the actually portable executable interpreter.
 
 ```sh
 sudo wget -O /usr/bin/ape https://cosmo.zip/pub/cosmos/bin/ape-$(uname -m).elf
 sudo chmod +x /usr/bin/ape
 sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
 sudo sh -c "echo ':APE-jart:M::jartsr::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
+```
+
+On WSL it's normally unsafe to use APE in a WSL environment, because it tries
+to run MZ executables as WIN32 binaries within the WSL environment. In
+order to make it safe to use llamafile on WSL, run this:
+
+```sh
+sudo sh -c "echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop"
 ```
 
 On Windows, you may need to rename `llamafile` to `llamafile.exe` in
