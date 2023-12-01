@@ -70,7 +70,8 @@ is the case for Python `subprocess`, old versions of Fish, etc.
 
 On some Linux systems, you might get errors relating to `run-detectors`
 or WINE. This is due to `binfmt_misc` registrations. You can fix that by
-adding an additional registration for APE file format llamafile uses:
+adding an additional registration for the APE file format llamafile
+uses:
 
 ```sh
 sudo wget -O /usr/bin/ape https://cosmo.zip/pub/cosmos/bin/ape-$(uname -m).elf
