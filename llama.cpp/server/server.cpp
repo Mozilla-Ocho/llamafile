@@ -3016,11 +3016,14 @@ int main(int argc, char **argv)
         // - Filesystem access is disabled entirely (except ZipOS).
         // - On Linux, network access is restricted to accept() only.
         // Cosmopolitan Libc implements pledge() on Linux using SECCOMP.
-        const char *promises;
+        char promises[32];
         if (IsOpenbsd()) {
-            promises = "stdio inet";
+            strlcpy(promises, "stdio inet", sizeof(promises));
         } else {
-            promises = "stdio anet";
+            strlcpy(promises, "stdio anet", sizeof(promises));
+        }
+        if (!startswith(sparams.public_path.c_str(), "/zip/")) {
+            strlcat(promises, " rpath", sizeof(promises));
         }
         __pledge_mode = PLEDGE_PENALTY_RETURN_EPERM;
         if (pledge(0, 0)) {
