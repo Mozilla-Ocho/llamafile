@@ -205,8 +205,9 @@ int main(int argc, char *argv[]) {
     }
 
     // read central directory
-    uint8_t *cdir = Malloc(amt);
-    if (pread(zfd, cdir, amt, off) != amt) {
+    size_t cdirsize = amt;
+    uint8_t *cdir = Malloc(cdirsize);
+    if (pread(zfd, cdir, cdirsize, off) != cdirsize) {
         DieSys(zpath);
     }
 
@@ -220,28 +221,66 @@ int main(int argc, char *argv[]) {
     }
     GetDosLocalTime(now.tv_sec, &mtime, &mdate);
 
+    // create array of zip entry names
+    char **names = Malloc(sizeof(char *) * argc);
+    for (int i = optind; i < argc; ++i) {
+        names[i] = StrDup(argv[i]);
+        if (FLAG_junk) {
+            names[i] = basename(names[i]);
+        } else {
+            while (*names[i] == '/') {
+                ++names[i];
+            }
+        }
+    }
+
+    // delete central directory entries about to be replaced
+    int new_count = 0;
+    off_t new_index = 0;
+    unsigned entry_index, entry_offset;
+    for (entry_index = entry_offset = 0;
+         entry_index < cnt && entry_offset + kZipCfileHdrMinSize <= cdirsize &&
+                       entry_offset + ZIP_CFILE_HDRSIZE(cdir + entry_offset) <= cdirsize;
+         ++entry_index, entry_offset += ZIP_CFILE_HDRSIZE(cdir + entry_offset)) {
+        if (ZIP_CFILE_MAGIC(cdir + entry_offset) != kZipCfileHdrMagic) {
+            Die(zpath, "corrupted zip central directory entry magic");
+        }
+
+        // check if entry name matches any of the new names
+        bool found = false;
+        for (int i = optind; i < argc; ++i) {
+            if (ZIP_CFILE_NAMESIZE(cdir + entry_offset) == strlen(names[i]) &&
+                !memcmp(ZIP_CFILE_NAME(cdir + entry_offset), names[i],
+                        ZIP_CFILE_NAMESIZE(cdir + entry_offset))) {
+                found = true;
+                break;
+            }
+        }
+
+        // copy back central directory entry
+        if (!found) {
+            memmove(cdir + new_index, cdir + entry_offset,
+                    ZIP_CFILE_HDRSIZE(cdir + entry_offset));
+            new_index += ZIP_CFILE_HDRSIZE(cdir + new_index);
+            ++new_count;
+        }
+    }
+    cdirsize = new_index;
+    cnt = new_count;
+
     // add inputs
     for (int i = optind; i < argc; ++i) {
 
         // open input file
         int fd;
         ssize_t size;
+        char *name = names[i];
         const char *path = argv[i];
         if ((fd = open(path, O_RDONLY)) == -1) {
             DieSys(path);
         }
         if ((size = lseek(fd, 0, SEEK_END)) == -1) {
             DieSys(path);
-        }
-
-        // construct zip entry name
-        char *name = StrDup(path);
-        if (FLAG_junk) {
-            name = basename(name);
-        } else {
-            while (*name == '/') {
-                ++name;
-            }
         }
 
         // determine size and alignment of local file header
@@ -295,9 +334,9 @@ int main(int argc, char *argv[]) {
         // create central directory entry
         extlen = (2 + 2 + 8 + 8 + 8);
         hdrlen = kZipCfileHdrMinSize + namlen + extlen;
-        cdir = Realloc(cdir, amt + hdrlen);
-        uint8_t *cdirhdr = cdir + amt;
-        amt += hdrlen;
+        cdir = Realloc(cdir, cdirsize + hdrlen);
+        uint8_t *cdirhdr = cdir + cdirsize;
+        cdirsize += hdrlen;
         p = cdirhdr;
 
         p = ZIP_WRITE32(p, kZipCfileHdrMagic);
@@ -335,7 +374,7 @@ int main(int argc, char *argv[]) {
     }
 
     // write out central directory
-    if (pwrite(zfd, cdir, amt, zsize) != amt) {
+    if (pwrite(zfd, cdir, cdirsize, zsize) != cdirsize) {
         DieSys(zpath);
     }
     free(cdir);
@@ -351,22 +390,22 @@ int main(int argc, char *argv[]) {
     p = ZIP_WRITE32(p, 0);  // number of disk with start of central directory
     p = ZIP_WRITE64(p, cnt);  // number of records on disk
     p = ZIP_WRITE64(p, cnt);  // number of records
-    p = ZIP_WRITE64(p, amt);  // size of central directory
+    p = ZIP_WRITE64(p, cdirsize);  // size of central directory
     p = ZIP_WRITE64(p, zsize);  // offset of start of central directory
     p = ZIP_WRITE32(p, kZipCdir64LocatorMagic);
     p = ZIP_WRITE32(p, 0);  // number of disk with eocd64
-    p = ZIP_WRITE64(p, zsize + amt);  // offset of eocd64
+    p = ZIP_WRITE64(p, zsize + cdirsize);  // offset of eocd64
     p = ZIP_WRITE32(p, 1);  // total number of disks
     p = ZIP_WRITE32(p, kZipCdirHdrMagic);
     p = ZIP_WRITE16(p, 0);  // number of this disk
     p = ZIP_WRITE16(p, 0);  // number of disks
     p = ZIP_WRITE16(p, cnt);  // number of records on disk
     p = ZIP_WRITE16(p, cnt);  // number of records
-    p = ZIP_WRITE32(p, amt);  // size of central directory
+    p = ZIP_WRITE32(p, cdirsize);  // size of central directory
     p = ZIP_WRITE32(p, 0xffffffffu);  // offset of central directory
     p = ZIP_WRITE16(p, 0);  // comment length
     unassert(p == eocd + sizeof(eocd));
-    if (pwrite(zfd, eocd, sizeof(eocd), zsize + amt) != sizeof(eocd)) {
+    if (pwrite(zfd, eocd, sizeof(eocd), zsize + cdirsize) != sizeof(eocd)) {
         DieSys(zpath);
     }
 

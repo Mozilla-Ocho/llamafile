@@ -317,7 +317,7 @@ executable:
 
 ```
 mv o//llama.cpp/server/server server.com
-zip server.com .args
+o//llamafile/zipalign -j0 server.com .args
 mv server.com server
 ./server
 ```
