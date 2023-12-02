@@ -14,7 +14,7 @@ locally on most computers, with no installation.
 ## Quickstart
 
 The easiest way to try it for yourself is to download our example 
-llamafile for the [LLaVA](https://llava-vl.github.io/) model (license: [LLaMA](https://github.com/facebookresearch/llama/blob/main/LICENSE), 
+llamafile for the [LLaVA](https://llava-vl.github.io/) model (license: [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/), 
 [OpenAI](https://openai.com/policies/terms-of-use)). LLaVA is a new LLM that can do more 
 than just chat; you can also upload images and ask it questions 
 about them. With llamafile, this all happens locally; no data 
@@ -389,7 +389,7 @@ FLAGS
   -0        store uncompressed (currently default)
 ```
 
-## Technical Details
+## Technical details
 
 Here is a succinct overview of the tricks we used to create the fattest
 executable format ever. The long story short is llamafile is a shell
@@ -402,7 +402,7 @@ The llama.cpp executable then opens the shell script again as a file,
 and calls mmap() again to pull the weights into memory and make them
 directly accessible to both the CPU and GPU.
 
-### ZIP Weights Embedding
+### ZIP weights embedding
 
 The trick to embedding weights inside llama.cpp executables is to ensure
 the local file is aligned on a page size boundary. That way, assuming
@@ -415,7 +415,7 @@ program should be able to read them, provided they support ZIP64. This
 makes the weights much more easily accessible than they otherwise would
 have been, had we invented our own file format for concatenated files.
 
-### Microarchitectural Portability
+### Microarchitectural portability
 
 On Intel and AMD microprocessors, llama.cpp spends most of its time in
 the matmul quants, which are usually written thrice for SSSE3, AVX, and
@@ -425,7 +425,7 @@ that can be `#include`ed multiple times, with varying
 wrapper function is added which uses Cosmopolitan's `X86_HAVE(FOO)`
 feature to runtime dispatch to the appropriate implementation.
 
-### Architecture Portability
+### Architecture portability
 
 llamafile solves architecture portability by building llama.cpp twice:
 once for AMD64 and again for ARM64. It then wraps them with a shell
@@ -441,7 +441,7 @@ program that comes included with the `cosmocc` compiler. What the
 the host platform's native executable format. This guarantees a fallback
 path exists for traditional release processes when it's needed.
 
-### GPU Support
+### GPU support
 
 Cosmopolitan Libc uses static linking, since that's the only way to get
 the same executable to run on six OSes. This presents a challenge for
