@@ -131,11 +131,31 @@ static bool CreateTempPath(const char *path, char tmp[static PATH_MAX]) {
     }
 }
 
+static void LogCommand(char *args[]) {
+    for (int i = 0; args[i]; ++i) {
+        if (i) {
+            tinyprint(2, " ", NULL);
+        }
+        // this quoting should be close enough to correct to be
+        // copy/pastable on both unix and windows command terms
+        bool need_quotes = !!strchr(args[i], ' ');
+        if (need_quotes) {
+            tinyprint(2, "\"", NULL);
+        }
+        tinyprint(2, args[i], NULL);
+        if (need_quotes) {
+            tinyprint(2, "\"", NULL);
+        }
+    }
+    tinyprint(2, "\n", NULL);
+}
+
 static bool Compile(const char *src,
                     const char *tmp,
                     const char *out,
                     char *args[]) {
     int pid, ws;
+    LogCommand(args);
     errno_t err = posix_spawnp(&pid, args[0], NULL, NULL, args, environ);
     if (err) {
         perror(args[0]);
