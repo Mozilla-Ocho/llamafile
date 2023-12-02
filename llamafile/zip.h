@@ -265,4 +265,7 @@
 #define ZIP_EXTRA_CONTENT(P)     ((P) + 4)
 #define ZIP_EXTRA_SIZE(P)        (ZIP_EXTRA_CONTENTSIZE(P) + kZipExtraHdrSize)
 
+int64_t get_zip_cfile_offset(const uint8_t *);
+int64_t get_zip_cfile_compressed_size(const uint8_t *);
+
 #endif /* COSMO_ZIP_ */

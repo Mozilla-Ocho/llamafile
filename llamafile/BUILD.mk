@@ -14,7 +14,12 @@ LLAMAFILE_OBJS =					\
 o/$(MODE)/llamafile/zipalign:				\
 		o/$(MODE)/llamafile/zipalign.o
 
+o/$(MODE)/llamafile/zipcheck:				\
+		o/$(MODE)/llamafile/zipcheck.o		\
+		o/$(MODE)/llamafile/zip.o
+
 .PHONY: o/$(MODE)/llamafile
 o/$(MODE)/llamafile:					\
 		$(LLAMAFILE_OBJS)			\
-		o/$(MODE)/llamafile/zipalign
+		o/$(MODE)/llamafile/zipalign		\
+		o/$(MODE)/llamafile/zipcheck
