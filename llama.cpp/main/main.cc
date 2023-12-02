@@ -2,6 +2,8 @@
 // vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
 #include <cosmo.h>
+#include "llama.cpp/ggml-metal.h"
+#include "llama.cpp/ggml-cuda.h"
 #include "tool/args/args.h"
 
 #include "llama.cpp/common.h"
@@ -130,7 +132,7 @@ int main(int argc, char ** argv) {
     atexit([]() { console::cleanup(); });
     is_terminal = isatty(2);
 
-    if (!params.unsecure) {
+    if (!params.unsecure && !ggml_metal_supported() && !ggml_cuda_supported()) {
         // Enable pledge() security on Linux and OpenBSD.
         // - We do this *after* opening the log file for writing.
         // - We do this *before* loading any weights or graphdefs.
