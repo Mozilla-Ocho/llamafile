@@ -2,6 +2,7 @@
 // vi: set net ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
+#include "llamafile/version.h"
 
 #include <cstdio>
 #include <cstring>
@@ -94,6 +95,11 @@ static void usage(const char * executable) {
 }
 
 int main(int argc, char ** argv) {
+    if (argc == 2 && !strcmp(argv[1], "--version")) {
+        printf("llamafile v" LLAMAFILE_VERSION_STRING " quantize\n");
+        exit(0);
+    }
+
     llamafile_check_cpu();
 
     if (argc < 3) {

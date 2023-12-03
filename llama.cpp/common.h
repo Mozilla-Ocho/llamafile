@@ -3,8 +3,8 @@
 #pragma once
 
 #include "llama.h"
-
 #include "sampling.h"
+#include "llamafile/version.h"
 
 #define LOG_NO_FILE_LINE_FUNCTION
 #include "log.h"
@@ -26,9 +26,8 @@
 #define die(msg)          do { fputs("error: " msg "\n", stderr);                exit(1); } while (0)
 #define die_fmt(fmt, ...) do { fprintf(stderr, "error: " fmt "\n", __VA_ARGS__); exit(1); } while (0)
 
-#define print_build_info() do {                                                                     \
-    fprintf(stderr, "%s: build = %d (%s)\n", __func__, LLAMA_BUILD_NUMBER, LLAMA_COMMIT);           \
-    fprintf(stderr, "%s: built with %s for %s\n", __func__, LLAMA_COMPILER, LLAMA_BUILD_TARGET);    \
+#define print_build_info() do {  \
+    fprintf(stderr, "%s: llamafile version " LLAMAFILE_VERSION_STRING "\n", __func__, LLAMA_BUILD_NUMBER, LLAMA_COMMIT);  \
 } while(0)
 
 // build info

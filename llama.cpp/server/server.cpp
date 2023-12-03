@@ -10,6 +10,7 @@
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/ggml-cuda.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/version.h"
 
 #define CPPHTTPLIB_NO_EXCEPTIONS 1
 
@@ -2628,6 +2629,11 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
 
 int main(int argc, char **argv)
 {
+    if (argc == 2 && !strcmp(argv[1], "--version")) {
+        printf("llamafile v" LLAMAFILE_VERSION_STRING " server\n");
+        exit(0);
+    }
+
     llamafile_check_cpu();
     LoadZipArgs(&argc, &argv);
 
