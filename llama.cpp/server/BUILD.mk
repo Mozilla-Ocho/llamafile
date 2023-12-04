@@ -8,6 +8,8 @@ LLAMA_CPP_SERVER_ASSETS := $(wildcard llama.cpp/server/public/*)
 LLAMA_CPP_SERVER_HDRS = $(filter %.h,$(LLAMA_CPP_SERVER_FILES))
 LLAMA_CPP_SERVER_SRCS = $(filter %.cpp,$(LLAMA_CPP_SERVER_FILES))
 
+o/$(MODE)/llama.cpp/server/server.o: private CXXFLAGS += -O1
+
 o/$(MODE)/llama.cpp/server/server:				\
 		o/$(MODE)/llama.cpp/server/server.o		\
 		o/$(MODE)/llama.cpp/llava/llava.a		\

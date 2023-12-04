@@ -22,4 +22,5 @@ o/$(MODE)/llamafile/zipcheck:				\
 o/$(MODE)/llamafile:					\
 		$(LLAMAFILE_OBJS)			\
 		o/$(MODE)/llamafile/zipalign		\
-		o/$(MODE)/llamafile/zipcheck
+		o/$(MODE)/llamafile/zipcheck		\
+		o/$(MODE)/llamafile/addnl
