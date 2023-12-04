@@ -1,6 +1,7 @@
 # llamafile
 
-<img src="llamafile.svg" width="350" height="350">
+<img src="llamafile/llamafile-640x640.png" width="320" height="320"
+     alt="[line drawing of llama animal head in front of slightly open manilla folder filled with files]">
 
 **llamafile lets you distribute and run LLMs with a single file. ([announcement blog post](https://hacks.mozilla.org/2023/11/introducing-llamafile/))**
 
