@@ -191,7 +191,7 @@ namespace grammar_parser {
                 pos = parse_space(pos + 1, is_nested);
             } else if (*pos == '*' || *pos == '+' || *pos == '?') { // repetition operator
                 if (last_sym_start == out_elements.size()) {
-                    ThrowRuntimeError(std::string("expecting preceeding item to */+/? at ") + pos);
+                    ThrowRuntimeError(std::string("expecting preceding item to */+/? at ") + pos);
                 }
 
                 // apply transformation to previous symbol (last_sym_start to end) according to
