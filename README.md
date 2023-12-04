@@ -1,6 +1,6 @@
 # llamafile
 
-![llamafile-250](llamafile/llamafile.png)
+<img src="llamafile.svg" width="350" height="350">
 
 **llamafile lets you distribute and run LLMs with a single file. ([announcement blog post](https://hacks.mozilla.org/2023/11/introducing-llamafile/))**
 
