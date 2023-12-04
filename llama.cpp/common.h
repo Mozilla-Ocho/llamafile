@@ -119,6 +119,7 @@ struct gpt_params {
     bool use_mlock         = false; // use mlock to keep model in memory
     bool numa              = false; // attempt optimizations that help on some NUMA systems
     bool verbose_prompt    = false; // print prompt tokens before generation
+    bool silent_prompt     = false; // don't print prompt to stdout
     bool infill            = false; // use infill mode
 
     bool unsecure          = false; // disable pledge() sandboxing

@@ -466,7 +466,7 @@ int main(int argc, char ** argv) {
     }
 
     bool is_antiprompt        = false;
-    bool input_echo           = true;
+    bool input_echo           = !params.silent_prompt;
     bool need_to_save_session = !path_session.empty() && n_matching_session_tokens < embd_inp.size();
 
     int n_past             = 0;
@@ -735,6 +735,11 @@ int main(int argc, char ** argv) {
                     printf("\n");
                 } else if (params.instruct) {
                     is_interacting = true;
+                } else if (params.silent_prompt) {
+                    // --silent-prompt usually goes with `./main 2>/dev/null` and
+                    // doing that usually causes the llm terminal output to not
+                    // include a trailing newline. that's an unpleasant ux.
+                    printf("\n");
                 }
             }
 

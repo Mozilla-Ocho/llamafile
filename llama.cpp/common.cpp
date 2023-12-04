@@ -567,6 +567,8 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             params.numa = true;
         } else if (arg == "--verbose-prompt") {
             params.verbose_prompt = true;
+        } else if (arg == "--silent-prompt") {
+            params.silent_prompt = true;
         } else if (arg == "-r" || arg == "--reverse-prompt") {
             if (++i >= argc) {
                 invalid_param = true;

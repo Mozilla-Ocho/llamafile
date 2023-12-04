@@ -34,3 +34,4 @@ LOCAL MODIFICATIONS
   - Remove log callback pointer API from Metal GPU module
   - Use runtime dispatching for matmul quants
   - Remove operating system #ifdef statements
+  - Introduce --silent-prompt flag to main
