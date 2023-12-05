@@ -12,7 +12,7 @@ RUN chmod +x ./llamafile-server
 
 
 
-FROM scratch AS final
+FROM ubuntu:latest AS final
 
 RUN addgroup --gid 1000 user
 RUN adduser --uid 1000 --gid 1000 --disabled-password --gecos "" user
