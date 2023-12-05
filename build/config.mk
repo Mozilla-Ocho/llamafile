@@ -1,11 +1,13 @@
 #-*-mode:makefile-gmake;indent-tabs-mode:t;tab-width:8;coding:utf-8-*-┐
 #───vi: set et ft=make ts=8 tw=8 fenc=utf-8 :vi───────────────────────┘
 
-PREFIX = cosmo
+PREFIX = /usr/local
+TOOLCHAIN = cosmo
 
-AR = $(PREFIX)ar
-CC = $(PREFIX)cc
-CXX = $(PREFIX)c++
+AR = $(TOOLCHAIN)ar
+CC = $(TOOLCHAIN)cc
+CXX = $(TOOLCHAIN)c++
+INSTALL = install
 
 ARFLAGS = rcsD
 CCFLAGS = -g -O3
