@@ -1,0 +1,242 @@
+.Dd December 5, 2023
+.Dt llamafile 1
+.Os
+.Sh NAME
+.Nm llamafile
+.Nd large language model runner
+.Sh SYNOPSIS
+.Nm
+.Op flags...
+.Op Fl m Ar weights.gguf
+.Op Fl p Ar prompt
+.Sh DESCRIPTION
+.Nm
+is a command-line tool for running large language models. It has use
+cases such as:
+.Pp
+.Bl -dash -compact
+.It
+Code completion
+.It
+Prose composition
+.It
+Text summarization
+.It
+Interactive chat bot
+.El
+.Sh OPTIONS
+The following options are available:
+.Bl -tag -width indent
+.It Fl h , Fl Fl help
+Show help message and exit.
+.It Fl i , Fl Fl interactive
+Run in interactive mode.
+.It Fl Fl interactive-first
+Run in interactive mode and wait for input right away.
+.It Fl ins , Fl Fl instruct
+Run in instruction mode (use with Alpaca models).
+.It Fl Fl multiline-input
+Allows you to write or paste multiple lines without ending each in '\[rs]'.
+.It Fl r Ar PROMPT , Fl Fl reverse-prompt Ar PROMPT
+Halt generation at
+.Ar PROMPT
+and return control in interactive mode (can be specified more than once for multiple prompts).
+.It Fl Fl color
+colorise output to distinguish prompt and user input from generations
+.It Fl s Ar SEED , Fl Fl seed Ar SEED
+Random Number Generator (RNG) seed (default: -1, use random seed for < 0)
+.It Fl t Ar N , Fl Fl threads Ar N
+Number of threads to use during generation (default: nproc/2)
+.It Fl tb Ar N , Fl Fl threads-batch Ar N
+Number of threads to use during batch and prompt processing (default:
+same as
+.Fl Fl threads )
+.It Fl p Ar PROMPT , Fl Fl prompt Ar PROMPT
+Prompt to start generation with (default: empty)
+.It Fl e , Fl Fl escape
+.\" Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]", \[rs]\[rs])
+.It Fl Fl prompt-cache Ar FNAME
+File to cache prompt state for faster startup (default: none)
+.It Fl Fl prompt-cache-all
+If specified, saves user input and generations to cache as well. Not supported with
+.Fl Fl interactive
+or other interactive options.
+.It Fl Fl prompt-cache-ro
+If specified, uses the prompt cache but does not update it.
+.It Fl Fl random-prompt
+Start with a randomized prompt.
+.It Fl Fl in-prefix-bos
+Prefix BOS to user inputs, preceding the
+.Fl Fl in-prefix
+string.
+.It Fl Fl in-prefix Ar STRING
+String to prefix user inputs with (default: empty)
+.It Fl Fl in-suffix Ar STRING
+String to suffix after user inputs with (default: empty)
+.It Fl f Ar FNAME , Fl Fl file Ar FNAME
+Prompt file to start generation.
+.It Fl n Ar N , Fl Fl n-predict Ar N
+Number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
+.It Fl c Ar N , Fl Fl ctx-size Ar N
+Size of the prompt context (default: 512, 0 = loaded from model)
+.It Fl b Ar N , Fl Fl batch-size Ar N
+Batch size for prompt processing (default: 512)
+.It Fl Fl top-k Ar N
+Top-k sampling (default: 40, 0 = disabled)
+.It Fl Fl top-p Ar N
+Top-p sampling (default: 0.9, 1.0 = disabled)
+.It Fl Fl min-p Ar N
+Min-p sampling (default: 0.1, 0.0 = disabled)
+.It Fl Fl tfs Ar N
+Tail free sampling, parameter z (default: 1.0, 1.0 = disabled)
+.It Fl Fl typical Ar N
+Locally typical sampling, parameter p (default: 1.0, 1.0 = disabled)
+.It Fl Fl repeat-last-n Ar N
+Last n tokens to consider for penalize (default: 64, 0 = disabled, -1 = ctx_size)
+.It Fl Fl repeat-penalty Ar N
+Penalize repeat sequence of tokens (default: 1.1, 1.0 = disabled)
+.It Fl Fl presence-penalty Ar N
+Repeat alpha presence penalty (default: 0.0, 0.0 = disabled)
+.It Fl Fl frequency-penalty Ar N
+Repeat alpha frequency penalty (default: 0.0, 0.0 = disabled)
+.It Fl Fl mirostat Ar N
+Use Mirostat sampling. Top K, Nucleus, Tail Free and Locally Typical samplers are ignored if used. (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)
+.It Fl Fl mirostat-lr Ar N
+Mirostat learning rate, parameter eta (default: 0.1)
+.It Fl Fl mirostat-ent Ar N
+Mirostat target entropy, parameter tau (default: 5.0)
+.It Fl l Ar TOKEN_ID(+/-)BIAS , Fl Fl logit-bias Ar TOKEN_ID(+/-)BIAS
+Modifies the likelihood of token appearing in the completion, i.e.
+.Fl Fl logit-bias Ar 15043+1
+to increase likelihood of token
+.Ar ' Hello' ,
+or
+.Fl Fl logit-bias Ar 15043-1
+to decrease likelihood of token
+.Ar ' Hello' .
+.It Fl Fl grammar Ar GRAMMAR
+BNF-like grammar to constrain generations (see samples in grammars/ dir)
+.It Fl Fl grammar-file Ar FNAME
+File to read grammar from.
+.It Fl Fl cfg-negative-prompt Ar PROMPT
+Negative prompt to use for guidance. (default: empty)
+.It Fl Fl cfg-negative-prompt-file Ar FNAME
+Negative prompt file to use for guidance. (default: empty)
+.It Fl Fl cfg-scale Ar N
+Strength of guidance (default: 1.000000, 1.0 = disable)
+.It Fl Fl rope-scaling Ar {none,linear,yarn}
+RoPE frequency scaling method, defaults to linear unless specified by the model
+.It Fl Fl rope-scale Ar N
+RoPE context scaling factor, expands context by a factor of N
+.It Fl Fl rope-freq-base Ar N
+RoPE base frequency, used by NTK-aware scaling (default: loaded from model)
+.It Fl Fl rope-freq-scale Ar N
+RoPE frequency scaling factor, expands context by a factor of 1/N
+.It Fl Fl yarn-orig-ctx Ar N
+YaRN: original context size of model (default: 0 = model training context size)
+.It Fl Fl yarn-ext-factor Ar N
+YaRN: extrapolation mix factor (default: 1.0, 0.0 = full interpolation)
+.It Fl Fl yarn-attn-factor Ar N
+YaRN: scale sqrt(t) or attention magnitude (default: 1.0)
+.It Fl Fl yarn-beta-slow Ar N
+YaRN: high correction dim or alpha (default: 1.0)
+.It Fl Fl yarn-beta-fast Ar N
+YaRN: low correction dim or beta (default: 32.0)
+.It Fl Fl ignore-eos
+Ignore end of stream token and continue generating (implies
+.Fl Fl logit-bias Ar 2-inf )
+.It Fl Fl no-penalize-nl
+Do not penalize newline token.
+.It Fl Fl memory-f32
+Use f32 instead of f16 for memory key+value (default: disabled) Not recommended: doubles context memory required and no measurable increase in quality.
+.It Fl Fl temp Ar N
+Temperature (default: 0.8)
+.It Fl Fl logits-all
+Return logits for all tokens in the batch (default: disabled)
+.It Fl Fl hellaswag
+Compute HellaSwag score over random tasks from datafile supplied with -f
+.It Fl Fl hellaswag-tasks Ar N
+Number of tasks to use when computing the HellaSwag score (default: 400)
+.It Fl Fl keep Ar N
+Number of tokens to keep from the initial prompt (default: 0, -1 = all)
+.It Fl Fl draft Ar N
+Number of tokens to draft for speculative decoding (default: 16)
+.It Fl Fl chunks Ar N
+Max number of chunks to process (default: -1, -1 = all)
+.It Fl np Ar N , Fl Fl parallel Ar N
+Number of parallel sequences to decode (default: 1)
+.It Fl ns Ar N , Fl Fl sequences Ar N
+Number of sequences to decode (default: 1)
+.It Fl pa Ar N , Fl Fl p-accept Ar N
+speculative decoding accept probability (default: 0.5)
+.It Fl ps Ar N , Fl Fl p-split Ar N
+Speculative decoding split probability (default: 0.1)
+.It Fl cb , Fl Fl cont-batching
+Enable continuous batching (a.k.a dynamic batching) (default: disabled)
+.It Fl Fl mmproj Ar MMPROJ_FILE
+Path to a multimodal projector file for LLaVA. See llama.cpp/llava/README.md
+.It Fl Fl image Ar IMAGE_FILE
+Path to an image file. use with multimodal models.
+.It Fl Fl mlock
+Force system to keep model in RAM rather than swapping or compressing.
+.It Fl Fl no-mmap
+Do not memory-map model (slower load but may reduce pageouts if not using mlock).
+.It Fl Fl numa
+Attempt optimizations that help on some NUMA systems if run without this previously, it is recommended to drop the system page cache before using this. See https://github.com/ggerganov/llama.cpp/issues/1437.
+.It Fl ngl Ar N , Fl Fl n-gpu-layers Ar N
+Number of layers to store in VRAM.
+.It Fl ngld Ar N , Fl Fl n-gpu-layers-draft Ar N
+Number of layers to store in VRAM for the draft model.
+.It Fl ts Ar SPLIT , Fl Fl tensor-split Ar SPLIT
+How to split tensors across multiple GPUs, comma-separated list of proportions, e.g. 3,1
+.It Fl mg Ar i , Fl Fl main-gpu Ar i
+The GPU to use for scratch and small tensors.
+.It Fl nommq , Fl Fl no-mul-mat-q
+Use cuBLAS instead of custom mul_mat_q CUDA kernels. Not recommended since this is both slower and uses more VRAM.
+.It Fl Fl verbose-prompt
+Print prompt before generation.
+.It Fl Fl silent-prompt
+Don't echo the prompt itself to standard output.
+.It Fl Fl simple-io
+Use basic IO for better compatibility in subprocesses and limited consoles.
+.It Fl Fl lora Ar FNAME
+Apply LoRA adapter (implies
+.Fl Fl no-mmap )
+.It Fl Fl lora-scaled Ar FNAME Ar S
+Apply LoRA adapter with user defined scaling S (implies
+.Fl Fl no-mmap )
+.It Fl Fl lora-base Ar FNAME
+Optional model to use as a base for the layers modified by the LoRA adapter
+.It Fl m Ar FNAME , Fl Fl model Ar FNAME
+Model path (default: models/7B/ggml-model-f16.gguf)
+.It Fl md Ar FNAME , Fl Fl model-draft Ar FNAME
+Draft model for speculative decoding (default: models/7B/ggml-model-f16.gguf)
+.It Fl Fl unsecure
+Disables pledge() sandboxing on Linux and OpenBSD.
+.El
+.Sh LOG OPTIONS
+The following log options are available:
+.Bl -tag -width indent
+.It Fl ld Ar LOGDIR , Fl Fl logdir Ar LOGDIR
+Path under which to save YAML logs (no logging if unset)
+.It Fl Fl log-test
+Run simple logging test
+.It Fl Fl log-disable
+Disable trace logs
+.It Fl Fl log-enable
+Enable trace logs
+.It Fl Fl log-file
+Specify a log filename (without extension)
+.It Fl Fl log-new
+Create a separate new log file on start. Each log file will have unique name: "<name>.<ID>.log"
+.It Fl Fl log-append
+Don't truncate the old log file.
+.El
+.Sh SEE ALSO
+.Xr llamafile-server 1 ,
+.Xr llamafile-quantize 1 ,
+.Xr llamafile-perplexity 1 ,
+.Xr llava-cli 1 ,
+.Xr llava-quantize 1 ,
+.Xr zipalign 1 ,
+.Xr unzip 1

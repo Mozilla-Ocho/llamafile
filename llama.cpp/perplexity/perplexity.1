@@ -1,0 +1,27 @@
+.Dd December 5, 2023
+.Dt llamafile-perplexity 1
+.Os
+.Sh NAME
+.Nm llamafile-perplexity
+.Nd LLM benchmarking tool
+.Sh SYNOPSIS
+.Nm
+.Op flags...
+.Sh DESCRIPTION
+.Nm
+can be used to gauge the quality of an LLM implementation.
+.Sh OPTIONS
+The following options are available:
+.Bl -tag -width indent
+.It Fl h , Fl Fl help
+Show help message and exit.
+.It Fl m Ar FNAME , Fl Fl model Ar FNAME
+Model path (default: models/7B/ggml-model-f16.gguf)
+.It Fl f Ar FNAME , Fl Fl file Ar FNAME
+Raw data input file.
+.It Fl t Ar N , Fl Fl threads Ar N
+Number of threads to use during generation (default: nproc/2)
+.It Fl s Ar SEED , Fl Fl seed Ar SEED
+Random Number Generator (RNG) seed (default: -1, use random seed for < 0)
+.Sh SEE ALSO
+.Xr llamafile 1

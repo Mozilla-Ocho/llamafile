@@ -1,0 +1,89 @@
+.Dd December 5, 2023
+.Dt llava-cli 1
+.Os
+.Sh NAME
+.Nm llava-cli
+.Nd CLIP model command line interface
+.Sh SYNOPSIS
+.Nm
+.Op flags...
+.Sh DESCRIPTION
+.Nm
+is a command-line tool for LLaVA.
+.Sh OPTIONS
+The following options are available:
+.Bl -tag -width indent
+.It Fl h , Fl Fl help
+Show help message and exit.
+.It Fl Fl temp Ar N
+Temperature (default: 0.8)
+.It Fl Fl top-k Ar N
+Top-k sampling (default: 40, 0 = disabled)
+.It Fl Fl top-p Ar N
+Top-p sampling (default: 0.9, 1.0 = disabled)
+.It Fl Fl tfs Ar N
+Tail free sampling, parameter z (default: 1.0, 1.0 = disabled)
+.It Fl Fl typical Ar N
+Locally typical sampling, parameter p (default: 1.0, 1.0 = disabled)
+.It Fl Fl mirostat Ar N
+Use Mirostat sampling. Top K, Nucleus, Tail Free and Locally Typical samplers are ignored if used. (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)
+.It Fl Fl mirostat-lr Ar N
+Mirostat learning rate, parameter eta (default: 0.1)
+.It Fl Fl mirostat-ent Ar N
+Mirostat target entropy, parameter tau (default: 5.0)
+.Fl Fl logit-bias Ar 15043+1
+to increase likelihood of token
+.Ar ' Hello' ,
+or
+.Fl Fl logit-bias Ar 15043-1
+to decrease likelihood of token
+.Ar ' Hello' .
+.It Fl p Ar PROMPT , Fl Fl prompt Ar PROMPT
+Prompt to start generation with (default: empty)
+.It Fl t Ar N , Fl Fl threads Ar N
+Number of threads to use during generation (default: nproc/2)
+.It Fl tb Ar N , Fl Fl threads-batch Ar N
+Number of threads to use during batch and prompt processing (default:
+same as
+.Fl Fl threads )
+.It Fl Fl image Ar IMAGE_FILE
+Path to an image file. use with multimodal models.
+.It Fl n Ar N , Fl Fl n-predict Ar N
+Number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
+.It Fl b Ar N , Fl Fl batch-size Ar N
+Batch size for prompt processing (default: 512)
+.It Fl m Ar FNAME , Fl Fl model Ar FNAME
+Model path (default: models/7B/ggml-model-f16.gguf)
+.It Fl Fl mmproj Ar MMPROJ_FILE
+Path to a multimodal projector file for LLaVA. See llama.cpp/llava/README.md
+.It Fl Fl numa
+Attempt optimizations that help on some NUMA systems if run without this previously, it is recommended to drop the system page cache before using this. See https://github.com/ggerganov/llama.cpp/issues/1437.
+.It Fl c Ar N , Fl Fl ctx-size Ar N
+Size of the prompt context (default: 512, 0 = loaded from model)
+.It Fl Fl rope-scaling Ar {none,linear,yarn}
+RoPE frequency scaling method, defaults to linear unless specified by the model
+.It Fl Fl rope-scale Ar N
+RoPE context scaling factor, expands context by a factor of N
+.It Fl Fl rope-freq-base Ar N
+RoPE base frequency, used by NTK-aware scaling (default: loaded from model)
+.It Fl Fl rope-freq-scale Ar N
+RoPE frequency scaling factor, expands context by a factor of 1/N
+.It Fl Fl yarn-orig-ctx Ar N
+YaRN: original context size of model (default: 0 = model training context size)
+.It Fl Fl yarn-ext-factor Ar N
+YaRN: extrapolation mix factor (default: 1.0, 0.0 = full interpolation)
+.It Fl Fl yarn-attn-factor Ar N
+YaRN: scale sqrt(t) or attention magnitude (default: 1.0)
+.It Fl Fl yarn-beta-slow Ar N
+YaRN: high correction dim or alpha (default: 1.0)
+.It Fl Fl yarn-beta-fast Ar N
+YaRN: low correction dim or beta (default: 32.0)
+.It Fl s Ar SEED , Fl Fl seed Ar SEED
+Random Number Generator (RNG) seed (default: -1, use random seed for < 0)
+.It Fl Fl memory-f32
+Use f32 instead of f16 for memory key+value (default: disabled) Not recommended: doubles context memory required and no measurable increase in quality.
+.It Fl Fl logits-all
+Return logits for all tokens in the batch (default: disabled).El
+.Sh SEE ALSO
+.Xr llava-quantize 1 ,
+.Xr llamafile 1

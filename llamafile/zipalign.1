@@ -1,0 +1,39 @@
+.Dd December 5, 2023
+.Dt zipalign 1
+.Os
+.Sh NAME
+.Nm zipalign
+.Nd PKZIP for LLMs
+.Sh SYNOPSIS
+.Nm
+.Op FLAG...
+.Ar ZIP
+.Ar FILE...
+.Sh DESCRIPTION
+.Nm
+adds aligned uncompressed files to a PKZIP archive.
+.Pp
+This tool is designed to concatenate gigabytes of LLM weights to an
+executable. This command goes 10x faster than `zip -j0`. Unlike zip
+you are not required to use the .com file extension for it to work.
+But most importantly, this tool has a flag that lets you insert zip
+files that are aligned on a specific boundary. The result is things
+like GPUs that have specific memory alignment requirements will now
+be able to perform math directly on the zip file's mmap()'d weights
+.Sh OPTIONS
+The following options are available:
+.Bl -tag -width indent
+.It Fl h
+Show help.
+.It Fl N
+Run in nondeterministic mode. This will cause the date/time of inserted assets to reflect the current time.
+.It Fl a Ar INT
+Byte alignment for inserted zip assets. This must be a two power. It defaults to 65536.
+.It Fl j
+Strip directory components. The filename of each input path will be used as the ZIP asset name.
+.It Fl 0
+Store zip assets without compression.
+.El
+.Sh SEE ALSO
+.Xr unzip 1 ,
+.Xr llamafile 1
