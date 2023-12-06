@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "zip.h"
 #include <time.h>
 #include <fcntl.h>
 #include <cosmo.h>
@@ -27,8 +28,8 @@
 #include <getopt.h>
 #include <stdbool.h>
 #include <sys/uio.h>
+#include <sys/stat.h>
 #include <third_party/zlib/zlib.h>
-#include "zip.h"
 
 #define USAGE \
   " ZIP FILE...\n\
@@ -37,22 +38,19 @@ DESCRIPTION\n\
 \n\
   Adds aligned uncompressed files to PKZIP archive\n\
 \n\
-  This tool is designed to concatenate gigabytes of LLM weights to an\n\
-  executable. This command goes 10x faster than `zip -j0`. Unlike zip\n\
-  you are not required to use the .com file extension for it to work.\n\
-  But most importantly, this tool has a flag that lets you insert zip\n\
-  files that are aligned on a specific boundary. The result is things\n\
-  like GPUs that have specific memory alignment requirements will now\n\
-  be able to perform math directly on the zip file's mmap()'d weights\n\
-\n\
 FLAGS\n\
 \n\
   -h        help\n\
+  -v        verbose\n\
   -N        nondeterministic mode\n\
   -a INT    alignment (default 65536)\n\
   -j        strip directory components\n\
-  -0        store uncompressed (currently default)\n\
+  -0        store uncompressed (default)\n\
+  -6        store with faster compression\n\
+  -9        store with maximum compression\n\
 \n"
+
+#define CHUNK 2097152
 
 #define Min(a, b) ((a) < (b) ? (a) : (b))
 #define DOS_DATE(YEAR, MONTH_IDX1, DAY_IDX1) \
@@ -62,11 +60,13 @@ FLAGS\n\
 
 static const char *prog;
 static int FLAG_junk;
+static int FLAG_level;
+static int FLAG_verbose;
 static int FLAG_alignment = 65536;
 static bool FLAG_nondeterministic;
 
 static wontreturn void Die(const char *thing, const char *reason) {
-    tinyprint(2, thing, ": ", reason, "\n", NULL);
+    tinyprint(2, thing, ": fatal error: ", reason, "\n", NULL);
     exit(1);
 }
 
@@ -105,9 +105,9 @@ static void GetDosLocalTime(int64_t utcunixts,
                             uint16_t *out_time,
                             uint16_t *out_date) {
     struct tm tm;
-    gmtime_r(&utcunixts, &tm);
+    localtime_r(&utcunixts, &tm);
     *out_time = DOS_TIME(tm.tm_hour, tm.tm_min, tm.tm_sec);
-    *out_date = DOS_DATE(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday + 1);
+    *out_date = DOS_DATE(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 }
 
 int main(int argc, char *argv[]) {
@@ -118,9 +118,22 @@ int main(int argc, char *argv[]) {
 
     // parse flags
     int opt;
-    while ((opt = getopt(argc, argv, "hj0Na:")) != -1) {
+    while ((opt = getopt(argc, argv, "0123456789hvjNa:")) != -1) {
         switch (opt) {
             case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                FLAG_level = opt - '0';
+                break;
+            case 'v':
+                ++FLAG_verbose;
                 break;
             case 'j':
                 FLAG_junk = true;
@@ -211,16 +224,6 @@ int main(int argc, char *argv[]) {
         DieSys(zpath);
     }
 
-    // get time
-    struct timespec now;
-    uint16_t mtime, mdate;
-    if (FLAG_nondeterministic) {
-        now = timespec_real();
-    } else {
-        now = timespec_fromseconds(1700000000);
-    }
-    GetDosLocalTime(now.tv_sec, &mtime, &mdate);
-
     // create array of zip entry names
     char **names = Malloc(sizeof(char *) * argc);
     for (int i = optind; i < argc; ++i) {
@@ -230,6 +233,15 @@ int main(int argc, char *argv[]) {
         } else {
             while (*names[i] == '/') {
                 ++names[i];
+            }
+        }
+    }
+
+    // verify there's no duplicate zip asset names
+    for (int i = optind; i < argc; ++i) {
+        for (int j = i + 1; j < argc; ++j) {
+            if (!strcmp(names[i], names[j])) {
+                Die(names[i], "zip asset name specified multiple times");
             }
         }
     }
@@ -273,34 +285,103 @@ int main(int argc, char *argv[]) {
 
         // open input file
         int fd;
-        ssize_t size;
-        char *name = names[i];
         const char *path = argv[i];
         if ((fd = open(path, O_RDONLY)) == -1) {
             DieSys(path);
         }
-        if ((size = lseek(fd, 0, SEEK_END)) == -1) {
+
+        // get information about file
+        uint64_t size;
+        struct stat st;
+        if (fstat(fd, &st) == -1) {
             DieSys(path);
         }
+        size = st.st_size;
+        if (!S_ISREG(st.st_mode)) {
+            Die(path, "not a regular file");
+        }
+
+        // get time
+        int64_t ts;
+        uint16_t mtime, mdate;
+        if (FLAG_nondeterministic) {
+            ts = st.st_mtime;
+        } else {
+            ts = 1700000000;
+        }
+        GetDosLocalTime(ts, &mtime, &mdate);
 
         // determine size and alignment of local file header
+        char *name = names[i];
         size_t namlen = strlen(name);
         size_t extlen = (2 + 2 + 8 + 8);
         size_t hdrlen = kZipLfileHdrMinSize + namlen + extlen;
         while ((zsize + hdrlen) & (FLAG_alignment - 1)) ++zsize;
 
+        // initialize zlib in raw deflate mode
+        z_stream zs;
+        int compression;
+        if (!FLAG_level) {
+            compression = kZipCompressionNone;
+        } else {
+            compression = kZipCompressionDeflate;
+            zs.zalloc = 0;
+            zs.zfree = 0;
+            zs.opaque = 0;
+            switch (deflateInit2(&zs, FLAG_level, Z_DEFLATED, -MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY)) {
+                case Z_OK:
+                    break;
+                case Z_MEM_ERROR:
+                    DieOom();
+                default:
+                    unassert(!"deflateInit2() called with invalid parameters");
+            }
+        }
+
         // copy file
         ssize_t rc;
         uint32_t crc = 0;
-        _Alignas(4096) static uint8_t iobuf[2097152];
+        uint64_t compsize = 0;
+        _Alignas(4096) static uint8_t iobuf[CHUNK];
+        _Alignas(4096) static uint8_t cdbuf[CHUNK];
         for (off_t i = 0; i < size; i += rc) {
-            if ((rc = pread(fd, iobuf, Min(size, sizeof(iobuf)), i)) <= 0) {
+            // read chunk
+            if ((rc = pread(fd, iobuf, Min(size, CHUNK), i)) <= 0) {
                 DieSys(path);
             }
             crc = crc32(crc, iobuf, rc);
-            if (pwrite(zfd, iobuf, rc, zsize + hdrlen + i) != rc) {
-                DieSys(zpath);
+            if (!FLAG_level) {
+                // write uncompressed chunk to output
+                if (pwrite(zfd, iobuf, rc, zsize + hdrlen + compsize) != rc) {
+                    DieSys(zpath);
+                }
+                compsize += rc;
+            } else {
+                // compress chunk and write to output
+                zs.avail_in = rc;
+                zs.next_in = iobuf;
+                do {
+                    zs.next_out = cdbuf;
+                    zs.avail_out = CHUNK;
+                    int boop;
+                    switch ((boop = deflate(&zs, rc != CHUNK ? Z_FINISH : Z_FULL_FLUSH))) {
+                        case Z_MEM_ERROR:
+                            DieOom();
+                        case Z_STREAM_ERROR:
+                            unassert(!"deflate() stream error");
+                        default:
+                            break;
+                    }
+                    ssize_t have = CHUNK - zs.avail_out;
+                    if (pwrite(zfd, cdbuf, have, zsize + hdrlen + compsize) != have) {
+                        DieSys(zpath);
+                    }
+                    compsize += have;
+                } while (!zs.avail_out);
             }
+        }
+        if (FLAG_level) {
+            unassert(deflateEnd(&zs) == Z_OK);
         }
 
         // write local file header
@@ -310,7 +391,7 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE32(p, kZipLfileHdrMagic);
         p = ZIP_WRITE16(p, kZipEra2001);
         p = ZIP_WRITE16(p, kZipGflagUtf8);
-        p = ZIP_WRITE16(p, kZipCompressionNone);
+        p = ZIP_WRITE16(p, compression);
         p = ZIP_WRITE16(p, mtime);
         p = ZIP_WRITE16(p, mdate);
         p = ZIP_WRITE32(p, crc);
@@ -323,7 +404,7 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE16(p, kZipExtraZip64);
         p = ZIP_WRITE16(p, 8 + 8);
         p = ZIP_WRITE64(p, size);  // uncompressed size
-        p = ZIP_WRITE64(p, size);  // compressed size
+        p = ZIP_WRITE64(p, compsize);  // compressed size
 
         unassert(p == lochdr + hdrlen);
         if (pwrite(zfd, lochdr, hdrlen, zsize) != hdrlen) {
@@ -343,7 +424,7 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE16(p, kZipOsUnix << 8 | kZipEra2001);  // version made by
         p = ZIP_WRITE16(p, kZipEra2001);  // version needed to extract
         p = ZIP_WRITE16(p, kZipGflagUtf8);
-        p = ZIP_WRITE16(p, kZipCompressionNone);
+        p = ZIP_WRITE16(p, compression);
         p = ZIP_WRITE16(p, mtime);
         p = ZIP_WRITE16(p, mdate);
         p = ZIP_WRITE32(p, crc);
@@ -354,22 +435,27 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE16(p, 0);  // comment length
         p = ZIP_WRITE16(p, 0);  // disk number start
         p = ZIP_WRITE16(p, kZipIattrBinary);
-        p = ZIP_WRITE32(p, 0100644u << 16);  // external file attributes
+        p = ZIP_WRITE32(p, st.st_mode << 16);  // external file attributes
         p = ZIP_WRITE32(p, 0xffffffffu); // lfile offset
         p = mempcpy(p, name, namlen);
 
         p = ZIP_WRITE16(p, kZipExtraZip64);
         p = ZIP_WRITE16(p, 8 + 8 + 8);
-        p = ZIP_WRITE64(p, size);   // uncompressed size
-        p = ZIP_WRITE64(p, size);   // compressed size
+        p = ZIP_WRITE64(p, size);  // uncompressed size
+        p = ZIP_WRITE64(p, compsize);  // compressed size
         p = ZIP_WRITE64(p, zsize);  // lfile offset
         unassert(p == cdirhdr + hdrlen);
 
         // finish up
         ++cnt;
-        zsize += hdrlen + size;
+        zsize += hdrlen + compsize;
         if (close(fd)) {
             DieSys(path);
+        }
+
+        // log asset creation
+        if (FLAG_verbose) {
+            tinyprint(2, path, " -> ", name, "\n", NULL);
         }
     }
 

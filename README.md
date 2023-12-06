@@ -244,7 +244,7 @@ In the event that GPU support couldn't be compiled and dynamically
 linked on the fly for any reason, llamafile will fall back to CPU
 inference.
 
-## Source instructions
+## Source installation
 
 Here's how to build llamafile from source. First, you need the cosmocc
 toolchain, which is a fat portable binary version of GCC. Here's how you
@@ -259,18 +259,18 @@ cd ..
 export PATH="$PWD/cosmocc/bin:$PATH"
 ```
 
-You can now build the llamafile repository by running make:
+You can now build and install the llamafile repository by running make:
 
 ```sh
 make -j8
+sudo make install
 ```
 
 Here's an example of how to generate code for a libc function using the
 llama.cpp command line interface, utilizing WizardCoder-Python-13B weights:
 
 ```sh
-make -j8 o//llama.cpp/main/main
-o//llama.cpp/main/main \
+llamafile \
   -m ~/weights/wizardcoder-python-13b-v1.0.Q8_0.gguf \
   --temp 0 \
   -r $'```\n' \
@@ -280,28 +280,19 @@ o//llama.cpp/main/main \
 Here's a similar example that instead utilizes Mistral-7B-Instruct weights:
 
 ```sh
-make -j8 o//llama.cpp/main/main
-o//llama.cpp/main/main \
+llamafile \
   -m ~/weights/mistral-7b-instruct-v0.1.Q4_K_M.gguf \
   --temp 0.7 \
   -r $'\n' \
   -p $'### Instruction: Write a story about llamas\n### Response:\n'
 ```
 
-Here's an example of how to run llama.cpp's built-in HTTP server in such
-a way that the weights are embedded inside the executable. This example
-uses LLaVA v1.5-7B, a multimodal LLM that works with llama.cpp's 
+Here's an example of how to run llama.cpp's built-in HTTP server. This
+example uses LLaVA v1.5-7B, a multimodal LLM that works with llama.cpp's
 recently-added support for image inputs.
 
 ```sh
-make -j8
-
-o//llamafile/zipalign -j0 \
-  o//llama.cpp/server/server \
-  ~/weights/llava-v1.5-7b-Q8_0.gguf \
-  ~/weights/llava-v1.5-7b-mmproj-Q8_0.gguf
-
-o//llama.cpp/server/server \
+llamafile-server \
   -m llava-v1.5-7b-Q8_0.gguf \
   --mmproj llava-v1.5-7b-mmproj-Q8_0.gguf \
   --host 0.0.0.0
@@ -313,18 +304,15 @@ images to it.
 
 If you want to be able to just say:
 
-```
-./server
+```sh
+./llava-server.llamafile
 ```
 
-...and have it run the web server without having to specify arguments (for
-the paths you already know are in there), then you can add a special
-`.args` to the zip archive, which specifies the default arguments. In
-this case, we're going to try our luck with the normal `zip` command,
-which requires we temporarily rename the file. First, let's create the
-arguments file:
+...and have it run the web server without having to specify arguments,
+then you can embed both the weights and a special `.args` inside, which
+specifies the default arguments. First, let's create a `.args` file:
 
-```
+```sh
 cat <<EOF >.args
 -m
 llava-v1.5-7b-Q8_0.gguf
@@ -338,46 +326,42 @@ EOF
 
 As we can see above, there's one argument per line. The `...` argument
 optionally specifies where any additional CLI arguments passed by the
-user are to be inserted. Next, we'll add the argument file to the
-executable:
+user are to be inserted. Next, we'll add both the weights and the
+argument file to the executable:
 
-```
-mv o//llama.cpp/server/server server.com
-o//llamafile/zipalign -j0 server.com .args
-mv server.com server
-./server
+```sh
+cp /usr/local/bin/llamafile-server llava-server.llamafile
+
+zipalign -j0 \
+  llava-server.llamafile \
+  ~/weights/llava-v1.5-7b-Q8_0.gguf \
+  ~/weights/llava-v1.5-7b-mmproj-Q8_0.gguf \
+  .args
+
+./llava-server.llamafile
 ```
 
 Congratulations. You've just made your own LLM executable that's easy to
 share with your friends.
 
-## zipalign documentation
+## Distribution
 
-```
-SYNOPSIS
+One good way to share a llamafile with your friends is by posting it on
+Hugging Face. If you do that, then it's recommended that you mention in
+your Hugging Face commit message what git revision or released version
+of llamafile you used when building your llamafile. That way everyone
+online will be able verify the provenance of its executable content. If
+you've made changes to the llama.cpp or cosmopolitan source code, then
+the Apache 2.0 license requires you to explain what changed. One way you
+can do that is by embedding a notice in your llamafile using `zipalign`
+that describes the changes, and mention it in your Hugging Face commit.
 
-  o//llamafile/zipalign ZIP FILE...
+## Documentation
 
-DESCRIPTION
-
-  Adds aligned uncompressed files to PKZIP archive
-
-  This tool is designed to concatenate gigabytes of LLM weights to an
-  executable. This command goes 10x faster than `zip -j0`. Unlike zip
-  you are not required to use the .com file extension for it to work.
-  But most importantly, this tool has a flag that lets you insert zip
-  files that are aligned on a specific boundary. The result is things
-  like GPUs that have specific memory alignment requirements will now
-  be able to perform math directly on the zip file's mmap()'d weights
-
-FLAGS
-
-  -h        help
-  -N        nondeterministic mode
-  -a INT    alignment (default 65536)
-  -j        strip directory components
-  -0        store uncompressed (currently default)
-```
+There's a man page for each of the llamafile programs installed when you
+run `sudo make install`. The command manuals are also typeset as PDF
+files that you can download from our GitHub releases page. Lastly, most
+commands will display that information when passing the `--help` flag.
 
 ## Technical details
 
@@ -399,7 +383,7 @@ the local file is aligned on a page size boundary. That way, assuming
 the zip file is uncompressed, once it's mmap()'d into memory we can pass
 pointers directly to GPUs like Apple Metal, which require that data be
 page size aligned. Since no existing ZIP archiving tool has an alignment
-flag, we had to write about [400 lines of code](llamafile/zipalign.c) to
+flag, we had to write about [500 lines of code](llamafile/zipalign.c) to
 insert the ZIP files ourselves. However, once there, every existing ZIP
 program should be able to read them, provided they support ZIP64. This
 makes the weights much more easily accessible than they otherwise would
