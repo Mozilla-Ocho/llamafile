@@ -7,7 +7,7 @@ INCS = $(foreach x,$(PKGS),$($(x)_INCS))
 
 o/$(MODE)/depend: $(SRCS) $(HDRS) $(INCS)
 	@mkdir -p $(@D)
-	mkdeps -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS) $(INCS)
+	$(MKDEPS) -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS) $(INCS)
 
 $(SRCS):
 $(HDRS):

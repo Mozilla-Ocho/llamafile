@@ -2,11 +2,14 @@
 #───vi: set et ft=make ts=8 tw=8 fenc=utf-8 :vi───────────────────────┘
 
 PREFIX = /usr/local
-TOOLCHAIN = cosmo
+COSMOCC = cosmocc/3.1.3
+TOOLCHAIN = $(COSMOCC)/bin/cosmo
 
 AR = $(TOOLCHAIN)ar
 CC = $(TOOLCHAIN)cc
 CXX = $(TOOLCHAIN)c++
+ZIPOBJ = $(COSMOCC)/bin/zipobj
+MKDEPS = $(COSMOCC)/bin/mkdeps
 INSTALL = install
 
 ARFLAGS = rcsD
@@ -43,3 +46,9 @@ all: o/$(MODE)/
 
 .PHONY: clean
 clean:; rm -rf o
+
+.PHONY: distclean
+distclean:; rm -rf o cosmocc
+
+cosmocc/3.1.3:
+	build/download-cosmocc.sh $@ 3.1.3 7470f05ef28f1941eb655c0359de08118023ba75767c2c47b398569a16397504

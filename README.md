@@ -246,28 +246,20 @@ inference.
 
 ## Source installation
 
-Here's how to build llamafile from source. First, you need the cosmocc
-toolchain, which is a fat portable binary version of GCC. Here's how you
-can download the latest release and add it to your path.
-
-```sh
-mkdir -p cosmocc
-cd cosmocc
-curl -L https://github.com/jart/cosmopolitan/releases/download/3.1.3/cosmocc-3.1.3.zip >cosmocc.zip
-unzip cosmocc.zip
-cd ..
-export PATH="$PWD/cosmocc/bin:$PATH"
-```
-
-You can now build and install the llamafile repository by running make:
+Developing on llamafile requires a modern version of the GNU `make`
+command (called `gmake` on some systems), `sha256sum` (otherwise `cc`
+will be used to build it), `wget` (or `curl`), and `unzip` available at
+[https://cosmo.zip/pub/cosmos/bin/](https://cosmo.zip/pub/cosmos/bin/).
+Windows users need [cosmos bash](https://justine.lol/cosmo3/) shell too.
 
 ```sh
 make -j8
-sudo make install
+sudo make install PREFIX=/usr/local
 ```
 
 Here's an example of how to generate code for a libc function using the
-llama.cpp command line interface, utilizing WizardCoder-Python-13B weights:
+llama.cpp command line interface, utilizing WizardCoder-Python-13B
+weights:
 
 ```sh
 llamafile \
