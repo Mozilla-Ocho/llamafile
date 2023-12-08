@@ -1,5 +1,5 @@
 #-*-mode:makefile-gmake;indent-tabs-mode:t;tab-width:8;coding:utf-8-*-┐
-#── vi: set noet ft=make ts=8 tw=8 fenc=utf-8 :vi ────────────────────┘
+#── vi: set noet ft=make ts=8 sw=8 fenc=utf-8 :vi ────────────────────┘
 
 SRCS = $(foreach x,$(PKGS),$($(x)_SRCS))
 HDRS = $(foreach x,$(PKGS),$($(x)_HDRS))
