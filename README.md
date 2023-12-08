@@ -234,11 +234,15 @@ you have the `cc` compiler installed, (2) you pass the `--n-gpu-layers
 CUDA developer toolkit is installed on your machine and the `nvcc`
 compiler is on your path.
 
-On Windows, that usually means you need to open up the MSVC x64 native
-command prompt and run llamafile there, for the first invocation, so it
-can build a DLL with native GPU support. After that, `$CUDA_PATH/bin`
-still usually needs to be on the `$PATH` so the GGML DLL can find its
-other CUDA dependencies.
+On Windows, install [CUDA](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html) (you only need CUDA and the compiler, so use 
+the network installer and deselect other options). You must edit 
+Windows Environment Variables to add to PATH: 
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.3\bin
+Invoke x64 Native Tools Command Prompt for VS 2022 (this is required to 
+compile the dependencies for CUDA at first start) and run llamafile.
+For the first invocation, it will build a DLL with native GPU support. 
+When you invoke it with a model, verify GPU is used by looking for:
+"total VRAM used" to be a non-zero number (usually the size of the model).
 
 In the event that GPU support couldn't be compiled and dynamically
 linked on the fly for any reason, llamafile will fall back to CPU
