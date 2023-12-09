@@ -13,11 +13,6 @@ o/$(MODE)/llama.cpp/llava/llava.a:				\
 		o/$(MODE)/llama.cpp/llava/clip.o		\
 		o/$(MODE)/llama.cpp/llava/llava.o
 
-o/$(MODE)/llama.cpp/llava/llava-cli:				\
-		o/$(MODE)/llama.cpp/llava/llava-cli.o		\
-		o/$(MODE)/llama.cpp/llava/llava.a		\
-		o/$(MODE)/llama.cpp/llama.cpp.a
-
 o/$(MODE)/llama.cpp/llava/llava-quantize:			\
 		o/$(MODE)/llama.cpp/llava/llava-quantize.o	\
 		o/$(MODE)/llama.cpp/llava/llava.a		\
@@ -26,5 +21,4 @@ o/$(MODE)/llama.cpp/llava/llava-quantize:			\
 .PHONY: o/$(MODE)/llama.cpp/llava
 o/$(MODE)/llama.cpp/llava:					\
 		o/$(MODE)/llama.cpp/llava/llava.a		\
-		o/$(MODE)/llama.cpp/llava/llava-cli		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize

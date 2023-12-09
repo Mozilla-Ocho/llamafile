@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op flags...
-.Op Fl m Ar weights.gguf
+.Op Fl m Ar model.gguf
 .Op Fl p Ar prompt
 .Sh DESCRIPTION
 .Nm
@@ -29,6 +29,8 @@ The following options are available:
 .Bl -tag -width indent
 .It Fl h , Fl Fl help
 Show help message and exit.
+.It Fl Fl version
+Print llamafile version.
 .It Fl i , Fl Fl interactive
 Run in interactive mode.
 .It Fl Fl interactive-first
@@ -51,7 +53,7 @@ Number of threads to use during generation (default: nproc/2)
 Number of threads to use during batch and prompt processing (default:
 same as
 .Fl Fl threads )
-.It Fl p Ar PROMPT , Fl Fl prompt Ar PROMPT
+.It Fl p Ar STRING , Fl Fl prompt Ar STRING
 Prompt to start generation with (default: empty)
 .It Fl e , Fl Fl escape
 Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]", \[rs]\[rs])
@@ -173,10 +175,6 @@ speculative decoding accept probability (default: 0.5)
 Speculative decoding split probability (default: 0.1)
 .It Fl cb , Fl Fl cont-batching
 Enable continuous batching (a.k.a dynamic batching) (default: disabled)
-.It Fl Fl mmproj Ar MMPROJ_FILE
-Path to a multimodal projector file for LLaVA. See llama.cpp/llava/README.md
-.It Fl Fl image Ar IMAGE_FILE
-Path to an image file. use with multimodal models.
 .It Fl Fl mlock
 Force system to keep model in RAM rather than swapping or compressing.
 .It Fl Fl no-mmap
@@ -208,7 +206,7 @@ Apply LoRA adapter with user defined scaling S (implies
 .It Fl Fl lora-base Ar FNAME
 Optional model to use as a base for the layers modified by the LoRA adapter
 .It Fl m Ar FNAME , Fl Fl model Ar FNAME
-Model path (default: models/7B/ggml-model-f16.gguf)
+Model path in GGUF file format (default: models/7B/ggml-model-f16.gguf)
 .It Fl md Ar FNAME , Fl Fl model-draft Ar FNAME
 Draft model for speculative decoding (default: models/7B/ggml-model-f16.gguf)
 .It Fl Fl unsecure
@@ -236,7 +234,6 @@ Don't truncate the old log file.
 .Xr llamafile-server 1 ,
 .Xr llamafile-quantize 1 ,
 .Xr llamafile-perplexity 1 ,
-.Xr llava-cli 1 ,
 .Xr llava-quantize 1 ,
 .Xr zipalign 1 ,
 .Xr unzip 1

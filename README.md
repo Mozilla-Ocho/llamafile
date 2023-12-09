@@ -267,20 +267,53 @@ weights:
 
 ```sh
 llamafile \
-  -m ~/weights/wizardcoder-python-13b-v1.0.Q8_0.gguf \
+  -m wizardcoder-python-13b-v1.0.Q8_0.gguf \
   --temp 0 \
   -r $'```\n' \
-  -p $'```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
+  -p $'```c\nvoid *memcpy(char *dst, const char *src, size_t size) {\n'
 ```
 
-Here's a similar example that instead utilizes Mistral-7B-Instruct weights:
+Here's a similar example that instead utilizes Mistral-7B-Instruct
+weights for prose composition:
 
 ```sh
 llamafile \
-  -m ~/weights/mistral-7b-instruct-v0.1.Q4_K_M.gguf \
+  -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
   --temp 0.7 \
   -r $'\n' \
   -p $'### Instruction: Write a story about llamas\n### Response:\n'
+```
+
+Here's an example of how you can use llamafile to summarize HTML URLs:
+
+```sh
+(
+  echo [INST]Summarize the following text:
+  links -codepage utf-8 \
+        -force-html \
+        -width 500 \
+        -dump https://www.poetryfoundation.org/poems/48860/the-raven |
+    sed 's/   */ /'
+  echo [/INST]
+) | llamafile \
+      -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
+      -c 6700 \
+      -f /dev/stdin \
+      --temp 0 \
+      -ngl 35 \
+      -n 500 \
+      --silent-prompt 2>/dev/null
+```
+
+Here's how you can use llamafile to describe a jpg/png/gif/bmp image:
+
+```sh
+llamafile --temp 0 \
+  --image ~/Pictures/lemurs.jpg \
+  -m llava-v1.5-7b-Q4_K.gguf \
+  --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \
+  -p $'### User: What do you see?\n### Assistant: ' \
+  --silent-prompt 2>/dev/null
 ```
 
 Here's an example of how to run llama.cpp's built-in HTTP server. This
@@ -330,8 +363,8 @@ cp /usr/local/bin/llamafile-server llava-server.llamafile
 
 zipalign -j0 \
   llava-server.llamafile \
-  ~/weights/llava-v1.5-7b-Q8_0.gguf \
-  ~/weights/llava-v1.5-7b-mmproj-Q8_0.gguf \
+  llava-v1.5-7b-Q8_0.gguf \
+  llava-v1.5-7b-mmproj-Q8_0.gguf \
   .args
 
 ./llava-server.llamafile

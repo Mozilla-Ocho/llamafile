@@ -6,8 +6,8 @@
 #include "clip.h"
 #include "llava.h"
 #include "llama.cpp/llama.h"
-
 #include "llama.cpp/base64.h"
+#include "llamafile/version.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -282,10 +282,7 @@ static void llava_free(struct llava_context * ctx_llava) {
     llama_backend_free();
 }
 
-int main(int argc, char ** argv) {
-    llamafile_check_cpu();
-    ggml_time_init();
-
+int llava_cli(int argc, char ** argv) {
     gpt_params params;
 
     if (!gpt_params_parse(argc, argv, params)) {

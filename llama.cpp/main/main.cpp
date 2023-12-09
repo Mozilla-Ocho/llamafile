@@ -5,6 +5,7 @@
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/ggml-cuda.h"
 #include "llamafile/version.h"
+#include "llama.cpp/llava/llava.h"
 #include "tool/args/args.h"
 
 #include "llama.cpp/common.h"
@@ -105,6 +106,15 @@ static int Eval(struct llama_context * ctx, struct llama_batch batch) {
     return rc;
 }
 
+static bool has_argument(int argc, char ** argv, const char * arg) {
+    for (int i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], arg)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(int argc, char ** argv) {
     if (argc == 2 && !strcmp(argv[1], "--version")) {
         printf("llamafile v" LLAMAFILE_VERSION_STRING " main\n");
@@ -115,10 +125,18 @@ int main(int argc, char ** argv) {
     ShowCrashReports();
     LoadZipArgs(&argc, &argv);
 
+    if (has_argument(argc, argv, "--mmproj")) {
+        return llava_cli(argc, argv);
+    }
+
     gpt_params params;
     g_params = &params;
 
     if (!gpt_params_parse(argc, argv, params)) {
+        return 1;
+    }
+    if (!params.image.empty()) {
+        fprintf(stderr, "%s: fatal error: --mmproj must also be passed if --image is passed\n", argv[0]);
         return 1;
     }
     llama_sampling_params & sparams = params.sparams;

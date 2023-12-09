@@ -1,11 +1,17 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+#include "clip.h"
+#include "llama.cpp/ggml.h"
+#include "llamafile/version.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "llama.cpp/ggml.h"
-#include "clip.h"
+#include <string.h>
 
 int main(int argc, char *argv[]) {
+    if (argc == 2 && !strcmp(argv[1], "--version")) {
+        printf("llamafile v" LLAMAFILE_VERSION_STRING " llava-quantize\n");
+        exit(0);
+    }
     llamafile_check_cpu();
     if (argc != 4) {
         fprintf(stderr,
