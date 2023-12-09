@@ -103,6 +103,12 @@ SOFTWARE.\"");
 // end of logging block
 //
 
+static volatile bool is_interrupted;
+
+void ggml_interrupt(bool state) {
+    is_interrupted = state;
+}
+
 static void * ggml_aligned_malloc(size_t size) {
     if (size == 0) {
         GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_aligned_malloc!\n");
@@ -15955,7 +15961,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
 
     int node_n = -1;
 
-    while (true) {
+    while (!is_interrupted) {
         if (cplan->abort_callback && cplan->abort_callback(cplan->abort_callback_data)) {
             state->shared->node_n += 1;
             return (thread_ret_t) GGML_EXIT_ABORTED;
@@ -16025,7 +16031,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
         } else {
             // wait for other threads to finish
             const int last = node_n;
-            while (true) {
+            while (!is_interrupted) {
                 // TODO: this sched_yield can have significant impact on the performance - either positive or negative
                 //       depending on the workload and the operating system.
                 //       since it is not clear what is the best approach, it should potentially become user-configurable

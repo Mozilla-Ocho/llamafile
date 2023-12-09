@@ -2113,6 +2113,8 @@ extern "C" {
     GGML_API int ggml_cpu_has_ssse3      (void);
     GGML_API int ggml_cpu_has_vsx        (void);
 
+    GGML_API void ggml_interrupt(bool);
+
     //
     // Internal types and functions exposed for tests and benchmarks
     //

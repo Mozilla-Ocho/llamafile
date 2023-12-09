@@ -30,12 +30,6 @@ static gpt_params * g_params;
 static volatile bool is_terminated;
 static volatile bool is_interacting;
 
-static void acknowledge_shutdown(void) {
-    if (is_terminal) {
-        write(2, "^C", 2);
-    }
-}
-
 static void sigint_handler(int signo) {
     if (g_params->interactive && !is_interacting) {
         // if we're in interactive mode, ctrl-c may be used to get the
@@ -47,7 +41,7 @@ static void sigint_handler(int signo) {
         // 2. if we're using a purely generative mode then ctrl-c can
         //    be used to gracefully halt the text generation process.
         is_terminated = true;
-        acknowledge_shutdown();
+        ggml_interrupt(true);
     }
 }
 
@@ -93,17 +87,6 @@ static void write_logfile(
 
     llama_dump_timing_info_yaml(logfile, ctx);
     fclose(logfile);
-}
-
-static int Eval(struct llama_context * ctx, struct llama_batch batch) {
-    int rc;
-    sigset_t ss, oldss;
-    sigemptyset(&ss);
-    sigaddset(&ss, SIGINT);
-    sigprocmask(SIG_BLOCK, &ss, &oldss);
-    rc = llama_decode(ctx, batch);
-    sigprocmask(SIG_SETMASK, &oldss, 0);
-    return rc;
 }
 
 static bool has_argument(int argc, char ** argv, const char * arg) {
@@ -609,7 +592,7 @@ int main(int argc, char ** argv) {
 
                 for (int i = 0; i < input_size; i += params.n_batch) {
                     int n_eval = std::min(input_size - i, params.n_batch);
-                    if (Eval(ctx_guidance, llama_batch_get_one(input_buf + i, n_eval, n_past_guidance, 0))) {
+                    if (llama_decode(ctx_guidance, llama_batch_get_one(input_buf + i, n_eval, n_past_guidance, 0))) {
                         LOG_TEE("%s : failed to eval\n", __func__);
                         return 1;
                     }
@@ -626,7 +609,7 @@ int main(int argc, char ** argv) {
 
                 LOG("eval: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, embd).c_str());
 
-                if (Eval(ctx, llama_batch_get_one(&embd[i], n_eval, n_past, 0))) {
+                if (llama_decode(ctx, llama_batch_get_one(&embd[i], n_eval, n_past, 0))) {
                     LOG_TEE("%s : failed to eval\n", __func__);
                     return 1;
                 }

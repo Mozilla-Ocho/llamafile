@@ -31,6 +31,7 @@ LOCAL MODIFICATIONS
   - Add support to main() programs for Cosmo /zip/.args files
   - Use condition variables for server rather than busy loop
   - Introduce pledge() SECCOMP sandboxing to improve security
+  - Introduce ggml_interrupt() to gracefully handle signals
   - Remove log callback pointer API from Metal GPU module
   - Use runtime dispatching for matmul quants
   - Remove operating system #ifdef statements
