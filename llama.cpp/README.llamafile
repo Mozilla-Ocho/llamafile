@@ -20,8 +20,8 @@ ORIGIN
   allocation, scheduling, backends, etc. So far, we've curated up to:
 
     https://github.com/ggerganov/llama.cpp
-    8d6d9f033b8101f929e445cf45b39e1557ca7934
-    Fri Dec 1 11:41:56 2023 +0200
+    fe680e3d1080a765e5d3150ffd7bab189742898d
+    Thu Dec 7 22:26:54 2023 +0200
 
   See the llamafile git history re: cherry-picks for further details.
 
