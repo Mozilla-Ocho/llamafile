@@ -117,8 +117,8 @@ static void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void *
         const int8_t  * restrict q8 = y[i].qs;
 
 #if QK_K == 256
-        const float d = y[i].d * GGML_FP16_TO_FP32(x[i].d);
-        const float dmin = -y[i].d * GGML_FP16_TO_FP32(x[i].dmin);
+        const float d = y[i].d * GGML_FP16_TO_FP32__F16C(x[i].d);
+        const float dmin = -y[i].d * GGML_FP16_TO_FP32__F16C(x[i].dmin);
 
         memcpy(utmp, x[i].scales, 12);
         utmp[3] = ((utmp[2] >> 4) & kmask2) | (((utmp[1] >> 6) & kmask3) << 4);

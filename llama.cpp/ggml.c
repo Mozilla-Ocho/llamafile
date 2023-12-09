@@ -1005,7 +1005,67 @@ inline static void ggml_vec_neg_f32 (const int n, float * y, const float * x)   
 inline static void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]*y[i];   }
 inline static void ggml_vec_div_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]/y[i];   }
 
+#ifdef __x86_64__
+#pragma GCC push_options
+#pragma GCC target("avx2")
+#pragma GCC target("fma")
+static void ggml_vec_dot_f32_avx2(const int n, float * restrict s, const float * restrict x, const float * restrict y) {
+    float sumf = 0.0f;
+    const int np = (n & ~(32 - 1));
+    __m256 sum[(32/8)] = { _mm256_setzero_ps() };
+    __m256 ax[(32/8)];
+    __m256 ay[(32/8)];
+    for (int i = 0; i < np; i += 32) {
+        for (int j = 0; j < (32/8); j++) {
+            ax[j] = _mm256_loadu_ps(x + i + j*8);
+            ay[j] = _mm256_loadu_ps(y + i + j*8);
+            sum[j] = _mm256_fmadd_ps(ax[j], ay[j], sum[j]);
+        }
+    }
+    GGML_F32x8_REDUCE_AVX(sumf, sum);
+    for (int i = np; i < n; ++i) {
+        sumf += x[i]*y[i];
+    }
+    *s = sumf;
+}
+#pragma GCC pop_options
+#endif /* __x86_64__ */
+
+#ifdef __x86_64__
+#pragma GCC push_options
+#pragma GCC target("avx")
+static void ggml_vec_dot_f32_avx(const int n, float * restrict s, const float * restrict x, const float * restrict y) {
+    float sumf = 0.0f;
+    const int np = (n & ~(32 - 1));
+    __m256 sum[(32/8)] = { _mm256_setzero_ps() };
+    __m256 ax[(32/8)];
+    __m256 ay[(32/8)];
+    for (int i = 0; i < np; i += 32) {
+        for (int j = 0; j < (32/8); j++) {
+            ax[j] = _mm256_loadu_ps(x + i + j*8);
+            ay[j] = _mm256_loadu_ps(y + i + j*8);
+            sum[j] = _mm256_add_ps(_mm256_mul_ps(ax[j], ay[j]), sum[j]);
+        }
+    }
+    GGML_F32x8_REDUCE_AVX(sumf, sum);
+    for (int i = np; i < n; ++i) {
+        sumf += x[i]*y[i];
+    }
+    *s = sumf;
+}
+#pragma GCC pop_options
+#endif /* __x86_64__ */
+
 static void ggml_vec_dot_f32(const int n, float * restrict s, const float * restrict x, const float * restrict y) {
+
+#ifdef __x86_64__
+    if (X86_HAVE(AVX2) && X86_HAVE(FMA)) {
+        return ggml_vec_dot_f32_avx2(n, s, x, y);
+    } else if (X86_HAVE(AVX)) {
+        return ggml_vec_dot_f32_avx(n, s, x, y);
+    }
+#endif
+
 #ifdef GGML_SIMD
     float sumf = 0.0f;
     const int np = (n & ~(GGML_F32_STEP - 1));

@@ -88,6 +88,9 @@ extern "C" {
 #include <riscv_vector.h>
 #endif
 
+#define GGML_FP16_TO_FP32__F16C(x) _cvtsh_ss(x)
+#define GGML_FP32_TO_FP16__F16C(x) _cvtss_sh(x, 0)
+
 #ifdef __F16C__
 
 #ifdef _MSC_VER
