@@ -1,3 +1,6 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #include "llama.cpp/ggml.h"
 #include "llama.cpp/common.h"
 #include "clip.h"
@@ -174,8 +177,8 @@ struct llava_context {
 };
 
 static void show_additional_info(int /*argc*/, char ** argv) {
-    printf("\n example usage: %s -m <llava-v1.5-7b/ggml-model-q5_k.gguf> --mmproj <llava-v1.5-7b/mmproj-model-f16.gguf> --image <path/to/an/image.jpg> [--temp 0.1] [-p \"describe the image in detail.\"]\n", argv[0]);
-    printf("  note: a lower temperature value like 0.1 is recommended for better quality.\n");
+    fprintf(stderr, "\n example usage: %s -m <llava-v1.5-7b/ggml-model-q5_k.gguf> --mmproj <llava-v1.5-7b/mmproj-model-f16.gguf> --image <path/to/an/image.jpg> [--temp 0.1] [-p \"describe the image in detail.\"]\n", argv[0]);
+    fprintf(stderr, "  note: a lower temperature value like 0.1 is recommended for better quality.\n");
 }
 
 static struct llava_image_embed * load_image(llava_context * ctx_llava, gpt_params * params) {
@@ -185,7 +188,7 @@ static struct llava_image_embed * load_image(llava_context * ctx_llava, gpt_para
     auto prompt = params->prompt;
     if (prompt_contains_image(prompt)) {
         if (!params->image.empty()) {
-            printf("using base64 encoded image instead of command line image path\n");
+          fprintf(stderr, "using base64 encoded image instead of command line image path\n");
         }
         embed = llava_image_embed_make_with_prompt_base64(ctx_llava->ctx_clip, params->n_threads, prompt);
         if (!embed) {

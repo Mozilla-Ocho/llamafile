@@ -1,3 +1,6 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 // NOTE: This is modified from clip.cpp only for LLaVA,
 // so there might be still unnecessary artifacts hanging around
 // I'll gradually clean and extend it
@@ -231,7 +234,7 @@ struct clip_ctx {
 
 static ggml_cgraph * clip_image_build_graph(const clip_ctx * ctx, const clip_image_f32_batch * imgs) {
     if (!ctx->has_vision_encoder) {
-        printf("This gguf file seems to have no vision encoder\n");
+        fprintf(stderr, "This gguf file seems to have no vision encoder\n");
         return nullptr;
     }
 
@@ -481,15 +484,15 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         const int idx_name = gguf_find_key(ctx, KEY_NAME);
         if (idx_name != -1) { // make name optional temporarily as some of the uploaded models missing it due to a bug
             const std::string name = gguf_get_val_str(ctx, idx_name);
-            printf("%s: model name:   %s\n", __func__, name.c_str());
+            fprintf(stderr, "%s: model name:   %s\n", __func__, name.c_str());
         }
-        printf("%s: description:  %s\n", __func__, description.c_str());
-        printf("%s: GGUF version: %d\n", __func__, gguf_get_version(ctx));
-        printf("%s: alignment:    %zu\n", __func__, gguf_get_alignment(ctx));
-        printf("%s: n_tensors:    %d\n", __func__, n_tensors);
-        printf("%s: n_kv:         %d\n", __func__, n_kv);
-        printf("%s: ftype:        %s\n", __func__, ftype_str.c_str());
-        printf("\n");
+        fprintf(stderr, "%s: description:  %s\n", __func__, description.c_str());
+        fprintf(stderr, "%s: GGUF version: %d\n", __func__, gguf_get_version(ctx));
+        fprintf(stderr, "%s: alignment:    %zu\n", __func__, gguf_get_alignment(ctx));
+        fprintf(stderr, "%s: n_tensors:    %d\n", __func__, n_tensors);
+        fprintf(stderr, "%s: n_kv:         %d\n", __func__, n_kv);
+        fprintf(stderr, "%s: ftype:        %s\n", __func__, ftype_str.c_str());
+        fprintf(stderr, "\n");
     }
 
     // kv
@@ -499,9 +502,9 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         for (int i = 0; i < n_kv; ++i) {
             const char * key = gguf_get_key(ctx, i);
 
-            printf("%s: kv[%d]: key = %s\n", __func__, i, key);
+            fprintf(stderr, "%s: kv[%d]: key = %s\n", __func__, i, key);
         }
-        printf("\n");
+        fprintf(stderr, "\n");
     }
 
     // data
@@ -519,8 +522,8 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             size_t padded_size = ggml_nbytes_pad(cur);
             ctx_size += padded_size;
             if (verbosity >= 3) {
-                printf("%s: tensor[%d]: n_dims = %d, name = %s, tensor_size=%zu, padded_size=%zu, offset=%zu\n", __func__, i,
-                       cur->n_dims, cur->name, tensor_size, padded_size, offset);
+                fprintf(stderr, "%s: tensor[%d]: n_dims = %d, name = %s, tensor_size=%zu, padded_size=%zu, offset=%zu\n", __func__, i,
+                        cur->n_dims, cur->name, tensor_size, padded_size, offset);
             }
         }
     }
@@ -548,11 +551,11 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         new_clip->use_gelu = gguf_get_val_bool(ctx, idx);
 
         if (verbosity >= 1) {
-            printf("%s: text_encoder:   %d\n", __func__, new_clip->has_text_encoder);
-            printf("%s: vision_encoder: %d\n", __func__, new_clip->has_vision_encoder);
-            printf("%s: llava_projector:  %d\n", __func__, new_clip->has_llava_projector);
-            printf("%s: model size:     %.2f MB\n", __func__, (ctx_size / 1024.0 / 1024.0));
-            printf("%s: metadata size:  %.2f MB\n", __func__, ggml_get_mem_size(meta) / 1024.0 / 1024.0);
+            fprintf(stderr, "%s: text_encoder:   %d\n", __func__, new_clip->has_text_encoder);
+            fprintf(stderr, "%s: vision_encoder: %d\n", __func__, new_clip->has_vision_encoder);
+            fprintf(stderr, "%s: llava_projector:  %d\n", __func__, new_clip->has_llava_projector);
+            fprintf(stderr, "%s: model size:     %.2f MB\n", __func__, (ctx_size / 1024.0 / 1024.0));
+            fprintf(stderr, "%s: metadata size:  %.2f MB\n", __func__, ggml_get_mem_size(meta) / 1024.0 / 1024.0);
         }
     }
 
@@ -573,7 +576,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
         struct llamafile * fin = llamafile_open(fname, "rbe");
         if (!fin) {
-            printf("cannot open model file for loading tensors\n");
+            fprintf(stderr, "cannot open model file for loading tensors\n");
             clip_free(new_clip);
             return nullptr;
         }
@@ -588,7 +591,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             const size_t offset = gguf_get_data_offset(ctx) + gguf_get_tensor_offset(ctx, i);
             llamafile_seek(fin, offset, SEEK_SET);
             if (!fin) {
-                printf("%s: failed to seek for tensor %s\n", __func__, name);
+                fprintf(stderr, "%s: failed to seek for tensor %s\n", __func__, name);
                 clip_free(new_clip);
                 return nullptr;
             }
@@ -621,14 +624,14 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         }
 
         if (verbosity >= 2) {
-            printf("\n%s: vision model hparams\n", __func__);
-            printf("image_size         %d\n", hparams.image_size);
-            printf("patch_size         %d\n", hparams.patch_size);
-            printf("v_hidden_size      %d\n", hparams.hidden_size);
-            printf("v_n_intermediate   %d\n", hparams.n_intermediate);
-            printf("v_projection_dim   %d\n", hparams.projection_dim);
-            printf("v_n_head           %d\n", hparams.n_head);
-            printf("v_n_layer          %d\n", hparams.n_layer);
+            fprintf(stderr, "\n%s: vision model hparams\n", __func__);
+            fprintf(stderr, "image_size         %d\n", hparams.image_size);
+            fprintf(stderr, "patch_size         %d\n", hparams.patch_size);
+            fprintf(stderr, "v_hidden_size      %d\n", hparams.hidden_size);
+            fprintf(stderr, "v_n_intermediate   %d\n", hparams.n_intermediate);
+            fprintf(stderr, "v_projection_dim   %d\n", hparams.projection_dim);
+            fprintf(stderr, "v_n_head           %d\n", hparams.n_head);
+            fprintf(stderr, "v_n_layer          %d\n", hparams.n_layer);
         }
 
         vision_model.patch_embeddings = get_tensor(new_clip->ctx, TN_PATCH_EMBD);
@@ -680,7 +683,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         new_clip->buf_alloc.resize(alloc_size);
         new_clip->alloc = ggml_allocr_new(new_clip->buf_alloc.data, new_clip->buf_alloc.size, tensor_alignment);
 
-        printf("%s: total allocated memory: %.2f MB\n", __func__, (new_clip->buf_compute.size + alloc_size)/1024.0/1024.0);
+        fprintf(stderr, "%s: total allocated memory: %.2f MB\n", __func__, (new_clip->buf_compute.size + alloc_size)/1024.0/1024.0);
     }
 
     return new_clip;
@@ -731,7 +734,7 @@ bool clip_image_load_from_bytes(const unsigned char * bytes, size_t bytes_length
 // TODO: implement bicubic interpolation instead of linear.
 bool clip_image_preprocess(const clip_ctx * ctx, const clip_image_u8 * img, clip_image_f32 * res, const bool pad2square) {
     if (!ctx->has_vision_encoder) {
-        printf("This gguf file seems to have no vision encoder\n");
+        fprintf(stderr, "This gguf file seems to have no vision encoder\n");
         return false;
     }
 
@@ -841,7 +844,7 @@ void clip_free(clip_ctx * ctx) {
 
 bool clip_image_encode(const clip_ctx * ctx, const int n_threads, clip_image_f32 * img, float * vec) {
     if (!ctx->has_vision_encoder) {
-        printf("This gguf file seems to have no vision encoder\n");
+        fprintf(stderr, "This gguf file seems to have no vision encoder\n");
         return false;
     }
 
@@ -854,7 +857,7 @@ bool clip_image_encode(const clip_ctx * ctx, const int n_threads, clip_image_f32
 bool clip_image_batch_encode(const clip_ctx * ctx, const int n_threads, const clip_image_f32_batch * imgs, float * vec) {
 
     if (!ctx->has_vision_encoder) {
-        printf("This gguf file seems to have no vision encoder\n");
+        fprintf(stderr, "This gguf file seems to have no vision encoder\n");
         return false;
     }
 
@@ -989,7 +992,7 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
                 f32_data = (float *)conv_buf.data();
                 break;
             default:
-                printf("Please use an input file in f32 or f16\n");
+                fprintf(stderr, "Please use an input file in f32 or f16\n");
                 return false;
             }
 
@@ -1041,8 +1044,8 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
             fout.put(0);
         }
 
-        printf("%s: n_dims = %d | quantize=%d | size = %f MB -> %f MB\n", name.c_str(), cur->n_dims, quantize,
-               orig_size / 1024.0 / 1024.0, new_size / 1024.0 / 1024.0);
+        fprintf(stderr, "%s: n_dims = %d | quantize=%d | size = %f MB -> %f MB\n", name.c_str(), cur->n_dims, quantize,
+                orig_size / 1024.0 / 1024.0, new_size / 1024.0 / 1024.0);
     }
 
     // go back to beginning of file and write the updated metadata
@@ -1057,19 +1060,19 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
     gguf_free(ctx_out);
 
     {
-        printf("%s: original size  = %8.2f MB\n", __func__, total_size_org / 1024.0 / 1024.0);
-        printf("%s: quantized size  = %8.2f MB\n", __func__, total_size_new / 1024.0 / 1024.0);
+        fprintf(stderr, "%s: original size  = %8.2f MB\n", __func__, total_size_org / 1024.0 / 1024.0);
+        fprintf(stderr, "%s: quantized size  = %8.2f MB\n", __func__, total_size_new / 1024.0 / 1024.0);
 
         int64_t sum_all = 0;
         for (size_t i = 0; i < hist_all.size(); ++i) {
             sum_all += hist_all[i];
         }
 
-        printf("%s: hist: ", __func__);
+        fprintf(stderr, "%s: hist: ", __func__);
         for (size_t i = 0; i < hist_all.size(); ++i) {
-            printf("%5.3f ", hist_all[i] / (float)sum_all);
+            fprintf(stderr, "%5.3f ", hist_all[i] / (float)sum_all);
         }
-        printf("\n");
+        fprintf(stderr, "\n");
     }
 
     return true;

@@ -1,3 +1,6 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #include "clip.h"
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
@@ -31,7 +34,7 @@ static bool encode_image_with_clip(clip_ctx * ctx_clip, int n_threads, const cli
     const int64_t t_img_enc_end_us = ggml_time_us();
     float t_img_enc_ms = (t_img_enc_end_us - t_img_enc_start_us) / 1000.0;
 
-    printf("\n%s: image encoded in %8.2f ms by CLIP (%8.2f ms per image patch)\n", __func__, t_img_enc_ms, t_img_enc_ms / *n_img_pos);
+    fprintf(stderr, "%s: image encoded in %8.2f ms by CLIP (%8.2f ms per image patch)\n", __func__, t_img_enc_ms, t_img_enc_ms / *n_img_pos);
 
     return true;
 }
@@ -41,7 +44,7 @@ bool llava_validate_embed_size(const llama_context * ctx_llama, const clip_ctx *
     int n_llama_embd = llama_n_embd(llama_get_model(ctx_llama));
     auto n_image_embd = clip_n_mmproj_embd(ctx_clip);
     if (n_image_embd != n_llama_embd) {
-        printf("%s: embedding dim of the multimodal projector (%d) is not equal to that of LLaMA (%d). Make sure that you use the correct mmproj file.\n", __func__, n_image_embd, n_llama_embd);
+        fprintf(stderr, "%s: embedding dim of the multimodal projector (%d) is not equal to that of LLaMA (%d). Make sure that you use the correct mmproj file.\n", __func__, n_image_embd, n_llama_embd);
         return false;
     }
     return true;

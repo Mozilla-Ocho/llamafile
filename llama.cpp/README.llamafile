@@ -35,3 +35,4 @@ LOCAL MODIFICATIONS
   - Use runtime dispatching for matmul quants
   - Remove operating system #ifdef statements
   - Introduce --silent-prompt flag to main
+  - Remove stdout logging from LLaVA
