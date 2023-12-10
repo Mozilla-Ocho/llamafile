@@ -329,6 +329,24 @@ llamafile --temp 0 \
   --silent-prompt 2>/dev/null
 ```
 
+It's possible to use BNF grammar to enforce the output is predictable
+and safe to use in your shell script. The simplest grammar would be
+`--grammar 'root ::= "yes" | "no"'` to force the LLM to only print to
+standard output either `"yes\n"` or `"no\n"`. Another example is if you
+wanted to write a script to rename all your image files, you could say:
+
+```sh
+llamafile --temp 0 \
+    --image ~/Pictures/lemurs.jpg \
+    -m llava-v1.5-7b-Q4_K.gguf \
+    --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \
+    --grammar 'root ::= [a-z]+ (" " [a-z]+)+' \
+    -p $'### User: What do you see?\n### Assistant: ' \
+    --silent-prompt 2>/dev/null |
+  sed -e's/ /_/' -e's/$/.jpg/'
+a_baby_monkey_on_the_back_of_a_mother.jpg
+```
+
 Here's an example of how to run llama.cpp's built-in HTTP server. This
 example uses LLaVA v1.5-7B, a multimodal LLM that works with llama.cpp's
 recently-added support for image inputs.
