@@ -7541,7 +7541,7 @@ void llama_sample_grammar(struct llama_context * ctx, llama_token_data_array * c
 
     for (size_t i = 0; i < candidates->size; ++i) {
         const llama_token id    = candidates->data[i].id;
-        const std::string & piece = ctx->model.vocab.id_to_token[id].text;
+        const std::string piece = llama_token_to_piece(ctx, id);
         if (id == eos) {
             if (!allow_eos) {
                 candidates->data[i].logit = -INFINITY;
@@ -7753,7 +7753,7 @@ void llama_grammar_accept_token(struct llama_context * ctx, struct llama_grammar
         GGML_ASSERT(false);
     }
 
-    const std::string & piece = ctx->model.vocab.id_to_token[token].text;
+    const std::string piece = llama_token_to_piece(ctx, token);
 
     // Note terminating 0 in decoded string
     const auto   decoded     = decode_utf8(piece, grammar->partial_utf8);
@@ -7867,7 +7867,7 @@ struct llama_beam_search_data {
     }
 
     // Min-heaps are used to efficiently collect the top-k elements (k=n_beams).
-    // The repetative patterns below reflect the 2 stages of heaps:
+    // The repetitive patterns below reflect the 2 stages of heaps:
     //  * Gather elements until the vector is full, then call std::make_heap() on it.
     //  * If the heap is full and a new element is found that should be included, pop the
     //    least element to the back(), replace it with the new, then push it into the heap.
