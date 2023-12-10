@@ -35,6 +35,7 @@ __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llamafile/compcap.cu");
 __static_yoink("llamafile/llamafile.h");
 __static_yoink("llama.cpp/ggml-cuda.h");
+__static_yoink("llama.cpp/naive-gemm.cu");
 __static_yoink("llama.cpp/ggml-cuda.cu");
 
 #define NVCC_LIBS "-lcublas"
@@ -50,7 +51,7 @@ __static_yoink("llama.cpp/ggml-cuda.cu");
         "-DGGML_CUDA_MMV_Y=1",                                          \
         "-DK_QUANTS_PER_ITERATION=2",                                   \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
-        "-DGGML_USE_CUBLAS"
+        "-DGGML_USE_NAIVE"
 
 static const struct Source {
     const char *zip;
@@ -60,6 +61,7 @@ static const struct Source {
     {"/zip/llamafile/compcap.cu", "compcap.cu"},
     {"/zip/llamafile/llamafile.h", "llamafile.h"},
     {"/zip/llama.cpp/ggml-cuda.h", "ggml-cuda.h"},
+    {"/zip/llama.cpp/naive-gemm.cu", "naive-gemm.cu"},
     {"/zip/llama.cpp/ggml-cuda.cu", "ggml-cuda.cu"}, // must come last
 };
 
@@ -371,6 +373,8 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
                 src, NVCC_LIBS, NULL})) {
         return true;
     }
+
+    exit(1);  // TODO(mrdomino): remove
 
     // oh no
     return false;

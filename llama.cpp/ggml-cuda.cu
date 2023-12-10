@@ -79,6 +79,16 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
+
+#if defined(GGML_USE_NAIVE)
+
+// #define cublasSgemm_v2 cublasSgemm_v2_
+// #define cublasGemmEx cublasGemmEx_
+#define cublasGemmStridedBatchedEx cublasGemmStridedBatchEx_
+#include "naive-gemm.cu"
+
+#endif // defined(GGML_USE_NAIVE)
+
 #endif // defined(GGML_USE_HIPBLAS)
 
 #include "ggml-cuda.h"
