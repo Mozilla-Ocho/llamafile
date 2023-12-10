@@ -84,6 +84,10 @@
 #include "ggml-cuda.h"
 #include "ggml.h"
 
+#ifdef __i386__
+#error "you need to use a 64-bit compiler for llamafile"
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // BEGIN: COPIED FROM GGML.C
 
