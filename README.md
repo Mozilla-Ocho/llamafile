@@ -284,6 +284,19 @@ llamafile \
   -p $'### Instruction: Write a story about llamas\n### Response:\n'
 ```
 
+Here's an example of how llamafile can be used as an interactive chatbot
+that lets you query knowledge contained in training data:
+
+```sh
+llamafile -m llama-65b-Q5_K.gguf -p '
+The following is a conversation between a Researcher and their helpful AI assistant Digital Athena which is a large language model trained on the sum of human knowledge.
+Researcher: Good morning.
+Digital Athena: How can I help you today?
+Researcher:' --interactive --color --batch_size 1024 --ctx_size 4096 \
+--keep -1 --temp 0 --mirostat 2 --in-prefix ' ' --interactive-first \
+--in-suffix 'Digital Athena:' --reverse-prompt 'Researcher:'
+```
+
 Here's an example of how you can use llamafile to summarize HTML URLs:
 
 ```sh
@@ -339,10 +352,10 @@ If you want to be able to just say:
 
 ...and have it run the web server without having to specify arguments,
 then you can embed both the weights and a special `.args` inside, which
-specifies the default arguments. First, let's create a `.args` file:
+specifies the default arguments. First, let's create a file named
+`.args` which has this content:
 
 ```sh
-cat <<EOF >.args
 -m
 llava-v1.5-7b-Q8_0.gguf
 --mmproj
@@ -350,7 +363,6 @@ llava-v1.5-7b-mmproj-Q8_0.gguf
 --host
 0.0.0.0
 ...
-EOF
 ```
 
 As we can see above, there's one argument per line. The `...` argument
