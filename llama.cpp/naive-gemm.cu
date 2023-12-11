@@ -132,6 +132,9 @@ cublasStatus_t cublasGemmStridedBatchedEx(cublasHandle_t handle,
       return CUBLAS_STATUS_NOT_SUPPORTED;
   }
 
+  cudaStream_t stream;
+  cublasGetStream(handle, &stream);
+
   // https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
   int numSMs, devId;
   cudaGetDevice(&devId);
@@ -140,10 +143,9 @@ cublasStatus_t cublasGemmStridedBatchedEx(cublasHandle_t handle,
   int maxthreads = 128;
 
   // call the entry function
-  cublasGSBE_entry<<<maxblocks, maxthreads>>>(transa, transb, m, n, k, alpha,
-                                              A, Atype, lda, strideA, B, Btype,
-                                              ldb, strideB, beta, C, Ctype,
-                                              ldc, strideC, batchCount);
+  cublasGSBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
+      transa, transb, m, n, k, alpha, A, Atype, lda, strideA, B, Btype, ldb,
+      strideB, beta, C, Ctype, ldc, strideC, batchCount);
 
   return CUBLAS_STATUS_SUCCESS;
 }
