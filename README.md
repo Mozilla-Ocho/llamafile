@@ -44,14 +44,14 @@ chmod +x llava-v1.5-7b-q4-server.llamafile
 6. Your browser should open automatically and display a chat interface. 
 (If it doesn't, just open your browser and point it at https://localhost:8080.)
 
-7. When you're done chatting, return to your terminal and hit 
-```Control-C``` to shut down llamafile.
+7. When you're done chatting, return to your terminal and hit
+`Control-C` to shut down llamafile.
 
 **Having trouble? See the "Gotchas" section below.**
 
 ## Other example llamafiles
 
-We also provide example llamafiles for two other models, so you can 
+We also provide example llamafiles for two other models, so you can
 easily try out llamafile with different kinds of LLMs.
 
 | Model | License | Command-line llamafile | Server llamafile |
@@ -60,14 +60,13 @@ easily try out llamafile with different kinds of LLMs.
 | LLaVA 1.5 | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | (Not provided because this model's features are best utilized via the web UI) | **[llava-v1.5-7b-q4-server.llamafile (3.97 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true)** |
 | WizardCoder-Python-13B | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b-main.llamafile (7.33 GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true) | [wizardcoder-python-13b-server.llamafile (7.33GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-server.llamafile?download=true) |
 
-"Server llamafiles" work just like the LLaVA example above: you simply run 
-them from your terminal and then access the chat UI in your web browser at 
-https://localhost:8080. 
+"Server llamafiles" work just like the LLaVA example above: you simply
+run them from your terminal and then access the chat UI in your web
+browser at <https://localhost:8080>.
 
-"Command-line llamafiles" run entirely inside your terminal and 
-operate just like  llama.cpp's "main" function. This means you 
-have to provide some command-line parameters, just like with 
-llama.cpp.
+"Command-line llamafiles" run entirely inside your terminal and operate
+just like llama.cpp's "main" function. This means you have to provide
+some command-line parameters, just like with llama.cpp.
 
 Here is an example for the Mistral command-line llamafile:
 
@@ -144,7 +143,7 @@ enable you to work around Windows' 4GB executable file size limit.
 For Windows users, here's an example for the Mistral LLM:
 
 ```sh
-curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.2.1/llamafile-server-0.2.1
+curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.3/llamafile-server-0.3
 curl -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
 .\llamafile.exe -m mistral.gguf
 ```
@@ -152,7 +151,7 @@ curl -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GG
 Here's the same example, but for macOS, Linux, and BSD users:
 
 ```sh
-curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.2.1/llamafile-server-0.2.1 >llamafile
+curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.3/llamafile-server-0.3 >llamafile
 curl -L https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf >mistral.gguf
 chmod +x llamafile
 ./llamafile -m mistral.gguf
@@ -313,7 +312,6 @@ Here's an example of how you can use llamafile to summarize HTML URLs:
       -c 6700 \
       -f /dev/stdin \
       --temp 0 \
-      -ngl 35 \
       -n 500 \
       --silent-prompt 2>/dev/null
 ```
