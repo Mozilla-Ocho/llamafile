@@ -33,6 +33,7 @@ LOCAL MODIFICATIONS
   - Introduce pledge() SECCOMP sandboxing to improve security
   - Introduce ggml_interrupt() to gracefully handle signals
   - Remove log callback pointer API from Metal GPU module
+  - Avoid bind() conflicts on port 8080 w/ server
   - Allow --grammar to be used on --image prompts
   - Use runtime dispatching for matmul quants
   - Remove operating system #ifdef statements

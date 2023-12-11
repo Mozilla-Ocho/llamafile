@@ -2994,10 +2994,15 @@ int main(int argc, char **argv)
     svr.set_read_timeout (sparams.read_timeout);
     svr.set_write_timeout(sparams.write_timeout);
 
-    if (!svr.bind_to_port(sparams.hostname, sparams.port))
-    {
-        fprintf(stderr, "\ncouldn't bind to server socket: hostname=%s port=%d\n\n", sparams.hostname.c_str(), sparams.port);
-        return 1;
+    for (int i = 0;; ++i) {
+        if (svr.bind_to_port(sparams.hostname, sparams.port)) {
+            break;
+        } else if (i < 10) {
+            ++sparams.port;
+        } else {
+            fprintf(stderr, "\ncouldn't bind to server socket: hostname=%s port=%d\n\n", sparams.hostname.c_str(), sparams.port);
+            return 1;
+        }
     }
 
     // Set the base directory for serving static files
