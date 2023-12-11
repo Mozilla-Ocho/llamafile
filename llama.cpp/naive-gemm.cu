@@ -23,6 +23,11 @@ static __device__ __forceinline__ void matmul(int m, int n, int k,
   }
 }
 
+static __global__ void wrap_matmul(int m, int n, int k, const half *A, int lda,
+                                   const half *B, int ldb, half *C, int ldc) {
+  matmul(m, n, k, A, lda, B, ldb, C, ldc);
+}
+
 static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
                        const void *pAlpha, cudaDataType_t Atype,
                        cudaDataType_t Btype, const void *pBeta,
@@ -32,6 +37,39 @@ static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
     computeType == CUBLAS_COMPUTE_16F &&
     __half2float(*(half *)pAlpha) == 1.0f &&
     __half2float(*(half *)pBeta) == 0.0f;
+}
+
+// https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
+
+cublasStatus_t cublasGemmEx(cublasHandle_t handle,
+                            cublasOperation_t transa,
+                            cublasOperation_t transb,
+                            int m,
+                            int n,
+                            int k,
+                            const void    *alpha,
+                            const void     *A,
+                            cudaDataType_t Atype,
+                            int lda,
+                            const void     *B,
+                            cudaDataType_t Btype,
+                            int ldb,
+                            const void    *beta,
+                            void           *C,
+                            cudaDataType_t Ctype,
+                            int ldc,
+                            cublasComputeType_t computeType,
+                            cublasGemmAlgo_t algo) {
+  if (!check_args(transa, transb, alpha, Atype, Btype, beta, Ctype,
+                  computeType)) {
+    return CUBLAS_STATUS_NOT_SUPPORTED;
+  }
+
+  cudaStream_t stream;
+  cublasGetStream(handle, &stream);
+  wrap_matmul<<<1, 1, 0, stream>>>(
+      m, n, k, (const half*)A, lda, (const half *)B, ldb, (half *)C, ldc);
+  return CUBLAS_STATUS_SUCCESS;
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmstridedbatchedex
