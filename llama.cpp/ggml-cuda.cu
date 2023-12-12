@@ -84,6 +84,7 @@
 
 #define cublasSgemm_v2 cublasSgemm_v2_
 #define cublasGemmEx cublasGemmEx_
+#define cublasGemmBatchedEx cublasGemmBatchedEx_
 #define cublasGemmStridedBatchedEx cublasGemmStridedBatchEx_
 #include "naive-gemm.cu"
 

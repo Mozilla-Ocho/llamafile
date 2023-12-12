@@ -106,6 +106,65 @@ cublasStatus_t cublasGemmEx(cublasHandle_t handle,
   return CUBLAS_STATUS_SUCCESS;
 }
 
+// https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmbatchedex
+
+static __global__ void cublasGBE_entry(int m, int n, int k,
+                                       const half *const  Aarray[],
+                                       int lda,
+                                       const half *const  Barray[],
+                                       int ldb,
+                                       half *const        Carray[],
+                                       int ldc,
+                                       int batchCount) {
+  int x = blockIdx.x * blockDim.x + threadIdx.x;
+  int jump = blockDim.x * gridDim.x;
+
+  for (; x < batchCount; x += jump) {
+    matmul(m, n, k, Aarray[x], lda, Barray[x], ldb, Carray[x], ldc);
+  }
+}
+
+cublasStatus_t cublasGemmBatchedEx(cublasHandle_t handle,
+                            cublasOperation_t transa,
+                            cublasOperation_t transb,
+                            int m,
+                            int n,
+                            int k,
+                            const void    *alpha,
+                            const void     *const Aarray[],
+                            cudaDataType_t Atype,
+                            int lda,
+                            const void     *const Barray[],
+                            cudaDataType_t Btype,
+                            int ldb,
+                            const void    *beta,
+                            void           *const Carray[],
+                            cudaDataType_t Ctype,
+                            int ldc,
+                            int batchCount,
+                            cublasComputeType_t computeType,
+                            cublasGemmAlgo_t algo) {
+  if (!check_args(transa, transb, alpha, Atype, Btype, beta, Ctype,
+                  computeType)) {
+    return CUBLAS_STATUS_NOT_SUPPORTED;
+  }
+
+  cudaStream_t stream;
+  cublasGetStream(handle, &stream);
+
+  // https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
+  int numSMs, devId;
+  cudaGetDevice(&devId);
+  cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, devId);
+  int maxblocks = 16 * numSMs;
+  int maxthreads = 128;
+
+  cublasGBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
+      m, n, k, (const half **)Aarray, lda, (const half **)Barray, ldb,
+      (half **)Carray, ldc, batchCount);
+  return CUBLAS_STATUS_SUCCESS;
+}
+
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmstridedbatchedex
 
 #define STRIDE0(A, i, stride) ((A) + (i) * (stride))
