@@ -52,7 +52,7 @@ __static_yoink("llama.cpp/ggml-cuda.cu");
         "-DGGML_CUDA_MMV_Y=1",                                          \
         "-DK_QUANTS_PER_ITERATION=2",                                   \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
-        "-DGGML_USE_NAIVE"
+        "-DGGML_USE_CUBLAS"
 
 static const struct Source {
     const char *zip;
@@ -375,8 +375,6 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
                 src, NVCC_LIBS, NULL})) {
         return true;
     }
-
-    exit(1);  // TODO(mrdomino): remove
 
     // oh no
     return false;
