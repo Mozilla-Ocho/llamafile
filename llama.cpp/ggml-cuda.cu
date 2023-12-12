@@ -77,13 +77,13 @@
 #define cudaStream_t hipStream_t
 #define cudaSuccess hipSuccess
 
-#elif defined(GGML_USE_NAIVE)
+#elif defined(GGML_USE_TINYBLAS)
 
-#include "naive-gemm.cu"
-#define cublasSgemm naiveSgemm
-#define cublasGemmEx naiveGemmEx
-#define cublasGemmBatchedEx naiveGemmBatchedEx
-#define cublasGemmStridedBatchedEx naiveGemmStridedBatchedEx
+#include "tinyblas.cu"
+#define cublasSgemm tinyblasSgemm
+#define cublasGemmEx tinyblasGemmEx
+#define cublasGemmBatchedEx tinyblasGemmBatchedEx
+#define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
 
 #else
 
@@ -91,9 +91,9 @@
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
 
-#endif // defined(GGML_USE_HIPBLAS) || defined(GGML_USE_NAIVE)
+#endif // defined(GGML_USE_HIPBLAS) || defined(GGML_USE_TINYBLAS)
 
-#if defined(GGML_USE_NAIVE)
+#if defined(GGML_USE_TINYBLAS)
 #define CUBLAS_ENTRY() cudaStream_t _ggml_stream = nullptr
 #define CUBLAS_SET_STREAM(_, stream) do _ggml_stream = (stream); while (0)
 #define CUBLAS_HANDLE(_) _ggml_stream
@@ -443,7 +443,7 @@ static_assert(sizeof(half) == sizeof(ggml_fp16_t), "wrong fp16 size");
         }                                                                               \
     } while (0)
 
-#if CUDART_VERSION >= 12000 && !defined(GGML_USE_NAIVE)
+#if CUDART_VERSION >= 12000 && !defined(GGML_USE_TINYBLAS)
 #define CUBLAS_CHECK(err)                                                               \
     do {                                                                                \
         cublasStatus_t err_ = (err);                                                    \
@@ -468,7 +468,7 @@ static_assert(sizeof(half) == sizeof(ggml_fp16_t), "wrong fp16 size");
             exit(1);                                                                    \
         }                                                                               \
     } while (0)
-#endif // CUDART_VERSION >= 11 && !defined(GGML_USE_NAIVE)
+#endif // CUDART_VERSION >= 11 && !defined(GGML_USE_TINYBLAS)
 
 #if CUDART_VERSION >= 11100
 #define GGML_CUDA_ASSUME(x) __builtin_assume(x)
@@ -746,9 +746,9 @@ static void * g_scratch_buffer = nullptr;
 static size_t g_scratch_size = 0; // disabled by default
 static size_t g_scratch_offset = 0;
 
-#if !defined(GGML_USE_NAIVE)
+#if !defined(GGML_USE_TINYBLAS)
 static cublasHandle_t g_cublas_handles[GGML_CUDA_MAX_DEVICES] = {nullptr};
-#endif // !defined(GGML_USE_NAIVE)
+#endif // !defined(GGML_USE_TINYBLAS)
 
 static __global__ void add_f32(const float * x, const float * y, float * dst, const int kx, const int ky) {
     const int i = blockDim.x*blockIdx.x + threadIdx.x;
@@ -6115,11 +6115,11 @@ void ggml_init_cublas() {
                 CUDA_CHECK(cudaStreamCreateWithFlags(&g_cudaStreams[id][is], cudaStreamNonBlocking));
             }
 
-#if !defined(GGML_USE_NAIVE)
+#if !defined(GGML_USE_TINYBLAS)
             // create cublas handle
             CUBLAS_CHECK(cublasCreate(&g_cublas_handles[id]));
             CUBLAS_CHECK(cublasSetMathMode(g_cublas_handles[id], CUBLAS_TF32_TENSOR_OP_MATH));
-#endif // !defined(GGML_USE_NAIVE)
+#endif // !defined(GGML_USE_TINYBLAS)
         }
 
         // configure logging to stdout
