@@ -86,7 +86,16 @@
 #define cublasGemmEx cublasGemmEx_
 #define cublasGemmBatchedEx cublasGemmBatchedEx_
 #define cublasGemmStridedBatchedEx cublasGemmStridedBatchEx_
+#define CUBLAS_ENTRY() cudaStream_t _ggml_stream = nullptr
+#define CUBLAS_SET_STREAM(_, stream) do _ggml_stream = (stream); while (0)
+#define CUBLAS_HANDLE(_) _ggml_stream
 #include "naive-gemm.cu"
+
+#else
+
+#define CUBLAS_ENTRY()
+#define CUBLAS_SET_STREAM(id, stream) CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream))
+#define CUBLAS_HANDLE(id) g_cublas_handles[id]
 
 #endif // defined(GGML_USE_NAIVE)
 
@@ -432,7 +441,7 @@ static_assert(sizeof(half) == sizeof(ggml_fp16_t), "wrong fp16 size");
         }                                                                               \
     } while (0)
 
-#if CUDART_VERSION >= 12000
+#if CUDART_VERSION >= 12000 && !defined(GGML_USE_NAIVE)
 #define CUBLAS_CHECK(err)                                                               \
     do {                                                                                \
         cublasStatus_t err_ = (err);                                                    \
@@ -457,7 +466,7 @@ static_assert(sizeof(half) == sizeof(ggml_fp16_t), "wrong fp16 size");
             exit(1);                                                                    \
         }                                                                               \
     } while (0)
-#endif // CUDART_VERSION >= 11
+#endif // CUDART_VERSION >= 11 && !defined(GGML_USE_NAIVE)
 
 #if CUDART_VERSION >= 11100
 #define GGML_CUDA_ASSUME(x) __builtin_assume(x)
@@ -735,7 +744,9 @@ static void * g_scratch_buffer = nullptr;
 static size_t g_scratch_size = 0; // disabled by default
 static size_t g_scratch_offset = 0;
 
+#if !defined(GGML_USE_NAIVE)
 static cublasHandle_t g_cublas_handles[GGML_CUDA_MAX_DEVICES] = {nullptr};
+#endif // !defined(GGML_USE_NAIVE)
 
 static __global__ void add_f32(const float * x, const float * y, float * dst, const int kx, const int ky) {
     const int i = blockDim.x*blockIdx.x + threadIdx.x;
@@ -6102,9 +6113,11 @@ void ggml_init_cublas() {
                 CUDA_CHECK(cudaStreamCreateWithFlags(&g_cudaStreams[id][is], cudaStreamNonBlocking));
             }
 
+#if !defined(GGML_USE_NAIVE)
             // create cublas handle
             CUBLAS_CHECK(cublasCreate(&g_cublas_handles[id]));
             CUBLAS_CHECK(cublasSetMathMode(g_cublas_handles[id], CUBLAS_TF32_TENSOR_OP_MATH));
+#endif // !defined(GGML_USE_NAIVE)
         }
 
         // configure logging to stdout
@@ -6673,6 +6686,7 @@ inline void ggml_cuda_op_mul_mat_cublas(
     const char * src1_ddq_i, float * dst_dd_i, const int64_t row_low, const int64_t row_high, const int64_t src1_ncols,
     const int64_t src1_padded_row_size, const cudaStream_t & stream) {
 
+    CUBLAS_ENTRY();
     GGML_ASSERT(src0_dd_i  != nullptr);
     GGML_ASSERT(src1_ddf_i != nullptr);
     GGML_ASSERT(dst_dd_i   != nullptr);
@@ -6723,9 +6737,9 @@ inline void ggml_cuda_op_mul_mat_cublas(
         const half alpha_f16 = 1.0f;
         const half beta_f16 = 0.0f;
 
-        CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream));
+        CUBLAS_SET_STREAM(id, stream);
         CUBLAS_CHECK(
-            cublasGemmEx(g_cublas_handles[id], CUBLAS_OP_T, CUBLAS_OP_N,
+            cublasGemmEx(CUBLAS_HANDLE(id), CUBLAS_OP_T, CUBLAS_OP_N,
                     row_diff, src1_ncols, ne10,
                     &alpha_f16, src0_ptr, CUDA_R_16F, ne00,
                                 src1_ptr, CUDA_R_16F, ne10,
@@ -6761,9 +6775,9 @@ inline void ggml_cuda_op_mul_mat_cublas(
         const float alpha = 1.0f;
         const float beta = 0.0f;
 
-        CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream));
+        CUBLAS_SET_STREAM(id, stream);
         CUBLAS_CHECK(
-            cublasSgemm(g_cublas_handles[id], CUBLAS_OP_T, CUBLAS_OP_N,
+            cublasSgemm(CUBLAS_HANDLE(id), CUBLAS_OP_T, CUBLAS_OP_N,
                     row_diff, src1_ncols, ne10,
                     &alpha, src0_ddf_i, ne00,
                             src1_ddf_i, ne10,
@@ -7523,6 +7537,7 @@ __global__ void k_compute_batched_ptrs(
 }
 
 static void ggml_cuda_mul_mat_mat_batched_cublas(const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
+    CUBLAS_ENTRY();
     GGML_ASSERT(!ggml_is_transposed(src0));
     GGML_ASSERT(!ggml_is_transposed(src1));
 
@@ -7556,7 +7571,7 @@ static void ggml_cuda_mul_mat_mat_batched_cublas(const ggml_tensor * src0, const
 
     int id;
     CUDA_CHECK(cudaGetDevice(&id));
-    CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], main_stream));
+    CUBLAS_SET_STREAM(id, main_stream);
 
     ggml_tensor_extra_gpu * src0_extra = (ggml_tensor_extra_gpu *) src0->extra;
     void * src0_ddq = src0_extra->data_device[g_main_device];
@@ -7598,7 +7613,7 @@ static void ggml_cuda_mul_mat_mat_batched_cublas(const ggml_tensor * src0, const
                 int i02 = i12 / r2;
 
                 CUBLAS_CHECK(
-                        cublasGemmEx(g_cublas_handles[id], CUBLAS_OP_T, CUBLAS_OP_N,
+                        cublasGemmEx(CUBLAS_HANDLE(id), CUBLAS_OP_T, CUBLAS_OP_N,
                             ne01, ne11, ne10,
                             &alpha_f16, (const char *) src0_as_f16 + i02*src0->nb[2]   + i03*src0->nb[3]  , CUDA_R_16F, nb01/sizeof(half),
                                         (const char *) src1_as_f16 + i12*src1->nb[2]/2 + i13*src1->nb[3]/2, CUDA_R_16F, nb11/sizeof(float),
@@ -7613,7 +7628,7 @@ static void ggml_cuda_mul_mat_mat_batched_cublas(const ggml_tensor * src0, const
         // there is no broadcast and src0, src1 are contiguous across dims 2, 3
         // use cublasGemmStridedBatchedEx
         CUBLAS_CHECK(
-        cublasGemmStridedBatchedEx(g_cublas_handles[id], CUBLAS_OP_T, CUBLAS_OP_N,
+        cublasGemmStridedBatchedEx(CUBLAS_HANDLE(id), CUBLAS_OP_T, CUBLAS_OP_N,
                 ne01, ne11, ne10,
                 &alpha_f16, (const char *) src0_as_f16, CUDA_R_16F, nb01/sizeof(half),  src0->nb[2]/sizeof(half),  // strideA
                             (const char *) src1_as_f16, CUDA_R_16F, nb11/sizeof(float), src1->nb[2]/sizeof(float), // strideB
@@ -7647,7 +7662,7 @@ static void ggml_cuda_mul_mat_mat_batched_cublas(const ggml_tensor * src0, const
         CUDA_CHECK(cudaGetLastError());
 
         CUBLAS_CHECK(
-        cublasGemmBatchedEx(g_cublas_handles[id], CUBLAS_OP_T, CUBLAS_OP_N,
+        cublasGemmBatchedEx(CUBLAS_HANDLE(id), CUBLAS_OP_T, CUBLAS_OP_N,
                 ne01, ne11, ne10,
                 &alpha_f16, (const void **) (ptrs_src + 0*ne23), CUDA_R_16F, nb01/sizeof(half),
                             (const void **) (ptrs_src + 1*ne23), CUDA_R_16F, nb11/sizeof(float),

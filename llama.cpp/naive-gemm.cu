@@ -54,7 +54,7 @@ static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
     __half2float(*(half *)pBeta) == 0.0f;
 }
 
-cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
+cublasStatus_t cublasSgemm_v2(cudaStream_t stream,
                               cublasOperation_t transa,
                               cublasOperation_t transb,
                               int m, int n, int k,
@@ -67,15 +67,13 @@ cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
       *alpha != 1.0f || *beta != 0.0f) {
     return CUBLAS_STATUS_NOT_SUPPORTED;
   }
-  cudaStream_t stream;
-  cublasGetStream(handle, &stream);
   matmul32<<<1, 1, 0, stream>>>(m, n, k, A, lda, B, ldb, C, ldc);
   return CUBLAS_STATUS_SUCCESS;
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
 
-cublasStatus_t cublasGemmEx(cublasHandle_t handle,
+cublasStatus_t cublasGemmEx(cudaStream_t stream,
                             cublasOperation_t transa,
                             cublasOperation_t transb,
                             int m,
@@ -99,8 +97,6 @@ cublasStatus_t cublasGemmEx(cublasHandle_t handle,
     return CUBLAS_STATUS_NOT_SUPPORTED;
   }
 
-  cudaStream_t stream;
-  cublasGetStream(handle, &stream);
   wrap_matmul<<<1, 1, 0, stream>>>(
       m, n, k, (const half*)A, lda, (const half *)B, ldb, (half *)C, ldc);
   return CUBLAS_STATUS_SUCCESS;
@@ -124,33 +120,30 @@ static __global__ void cublasGBE_entry(int m, int n, int k,
   }
 }
 
-cublasStatus_t cublasGemmBatchedEx(cublasHandle_t handle,
-                            cublasOperation_t transa,
-                            cublasOperation_t transb,
-                            int m,
-                            int n,
-                            int k,
-                            const void    *alpha,
-                            const void     *const Aarray[],
-                            cudaDataType_t Atype,
-                            int lda,
-                            const void     *const Barray[],
-                            cudaDataType_t Btype,
-                            int ldb,
-                            const void    *beta,
-                            void           *const Carray[],
-                            cudaDataType_t Ctype,
-                            int ldc,
-                            int batchCount,
-                            cublasComputeType_t computeType,
-                            cublasGemmAlgo_t algo) {
+cublasStatus_t cublasGemmBatchedEx(cudaStream_t stream,
+                                   cublasOperation_t transa,
+                                   cublasOperation_t transb,
+                                   int m,
+                                   int n,
+                                   int k,
+                                   const void    *alpha,
+                                   const void     *const Aarray[],
+                                   cudaDataType_t Atype,
+                                   int lda,
+                                   const void     *const Barray[],
+                                   cudaDataType_t Btype,
+                                   int ldb,
+                                   const void    *beta,
+                                   void           *const Carray[],
+                                   cudaDataType_t Ctype,
+                                   int ldc,
+                                   int batchCount,
+                                   cublasComputeType_t computeType,
+                                   cublasGemmAlgo_t algo) {
   if (!check_args(transa, transb, alpha, Atype, Btype, beta, Ctype,
                   computeType)) {
     return CUBLAS_STATUS_NOT_SUPPORTED;
   }
-
-  cudaStream_t stream;
-  cublasGetStream(handle, &stream);
 
   // https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
   int numSMs, devId;
@@ -197,7 +190,7 @@ static __global__ void cublasGSBE_entry(int m, int n, int k,
   }
 }
 
-cublasStatus_t cublasGemmStridedBatchedEx(cublasHandle_t handle,
+cublasStatus_t cublasGemmStridedBatchedEx(cudaStream_t stream,
                                           cublasOperation_t transa,
                                           cublasOperation_t transb,
                                           int m, int n, int k,
@@ -222,9 +215,6 @@ cublasStatus_t cublasGemmStridedBatchedEx(cublasHandle_t handle,
                   computeType)) {
     return CUBLAS_STATUS_NOT_SUPPORTED;
   }
-
-  cudaStream_t stream;
-  cublasGetStream(handle, &stream);
 
   // https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
   int numSMs, devId;
