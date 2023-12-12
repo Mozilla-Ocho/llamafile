@@ -82,7 +82,7 @@
 
 #if defined(GGML_USE_NAIVE)
 
-// #define cublasSgemm_v2 cublasSgemm_v2_
+#define cublasSgemm_v2 cublasSgemm_v2_
 #define cublasGemmEx cublasGemmEx_
 #define cublasGemmStridedBatchedEx cublasGemmStridedBatchEx_
 #include "naive-gemm.cu"
