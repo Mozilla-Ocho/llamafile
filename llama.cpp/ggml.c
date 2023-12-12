@@ -16183,7 +16183,7 @@ struct ggml_cplan ggml_graph_plan(struct ggml_cgraph * cgraph, int n_threads) {
                     size_t cur = 0;
                     const enum ggml_type vec_dot_type = type_traits[node->src[0]->type].vec_dot_type;
 
-#if defined(GGML_USE_CUBLAS)
+#if defined(GGML_USE_CUBLAS) || defined(GGML_USE_TINYBLAS)
                     if (ggml_cuda_can_mul_mat(node->src[0], node->src[1], node)) {
                         n_tasks = 1; // TODO: this actually is doing nothing
                                      //       the threads are still spinning
@@ -19607,7 +19607,7 @@ int ggml_cpu_has_wasm_simd(void) {
 }
 
 int ggml_cpu_has_blas(void) {
-#if defined(GGML_USE_ACCELERATE) || defined(GGML_USE_OPENBLAS) || defined(GGML_USE_CUBLAS) || defined(GGML_USE_CLBLAST)
+#if defined(GGML_USE_ACCELERATE) || defined(GGML_USE_OPENBLAS) || defined(GGML_USE_CUBLAS) || defined(GGML_USE_CLBLAST) || defined(GGML_USE_TINYBLAS)
     return 1;
 #else
     return 0;
