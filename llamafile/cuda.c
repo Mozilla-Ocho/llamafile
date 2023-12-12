@@ -34,8 +34,9 @@
 __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llamafile/compcap.cu");
 __static_yoink("llamafile/llamafile.h");
-__static_yoink("llama.cpp/ggml-cuda.h");
+__static_yoink("llama.cpp/naive-gemm.h");
 __static_yoink("llama.cpp/naive-gemm.cu");
+__static_yoink("llama.cpp/ggml-cuda.h");
 __static_yoink("llama.cpp/ggml-cuda.cu");
 
 #define NVCC_LIBS "-lcublas"
@@ -61,6 +62,7 @@ static const struct Source {
     {"/zip/llamafile/compcap.cu", "compcap.cu"},
     {"/zip/llamafile/llamafile.h", "llamafile.h"},
     {"/zip/llama.cpp/ggml-cuda.h", "ggml-cuda.h"},
+    {"/zip/llama.cpp/naive-gemm.h", "naive-gemm.h"},
     {"/zip/llama.cpp/naive-gemm.cu", "naive-gemm.cu"},
     {"/zip/llama.cpp/ggml-cuda.cu", "ggml-cuda.cu"}, // must come last
 };

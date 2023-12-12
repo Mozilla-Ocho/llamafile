@@ -1,6 +1,4 @@
-#include <cuda_runtime.h>
-#include <cuda_fp16.h>
-#include <cublas_v2.h>
+#include "naive-gemm.h"
 
 #define READ(A, trans, ld, i, j) \
   (((trans) == CUBLAS_OP_N) ? (A)[(i) + (j) * (ld)] : (A)[(j) + (i) * (ld)])
@@ -54,15 +52,15 @@ static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
     __half2float(*(half *)pBeta) == 0.0f;
 }
 
-cublasStatus_t cublasSgemm_v2(cudaStream_t stream,
-                              cublasOperation_t transa,
-                              cublasOperation_t transb,
-                              int m, int n, int k,
-                              const float           *alpha,
-                              const float           *A, int lda,
-                              const float           *B, int ldb,
-                              const float           *beta,
-                              float           *C, int ldc) {
+cublasStatus_t naiveSgemm(cudaStream_t stream,
+                          cublasOperation_t transa,
+                          cublasOperation_t transb,
+                          int m, int n, int k,
+                          const float           *alpha,
+                          const float           *A, int lda,
+                          const float           *B, int ldb,
+                          const float           *beta,
+                          float           *C, int ldc) {
   if (transa != CUBLAS_OP_T || transb != CUBLAS_OP_N ||
       *alpha != 1.0f || *beta != 0.0f) {
     return CUBLAS_STATUS_NOT_SUPPORTED;
@@ -73,25 +71,25 @@ cublasStatus_t cublasSgemm_v2(cudaStream_t stream,
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
 
-cublasStatus_t cublasGemmEx(cudaStream_t stream,
-                            cublasOperation_t transa,
-                            cublasOperation_t transb,
-                            int m,
-                            int n,
-                            int k,
-                            const void    *alpha,
-                            const void     *A,
-                            cudaDataType_t Atype,
-                            int lda,
-                            const void     *B,
-                            cudaDataType_t Btype,
-                            int ldb,
-                            const void    *beta,
-                            void           *C,
-                            cudaDataType_t Ctype,
-                            int ldc,
-                            cublasComputeType_t computeType,
-                            cublasGemmAlgo_t algo) {
+cublasStatus_t naiveGemmEx(cudaStream_t stream,
+                           cublasOperation_t transa,
+                           cublasOperation_t transb,
+                           int m,
+                           int n,
+                           int k,
+                           const void    *alpha,
+                           const void     *A,
+                           cudaDataType_t Atype,
+                           int lda,
+                           const void     *B,
+                           cudaDataType_t Btype,
+                           int ldb,
+                           const void    *beta,
+                           void           *C,
+                           cudaDataType_t Ctype,
+                           int ldc,
+                           cublasComputeType_t computeType,
+                           cublasGemmAlgo_t algo) {
   if (!check_args(transa, transb, alpha, Atype, Btype, beta, Ctype,
                   computeType)) {
     return CUBLAS_STATUS_NOT_SUPPORTED;
@@ -104,14 +102,14 @@ cublasStatus_t cublasGemmEx(cudaStream_t stream,
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmbatchedex
 
-static __global__ void cublasGBE_entry(int m, int n, int k,
-                                       const half *const  Aarray[],
-                                       int lda,
-                                       const half *const  Barray[],
-                                       int ldb,
-                                       half *const        Carray[],
-                                       int ldc,
-                                       int batchCount) {
+static __global__ void naiveGBE_entry(int m, int n, int k,
+                                      const half *const  Aarray[],
+                                      int lda,
+                                      const half *const  Barray[],
+                                      int ldb,
+                                      half *const        Carray[],
+                                      int ldc,
+                                      int batchCount) {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int jump = blockDim.x * gridDim.x;
 
@@ -120,26 +118,26 @@ static __global__ void cublasGBE_entry(int m, int n, int k,
   }
 }
 
-cublasStatus_t cublasGemmBatchedEx(cudaStream_t stream,
-                                   cublasOperation_t transa,
-                                   cublasOperation_t transb,
-                                   int m,
-                                   int n,
-                                   int k,
-                                   const void    *alpha,
-                                   const void     *const Aarray[],
-                                   cudaDataType_t Atype,
-                                   int lda,
-                                   const void     *const Barray[],
-                                   cudaDataType_t Btype,
-                                   int ldb,
-                                   const void    *beta,
-                                   void           *const Carray[],
-                                   cudaDataType_t Ctype,
-                                   int ldc,
-                                   int batchCount,
-                                   cublasComputeType_t computeType,
-                                   cublasGemmAlgo_t algo) {
+cublasStatus_t naiveGemmBatchedEx(cudaStream_t stream,
+                                  cublasOperation_t transa,
+                                  cublasOperation_t transb,
+                                  int m,
+                                  int n,
+                                  int k,
+                                  const void    *alpha,
+                                  const void     *const Aarray[],
+                                  cudaDataType_t Atype,
+                                  int lda,
+                                  const void     *const Barray[],
+                                  cudaDataType_t Btype,
+                                  int ldb,
+                                  const void    *beta,
+                                  void           *const Carray[],
+                                  cudaDataType_t Ctype,
+                                  int ldc,
+                                  int batchCount,
+                                  cublasComputeType_t computeType,
+                                  cublasGemmAlgo_t algo) {
   if (!check_args(transa, transb, alpha, Atype, Btype, beta, Ctype,
                   computeType)) {
     return CUBLAS_STATUS_NOT_SUPPORTED;
@@ -152,7 +150,7 @@ cublasStatus_t cublasGemmBatchedEx(cudaStream_t stream,
   int maxblocks = 16 * numSMs;
   int maxthreads = 128;
 
-  cublasGBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
+  naiveGBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
       m, n, k, (const half **)Aarray, lda, (const half **)Barray, ldb,
       (half **)Carray, ldc, batchCount);
   return CUBLAS_STATUS_SUCCESS;
@@ -170,17 +168,17 @@ cublasStatus_t cublasGemmBatchedEx(cudaStream_t stream,
    ? (const void *)STRIDE0((const half *)(A), (i), (stride))  \
    : (const void *)STRIDE0((const float *)(A), (i), (stride)))
 
-static __global__ void cublasGSBE_entry(int m, int n, int k,
-                                        const half      *A,
-                                        int             lda,
-                                        long long int   strideA,
-                                        const half      *B,
-                                        int             ldb,
-                                        long long int   strideB,
-                                        half            *C,
-                                        int             ldc,
-                                        long long int   strideC,
-                                        int batchCount) {
+static __global__ void naiveGSBE_entry(int m, int n, int k,
+                                       const half      *A,
+                                       int             lda,
+                                       long long int   strideA,
+                                       const half      *B,
+                                       int             ldb,
+                                       long long int   strideB,
+                                       half            *C,
+                                       int             ldc,
+                                       long long int   strideC,
+                                       int batchCount) {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int jump = blockDim.x * gridDim.x;
 
@@ -190,27 +188,27 @@ static __global__ void cublasGSBE_entry(int m, int n, int k,
   }
 }
 
-cublasStatus_t cublasGemmStridedBatchedEx(cudaStream_t stream,
-                                          cublasOperation_t transa,
-                                          cublasOperation_t transb,
-                                          int m, int n, int k,
-                                          const void    *pAlpha,
-                                          const void     *A,
-                                          cudaDataType_t Atype,
-                                          int lda,
-                                          long long int strideA,
-                                          const void     *B,
-                                          cudaDataType_t Btype,
-                                          int ldb,
-                                          long long int strideB,
-                                          const void    *pBeta,
-                                          void           *C,
-                                          cudaDataType_t Ctype,
-                                          int ldc,
-                                          long long int strideC,
-                                          int batchCount,
-                                          cublasComputeType_t computeType,
-                                          cublasGemmAlgo_t algo) {
+cublasStatus_t naiveGemmStridedBatchedEx(cudaStream_t stream,
+                                         cublasOperation_t transa,
+                                         cublasOperation_t transb,
+                                         int m, int n, int k,
+                                         const void    *pAlpha,
+                                         const void     *A,
+                                         cudaDataType_t Atype,
+                                         int lda,
+                                         long long int strideA,
+                                         const void     *B,
+                                         cudaDataType_t Btype,
+                                         int ldb,
+                                         long long int strideB,
+                                         const void    *pBeta,
+                                         void           *C,
+                                         cudaDataType_t Ctype,
+                                         int ldc,
+                                         long long int strideC,
+                                         int batchCount,
+                                         cublasComputeType_t computeType,
+                                         cublasGemmAlgo_t algo) {
   if (!check_args(transa, transb, pAlpha, Atype, Btype, pBeta, Ctype,
                   computeType)) {
     return CUBLAS_STATUS_NOT_SUPPORTED;
@@ -224,7 +222,7 @@ cublasStatus_t cublasGemmStridedBatchedEx(cudaStream_t stream,
   int maxthreads = 128;
 
   // call the entry function
-  cublasGSBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
+  naiveGSBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
       m, n, k, (const half*)A, lda, strideA, (const half*)B, ldb, strideB,
       (half *)C, ldc, strideC, batchCount);
 

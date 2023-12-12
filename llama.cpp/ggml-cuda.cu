@@ -10,6 +10,7 @@
 #include <assert.h>
 
 #if defined(GGML_USE_HIPBLAS)
+
 #include <hip/hip_runtime.h>
 #include <hipblas/hipblas.h>
 #include <hip/hip_fp16.h>
@@ -75,31 +76,32 @@
 #define cudaStreamWaitEvent(stream, event, flags) hipStreamWaitEvent(stream, event, flags)
 #define cudaStream_t hipStream_t
 #define cudaSuccess hipSuccess
+
+#elif defined(GGML_USE_NAIVE)
+
+#include "naive-gemm.cu"
+#define cublasSgemm naiveSgemm
+#define cublasGemmEx naiveGemmEx
+#define cublasGemmBatchedEx naiveGemmBatchedEx
+#define cublasGemmStridedBatchedEx naiveGemmStridedBatchedEx
+
 #else
+
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
 
-#if defined(GGML_USE_NAIVE)
+#endif // defined(GGML_USE_HIPBLAS) || defined(GGML_USE_NAIVE)
 
-#define cublasSgemm_v2 cublasSgemm_v2_
-#define cublasGemmEx cublasGemmEx_
-#define cublasGemmBatchedEx cublasGemmBatchedEx_
-#define cublasGemmStridedBatchedEx cublasGemmStridedBatchEx_
+#if defined(GGML_USE_NAIVE)
 #define CUBLAS_ENTRY() cudaStream_t _ggml_stream = nullptr
 #define CUBLAS_SET_STREAM(_, stream) do _ggml_stream = (stream); while (0)
 #define CUBLAS_HANDLE(_) _ggml_stream
-#include "naive-gemm.cu"
-
 #else
-
 #define CUBLAS_ENTRY()
 #define CUBLAS_SET_STREAM(id, stream) CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream))
 #define CUBLAS_HANDLE(id) g_cublas_handles[id]
-
-#endif // defined(GGML_USE_NAIVE)
-
-#endif // defined(GGML_USE_HIPBLAS)
+#endif
 
 #include "ggml-cuda.h"
 #include "ggml.h"
