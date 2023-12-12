@@ -39,9 +39,10 @@ __static_yoink("llama.cpp/tinyblas.cu");
 __static_yoink("llama.cpp/ggml-cuda.h");
 __static_yoink("llama.cpp/ggml-cuda.cu");
 
-#define NVCC_LIBS "-lcublas"
+#define NVCC_LIBS_CUBLAS "-lcublas",
+#define NVCC_LIBS_TINYBLAS
 
-#define NVCC_FLAGS "--shared",                                          \
+#define NVCC_FLAGS_BASE "--shared",                                     \
         "--forward-unknown-to-host-compiler",                           \
         "-use_fast_math",                                               \
         "--compiler-options", "-fPIC -O3 -march=native -mtune=native",  \
@@ -51,8 +52,20 @@ __static_yoink("llama.cpp/ggml-cuda.cu");
         "-DGGML_CUDA_DMMV_X=32",                                        \
         "-DGGML_CUDA_MMV_Y=1",                                          \
         "-DK_QUANTS_PER_ITERATION=2",                                   \
-        "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
-        "-DGGML_USE_CUBLAS"
+        "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128"
+
+#define NVCC_FLAGS_CUBLAS NVCC_FLAGS_BASE, "-DGGML_USE_CUBLAS"
+#define NVCC_FLAGS_TINYBLAS NVCC_FLAGS_BASE, "-DGGML_USE_TINYBLAS"
+
+// change this to TINYBLAS to build against tinyblas.
+#define BLAS CUBLAS
+
+// remove this when adding runtime detection of cublas.
+#define CONCAT_(A, B) A ## B
+#define CONCAT(A, B) CONCAT_(A, B)
+#define NVCC_FLAGS CONCAT(NVCC_FLAGS_, BLAS)
+#define NVCC_LIBS CONCAT(NVCC_LIBS_, BLAS)
+#define NVCC_LIBS_NULL NVCC_LIBS NULL
 
 static const struct Source {
     const char *zip;
@@ -360,7 +373,7 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
     tinyprint(2, "building ggml-cuda with nvcc -arch=native...\n", NULL);
     if (Compile(src, tmpdso, dso, (char *[]){
                 nvcc, "-arch=native", NVCC_FLAGS, "-o", tmpdso,
-                src, NVCC_LIBS, NULL})) {
+                src, NVCC_LIBS_NULL })) {
         return true;
     }
 
@@ -372,7 +385,7 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
     tinyprint(2, "building ggml-cuda with nvcc ", archflag, "...\n", NULL);
     if (Compile(src, tmpdso, dso, (char *[]){
                 nvcc, archflag, NVCC_FLAGS, "-o", tmpdso,
-                src, NVCC_LIBS, NULL})) {
+                src, NVCC_LIBS_NULL })) {
         return true;
     }
 
