@@ -1242,7 +1242,7 @@ void ggml_metal_graph_compute(
                 }
 
                 if (!ggml_metal_supports_op(dst)) {
-                    GGML_METAL_LOG_ERROR("%s: error: unsupported op '%s'\n", __func__, ggml_op_desc(dst));
+                    GGML_METAL_LOG_ERROR("%s: error: unsupported op '%d'\n", __func__, dst->op);
                     GGML_ASSERT(!"unsupported op");
                 }
 
