@@ -12,6 +12,7 @@ int main(int argc, char *argv[]) {
         printf("llamafile v" LLAMAFILE_VERSION_STRING " llava-quantize\n");
         exit(0);
     }
+    llamafile_init();
     llamafile_check_cpu();
     if (argc != 4) {
         fprintf(stderr,

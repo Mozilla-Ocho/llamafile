@@ -17,6 +17,7 @@ size_t llamafile_tell(struct llamafile *);
 size_t llamafile_size(struct llamafile *);
 FILE *llamafile_fp(struct llamafile *);
 
+void llamafile_init(void);
 void llamafile_check_cpu(void);
 const char *llamafile_get_tmp_dir(void);
 bool llamafile_extract(const char *, const char *);

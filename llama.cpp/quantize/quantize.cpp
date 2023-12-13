@@ -101,6 +101,7 @@ int main(int argc, char ** argv) {
         exit(0);
     }
 
+    llamafile_init();
     llamafile_check_cpu();
 
     if (argc < 3) {

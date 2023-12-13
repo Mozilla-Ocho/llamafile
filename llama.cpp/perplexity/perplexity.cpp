@@ -682,6 +682,7 @@ static void hellaswag_score(llama_context * ctx, const gpt_params & params) {
 int main(int argc, char ** argv) {
     gpt_params params;
 
+    llamafile_init();
     llamafile_check_cpu();
 
     params.n_batch = 512;
