@@ -149,8 +149,6 @@ Ignore end of stream token and continue generating (implies
 .Fl Fl logit-bias Ar 2-inf )
 .It Fl Fl no-penalize-nl
 Do not penalize newline token.
-.It Fl Fl memory-f32
-Use f32 instead of f16 for memory key+value (default: disabled) Not recommended: doubles context memory required and no measurable increase in quality.
 .It Fl Fl temp Ar N
 Temperature (default: 0.8)
 .It Fl Fl logits-all
@@ -211,6 +209,22 @@ Model path in GGUF file format (default: models/7B/ggml-model-f16.gguf)
 Draft model for speculative decoding (default: models/7B/ggml-model-f16.gguf)
 .It Fl Fl unsecure
 Disables pledge() sandboxing on Linux and OpenBSD.
+.It Fl Fl samplers
+Samplers that will be used for generation in the order, separated by
+semicolon, for example: top_k;tfs;typical;top_p;min_p;temp
+.It Fl Fl samplers-seq
+Simplified sequence for samplers that will be used.
+.It Fl cml , Fl Fl chatml
+Run in chatml mode (use with ChatML-compatible models)
+.It Fl dkvc , Fl Fl dump-kv-cache
+Verbose print of the KV cache.
+.It Fl nkvo , Fl Fl no-kv-offload
+Disable KV offload.
+.It Fl ctk Ar TYPE , Fl Fl cache-type-k Ar TYPE
+KV cache data type for K.
+.It Fl ctv Ar TYPE , Fl Fl cache-type-v Ar TYPE
+KV cache data type for V.
+Disable KV offload.
 .El
 .Sh LOG OPTIONS
 The following log options are available:

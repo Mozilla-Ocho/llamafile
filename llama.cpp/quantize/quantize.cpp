@@ -1,5 +1,6 @@
-// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
 #include "llamafile/version.h"

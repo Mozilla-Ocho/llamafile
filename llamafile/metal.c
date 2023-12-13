@@ -33,10 +33,13 @@
 __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llamafile/llamafile.h");
 __static_yoink("llama.cpp/ggml-impl.h");
+__static_yoink("llama.cpp/ggml-alloc.h");
 __static_yoink("llama.cpp/ggml-metal.m");
 __static_yoink("llama.cpp/ggml-metal.h");
 __static_yoink("llama.cpp/ggml-quants.h");
+__static_yoink("llama.cpp/ggml-backend.h");
 __static_yoink("llama.cpp/ggml-metal.metal");
+__static_yoink("llama.cpp/ggml-backend-impl.h");
 
 static const struct Source {
     const char *zip;
@@ -46,8 +49,11 @@ static const struct Source {
     {"/zip/llamafile/llamafile.h", "llamafile.h"},
     {"/zip/llama.cpp/ggml-impl.h", "ggml-impl.h"},
     {"/zip/llama.cpp/ggml-metal.h", "ggml-metal.h"},
+    {"/zip/llama.cpp/ggml-alloc.h", "ggml-alloc.h"},
     {"/zip/llama.cpp/ggml-quants.h", "ggml-quants.h"},
+    {"/zip/llama.cpp/ggml-backend.h", "ggml-backend.h"},
     {"/zip/llama.cpp/ggml-metal.metal", "ggml-metal.metal"},
+    {"/zip/llama.cpp/ggml-backend-impl.h", "ggml-backend-impl.h"},
     {"/zip/llama.cpp/ggml-metal.m", "ggml-metal.m"}, // must come last
 };
 
@@ -224,15 +230,9 @@ void ggml_metal_host_free(void *data) {
     return ggml_metal.host_free(data);
 }
 
-struct ggml_metal_context *ggml_metal_init(int n_cb, const char *metalPath) {
-    char path[PATH_MAX];
+struct ggml_metal_context *ggml_metal_init(int n_cb) {
     if (!ggml_metal_supported()) return NULL;
-    if (!metalPath) {
-        llamafile_get_app_dir(path, PATH_MAX);
-        strlcat(path, "ggml-metal.metal", sizeof(path));
-        metalPath = path;
-    }
-    return ggml_metal.init(n_cb, metalPath);
+    return ggml_metal.init(n_cb);
 }
 
 bool ggml_metal_add_buffer(struct ggml_metal_context *ctx,

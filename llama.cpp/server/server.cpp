@@ -1,6 +1,5 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
-// vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
-#include <cosmo.h>
+// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "tool/args/args.h"
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
@@ -17,6 +16,7 @@
 #include "httplib.h"
 #include "json.h"
 
+#include <cosmo.h>
 #include <unistd.h>
 #include <cstdio>
 #include <cstddef>
@@ -523,6 +523,7 @@ struct llama_server_context
     bool multimodal         = false;
     bool clean_kv_cache     = true;
     bool all_slots_are_idle = false;
+    bool add_bos_token      = true;
 
     int32_t id_gen;
     int32_t n_ctx;  // total context for all clients / slots
@@ -598,6 +599,8 @@ struct llama_server_context
 
         n_ctx = llama_n_ctx(ctx);
 
+        add_bos_token = llama_should_add_bos_token(model);
+
         return true;
     }
 
@@ -631,6 +634,11 @@ struct llama_server_context
 
     std::vector<llama_token> tokenize(const json & json_prompt, bool add_bos) const
     {
+        // TODO: currently, we tokenize using special tokens by default
+        //       this is not always correct (see https://github.com/ggerganov/llama.cpp/pull/4160#issuecomment-1824826216)
+        //       but it's better compared to completely ignoring ChatML and other chat templates
+        const bool TMP_FORCE_SPECIAL = true;
+
         // If `add_bos` is true, we only add BOS, when json_prompt is a string,
         // or the first element of the json_prompt array is a string.
         std::vector<llama_token> prompt_tokens;
@@ -646,12 +654,12 @@ struct llama_server_context
                     std::vector<llama_token> p;
                     if (first)
                     {
-                        p = ::llama_tokenize(ctx, s, add_bos);
+                        p = ::llama_tokenize(ctx, s, add_bos, TMP_FORCE_SPECIAL);
                         first = false;
                     }
                     else
                     {
-                        p = ::llama_tokenize(ctx, s, false);
+                        p = ::llama_tokenize(ctx, s, false, TMP_FORCE_SPECIAL);
                     }
                     prompt_tokens.insert(prompt_tokens.end(), p.begin(), p.end());
                 }
@@ -668,7 +676,7 @@ struct llama_server_context
         else
         {
             auto s = json_prompt.template get<std::string>();
-            prompt_tokens = ::llama_tokenize(ctx, s, add_bos);
+            prompt_tokens = ::llama_tokenize(ctx, s, add_bos, TMP_FORCE_SPECIAL);
         }
 
         return prompt_tokens;
@@ -712,6 +720,7 @@ struct llama_server_context
         slot->params.n_predict        = json_value(data, "n_predict",         default_params.n_predict);
         slot->sparams.top_k           = json_value(data, "top_k",             default_sparams.top_k);
         slot->sparams.top_p           = json_value(data, "top_p",             default_sparams.top_p);
+        slot->sparams.min_p           = json_value(data, "min_p",             default_sparams.min_p);
         slot->sparams.tfs_z           = json_value(data, "tfs_z",             default_sparams.tfs_z);
         slot->sparams.typical_p       = json_value(data, "typical_p",         default_sparams.typical_p);
         slot->sparams.temp            = json_value(data, "temperature",       default_sparams.temp);
@@ -900,7 +909,7 @@ struct llama_server_context
     }
 
     void update_system_prompt() {
-        system_tokens = ::llama_tokenize(ctx, system_prompt, true);
+        system_tokens = ::llama_tokenize(ctx, system_prompt, add_bos_token);
 
         llama_batch_clear(batch);
 
@@ -1143,6 +1152,7 @@ struct llama_server_context
         multi.id = id;
         std::copy(sub_ids.begin(), sub_ids.end(), std::inserter(multi.subtasks_remaining, multi.subtasks_remaining.end()));
         queue_multitasks.push_back(multi);
+        condition_tasks.notify_one();
     }
 
     void update_multi_task(int multitask_id, int subtask_id, task_result& result)
@@ -1154,6 +1164,7 @@ struct llama_server_context
             {
                 multitask.subtasks_remaining.erase(subtask_id);
                 multitask.results.push_back(result);
+                condition_tasks.notify_one();
             }
         }
     }
@@ -1175,6 +1186,7 @@ struct llama_server_context
             {"temp",              slot.sparams.temp},
             {"top_k",             slot.sparams.top_k},
             {"top_p",             slot.sparams.top_p},
+            {"min_p",             slot.sparams.min_p},
             {"tfs_z",             slot.sparams.tfs_z},
             {"typical_p",         slot.sparams.typical_p},
             {"repeat_last_n",     slot.sparams.penalty_last_n},
@@ -1563,6 +1575,7 @@ struct llama_server_context
 
                 std::lock_guard<std::mutex> lock(mutex_results);
                 queue_results.push_back(aggregate_result);
+                condition_results.notify_all();
 
                 queue_iterator = queue_multitasks.erase(queue_iterator);
             }
@@ -1711,7 +1724,7 @@ struct llama_server_context
                     }
                     else
                     {
-                        prompt_tokens = tokenize(slot.prompt, system_prompt.empty());  // add BOS if there isn't system prompt
+                        prompt_tokens = tokenize(slot.prompt, system_prompt.empty() && add_bos_token);  // add BOS if there isn't system prompt
                     }
 
                     slot.num_prompt_tokens = prompt_tokens.size();
@@ -1788,7 +1801,7 @@ struct llama_server_context
                     const bool has_images = process_images(slot);
 
                     // process the prefix of first image
-                    std::vector<llama_token> prefix_tokens = has_images ? tokenize(slot.images[0].prefix_prompt, true) : prompt_tokens;
+                    std::vector<llama_token> prefix_tokens = has_images ? tokenize(slot.images[0].prefix_prompt, add_bos_token) : prompt_tokens;
                     for (; slot.n_past < (int) prefix_tokens.size(); ++slot.n_past)
                     {
                        llama_batch_add(batch, prefix_tokens[slot.n_past], system_tokens.size() + slot.n_past, { slot.id }, false);
@@ -2110,10 +2123,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 break;
             }
             params.yarn_beta_slow = std::stof(argv[i]);
-        }
-        else if (arg == "--memory-f32" || arg == "--memory_f32")
-        {
-            params.memory_f16 = false;
         }
         else if (arg == "--threads" || arg == "-t")
         {
@@ -2637,6 +2646,7 @@ int main(int argc, char **argv)
 
     llamafile_check_cpu();
     LoadZipArgs(&argc, &argv);
+    ShowCrashReports();
 
     // own arguments required by this example
     gpt_params params;
@@ -2677,12 +2687,6 @@ int main(int argc, char **argv)
     svr.set_default_headers({{"Server", "llama.cpp"},
                              {"Access-Control-Allow-Origin", "*"},
                              {"Access-Control-Allow-Headers", "content-type"}});
-
-    svr.Get("/statusz", [](const httplib::Request &, httplib::Response &res)
-            {
-                res.set_content("todo\r\n", strlen("todo\r\n"), "text/html");
-                return false;
-            });
 
     svr.Get("/props", [&llama](const httplib::Request & /*req*/, httplib::Response &res)
             {
@@ -2732,6 +2736,17 @@ int main(int argc, char **argv)
                                     break;
                                 }
                             } else {
+                                const std::string str =
+                                    "error: " +
+                                    result.result_json.dump(-1, ' ', false, json::error_handler_t::replace) +
+                                    "\n\n";
+                                LOG_VERBOSE("data stream", {
+                                    { "to_send", str }
+                                });
+                                if (!sink.write(str.c_str(), str.size()))
+                                {
+                                    return false;
+                                }
                                 break;
                             }
                         }
@@ -2865,9 +2880,9 @@ int main(int argc, char **argv)
                             task_result result = llama.next_result(task_id);
                             if (!result.error) {
                                 const std::string str =
-                                    "data: " +
-                                    result.result_json.dump(-1, ' ', false, json::error_handler_t::replace) +
-                                    "\n\n";
+                                "data: " +
+                                result.result_json.dump(-1, ' ', false, json::error_handler_t::replace) +
+                                "\n\n";
                                 LOG_VERBOSE("data stream", {
                                     { "to_send", str }
                                 });

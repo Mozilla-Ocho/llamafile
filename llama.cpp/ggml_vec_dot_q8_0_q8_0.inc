@@ -78,11 +78,14 @@ static void ggml_vec_dot_q8_0_q8_0(const int n, float * restrict s, const void *
 
 #if defined(__AVX2__)
         const __m256 q = mul_sum_i8_pairs_float_avx2(bx, by);
-        // Multiply q with scale and accumulate
-        acc = _mm256_fmadd_ps( d, q, acc );
 #else
         const __m256 q = mul_sum_i8_pairs_float_avx(bx, by);
+#endif
+
         // Multiply q with scale and accumulate
+#if defined(__AVX2__)
+        acc = _mm256_fmadd_ps( d, q, acc );
+#else
         acc = _mm256_add_ps( _mm256_mul_ps( d, q ), acc );
 #endif
     }

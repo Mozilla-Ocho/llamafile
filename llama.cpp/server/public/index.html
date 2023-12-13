@@ -243,7 +243,7 @@
       cache_prompt: true
     })
 
-    /* START: Support for storing prompt templates and parameters in borwser LocalStorage */
+    /* START: Support for storing prompt templates and parameters in browsers LocalStorage */
 
     const local_storage_storageKey = "llamacpp_server_local_storage";
 
@@ -287,7 +287,7 @@
     let importedTemplates = local_storage_getDataAsObject('user_templates')
 
     if (importedTemplates) {
-      // saved templates were successfuly imported.
+      // saved templates were successfully imported.
 
       console.log('Processing saved templates and updating default template')
       params.value = { ...params.value, image_data: [] };
@@ -308,7 +308,7 @@
     }
 
     function userTemplateResetToDefault() {
-      console.log('Reseting themplate to default')
+      console.log('Resetting template to default')
       selectedUserTemplate.value.name = 'default';
       selectedUserTemplate.value.data = savedUserTemplates.value['default'];
     }
@@ -750,7 +750,7 @@
 
           <fieldset class="two">
             ${IntField({ label: "Predictions", max: 2048, min: -1, name: "n_predict", value: params.value.n_predict })}
-            ${FloatField({ label: "Temperature", max: 1.5, min: 0.0, name: "temperature", step: 0.01, value: params.value.temperature })}
+            ${FloatField({ label: "Temperature", max: 2.0, min: 0.0, name: "temperature", step: 0.01, value: params.value.temperature })}
             ${FloatField({ label: "Penalize repeat sequence", max: 2.0, min: 0.0, name: "repeat_penalty", step: 0.01, value: params.value.repeat_penalty })}
             ${IntField({ label: "Consider N tokens for penalize", max: 2048, min: 0, name: "repeat_last_n", value: params.value.repeat_last_n })}
             ${IntField({ label: "Top-K sampling", max: 100, min: -1, name: "top_k", value: params.value.top_k })}

@@ -13,7 +13,7 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
     const int32x4_t  vzero = vdupq_n_s32(0);
 #endif
 
-    int8x16x2_t q2bytes;
+    ggml_int8x16x2_t q2bytes;
     uint8_t aux[16];
 
     float sum = 0;
@@ -32,8 +32,8 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
         vst1q_u8(aux, scales);
 
         const uint8x16_t mins = vshrq_n_u8(mins_and_scales, 4);
-        const int16x8x2_t q8sums = vld1q_s16_x2(y[i].bsums);
-        const int16x8x2_t mins16 = {vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(mins))), vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(mins)))};
+        const ggml_int16x8x2_t q8sums = ggml_vld1q_s16_x2(y[i].bsums);
+        const ggml_int16x8x2_t mins16 = {vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(mins))), vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(mins)))};
         const int32x4_t s0 = vaddq_s32(vmull_s16(vget_low_s16 (mins16.val[0]), vget_low_s16 (q8sums.val[0])),
                                        vmull_s16(vget_high_s16(mins16.val[0]), vget_high_s16(q8sums.val[0])));
         const int32x4_t s1 = vaddq_s32(vmull_s16(vget_low_s16 (mins16.val[1]), vget_low_s16 (q8sums.val[1])),
@@ -61,7 +61,7 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
 #endif
 
 #define SHIFT_MULTIPLY_ACCUM_WITH_SCALE(shift, index)\
-        q8bytes = vld1q_s8_x2(q8); q8 += 32;\
+        q8bytes = ggml_vld1q_s8_x2(q8); q8 += 32;\
         q2bytes.val[0] = vreinterpretq_s8_u8(vandq_u8(vshrq_n_u8(q2bits.val[0], (shift)), m3));\
         q2bytes.val[1] = vreinterpretq_s8_u8(vandq_u8(vshrq_n_u8(q2bits.val[1], (shift)), m3));\
         MULTIPLY_ACCUM_WITH_SCALE((index));
@@ -69,9 +69,9 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
 
         for (int j = 0; j < QK_K/128; ++j) {
 
-            const uint8x16x2_t q2bits = vld1q_u8_x2(q2); q2 += 32;
+            const ggml_uint8x16x2_t q2bits = ggml_vld1q_u8_x2(q2); q2 += 32;
 
-            int8x16x2_t q8bytes = vld1q_s8_x2(q8); q8 += 32;
+            ggml_int8x16x2_t q8bytes = ggml_vld1q_s8_x2(q8); q8 += 32;
             q2bytes.val[0] = vreinterpretq_s8_u8(vandq_u8(q2bits.val[0], m3));
             q2bytes.val[1] = vreinterpretq_s8_u8(vandq_u8(q2bits.val[1], m3));
             MULTIPLY_ACCUM_WITH_SCALE(0);

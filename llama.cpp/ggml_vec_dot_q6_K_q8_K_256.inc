@@ -18,8 +18,8 @@ static void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void *
 
     const uint8x16_t mone = vdupq_n_u8(3);
 
-    int8x16x4_t q6bytes;
-    uint8x16x4_t q6h;
+    ggml_int8x16x4_t q6bytes;
+    ggml_uint8x16x4_t q6h;
 
     for (int i = 0; i < nb; ++i) {
 
@@ -31,9 +31,9 @@ static void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void *
 
         const int8_t * restrict scale = x[i].scales;
 
-        const int16x8x2_t q8sums = vld1q_s16_x2(y[i].bsums);
+        const ggml_int16x8x2_t q8sums = ggml_vld1q_s16_x2(y[i].bsums);
         const int8x16_t scales = vld1q_s8(scale);
-        const int16x8x2_t q6scales = {vmovl_s8(vget_low_s8(scales)), vmovl_s8(vget_high_s8(scales))};
+        const ggml_int16x8x2_t q6scales = {vmovl_s8(vget_low_s8(scales)), vmovl_s8(vget_high_s8(scales))};
 
         const int32x4_t prod = vaddq_s32(vaddq_s32(vmull_s16(vget_low_s16 (q8sums.val[0]), vget_low_s16 (q6scales.val[0])),
                                                    vmull_s16(vget_high_s16(q8sums.val[0]), vget_high_s16(q6scales.val[0]))),
@@ -45,9 +45,9 @@ static void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void *
 
         for (int j = 0; j < QK_K/128; ++j) {
 
-            uint8x16x2_t qhbits = vld1q_u8_x2(qh); qh += 32;
-            uint8x16x4_t q6bits = vld1q_u8_x4(q6); q6 += 64;
-            int8x16x4_t q8bytes = vld1q_s8_x4(q8); q8 += 64;
+            ggml_uint8x16x2_t qhbits = ggml_vld1q_u8_x2(qh); qh += 32;
+            ggml_uint8x16x4_t q6bits = ggml_vld1q_u8_x4(q6); q6 += 64;
+            ggml_int8x16x4_t q8bytes = ggml_vld1q_s8_x4(q8); q8 += 64;
 
             q6h.val[0] = vshlq_n_u8(vandq_u8(mone, qhbits.val[0]), 4);
             q6h.val[1] = vshlq_n_u8(vandq_u8(mone, qhbits.val[1]), 4);
@@ -90,7 +90,7 @@ static void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void *
             scale += 2;
 #endif
 
-            q8bytes = vld1q_s8_x4(q8); q8 += 64;
+            q8bytes = ggml_vld1q_s8_x4(q8); q8 += 64;
 
             shifted = vshrq_n_u8(qhbits.val[0], 4);
             q6h.val[0] = vshlq_n_u8(vandq_u8(mone, shifted), 4);
@@ -155,7 +155,7 @@ static void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void *
 
     for (int i = 0; i < nb; ++i) {
 
-        const float d = y[i].d * GGML_FP16_TO_FP32__F16C(x[i].d);
+        const float d = y[i].d * GGML_FP16_TO_FP32(x[i].d);
 
         const uint8_t * restrict q4 = x[i].ql;
         const uint8_t * restrict qh = x[i].qh;

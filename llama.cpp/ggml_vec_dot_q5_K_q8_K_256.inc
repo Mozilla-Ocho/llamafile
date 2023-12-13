@@ -22,7 +22,7 @@ static void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void *
     const int32x4_t mzero = vdupq_n_s32(0);
 #endif
 
-    int8x16x4_t q5bytes;
+    ggml_int8x16x4_t q5bytes;
 
     float sumf = 0;
 
@@ -52,16 +52,16 @@ static void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void *
         const uint8_t * restrict qh = x[i].qh;
         const int8_t  * restrict q8 = y[i].qs;
 
-        uint8x16x2_t qhbits = vld1q_u8_x2(qh);
+        ggml_uint8x16x2_t qhbits = ggml_vld1q_u8_x2(qh);
 
-        uint8x16x4_t q5h;
+        ggml_uint8x16x4_t q5h;
 
         int32_t sumi = 0;
 
         for (int j = 0; j < QK_K/64; ++j) {
 
-            const uint8x16x2_t q5bits = vld1q_u8_x2(q5); q5 += 32;
-            const int8x16x4_t q8bytes = vld1q_s8_x4(q8); q8 += 64;
+            const ggml_uint8x16x2_t q5bits = ggml_vld1q_u8_x2(q5); q5 += 32;
+            const ggml_int8x16x4_t q8bytes = ggml_vld1q_s8_x4(q8); q8 += 64;
 
             q5h.val[0] = vshlq_n_u8(vandq_u8(mone, qhbits.val[0]), 4);
             q5h.val[1] = vshlq_n_u8(vandq_u8(mone, qhbits.val[1]), 4);

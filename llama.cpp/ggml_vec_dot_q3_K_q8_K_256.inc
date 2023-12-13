@@ -25,7 +25,7 @@ static void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, const void *
     const uint8x16_t m3 = vshlq_n_u8(m0, 3);
     const int8_t m32 = 32;
 
-    int8x16x4_t q3bytes;
+    ggml_int8x16x4_t q3bytes;
 
     float sum = 0;
 
@@ -37,9 +37,9 @@ static void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, const void *
         const uint8_t * restrict qh = x[i].hmask;
         const int8_t  * restrict q8 = y[i].qs;
 
-        uint8x16x2_t qhbits = vld1q_u8_x2(qh);
+        ggml_uint8x16x2_t qhbits = ggml_vld1q_u8_x2(qh);
 
-        uint8x16x4_t q3h;
+        ggml_uint8x16x4_t q3h;
 
         int32_t isum = 0;
 
@@ -55,9 +55,9 @@ static void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, const void *
 
         for (int j = 0; j < QK_K/128; ++j) {
 
-            const uint8x16x2_t q3bits = vld1q_u8_x2(q3); q3 += 32;
-            const int8x16x4_t q8bytes_1 = vld1q_s8_x4(q8); q8 += 64;
-            const int8x16x4_t q8bytes_2 = vld1q_s8_x4(q8); q8 += 64;
+            const ggml_uint8x16x2_t q3bits = ggml_vld1q_u8_x2(q3); q3 += 32;
+            const ggml_int8x16x4_t q8bytes_1 = ggml_vld1q_s8_x4(q8); q8 += 64;
+            const ggml_int8x16x4_t q8bytes_2 = ggml_vld1q_s8_x4(q8); q8 += 64;
 
             q3h.val[0] = vshlq_n_u8(vbicq_u8(m0, qhbits.val[0]), 2);
             q3h.val[1] = vshlq_n_u8(vbicq_u8(m0, qhbits.val[1]), 2);

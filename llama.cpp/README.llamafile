@@ -8,30 +8,17 @@ LICENSE
 
 ORIGIN
 
-  Sources were initially imported from:
-
-    https://github.com/ggerganov/llama.cpp
-    e9c1cecb9d7d743d30b4a29ecd56a411437def0a
-    Tue Nov 7 09:04:51 2023 +0100
-
-  Since then, we've cherry-picked a number of small changes which fix
-  bugs and add features. The changes we haven't cherry-picked yet are
-  Georgi and Slaren's active development work, improving tensor graph
-  allocation, scheduling, backends, etc. So far, we've curated up to:
-
-    https://github.com/ggerganov/llama.cpp
-    fe680e3d1080a765e5d3150ffd7bab189742898d
-    Thu Dec 7 22:26:54 2023 +0200
-
-  See the llamafile git history re: cherry-picks for further details.
+  https://github.com/ggerganov/llama.cpp/pull/4406/
+  e1241d9b461816b679eaf6951631287687a18f66
+  2023-12-13
 
 LOCAL MODIFICATIONS
 
   - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
+  - Make cuBLAS dependency optional by introducing tinyBLAS library
   - Add support to main() programs for Cosmo /zip/.args files
-  - Use condition variables for server rather than busy loop
   - Introduce pledge() SECCOMP sandboxing to improve security
-  - Introduce ggml_interrupt() to gracefully handle signals
+  - Use condition variables for server rather than busy loop
   - Remove log callback pointer API from Metal GPU module
   - Avoid bind() conflicts on port 8080 w/ server
   - Allow --grammar to be used on --image prompts

@@ -33,10 +33,13 @@
 
 __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llamafile/compcap.cu");
+__static_yoink("llama.cpp/ggml-impl.h");
 __static_yoink("llamafile/llamafile.h");
 __static_yoink("llama.cpp/ggml-cuda.h");
+__static_yoink("llama.cpp/ggml-alloc.h");
 __static_yoink("llama.cpp/ggml-cuda.cu");
-__static_yoink("llama.cpp/ggml-cuda.dll");
+__static_yoink("llama.cpp/ggml-backend.h");
+__static_yoink("llama.cpp/ggml-backend-impl.h");
 
 #define NVCC_LIBS "-lcublas"
 
@@ -60,7 +63,11 @@ static const struct Source {
     {"/zip/llama.cpp/ggml.h", "ggml.h"},
     {"/zip/llamafile/compcap.cu", "compcap.cu"},
     {"/zip/llamafile/llamafile.h", "llamafile.h"},
+    {"/zip/llama.cpp/ggml-impl.h", "ggml-impl.h"},
     {"/zip/llama.cpp/ggml-cuda.h", "ggml-cuda.h"},
+    {"/zip/llama.cpp/ggml-alloc.h", "ggml-alloc.h"},
+    {"/zip/llama.cpp/ggml-backend.h", "ggml-backend.h"},
+    {"/zip/llama.cpp/ggml-backend-impl.h", "ggml-backend-impl.h"},
     {"/zip/llama.cpp/ggml-cuda.cu", "ggml-cuda.cu"}, // must come last
 };
 
@@ -88,6 +95,8 @@ static struct Cuda {
     typeof(ggml_cuda_compute_forward) *compute_forward;
     typeof(ggml_cuda_get_device_count) *get_device_count;
     typeof(ggml_cuda_get_device_description) *get_device_description;
+    typeof(ggml_backend_reg_cuda_init) *reg_cuda_init;
+    typeof(ggml_backend_cuda_buffer_type) *buffer_type;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -440,6 +449,8 @@ static bool LinkCudaDso(const char *dso) {
     ok &= !!(ggml_cuda.compute_forward = cosmo_dlsym(lib, "ggml_cuda_compute_forward"));
     ok &= !!(ggml_cuda.get_device_count = cosmo_dlsym(lib, "ggml_cuda_get_device_count"));
     ok &= !!(ggml_cuda.get_device_description = cosmo_dlsym(lib, "ggml_cuda_get_device_description"));
+    ok &= !!(ggml_cuda.reg_cuda_init = cosmo_dlsym(lib, "ggml_backend_reg_cuda_init"));
+    ok &= !!(ggml_cuda.buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_buffer_type"));
     if (!ok) {
         tinyprint(2, Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
@@ -591,4 +602,15 @@ void ggml_cuda_get_device_description(int device,
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.get_device_description(device, description,
                                             description_size);
+}
+
+ggml_backend_t ggml_backend_reg_cuda_init(const char * params,
+                                          void * user_data) {
+    if (!ggml_cuda_supported()) return 0;
+    return ggml_cuda.reg_cuda_init(params, user_data);
+}
+
+ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
+    if (!ggml_cuda_supported()) return 0;
+    return ggml_cuda.buffer_type(device);
 }

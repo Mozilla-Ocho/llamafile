@@ -20,12 +20,13 @@
 #pragma once
 
 #include "ggml.h"
+#include "ggml-backend.h"
 
 #include <stddef.h>
 #include <stdbool.h>
 
 // max memory buffers that can be mapped to the device
-#define GGML_METAL_MAX_BUFFERS 16
+#define GGML_METAL_MAX_BUFFERS 64
 #define GGML_METAL_MAX_COMMAND_BUFFERS 32
 
 struct ggml_tensor;
@@ -45,7 +46,7 @@ struct ggml_metal_context;
 bool ggml_metal_supported(void);
 
 // number of command buffers to use
-struct ggml_metal_context * ggml_metal_init(int n_cb, const char *metalPath);
+struct ggml_metal_context * ggml_metal_init(int n_cb);
 void ggml_metal_free(struct ggml_metal_context * ctx);
 
 void * ggml_metal_host_malloc(size_t n);
@@ -87,6 +88,23 @@ int * ggml_metal_get_concur_list(struct ggml_metal_context * ctx);
 // same as ggml_graph_compute but uses Metal
 // creates gf->n_threads command buffers in parallel
 void ggml_metal_graph_compute(struct ggml_metal_context * ctx, struct ggml_cgraph * gf);
+
+//
+// backend API
+// user-code should use only these functions
+//
+
+GGML_API ggml_backend_t ggml_backend_metal_init(void);
+
+GGML_API bool ggml_backend_is_metal(ggml_backend_t backend);
+
+GGML_API void ggml_backend_metal_set_n_cb(ggml_backend_t backend, int n_cb);
+GGML_API ggml_backend_buffer_type_t ggml_backend_metal_buffer_type(void);
+
+// helper to check if the device supports a specific family
+// ideally, the user code should be doing these checks
+// ref: https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+GGML_API bool ggml_backend_metal_supports_family(ggml_backend_t backend, int family);
 
 #ifdef __cplusplus
 }

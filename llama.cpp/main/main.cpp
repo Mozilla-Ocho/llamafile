@@ -1,49 +1,38 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
-#include <cosmo.h>
-#include "llama.cpp/ggml-metal.h"
-#include "llama.cpp/ggml-cuda.h"
-#include "llamafile/version.h"
-#include "llama.cpp/llava/llava.h"
-#include "tool/args/args.h"
-
-#include "llama.cpp/common.h"
-#include "llama.cpp/console.h"
-#include "llama.cpp/llama.h"
-
+#include <cassert>
 #include <cinttypes>
 #include <cmath>
+#include <cosmo.h>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <signal.h>
 #include <sstream>
 #include <string>
-#include <vector>
-#include <signal.h>
 #include <unistd.h>
+#include <vector>
 
-static bool is_terminal;
-static gpt_params * g_params;
-static volatile bool is_terminated;
-static volatile bool is_interacting;
+#include "tool/args/args.h"
+#include "llamafile/version.h"
+#include "llama.cpp/llama.h"
+#include "llama.cpp/common.h"
+#include "llama.cpp/console.h"
+#include "llama.cpp/ggml-cuda.h"
+#include "llama.cpp/ggml-metal.h"
+#include "llama.cpp/llava/llava.h"
 
-static void sigint_handler(int signo) {
-    if (g_params->interactive && !is_interacting) {
-        // if we're in interactive mode, ctrl-c may be used to get the
-        // llm to stop generating text and start accepting input again
-        is_interacting = true;
-    } else {
-        // 1. if we're in interactive mode, then pressing ctrl-c when
-        //    waiting for user input will end the program like an eof
-        // 2. if we're using a purely generative mode then ctrl-c can
-        //    be used to gracefully halt the text generation process.
-        is_terminated = true;
-        ggml_interrupt(true);
-    }
-}
+static llama_context           ** g_ctx;
+static llama_model             ** g_model;
+static gpt_params               * g_params;
+static std::vector<llama_token> * g_input_tokens;
+static std::ostringstream       * g_output_ss;
+static std::vector<llama_token> * g_output_tokens;
+static bool is_interacting = false;
+
 
 static void write_logfile(
     const llama_context * ctx, const gpt_params & params, const llama_model * model,
@@ -89,6 +78,26 @@ static void write_logfile(
     fclose(logfile);
 }
 
+static void sigint_handler(int signo) {
+    if (signo == SIGINT) {
+        if (g_params->interactive && !is_interacting) {
+            is_interacting = true;
+        } else {
+            console::cleanup();
+            printf("\n");
+            llama_print_timings(*g_ctx);
+            write_logfile(*g_ctx, *g_params, *g_model, *g_input_tokens, g_output_ss->str(), *g_output_tokens);
+            _exit(130);
+        }
+    }
+}
+
+static void llama_log_callback_logTee(ggml_log_level level, const char * text, void * user_data) {
+    (void) level;
+    (void) user_data;
+    LOG_TEE("%s", text);
+}
+
 static bool has_argument(int argc, char ** argv, const char * arg) {
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], arg)) {
@@ -128,6 +137,7 @@ int main(int argc, char ** argv) {
     log_set_target(log_filename_generator("main", "log"));
     LOG_TEE("Log start\n");
     log_dump_cmdline(argc, argv);
+    llama_log_set(llama_log_callback_logTee, nullptr);
 #endif // LOG_DISABLE_LOGS
 
     // TODO: Dump params ?
@@ -137,7 +147,6 @@ int main(int argc, char ** argv) {
     // (note for later: this is a slightly awkward choice)
     console::init(params.simple_io, params.use_color);
     atexit([]() { console::cleanup(); });
-    is_terminal = isatty(2);
 
     if (!params.unsecure && !ggml_metal_supported() && !ggml_cuda_supported()) {
         // Enable pledge() security on Linux and OpenBSD.
@@ -210,6 +219,8 @@ int main(int argc, char ** argv) {
     llama_model * model;
     llama_context * ctx;
     llama_context * ctx_guidance = NULL;
+    g_model = &model;
+    g_ctx = &ctx;
 
     // load the model and apply lora adapter, if any
     LOG("%s: load the model and apply lora adapter, if any\n", __func__);
@@ -265,13 +276,16 @@ int main(int argc, char ** argv) {
         }
     }
 
-    const bool add_bos = llama_vocab_type(model) == LLAMA_VOCAB_TYPE_SPM;
+    const bool add_bos = llama_should_add_bos_token(model);
     LOG("add_bos: %d\n", add_bos);
 
     std::vector<llama_token> embd_inp;
 
-    if (params.interactive_first || params.instruct || !params.prompt.empty() || session_tokens.empty()) {
+    if (params.interactive_first || params.instruct || params.chatml || !params.prompt.empty() || session_tokens.empty()) {
         LOG("tokenize the prompt\n");
+        if (params.chatml) {
+            params.prompt = "<|im_start|>system\n" + params.prompt + "<|im_end|>";
+        }
         embd_inp = ::llama_tokenize(ctx, params.prompt, add_bos, true);
     } else {
         LOG("use session tokens\n");
@@ -349,7 +363,7 @@ int main(int argc, char ** argv) {
     }
 
     // number of tokens to keep when resetting context
-    if (params.n_keep < 0 || params.n_keep > (int) embd_inp.size() || params.instruct) {
+    if (params.n_keep < 0 || params.n_keep > (int) embd_inp.size() || params.instruct || params.chatml) {
         params.n_keep = (int)embd_inp.size();
     }
 
@@ -360,10 +374,22 @@ int main(int argc, char ** argv) {
     LOG("inp_pfx: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, inp_pfx).c_str());
     LOG("inp_sfx: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, inp_sfx).c_str());
 
+    // chatml prefix & suffix
+    const auto cml_pfx = ::llama_tokenize(ctx, "\n<|im_start|>user\n", add_bos, true);
+    const auto cml_sfx = ::llama_tokenize(ctx, "<|im_end|>\n<|im_start|>assistant\n", false, true);
+
+    LOG("cml_pfx: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, cml_pfx).c_str());
+    LOG("cml_sfx: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, cml_sfx).c_str());
+
     // in instruct mode, we inject a prefix and a suffix to each input by the user
     if (params.instruct) {
         params.interactive_first = true;
         params.antiprompt.push_back("### Instruction:\n\n");
+    }
+    // similar for chatml mode
+    else if (params.chatml) {
+        params.interactive_first = true;
+        params.antiprompt.push_back("<|im_start|>user\n");
     }
 
     // enable interactive mode if interactive start is specified
@@ -444,6 +470,7 @@ int main(int argc, char ** argv) {
         }
     }
     LOG_TEE("sampling: \n%s\n", llama_sampling_print(sparams).c_str());
+    LOG_TEE("sampling order: \n%s\n", llama_sampling_order_print(sparams).c_str());
     LOG_TEE("generate: n_ctx = %d, n_batch = %d, n_predict = %d, n_keep = %d\n", n_ctx, params.n_batch, params.n_predict, params.n_keep);
     LOG_TEE("\n\n");
 
@@ -476,9 +503,9 @@ int main(int argc, char ** argv) {
     int n_session_consumed = 0;
     int n_past_guidance    = 0;
 
-    std::vector<int>   input_tokens;
-    std::vector<int>   output_tokens;
-    std::ostringstream output_ss;
+    std::vector<int>   input_tokens;  g_input_tokens  = &input_tokens;
+    std::vector<int>   output_tokens; g_output_tokens = &output_tokens;
+    std::ostringstream output_ss;     g_output_ss     = &output_ss;
 
     // the first thing we will do is to output the prompt, so set color accordingly
     console::set_display(console::prompt);
@@ -488,7 +515,7 @@ int main(int argc, char ** argv) {
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(sparams);
 
-    while (!is_terminated && ((n_remain != 0 && !is_antiprompt) || params.interactive)) {
+    while ((n_remain != 0 && !is_antiprompt) || params.interactive) {
         // predict
         if (!embd.empty()) {
             // Note: n_ctx - 4 here is to match the logic for commandline prompt handling via
@@ -734,7 +761,7 @@ int main(int argc, char ** argv) {
 
                     is_interacting = true;
                     printf("\n");
-                } else if (params.instruct) {
+                } else if (params.instruct || params.chatml) {
                     is_interacting = true;
                 } else if (params.silent_prompt) {
                     // --silent-prompt usually goes with `./main 2>/dev/null` and
@@ -747,7 +774,7 @@ int main(int argc, char ** argv) {
             if (n_past > 0 && is_interacting) {
                 LOG("waiting for user input\n");
 
-                if (params.instruct) {
+                if (params.instruct || params.chatml) {
                     printf("\n> ");
                 }
 
@@ -794,6 +821,12 @@ int main(int argc, char ** argv) {
                         n_consumed = embd_inp.size();
                         embd_inp.insert(embd_inp.end(), inp_pfx.begin(), inp_pfx.end());
                     }
+                    // chatml mode: insert user chat prefix
+                    if (params.chatml && !is_antiprompt) {
+                        LOG("inserting chatml prefix\n");
+                        n_consumed = embd_inp.size();
+                        embd_inp.insert(embd_inp.end(), cml_pfx.begin(), cml_pfx.end());
+                    }
                     if (params.escape) {
                         process_escapes(buffer);
                     }
@@ -811,6 +844,11 @@ int main(int argc, char ** argv) {
                     if (params.instruct) {
                         LOG("inserting instruction suffix\n");
                         embd_inp.insert(embd_inp.end(), inp_sfx.begin(), inp_sfx.end());
+                    }
+                    // chatml mode: insert assistant chat suffix
+                    if (params.chatml) {
+                        LOG("inserting chatml suffix\n");
+                        embd_inp.insert(embd_inp.end(), cml_sfx.begin(), cml_sfx.end());
                     }
 
                     for (size_t i = original_size; i < embd_inp.size(); ++i) {
@@ -837,7 +875,7 @@ int main(int argc, char ** argv) {
         }
 
         // end of text token
-        if (!embd.empty() && embd.back() == llama_token_eos(model) && !(params.instruct || params.interactive)) {
+        if (!embd.empty() && embd.back() == llama_token_eos(model) && !(params.instruct || params.interactive || params.chatml)) {
             LOG_TEE(" [end of text]\n");
             break;
         }
