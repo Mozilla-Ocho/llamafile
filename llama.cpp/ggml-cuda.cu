@@ -223,6 +223,11 @@ static int64_t ggml_nrows(const struct ggml_tensor * tensor) {
     return tensor->ne[1]*tensor->ne[2]*tensor->ne[3];
 }
 
+#define ggml_is_permuted ggml_is_permuted_
+static bool ggml_is_permuted(const struct ggml_tensor * tensor) {
+    return tensor->nb[0] > tensor->nb[1] || tensor->nb[1] > tensor->nb[2] || tensor->nb[2] > tensor->nb[3];
+}
+
 #define ggml_is_contiguous ggml_is_contiguous_
 static bool ggml_is_contiguous(const struct ggml_tensor * tensor) {
     return
