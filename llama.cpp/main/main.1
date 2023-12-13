@@ -7,8 +7,14 @@
 .Sh SYNOPSIS
 .Nm
 .Op flags...
-.Op Fl m Ar model.gguf
-.Op Fl p Ar prompt
+.Fl m Ar model.gguf
+.Fl p Ar prompt
+.Nm
+.Op flags...
+.Fl m Ar model.gguf
+.Fl Fl mmproj Ar vision.gguf
+.Fl Fl image Ar graphic.png
+.Fl p Ar prompt
 .Sh DESCRIPTION
 .Nm
 is a command-line tool for running large language models. It has use
@@ -20,9 +26,9 @@ Code completion
 .It
 Prose composition
 .It
-Text summarization
+Chatbot that passes the Turing test
 .It
-Interactive chat bot
+Text/image summarization and analysis
 .El
 .Sh OPTIONS
 The following options are available:
@@ -31,6 +37,31 @@ The following options are available:
 Show help message and exit.
 .It Fl Fl version
 Print llamafile version.
+.It Fl m Ar FNAME , Fl Fl model Ar FNAME
+Model path in GGUF file format (default: models/7B/ggml-model-f16.gguf)
+.It Fl p Ar STRING , Fl Fl prompt Ar STRING
+Prompt to start generation with (default: empty)
+.It Fl Fl mmproj Ar FNAME
+Specifies path of vision model in the GGUF file format. If this flag is supplied, then the
+.Fl Fl model
+and
+.Fl Fl image
+flags should also be supplied.
+.It Fl Fl image Ar IMAGE_FILE
+Path to an image file. This should be used with multimodal models. See also the
+.Fl Fl mmproj
+flag for supplying the vision model.
+.It Fl Fl grammar Ar GRAMMAR
+BNF-like grammar to constrain which tokens may be selected when
+generating text. For example, the grammar:
+.Bd -literal -offset indent
+root ::= "yes" | "no"
+.Ed
+.Pp
+will force the LLM to only output yes or no before exiting. This is
+useful for shell scripts when the
+.Fl Fl silent-prompt
+flag is also supplied.
 .It Fl i , Fl Fl interactive
 Run in interactive mode.
 .It Fl Fl interactive-first
@@ -53,8 +84,8 @@ Number of threads to use during generation (default: nproc/2)
 Number of threads to use during batch and prompt processing (default:
 same as
 .Fl Fl threads )
-.It Fl p Ar STRING , Fl Fl prompt Ar STRING
-Prompt to start generation with (default: empty)
+.It Fl f Ar FNAME , Fl Fl file Ar FNAME
+Prompt file to start generation.
 .It Fl e , Fl Fl escape
 Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]", \[rs]\[rs])
 .It Fl Fl prompt-cache Ar FNAME
@@ -75,8 +106,6 @@ string.
 String to prefix user inputs with (default: empty)
 .It Fl Fl in-suffix Ar STRING
 String to suffix after user inputs with (default: empty)
-.It Fl f Ar FNAME , Fl Fl file Ar FNAME
-Prompt file to start generation.
 .It Fl n Ar N , Fl Fl n-predict Ar N
 Number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
 .It Fl c Ar N , Fl Fl ctx-size Ar N
@@ -116,8 +145,8 @@ or
 .Fl Fl logit-bias Ar 15043-1
 to decrease likelihood of token
 .Ar ' Hello' .
-.It Fl Fl grammar Ar GRAMMAR
-BNF-like grammar to constrain generations (see samples in grammars/ dir)
+.It Fl md Ar FNAME , Fl Fl model-draft Ar FNAME
+Draft model for speculative decoding (default: models/7B/ggml-model-f16.gguf)
 .It Fl Fl grammar-file Ar FNAME
 File to read grammar from.
 .It Fl Fl cfg-negative-prompt Ar PROMPT
@@ -203,10 +232,6 @@ Apply LoRA adapter with user defined scaling S (implies
 .Fl Fl no-mmap )
 .It Fl Fl lora-base Ar FNAME
 Optional model to use as a base for the layers modified by the LoRA adapter
-.It Fl m Ar FNAME , Fl Fl model Ar FNAME
-Model path in GGUF file format (default: models/7B/ggml-model-f16.gguf)
-.It Fl md Ar FNAME , Fl Fl model-draft Ar FNAME
-Draft model for speculative decoding (default: models/7B/ggml-model-f16.gguf)
 .It Fl Fl unsecure
 Disables pledge() sandboxing on Linux and OpenBSD.
 .It Fl Fl samplers
