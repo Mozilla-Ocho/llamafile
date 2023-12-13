@@ -5,6 +5,10 @@ HOST=${1:?HOST}
 ssh $HOST mkdir -p lfbuild
 scp llama.cpp/ggml-cuda.cu \
     llama.cpp/ggml-cuda.h \
+    llama.cpp/ggml-impl.h \
+    llama.cpp/ggml-alloc.h \
+    llama.cpp/ggml-backend.h \
+    llama.cpp/ggml-backend-impl.h \
     llama.cpp/tinyblas.cu \
     llama.cpp/tinyblas.h \
     llama.cpp/ggml.h \

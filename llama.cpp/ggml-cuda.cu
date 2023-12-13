@@ -92,6 +92,7 @@
 #define cublasGemmEx tinyblasGemmEx
 #define cublasGemmBatchedEx tinyblasGemmBatchedEx
 #define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
+#define cublasGetStatusString(x) "REDACTED!cublasGetStatusString"
 
 #else
 #include <cuda_runtime.h>
@@ -118,6 +119,10 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // BEGIN: COPIED FROM GGML.C
@@ -269,12 +274,11 @@ static ggml_backend_buffer_t ggml_backend_buffer_init(
                size_t                          size) {
     fprintf(stderr, "WARNING: using untested foreign malloc due to ggml backend\n");
     ggml_backend_buffer_t buffer = (ggml_backend_buffer_t)malloc(sizeof(struct ggml_backend_buffer));
-    (*buffer) = (struct ggml_backend_buffer) {
-        /* .interface = */ iface,
-        /* .buft      = */ buft,
-        /* .context   = */ context,
-        /* .size      = */ size,
-    };
+    memset(buffer, 0, sizeof(*buffer));
+    buffer->iface = iface;
+    buffer->buft = buft;
+    buffer->context = context;
+    buffer->size = size;
     return buffer;
 }
 
