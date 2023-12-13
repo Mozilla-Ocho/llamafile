@@ -394,9 +394,10 @@ static bool ExtractCudaDso(char dso[static PATH_MAX]) {
 
     // see if prebuilt dso is bundled in zip assets
     char zip[80];
-    strlcpy(zip, "/zip/llama.cpp/ggml-cuda.", PATH_MAX);
+    strlcpy(zip, "/zip/ggml-cuda.", PATH_MAX);
     strlcat(zip, GetDsoExtension(), PATH_MAX);
     if (!FileExists(zip)) {
+        tinyprint(2, "prebuilt binary ", zip, " not found\n", NULL);
         return false;
     }
 
