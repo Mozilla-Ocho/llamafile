@@ -8338,7 +8338,7 @@ static void ggml_cuda_mul_mat_mat_batched_cublas(const ggml_tensor * src0, const
         // there is no broadcast and src0, src1 are contiguous across dims 2, 3
         // use cublasGemmStridedBatchedEx
         CUBLAS_CHECK(
-        cublasGemmStridedBatchedEx(g_cublas_handles[g_main_device], CUBLAS_OP_T, CUBLAS_OP_N,
+        cublasGemmStridedBatchedEx(CUBLAS_HANDLE(g_main_device), CUBLAS_OP_T, CUBLAS_OP_N,
                 ne01, ne11, ne10,
                 &alpha_f16, (const char *) src0_as_f16, CUDA_R_16F, nb01/sizeof(half),  src0->nb[2]/sizeof(half),  // strideA
                             (const char *) src1_as_f16, CUDA_R_16F, nb11/sizeof(float), src1->nb[2]/sizeof(float), // strideB
@@ -8372,7 +8372,7 @@ static void ggml_cuda_mul_mat_mat_batched_cublas(const ggml_tensor * src0, const
         CUDA_CHECK(cudaGetLastError());
 
         CUBLAS_CHECK(
-        cublasGemmBatchedEx(g_cublas_handles[g_main_device], CUBLAS_OP_T, CUBLAS_OP_N,
+        cublasGemmBatchedEx(CUBLAS_HANDLE(g_main_device), CUBLAS_OP_T, CUBLAS_OP_N,
                 ne01, ne11, ne10,
                 &alpha_f16, (const void **) (ptrs_src + 0*ne23), CUDA_R_16F, nb01/sizeof(half),
                             (const void **) (ptrs_src + 1*ne23), CUDA_R_16F, nb11/sizeof(float),
