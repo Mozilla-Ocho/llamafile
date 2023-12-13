@@ -477,8 +477,6 @@ static bool ImportCudaImpl(void) {
         return LinkCudaDso(dso);
     }
 
-    if (1) exit(1);
-
     // try using a prebuilt dso
     if (ExtractCudaDso(dso)) {
         return LinkCudaDso(dso);
