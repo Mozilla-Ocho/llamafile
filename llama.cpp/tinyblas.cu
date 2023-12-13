@@ -2,7 +2,7 @@
 
 #define READ(A, trans, ld, i, j) \
   (((trans) == CUBLAS_OP_N) ? (A)[(i) + (j) * (ld)] : (A)[(j) + (i) * (ld)])
-#define READ16(...) __half2float(READ(__VA_ARGS__))
+#define READ16(A, trans, ld, i, j) __half2float(READ(A, trans, ld, i, j))
 
 static __device__ __forceinline__ void matmul(int m, int n, int k,
                                               const half *A, int lda,
