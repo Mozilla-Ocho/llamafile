@@ -51,13 +51,14 @@ chmod +x llava-v1.5-7b-q4-server.llamafile
 
 ## Other example llamafiles
 
-We also provide example llamafiles for two other models, so you can
-easily try out llamafile with different kinds of LLMs.
+We also provide example llamafiles for other models, so you can easily
+try out llamafile with different kinds of LLMs.
 
 | Model | License | Command-line llamafile | Server llamafile |
 | --- | --- | --- | --- |
-| Mistral-7B-Instruct | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile (4.07 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile?download=true) | [mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile (4.07 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile?download=true) |
-| LLaVA 1.5 | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | (Not provided because this model's features are best utilized via the web UI) | **[llava-v1.5-7b-q4-server.llamafile (3.97 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true)** |
+| LLaVA 1.5 | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [llava-v1.5-7b-q4-main.llamafile (3.97 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true) | **[llava-v1.5-7b-q4-server.llamafile (3.97 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true)** |
+| Mistral-7B-Instruct | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mistral-7b-instruct-v0.1-Q4\_K\_M-main.llamafile (4.07 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile?download=true) | [mistral-7b-instruct-v0.1-Q4\_K\_M-server.llamafile (4.07 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile?download=true) |
+| Mixtral-8x7B-Instruct | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mixtral-8x7b-instruct-v0.1.Q3\_K\_M.llamafile (18.98 GB)](https://huggingface.co/jartine/Mixtral-8x7B-v0.1.llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q3_K_M.llamafile?download=true) | [mixtral-8x7b-instruct-v0.1.Q3\_K\_M-server.llamafile (18.98 GB)](https://huggingface.co/jartine/Mixtral-8x7B-v0.1.llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q3_K_M-server.llamafile?download=true) |
 | WizardCoder-Python-13B | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b-main.llamafile (7.33 GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true) | [wizardcoder-python-13b-server.llamafile (7.33GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-server.llamafile?download=true) |
 
 "Server llamafiles" work just like the LLaVA example above: you simply
@@ -71,23 +72,31 @@ some command-line parameters, just like with llama.cpp.
 Here is an example for the Mistral command-line llamafile:
 
 ```sh
-./mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile --temp 0.7 -r '\n' -p '### Instruction: Write a story about llamas\n### Response:\n'
+./mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile --temp 0.7 -e -r '\n' -p '### Instruction: Write a story about llamas\n### Response:\n'
 ```
 
 And here is an example for WizardCoder-Python command-line llamafile:
 
 ```sh
-./wizardcoder-python-13b-main.llamafile --temp 0 -r '\n' -p '\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
+./wizardcoder-python-13b-main.llamafile --temp 0 -e -r '\n' -p '\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
-As before, macOS, Linux, and BSD users will need to use the "chmod" 
-command to grant execution permissions to the file before running 
-these llamafiles for the first time.
+And here's an example for the LLaVA command-line llamafile:
 
-Unfortunately, Windows users cannot make use of these example llamafiles 
-because Windows has a maximum executable file size of 4GB, and all of 
-these examples exceed that size. (The LLaVA llamafile works on Windows because it is 30MB shy of the size limit.) But don't lose heart: llamafile allows 
-you to use external weights; this is described later in this document.
+```sh
+./llava-v1.5-7b-q4-main.llamafile --temp 0.2 --image lemurs.jpg -e -p '### User: What do you see?\n### Assistant:'
+```
+
+As before, macOS, Linux, and BSD users will need to use the "chmod"
+command to grant execution permissions to the file before running these
+llamafiles for the first time.
+
+Unfortunately, Windows users cannot make use of many of these example
+llamafiles because Windows has a maximum executable file size of 4GB,
+and all of these examples exceed that size. (The LLaVA llamafile works
+on Windows because it is 30MB shy of the size limit.) But don't lose
+heart: llamafile allows you to use external weights; this is described
+later in this document.
 
 **Having trouble? See the "Gotchas" section below.**
 
