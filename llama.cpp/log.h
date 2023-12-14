@@ -1,3 +1,6 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #pragma once
 
 #include <chrono>
@@ -393,13 +396,13 @@ inline FILE *log_handler1_impl(bool change = false, LogTriState append = LogTriS
             }
         }
 
-        logfile = fopen(filename.c_str(), _append ? "a" : "w");
+        logfile = fopen(filename.c_str(), _append ? "ae" : "we");
     }
 
     if (!logfile)
     {
-        //  Verify whether the file was opened, otherwise fallback to stderr
-        logfile = stderr;
+        //  Verify whether the file was opened, otherwise fallback to /dev/null
+        logfile = fopen("/dev/null", _append ? "ae" : "we");
 
         fprintf(stderr, "Failed to open logfile '%s' with error '%s'\n", filename.c_str(), std::strerror(errno));
         fflush(stderr);

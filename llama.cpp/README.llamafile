@@ -20,6 +20,7 @@ LOCAL MODIFICATIONS
   - Introduce pledge() SECCOMP sandboxing to improve security
   - Use condition variables for server rather than busy loop
   - Remove log callback pointer API from Metal GPU module
+  - Write log to /dev/null when main.log fails to open
   - Avoid bind() conflicts on port 8080 w/ server
   - Allow --grammar to be used on --image prompts
   - Use runtime dispatching for matmul quants

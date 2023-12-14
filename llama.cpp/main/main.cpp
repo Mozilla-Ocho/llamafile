@@ -53,7 +53,7 @@ static void write_logfile(
     }
 
     const std::string logfile_path = params.logdir + timestamp + ".yml";
-    FILE * logfile = fopen(logfile_path.c_str(), "w");
+    FILE * logfile = fopen(logfile_path.c_str(), "we");
 
     if (logfile == NULL) {
         fprintf(stderr, "%s: failed to open logfile %s\n", __func__, logfile_path.c_str());

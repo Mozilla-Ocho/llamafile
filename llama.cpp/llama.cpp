@@ -9829,7 +9829,7 @@ bool llama_load_session_file(struct llama_context * ctx, const char * path_sessi
 }
 
 bool llama_save_session_file(struct llama_context * ctx, const char * path_session, const llama_token * tokens, size_t n_token_count) {
-    llama_file file(path_session, "wb");
+    llama_file file(path_session, "wbe");
 
     file.write_u32(LLAMA_SESSION_MAGIC);
     file.write_u32(LLAMA_SESSION_VERSION);

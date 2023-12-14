@@ -50,7 +50,7 @@ void init(bool use_simple_io, bool use_advanced_display) {
         new_termios.c_cc[VMIN] = 1;
         new_termios.c_cc[VTIME] = 0;
         tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-        tty = fopen("/dev/tty", "w+");
+        tty = fopen("/dev/tty", "w+e");
         if (tty != nullptr) {
             out = tty;
         }

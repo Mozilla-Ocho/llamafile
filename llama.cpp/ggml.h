@@ -2156,7 +2156,7 @@ extern "C" {
     //
     // - first prepare a file with a placeholder for the meta data, write the tensor data, then write the meta data:
     //
-    //   FILE * f = fopen(fname, "wb");
+    //   FILE * f = fopen(fname, "wbe");
     //   fseek(f, gguf_get_meta_size(ctx), SEEK_SET);
     //   fwrite(f, ...);
     //   void * data = gguf_meta_get_meta_data(ctx);
