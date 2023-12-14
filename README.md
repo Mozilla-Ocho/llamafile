@@ -72,13 +72,13 @@ some command-line parameters, just like with llama.cpp.
 Here is an example for the Mistral command-line llamafile:
 
 ```sh
-./mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile --temp 0.7 -e -r '\n' -p '### Instruction: Write a story about llamas\n### Response:\n'
+./mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile --temp 0.7 -e -p '[INST]Write a story about llamas[/INST]\n'
 ```
 
 And here is an example for WizardCoder-Python command-line llamafile:
 
 ```sh
-./wizardcoder-python-13b-main.llamafile --temp 0 -e -r '\n' -p '\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
+./wizardcoder-python-13b-main.llamafile --temp 0 -e -r '```\n' -p '```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
 And here's an example for the LLaVA command-line llamafile:
