@@ -143,7 +143,7 @@ enable you to work around Windows' 4GB executable file size limit.
 For Windows users, here's an example for the Mistral LLM:
 
 ```sh
-curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.3/llamafile-server-0.3
+curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.4/llamafile-server-0.4
 curl -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
 .\llamafile.exe -m mistral.gguf
 ```
@@ -151,7 +151,7 @@ curl -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GG
 Here's the same example, but for macOS, Linux, and BSD users:
 
 ```sh
-curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.3/llamafile-server-0.3 >llamafile
+curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.4/llamafile-server-0.4 >llamafile
 curl -L https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf >mistral.gguf
 chmod +x llamafile
 ./llamafile -m mistral.gguf
@@ -227,21 +227,14 @@ weights fit into memory.
 
 On Apple Silicon, everything should just work if Xcode is installed.
 
-On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
-you have the `cc` compiler installed, (2) you pass the `--n-gpu-layers
-35` flag (or whatever value is appropriate) to enable GPU, and (3) the
-CUDA developer toolkit is installed on your machine and the `nvcc`
-compiler is on your path.
+On Windows, GPU should just work so long as (1) you're using our release
+binaries, and (2) you pass the `-ngl 35` flag. You also need an NVIDIA
+graphics card that supports CUDA. There's no support yet for AMD GPUs.
 
-On Windows, install [CUDA](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html) (you only need CUDA and the compiler, so use 
-the network installer and deselect other options). You must edit 
-Windows Environment Variables to add to PATH: 
-C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.3\bin
-Invoke x64 Native Tools Command Prompt for VS 2022 (this is required to 
-compile the dependencies for CUDA at first start) and run llamafile.
-For the first invocation, it will build a DLL with native GPU support. 
-When you invoke it with a model, verify GPU is used by looking for:
-"total VRAM used" to be a non-zero number (usually the size of the model).
+On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
+you have the `cc` compiler installed, (2) you pass the `-ngl 35` flag to
+enable GPU, and (3) the CUDA developer toolkit is installed on your
+machine and the `nvcc` compiler is on your path.
 
 In the event that GPU support couldn't be compiled and dynamically
 linked on the fly for any reason, llamafile will fall back to CPU
