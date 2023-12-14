@@ -33,8 +33,8 @@
 
 __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llamafile/compcap.cu");
-__static_yoink("llama.cpp/tinyblas.h");
-__static_yoink("llama.cpp/tinyblas.cu");
+__static_yoink("llamafile/tinyblas.h");
+__static_yoink("llamafile/tinyblas.cu");
 __static_yoink("llama.cpp/ggml-impl.h");
 __static_yoink("llamafile/llamafile.h");
 __static_yoink("llama.cpp/ggml-cuda.h");
@@ -65,8 +65,8 @@ static const struct Source {
     {"/zip/llama.cpp/ggml.h", "ggml.h"},
     {"/zip/llamafile/compcap.cu", "compcap.cu"},
     {"/zip/llamafile/llamafile.h", "llamafile.h"},
-    {"/zip/llama.cpp/tinyblas.h", "tinyblas.h"},
-    {"/zip/llama.cpp/tinyblas.cu", "tinyblas.cu"},
+    {"/zip/llamafile/tinyblas.h", "tinyblas.h"},
+    {"/zip/llamafile/tinyblas.cu", "tinyblas.cu"},
     {"/zip/llama.cpp/ggml-impl.h", "ggml-impl.h"},
     {"/zip/llama.cpp/ggml-cuda.h", "ggml-cuda.h"},
     {"/zip/llama.cpp/ggml-alloc.h", "ggml-alloc.h"},

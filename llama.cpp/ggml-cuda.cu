@@ -526,7 +526,7 @@ static_assert(sizeof(half) == sizeof(ggml_fp16_t), "wrong fp16 size");
         }                                                                               \
     } while (0)
 
-#if CUDART_VERSION >= 12000
+#if CUDART_VERSION >= 12000 && !defined(GGML_USE_TINYBLAS)
 #define CUBLAS_CHECK(err)                                                               \
     do {                                                                                \
         cublasStatus_t err_ = (err);                                                    \
