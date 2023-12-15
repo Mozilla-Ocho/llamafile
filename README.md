@@ -54,12 +54,12 @@ chmod +x llava-v1.5-7b-q4-server.llamafile
 We also provide example llamafiles for other models, so you can easily
 try out llamafile with different kinds of LLMs.
 
-| Model | License | Command-line llamafile | Server llamafile |
-| --- | --- | --- | --- |
-| LLaVA 1.5 | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [llava-v1.5-7b-q4-main.llamafile (3.97 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true) | **[llava-v1.5-7b-q4-server.llamafile (3.97 GB)](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true)** |
-| Mistral-7B-Instruct | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mistral-7b-instruct-v0.1-Q4\_K\_M-main.llamafile (4.07 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile?download=true) | [mistral-7b-instruct-v0.1-Q4\_K\_M-server.llamafile (4.07 GB)](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile?download=true) |
-| Mixtral-8x7B-Instruct | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mixtral-8x7b-instruct-v0.1.Q3\_K\_M.llamafile (18.98 GB)](https://huggingface.co/jartine/Mixtral-8x7B-v0.1.llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q3_K_M.llamafile?download=true) | [mixtral-8x7b-instruct-v0.1.Q3\_K\_M-server.llamafile (18.98 GB)](https://huggingface.co/jartine/Mixtral-8x7B-v0.1.llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q3_K_M-server.llamafile?download=true) |
-| WizardCoder-Python-13B | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b-main.llamafile (7.33 GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true) | [wizardcoder-python-13b-server.llamafile (7.33GB)](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-server.llamafile?download=true) |
+| Model | Size | License | Command-line llamafile | Server llamafile |
+| --- | --- | --- | --- | --- |
+| LLaVA 1.5 | 3.97 GB | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [llava-v1.5-7b-q4-main.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true) | **[llava-v1.5-7b-q4-server.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true)** |
+| Mistral-7B-Instruct | 4.07 GB | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mistral-7b-instruct-v0.1-Q4\_K\_M-main.llamafile](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile?download=true) | [mistral-7b-instruct-v0.1-Q4\_K\_M-server.llamafile](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile?download=true) |
+| Mixtral-8x7B-Instruct | 30.03 GB | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mixtral-8x7b-instruct-v0.1.Q5\_K\_M.llamafile](https://huggingface.co/jartine/Mixtral-8x7B-v0.1.llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q5_K_M.llamafile?download=true) | [mixtral-8x7b-instruct-v0.1.Q5\_K\_M-server.llamafile](https://huggingface.co/jartine/Mixtral-8x7B-v0.1.llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q5_K_M-server.llamafile?download=true) |
+| WizardCoder-Python-13B | 7.33 GB | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b-main.llamafile](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true) | [wizardcoder-python-13b-server.llamafile](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-server.llamafile?download=true) |
 
 "Server llamafiles" work just like the LLaVA example above: you simply
 run them from your terminal and then access the chat UI in your web
@@ -72,7 +72,7 @@ some command-line parameters, just like with llama.cpp.
 Here is an example for the Mistral command-line llamafile:
 
 ```sh
-./mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile --temp 0.7 -e -p '[INST]Write a story about llamas[/INST]\n'
+./mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile --temp 0.7 -p '[INST]Write a story about llamas[/INST]'
 ```
 
 And here is an example for WizardCoder-Python command-line llamafile:
