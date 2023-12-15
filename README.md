@@ -221,16 +221,16 @@ stock install:
 
 llamafile supports the following CPUs:
 
-- AMD64 microprocessors must have SSE3. Otherwise llamafile will
-print an error and refuse to run. This means that if you have an Intel
-CPU, it needs to be Intel Core or newer (circa 2006+), and if you
-have an AMD CPU, then it needs to be Bulldozer or newer (circa
-2011+). If you have a newer CPU with AVX, or better yet AVX2, then
-llamafile will utilize your chipset features to go faster. There is
-no support for AVX512+ runtime dispatching yet.
+- AMD64 microprocessors must have SSSE3. Otherwise llamafile will print
+  an error and refuse to run. This means that if you have an Intel CPU,
+  it needs to be Intel Core or newer (circa 2006+), and if you have an
+  AMD CPU, then it needs to be Bulldozer or newer (circa 2011+). If you
+  have a newer CPU with AVX, or better yet AVX2, then llamafile will
+  utilize your chipset features to go faster. There is no support for
+  AVX512+ runtime dispatching yet.
 - ARM64 microprocessors must have ARMv8a+. This means everything from
-Apple Silicon to 64-bit Raspberry Pis will work, provided your
-weights fit into memory.
+  Apple Silicon to 64-bit Raspberry Pis will work, provided your weights
+  fit into memory.
 
 ## GPU support
 
