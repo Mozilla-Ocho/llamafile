@@ -302,13 +302,13 @@ Here's an example of how you can use llamafile to summarize HTML URLs:
 
 ```sh
 (
-  echo [INST]Summarize the following text:
+  echo '[INST]Summarize the following text:'
   links -codepage utf-8 \
         -force-html \
         -width 500 \
         -dump https://www.poetryfoundation.org/poems/48860/the-raven |
     sed 's/   */ /'
-  echo [/INST]
+  echo '[/INST]'
 ) | llamafile \
       -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
       -c 6700 \
