@@ -1,0 +1,90 @@
+#!/bin/bash
+FILE=$1
+TYPE=${2:-both}
+SCRIPTNAME=$(basename $0)
+
+if [ -z "$FILE" ]; then
+  echo "Usage: $SCRIPTNAME <gguf file or url> [cli|server|both]"
+  exit 1
+fi
+
+# if the file starts with http
+if [[ $FILE == http* ]]; then
+  # download the file
+  # if the filename contains ?download=true, remove it
+  FILE=$(echo $FILE | sed 's/?download=true//g')
+  # get the filename
+  FILENAME=$(echo $FILE | sed 's/.*\///g')
+  echo "Downloading $FILENAME"
+  wget -O $FILENAME $FILE
+  # get the filename
+  FILE=$FILENAME
+fi
+
+# replace .gguf with .llamafile
+LLAMAFILE_NAME=$(echo $FILE | sed 's/.gguf/.llamafile/g')
+# replace .gguf with -server.llamafile
+LLAMAFILE_SERVER_NAME=$(echo $FILE | sed 's/.gguf/-server.llamafile/g')
+LLAMAFILE_PATH=$(which llamafile)
+LLAMAFILE_SERVER_PATH=$(which llamafile-server)
+CLI_ARGS=$(cat <<EOF
+-m
+$FILE
+...
+EOF
+)
+SERVER_ARGS=$(cat <<EOF
+-m
+$FILE
+--host
+0.0.0.0
+...
+EOF
+)
+
+convert_to_cli() {
+  echo "Converting $FILE to $LLAMAFILE_NAME"
+  # print CLI args to .args
+  echo "$CLI_ARGS" > .args
+  cp $LLAMAFILE_PATH $LLAMAFILE_NAME
+  zipalign -j0 $LLAMAFILE_NAME $FILE .args
+}
+
+convert_to_server() {
+  echo "Converting $FILE to $LLAMAFILE_SERVER_NAME"
+  # print server args to .args
+  echo "$SERVER_ARGS" > .args
+  cp $LLAMAFILE_SERVER_PATH $LLAMAFILE_SERVER_NAME
+  zipalign -j0 $LLAMAFILE_SERVER_NAME $FILE .args
+}
+
+cleanup() {
+  echo "Cleaning up"
+  # remove .args
+  rm .args
+  # remove the downloaded file
+  rm $FILE
+  echo "Done"
+}
+
+case $TYPE in
+  cli)
+    echo "Building CLI llamafile"
+    convert_to_cli
+    ;;
+  server)
+    echo "Building Server llamafile"
+    convert_to_server
+    ;;
+  both)
+    echo "Building both CLI and Server llamafiles"
+    convert_to_cli
+    convert_to_server
+    ;;
+  *)
+    echo "Invalid type specified. Valid options are 'cli', 'server', or 'both'."
+    exit 1
+    ;;
+esac
+
+cleanup
