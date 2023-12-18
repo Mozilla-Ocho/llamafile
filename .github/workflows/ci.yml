@@ -1,0 +1,13 @@
+   name: ci tests
+
+   on:
+     pull_request:
+
+   jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+      - name: checkout repo
+        uses: actions/checkout@main
+      - name: build application
+        run: make -j8
