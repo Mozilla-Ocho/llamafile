@@ -69,7 +69,7 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 #else
 #define NVCC_FLAGS "-shared",                                          \
         "-use_fast_math",                                               \
-        "-fPIC", "-O3", "-march=native", "-mtune=native",               \
+        IsWindows() ? "" : "-fPIC", "-O3", "-march=native", "-mtune=native",               \
         "-DNDEBUG",                                                     \
         "-DGGML_BUILD=1",                                               \
         "-DGGML_SHARED=1",                                              \
@@ -231,7 +231,7 @@ static bool GetNvccPath(char path[static PATH_MAX]) {
 #if !defined(USE_HIP)
     if (commandv(IsWindows() ? "nvcc.exe" : "nvcc", path, PATH_MAX)) {
 #else
-    if (commandv("hipcc", path, PATH_MAX)) {
+    if (commandv(IsWindows() ? "hipcc.bin.exe" : "hipcc", path, PATH_MAX)) {
 #endif
         return true;
     } else if ((cuda_path = getenv("CUDA_PATH"))) {
