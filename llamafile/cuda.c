@@ -43,8 +43,15 @@ __static_yoink("llama.cpp/ggml-cuda.cu");
 __static_yoink("llama.cpp/ggml-backend.h");
 __static_yoink("llama.cpp/ggml-backend-impl.h");
 
-#define NVCC_LIBS "-lcublas"
+#define USE_HIP 1
 
+#if !defined(USE_HIP)
+#define NVCC_LIBS "-lcublas"
+#else
+#define NVCC_LIBS "-lhipblas", "-lrocblas"
+#endif
+
+#if !defined(USE_HIP)
 #define NVCC_FLAGS "--shared",                                          \
         "--forward-unknown-to-host-compiler",                           \
         "-use_fast_math",                                               \
@@ -57,6 +64,21 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
         "-DK_QUANTS_PER_ITERATION=2",                                   \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
         "-DGGML_USE_CUBLAS"
+
+
+#else
+#define NVCC_FLAGS "-shared",                                          \
+        "-use_fast_math",                                               \
+        "-fPIC", "-O3", "-march=native", "-mtune=native",               \
+        "-DNDEBUG",                                                     \
+        "-DGGML_BUILD=1",                                               \
+        "-DGGML_SHARED=1",                                              \
+        "-DGGML_CUDA_DMMV_X=32",                                        \
+        "-DGGML_CUDA_MMV_Y=1",                                          \
+        "-DK_QUANTS_PER_ITERATION=2",                                   \
+        "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
+        "-DGGML_USE_HIPBLAS"
+#endif
 
 static const struct Source {
     const char *zip;
@@ -206,7 +228,11 @@ static bool Compile(const char *src,
 // set $CUDA_PATH to empty string to disable cuda
 static bool GetNvccPath(char path[static PATH_MAX]) {
     const char *cuda_path;
+#if !defined(USE_HIP)
     if (commandv(IsWindows() ? "nvcc.exe" : "nvcc", path, PATH_MAX)) {
+#else
+    if (commandv("hipcc", path, PATH_MAX)) {
+#endif
         return true;
     } else if ((cuda_path = getenv("CUDA_PATH"))) {
         if (!*cuda_path) return false;
@@ -217,10 +243,12 @@ static bool GetNvccPath(char path[static PATH_MAX]) {
     } else {
         strlcpy(path, "/usr/local/cuda/bin/", PATH_MAX);
     }
-    strlcat(path, "nvcc", PATH_MAX);
+    strlcat(path, USE_HIP ? "nvcc" : "hipcc", PATH_MAX);
+#if !defined(USE_HIP)
     if (IsWindows()) {
         strlcat(path, ".exe", PATH_MAX);
     }
+#endif
     return IsExecutable(path);
 }
 
@@ -254,7 +282,7 @@ static dontinline bool GetNvccArchFlag(char *nvcc, char flag[static 32]) {
     // run than compiling / running this script and (2) the nvidia-smi
     // command isn't available on Jetson devices.
     tinyprint(2, "building nvidia compute capability detector...\n", NULL);
-    if (!Compile(src, tmp, exe, (char *[]){nvcc, "-o", tmp, src, 0})) {
+    if (!Compile(src, tmp, exe, (char *[]){nvcc, "-o", tmp, src, USE_HIP ? "-DUSE_HIP=1" : 0, 0})) {
         return false;
     }
 
@@ -295,6 +323,7 @@ static dontinline bool GetNvccArchFlag(char *nvcc, char flag[static 32]) {
         return false;
     }
 
+#if !defined(USE_HIP)
     // parse output of detector
     char *endptr;
     if (!*ibuf || !strtol(ibuf, &endptr, 10) || *endptr) {
@@ -304,6 +333,13 @@ static dontinline bool GetNvccArchFlag(char *nvcc, char flag[static 32]) {
 
     // return resulting flag
     stpcpy(stpcpy(flag, "-arch=compute_"), ibuf);
+#else
+    if (!*ibuf) {
+        tinyprint(2, "error: bad compute capability detector output\n", NULL);
+        return false;
+    }
+    stpcpy(stpcpy(flag, "--offload-arch="), ibuf);
+#endif
     return true;
 }
 
@@ -369,7 +405,7 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
     // try building dso with host nvidia microarchitecture
     tinyprint(2, "building ggml-cuda with nvcc -arch=native...\n", NULL);
     if (Compile(src, tmpdso, dso, (char *[]){
-                nvcc, "-arch=native", NVCC_FLAGS, "-o", tmpdso,
+                nvcc, USE_HIP ? "-march=native" : "-arch=native", NVCC_FLAGS, "-o", tmpdso,
                 src, NVCC_LIBS, NULL})) {
         return true;
     }
