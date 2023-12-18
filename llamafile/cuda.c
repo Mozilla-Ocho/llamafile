@@ -45,13 +45,13 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 
 #define USE_HIP 1
 
-#if !defined(USE_HIP)
+#if !USE_HIP
 #define NVCC_LIBS "-lcublas"
 #else
 #define NVCC_LIBS "-lhipblas", "-lrocblas"
 #endif
 
-#if !defined(USE_HIP)
+#if !USE_HIP
 #define NVCC_FLAGS "--shared",                                          \
         "--forward-unknown-to-host-compiler",                           \
         "-use_fast_math",                                               \
@@ -228,7 +228,7 @@ static bool Compile(const char *src,
 // set $CUDA_PATH to empty string to disable cuda
 static bool GetNvccPath(char path[static PATH_MAX]) {
     const char *cuda_path;
-#if !defined(USE_HIP)
+#if !USE_HIP
     if (commandv(IsWindows() ? "nvcc.exe" : "nvcc", path, PATH_MAX)) {
 #else
     if (commandv(IsWindows() ? "hipcc.bin.exe" : "hipcc", path, PATH_MAX)) {
@@ -244,7 +244,7 @@ static bool GetNvccPath(char path[static PATH_MAX]) {
         strlcpy(path, "/usr/local/cuda/bin/", PATH_MAX);
     }
     strlcat(path, USE_HIP ? "nvcc" : "hipcc", PATH_MAX);
-#if !defined(USE_HIP)
+#if !USE_HIP
     if (IsWindows()) {
         strlcat(path, ".exe", PATH_MAX);
     }
@@ -323,7 +323,7 @@ static dontinline bool GetNvccArchFlag(char *nvcc, char flag[static 32]) {
         return false;
     }
 
-#if !defined(USE_HIP)
+#if !USE_HIP
     // parse output of detector
     char *endptr;
     if (!*ibuf || !strtol(ibuf, &endptr, 10) || *endptr) {
