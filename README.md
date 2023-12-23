@@ -42,7 +42,7 @@ chmod +x llava-v1.5-7b-q4-server.llamafile
 ```
 
 6. Your browser should open automatically and display a chat interface. 
-(If it doesn't, just open your browser and point it at https://localhost:8080.)
+(If it doesn't, just open your browser and point it at http://localhost:8080.)
 
 7. When you're done chatting, return to your terminal and hit
 `Control-C` to shut down llamafile.
@@ -63,7 +63,7 @@ try out llamafile with different kinds of LLMs.
 
 "Server llamafiles" work just like the LLaVA example above: you simply
 run them from your terminal and then access the chat UI in your web
-browser at <https://localhost:8080>.
+browser at <http://localhost:8080>.
 
 "Command-line llamafiles" run entirely inside your terminal and operate
 just like llama.cpp's "main" function. This means you have to provide
