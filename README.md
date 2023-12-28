@@ -311,7 +311,7 @@ Here's an example of how you can use llamafile to summarize HTML URLs:
         -force-html \
         -width 500 \
         -dump https://www.poetryfoundation.org/poems/48860/the-raven |
-    sed 's/   */ /'
+    sed 's/   */ /g'
   echo '[/INST]'
 ) | llamafile \
       -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
@@ -347,7 +347,7 @@ llamafile --temp 0 \
     --grammar 'root ::= [a-z]+ (" " [a-z]+)+' \
     -p $'### User: What do you see?\n### Assistant: ' \
     --silent-prompt 2>/dev/null |
-  sed -e's/ /_/' -e's/$/.jpg/'
+  sed -e's/ /_/g' -e's/$/.jpg/'
 a_baby_monkey_on_the_back_of_a_mother.jpg
 ```
 
