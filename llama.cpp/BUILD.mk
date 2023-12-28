@@ -18,9 +18,9 @@ LLAMA_CPP_OBJS =					\
 
 o/$(MODE)/llama.cpp/llama.cpp.a: $(LLAMA_CPP_OBJS)
 
-include llama.cpp/main/BUILD.mk
 include llama.cpp/llava/BUILD.mk
 include llama.cpp/server/BUILD.mk
+include llama.cpp/main/BUILD.mk
 include llama.cpp/quantize/BUILD.mk
 include llama.cpp/perplexity/BUILD.mk
 
