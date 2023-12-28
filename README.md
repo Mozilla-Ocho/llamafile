@@ -356,7 +356,7 @@ example uses LLaVA v1.5-7B, a multimodal LLM that works with llama.cpp's
 recently-added support for image inputs.
 
 ```sh
-llamafile-server \
+llamafile \
   -m llava-v1.5-7b-Q8_0.gguf \
   --mmproj llava-v1.5-7b-mmproj-Q8_0.gguf \
   --host 0.0.0.0
@@ -369,7 +369,7 @@ images to it.
 If you want to be able to just say:
 
 ```sh
-./llava-server.llamafile
+./llava.llamafile
 ```
 
 ...and have it run the web server without having to specify arguments,
@@ -393,15 +393,15 @@ user are to be inserted. Next, we'll add both the weights and the
 argument file to the executable:
 
 ```sh
-cp /usr/local/bin/llamafile-server llava-server.llamafile
+cp /usr/local/bin/llamafile llava.llamafile
 
 zipalign -j0 \
-  llava-server.llamafile \
+  llava.llamafile \
   llava-v1.5-7b-Q8_0.gguf \
   llava-v1.5-7b-mmproj-Q8_0.gguf \
   .args
 
-./llava-server.llamafile
+./llava.llamafile
 ```
 
 Congratulations. You've just made your own LLM executable that's easy to

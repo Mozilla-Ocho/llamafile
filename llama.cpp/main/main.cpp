@@ -24,6 +24,7 @@
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/llava/llava.h"
+#include "llama.cpp/server/server.h"
 
 static llama_context           ** g_ctx;
 static llama_model             ** g_model;
@@ -108,9 +109,16 @@ static bool has_argument(int argc, char ** argv, const char * arg) {
 }
 
 int main(int argc, char ** argv) {
-    if (argc == 2 && !strcmp(argv[1], "--version")) {
-        printf("llamafile v" LLAMAFILE_VERSION_STRING " main\n");
+
+    if (has_argument(argc, argv, "--version")) {
+        printf("llamafile v" LLAMAFILE_VERSION_STRING "\n");
         exit(0);
+    }
+
+    if (has_argument(argc, argv, "--server") ||
+        (!has_argument(argc, argv, "-p") &&
+         !has_argument(argc, argv, "-f"))) {
+        return server_cli(argc, argv);
     }
 
     llamafile_init();

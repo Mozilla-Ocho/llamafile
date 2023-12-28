@@ -5,7 +5,8 @@
 .Nm llamafile-server
 .Nd large language model server
 .Sh SYNOPSIS
-.Nm
+.Nm llamafile
+.Fl Fl server
 .Op flags...
 .Op Fl m Ar weights.gguf
 .Sh DESCRIPTION
@@ -14,6 +15,18 @@ launches an HTTP server and browser tab with a web user interface for
 the llama.cpp software. The UI lets you chat with your LLM and upload
 images it can analyze. Furthermore, this server provides an OpenAI API
 compatible completions endpoint.
+.Pp
+.Nm llamafile-server
+is launched via the
+.Nm llamafile
+command when the
+.Fl Fl server
+flag is passed. The server flag is implied by default if no prompt is
+specified, i.e. neither the
+.Fl p
+or
+.Fl f
+flags are passed.
 .Sh OPTIONS
 The following options are available:
 .Bl -tag -width indent

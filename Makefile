@@ -29,14 +29,12 @@ install:	llamafile/zipalign.1					\
 		llama.cpp/llava/llava-quantize.1			\
 		o/$(MODE)/llamafile/zipalign				\
 		o/$(MODE)/llama.cpp/main/main				\
-		o/$(MODE)/llama.cpp/server/server			\
 		o/$(MODE)/llama.cpp/quantize/quantize			\
 		o/$(MODE)/llama.cpp/perplexity/perplexity		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize
 	mkdir -p $(PREFIX)/bin
 	$(INSTALL) o/$(MODE)/llamafile/zipalign $(PREFIX)/bin/zipalign
 	$(INSTALL) o/$(MODE)/llama.cpp/main/main $(PREFIX)/bin/llamafile
-	$(INSTALL) o/$(MODE)/llama.cpp/server/server $(PREFIX)/bin/llamafile-server
 	$(INSTALL) o/$(MODE)/llama.cpp/quantize/quantize $(PREFIX)/bin/llamafile-quantize
 	$(INSTALL) o/$(MODE)/llama.cpp/perplexity/perplexity $(PREFIX)/bin/llamafile-perplexity
 	$(INSTALL) o/$(MODE)/llama.cpp/llava/llava-quantize $(PREFIX)/bin/llava-quantize

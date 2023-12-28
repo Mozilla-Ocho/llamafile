@@ -11,14 +11,18 @@
 .Fl p Ar prompt
 .Nm
 .Op flags...
+.Op Fl Fl server
+.Fl m Ar model.gguf
+.Op Fl Fl mmproj Ar vision.gguf
+.Nm
+.Op flags...
 .Fl m Ar model.gguf
 .Fl Fl mmproj Ar vision.gguf
 .Fl Fl image Ar graphic.png
 .Fl p Ar prompt
 .Sh DESCRIPTION
 .Nm
-is a command-line tool for running large language models. It has use
-cases such as:
+is a large language model tool. It has use cases such as:
 .Pp
 .Bl -dash -compact
 .It
@@ -37,6 +41,18 @@ The following options are available:
 Show help message and exit.
 .It Fl Fl version
 Print llamafile version and exit.
+.It Fl Fl server
+.Xr llamafile-server 1
+is launched via the
+.Nm llamafile
+command when the
+.Fl Fl server
+flag is passed. The server flag is implied by default if no prompt is
+specified, i.e. neither the
+.Fl p
+or
+.Fl f
+flags are passed.
 .It Fl m Ar FNAME , Fl Fl model Ar FNAME
 Model path in GGUF file format.
 .Pp

@@ -7,15 +7,13 @@ LLAMA_CPP_SERVER_FILES := $(wildcard llama.cpp/server/*)
 LLAMA_CPP_SERVER_ASSETS := $(wildcard llama.cpp/server/public/*)
 LLAMA_CPP_SERVER_HDRS = $(filter %.h,$(LLAMA_CPP_SERVER_FILES))
 LLAMA_CPP_SERVER_SRCS = $(filter %.cpp,$(LLAMA_CPP_SERVER_FILES))
+LLAMA_CPP_SERVER_OBJS = $(LLAMA_CPP_SERVER_SRCS:%.cpp=o/$(MODE)/%.o)
 
-o/$(MODE)/llama.cpp/server/server.o: private CXXFLAGS += -O1
+o/$(MODE)/llama.cpp/server/impl.o: private CXXFLAGS += -O1
 
-o/$(MODE)/llama.cpp/server/server:				\
-		o/$(MODE)/llama.cpp/server/server.o		\
-		o/$(MODE)/llama.cpp/llava/llava.a		\
-		o/$(MODE)/llama.cpp/llama.cpp.a			\
-		$(LLAMA_CPP_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)
+o/$(MODE)/llama.cpp/server/server.a:				\
+		$(LLAMA_CPP_SERVER_OBJS)
 
 .PHONY: o/$(MODE)/llama.cpp/server
 o/$(MODE)/llama.cpp/server:					\
-		o/$(MODE)/llama.cpp/server/server
+		o/$(MODE)/llama.cpp/server/server.a

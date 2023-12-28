@@ -1,5 +1,7 @@
-// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
+#include "server.h"
 #include "tool/args/args.h"
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
@@ -2323,6 +2325,9 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             sparams.unsecure = true;
         }
+        else if (arg == "--server")
+        {
+        }
         else
         {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
@@ -2645,7 +2650,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
     }
 }
 
-int main(int argc, char **argv)
+int server_cli(int argc, char ** argv)
 {
     if (argc == 2 && !strcmp(argv[1], "--version")) {
         printf("llamafile v" LLAMAFILE_VERSION_STRING " server\n");
