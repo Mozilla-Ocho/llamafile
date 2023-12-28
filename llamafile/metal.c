@@ -70,6 +70,7 @@ static struct Metal {
     typeof(ggml_metal_if_optimized) *if_optimized;
     typeof(ggml_metal_init) *init;
     typeof(ggml_metal_set_n_cb) *set_n_cb;
+    typeof(ggml_backend_metal_init) *backend_init;
 } ggml_metal;
 
 static const char *Dlerror(void) {
@@ -199,6 +200,7 @@ static bool ImportMetalImpl(void) {
     ok &= !!(ggml_metal.if_optimized = cosmo_dlsym(lib, "ggml_metal_if_optimized"));
     ok &= !!(ggml_metal.init = cosmo_dlsym(lib, "ggml_metal_init"));
     ok &= !!(ggml_metal.set_n_cb = cosmo_dlsym(lib, "ggml_metal_set_n_cb"));
+    ok &= !!(ggml_metal.backend_init = cosmo_dlsym(lib, "ggml_backend_metal_init"));
     if (!ok) {
         tinyprint(2, Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
@@ -211,6 +213,7 @@ static bool ImportMetalImpl(void) {
 static void ImportMetal(void) {
     if (IsXnuSilicon() && ImportMetalImpl()) {
         ggml_metal.supported = true;
+        ggml_metal.backend_init();
         tinyprint(2, "Apple Metal GPU support successfully loaded\n", NULL);
     }
 }
