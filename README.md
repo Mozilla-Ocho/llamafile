@@ -213,7 +213,7 @@ llamafile supports the following operating systems, which require a minimum
 stock install:
 
 - Linux 2.6.18+ (ARM64 or AMD64) i.e. any distro RHEL5 or newer
-- macOS 15.6+ (ARM64 or AMD64, with GPU only supported on ARM64)
+- Darwin (macOS) 23.1.0+ [1] (ARM64 or AMD64, with GPU only supported on ARM64)
 - Windows 8+ (AMD64)
 - FreeBSD 13+ (AMD64, GPU should work in theory)
 - NetBSD 9.2+ (AMD64, GPU should work in theory)
@@ -231,6 +231,9 @@ llamafile supports the following CPUs:
 - ARM64 microprocessors must have ARMv8a+. This means everything from
   Apple Silicon to 64-bit Raspberry Pis will work, provided your weights
   fit into memory.
+
+[1] Darwin kernel versions 15.6+ *should* be supported, but we currently
+    have no way of testing that.
 
 ## GPU support
 
