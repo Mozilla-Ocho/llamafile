@@ -42,7 +42,7 @@ chmod +x llava-v1.5-7b-q4-server.llamafile
 ```
 
 6. Your browser should open automatically and display a chat interface. 
-(If it doesn't, just open your browser and point it at https://localhost:8080.)
+(If it doesn't, just open your browser and point it at http://localhost:8080.)
 
 7. When you're done chatting, return to your terminal and hit
 `Control-C` to shut down llamafile.
@@ -63,7 +63,7 @@ try out llamafile with different kinds of LLMs.
 
 "Server llamafiles" work just like the LLaVA example above: you simply
 run them from your terminal and then access the chat UI in your web
-browser at <https://localhost:8080>.
+browser at <http://localhost:8080>.
 
 "Command-line llamafiles" run entirely inside your terminal and operate
 just like llama.cpp's "main" function. This means you have to provide
@@ -152,8 +152,8 @@ enable you to work around Windows' 4GB executable file size limit.
 For Windows users, here's an example for the Mistral LLM:
 
 ```sh
-curl -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.4/llamafile-server-0.4
-curl -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
+curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.4/llamafile-server-0.4
+curl -L -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
 .\llamafile.exe -m mistral.gguf
 ```
 
