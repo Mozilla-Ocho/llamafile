@@ -14,6 +14,7 @@
 #include "llamafile/version.h"
 
 #define CPPHTTPLIB_NO_EXCEPTIONS 1
+#define CPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH 1048576
 
 #include "httplib.h"
 #include "json.h"
