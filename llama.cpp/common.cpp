@@ -793,23 +793,6 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
     if (!params.kv_overrides.empty()) {
         params.kv_overrides.emplace_back(llama_model_kv_override());
         params.kv_overrides.back().key[0] = 0;
-     }
-
-    if (passed_gpu_flags) {
-        // user is tuning their gpu
-        if (!ggml_metal_supported() && !ggml_cuda_supported()) {
-            fprintf(stderr, "warning: GPU offload not supported on this platform; GPU related options will be ignored\n");
-            fprintf(stderr, "warning: you might need to install xcode (macos) or cuda (windows, linux, etc.) check the output above to see why support wasn't linked\n");
-        }
-    } else {
-        // no gpu flags were passed
-        if (ggml_metal_supported()) {
-            // apple metal gpu doesn't require explicit flags to enable
-        } else {
-            // avoid the >1 second cuda startup latency if cuda isn't being used
-            fprintf(stderr, "protip: pass the --n-gpu-layers N flag to link NVIDIA cuBLAS support\n");
-            ggml_cuda_disable();
-        }
     }
 
     return true;

@@ -232,8 +232,7 @@ int llava_cli(int argc, char ** argv) {
         return 1;
     }
     if (params.mmproj.empty() || (params.image.empty() && !prompt_contains_image(params.prompt))) {
-        gpt_print_usage(argc, argv, params);
-        show_additional_info(argc, argv);
+        fprintf(stderr, "%s: fatal error: --image flag missing\n", argv[0]);
         return 1;
     }
 
