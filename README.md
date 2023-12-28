@@ -275,9 +275,9 @@ weights:
 ```sh
 llamafile \
   -m wizardcoder-python-13b-v1.0.Q8_0.gguf \
-  --temp 0 \
-  -r $'```\n' \
-  -p $'```c\nvoid *memcpy(char *dst, const char *src, size_t size) {\n'
+  --temp 0 -e \
+  -r '```\n' \
+  -p '```c\nvoid *memcpy(char *dst, const char *src, size_t size) {\n'
 ```
 
 Here's a similar example that instead utilizes Mistral-7B-Instruct
@@ -286,9 +286,7 @@ weights for prose composition:
 ```sh
 llamafile \
   -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
-  --temp 0.7 \
-  -r $'\n' \
-  -p $'### Instruction: Write a story about llamas\n### Response:\n'
+  -p '[INST]Write a story about llamas[/INST]'
 ```
 
 Here's an example of how llamafile can be used as an interactive chatbot
