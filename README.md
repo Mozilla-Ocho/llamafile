@@ -315,8 +315,8 @@ Here's an example of how you can use llamafile to summarize HTML URLs:
   echo '[/INST]'
 ) | llamafile \
       -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
-      -c 6700 \
       -f /dev/stdin \
+      -c 0 \
       --temp 0 \
       -n 500 \
       --silent-prompt 2>/dev/null
