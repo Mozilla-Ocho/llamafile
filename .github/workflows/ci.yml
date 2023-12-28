@@ -1,0 +1,45 @@
+name: CI
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+jobs:
+  Tests:
+    timeout-minutes: 60
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [  macos-latest ] # ubuntu-latest, windows-latest are currently non-functional, requiring adaptation for proper functionality. 
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Build and Install CosmoCC
+        shell: bash
+        run: |
+          mkdir -p cosmocc
+          cd cosmocc
+          curl -o cosmocc.zip -L  https://cosmo.zip/pub/cosmocc/cosmocc.zip
+          unzip cosmocc.zip
+          cd ..
+          ./cosmocc/bin/make -j8 && ./cosmocc/bin/make install
+      - name: Create LLM Executable
+        shell: bash 
+        run: |
+          curl -o mistral.gguf -L https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
+          cat << EoF > .args
+          -m
+          mistral.gguf
+          ...
+          EoF
+          cp /usr/local/bin/llamafile llamafile_exe
+          chmod +x llamafile_exe
+          zipalign -j0 \
+            llamafile_exe \
+            mistral.gguf \
+            .args
+      - name: Execute LLM CLI
+        shell: bash
+        run: |
+          ./llamafile_exe --temp 0.7 --n-predict 50 -p '[INST]Write a story about llamas[/INST]'
