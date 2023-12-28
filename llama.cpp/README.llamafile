@@ -19,8 +19,10 @@ LOCAL MODIFICATIONS
   - Add support to main() programs for Cosmo /zip/.args files
   - Introduce pledge() SECCOMP sandboxing to improve security
   - Use condition variables for server rather than busy loop
+  - Fix OpenAI server sampling w.r.t. temperature and seed
   - Remove log callback pointer API from Metal GPU module
   - Write log to /dev/null when main.log fails to open
+  - Use _rand64() rather than time() as default seed
   - Avoid bind() conflicts on port 8080 w/ server
   - Allow --grammar to be used on --image prompts
   - Use runtime dispatching for matmul quants

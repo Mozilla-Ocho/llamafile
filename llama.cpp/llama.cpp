@@ -7217,7 +7217,7 @@ struct llama_grammar * llama_grammar_copy(const struct llama_grammar * grammar) 
 
 void llama_set_rng_seed(struct llama_context * ctx, uint32_t seed) {
     if (seed == LLAMA_DEFAULT_SEED) {
-        seed = time(NULL);
+        seed = _rand64();
     }
     ctx->rng.seed(seed);
 }
