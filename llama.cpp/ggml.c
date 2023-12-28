@@ -267,35 +267,38 @@ void ggml_fp16_to_fp32_row(const ggml_fp16_t * x, float * y, int n) {
     }
 }
 
-#if defined(__x86_64__) && !defined(__F16C__)
-#define UNDEF_F16C
+#ifdef __x86_64__
 #pragma GCC push_options
 #pragma GCC target("f16c")
-#endif
-void ggml_fp32_to_fp16_row(const float * x, ggml_fp16_t * y, int n) {
+static void ggml_fp32_to_fp16_row_f16c(const float * x, ggml_fp16_t * y, int n) {
     int i = 0;
+    for (; i + 7 < n; i += 8) {
+        __m256 x_vec = _mm256_loadu_ps(x + i);
+        __m128i y_vec = _mm256_cvtps_ph(x_vec, _MM_FROUND_TO_NEAREST_INT);
+        _mm_storeu_si128((__m128i *)(y + i), y_vec);
+    }
+    for(; i + 3 < n; i += 4) {
+        __m128 x_vec = _mm_loadu_ps(x + i);
+        __m128i y_vec = _mm_cvtps_ph(x_vec, _MM_FROUND_TO_NEAREST_INT);
+        _mm_storel_epi64((__m128i *)(y + i), y_vec);
+    }
+    for (; i < n; i++) {
+        y[i] = GGML_FP32_TO_FP16__F16C(x[i]);
+    }
+}
+#pragma GCC pop_options
+#endif
+
+void ggml_fp32_to_fp16_row(const float * x, ggml_fp16_t * y, int n) {
 #ifdef __x86_64__
     if (X86_HAVE(F16C)) {
-        for (; i + 7 < n; i += 8) {
-            __m256 x_vec = _mm256_loadu_ps(x + i);
-            __m128i y_vec = _mm256_cvtps_ph(x_vec, _MM_FROUND_TO_NEAREST_INT);
-            _mm_storeu_si128((__m128i *)(y + i), y_vec);
-        }
-        for(; i + 3 < n; i += 4) {
-            __m128 x_vec = _mm_loadu_ps(x + i);
-            __m128i y_vec = _mm_cvtps_ph(x_vec, _MM_FROUND_TO_NEAREST_INT);
-            _mm_storel_epi64((__m128i *)(y + i), y_vec);
-        }
+        return ggml_fp32_to_fp16_row_f16c(x, y, n);
     }
 #endif
-    for (; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         y[i] = GGML_FP32_TO_FP16(x[i]);
     }
 }
-#ifdef UNDEF_F16C
-#undef UNDEF_F16C
-#pragma GCC pop_options
-#endif
 
 //
 // timing
