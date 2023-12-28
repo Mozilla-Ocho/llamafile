@@ -36,11 +36,31 @@ The following options are available:
 .It Fl h , Fl Fl help
 Show help message and exit.
 .It Fl Fl version
-Print llamafile version.
+Print llamafile version and exit.
 .It Fl m Ar FNAME , Fl Fl model Ar FNAME
-Model path in GGUF file format (default: models/7B/ggml-model-f16.gguf)
+Model path in GGUF file format.
+.Pp
+Default: models/7B/ggml-model-f16.gguf
 .It Fl p Ar STRING , Fl Fl prompt Ar STRING
-Prompt to start generation with (default: empty)
+Prompt to start text generation. Your LLM works by auto-completing this
+text. For example:
+.Bd -literal -offset indent
+.Nm Fl m Li model.gguf Fl p Li \[dq]four score and\[dq]
+.Ed
+.Pp
+Stands a pretty good chance of printing Lincoln's Gettysburg Address.
+Prompts can take on a structured format too. Depending on how your model
+was trained, it may specify in its docs an instruction notation. With
+some models that might be:
+.Bd -literal -offset indent
+.Nm Fl p Li \[dq][INST]Summarize this: $(cat file)[/INST]\[dq]
+.Ed
+.Pp
+In most cases, simply colons and newlines will work too:
+.Bd -literal -offset indent
+.Nm Fl e Fl p Li \[dq]User: What is best in life?\[rs]nAssistant:\[dq]
+.Ed
+.Pp
 .It Fl Fl mmproj Ar FNAME
 Specifies path of vision model in the GGUF file format. If this flag is supplied, then the
 .Fl Fl model
@@ -48,7 +68,10 @@ and
 .Fl Fl image
 flags should also be supplied.
 .It Fl Fl image Ar IMAGE_FILE
-Path to an image file. This should be used with multimodal models. See also the
+Path to an image file. This should be used with multimodal models.
+Alternatively, it's possible to embed an image directly into the prompt
+instead; in which case, it must be base64 encoded into an HTML img tag
+URL with the image/jpeg MIME type. See also the
 .Fl Fl mmproj
 flag for supplying the vision model.
 .It Fl Fl grammar Ar GRAMMAR
@@ -77,19 +100,27 @@ and return control in interactive mode (can be specified more than once for mult
 .It Fl Fl color
 colorise output to distinguish prompt and user input from generations
 .It Fl s Ar SEED , Fl Fl seed Ar SEED
-Random Number Generator (RNG) seed (default: -1, use random seed for < 0)
+Random Number Generator (RNG) seed. A random seed is used if this is
+less than zero.
+.Pp
+Default: -1
 .It Fl t Ar N , Fl Fl threads Ar N
-Number of threads to use during generation (default: nproc/2)
+Number of threads to use during generation.
+.Pp
+Default: $(nproc)/2
 .It Fl tb Ar N , Fl Fl threads-batch Ar N
-Number of threads to use during batch and prompt processing (default:
-same as
-.Fl Fl threads )
+Number of threads to use during batch and prompt processing.
+.Pp
+Default: Same as
+.Fl Fl threads
 .It Fl f Ar FNAME , Fl Fl file Ar FNAME
 Prompt file to start generation.
 .It Fl e , Fl Fl escape
-Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]", \[rs]\[rs])
+Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]\[dq], \[rs]\[rs])
 .It Fl Fl prompt-cache Ar FNAME
-File to cache prompt state for faster startup (default: none)
+File to cache prompt state for faster startup.
+.Pp
+Default: none
 .It Fl Fl prompt-cache-all
 If specified, saves user input and generations to cache as well. Not supported with
 .Fl Fl interactive
@@ -103,39 +134,141 @@ Prefix BOS to user inputs, preceding the
 .Fl Fl in-prefix
 string.
 .It Fl Fl in-prefix Ar STRING
-String to prefix user inputs with (default: empty)
+String to prefix user inputs with.
+.Pp
+Default: empty
 .It Fl Fl in-suffix Ar STRING
-String to suffix after user inputs with (default: empty)
+String to suffix after user inputs with.
+.Pp
+Default: empty
 .It Fl n Ar N , Fl Fl n-predict Ar N
-Number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
+Number of tokens to predict.
+.Pp
+.Bl -dash -compact
+.It
+-1 = infinity
+.It
+-2 = until context filled
+.El
+.Pp
+Default: -1
 .It Fl c Ar N , Fl Fl ctx-size Ar N
-Size of the prompt context (default: 512, 0 = loaded from model)
+Size of the prompt context.
+.Pp
+.Bl -dash -compact
+.It
+0 = loaded from model
+.El
+.Pp
+Default: 512
 .It Fl b Ar N , Fl Fl batch-size Ar N
-Batch size for prompt processing (default: 512)
+Batch size for prompt processing.
+.Pp
+Default: 512
 .It Fl Fl top-k Ar N
-Top-k sampling (default: 40, 0 = disabled)
+Top-k sampling.
+.Pp
+.Bl -dash -compact
+.It
+0 = disabled
+.El
+.Pp
+Default: 40
 .It Fl Fl top-p Ar N
-Top-p sampling (default: 0.9, 1.0 = disabled)
+Top-p sampling.
+.Pp
+.Bl -dash -compact
+.It
+1.0 = disabled
+.El
+.Pp
+Default: 0.9
 .It Fl Fl min-p Ar N
-Min-p sampling (default: 0.1, 0.0 = disabled)
+Min-p sampling.
+.Pp
+.Bl -dash -compact
+.It
+0.0 = disabled
+.El
+.Pp
+Default: 0.1
 .It Fl Fl tfs Ar N
-Tail free sampling, parameter z (default: 1.0, 1.0 = disabled)
+Tail free sampling, parameter z.
+.Pp
+.Bl -dash -compact
+.It
+1.0 = disabled
+.El
+.Pp
+Default: 1.0
 .It Fl Fl typical Ar N
-Locally typical sampling, parameter p (default: 1.0, 1.0 = disabled)
+Locally typical sampling, parameter p.
+.Pp
+.Bl -dash -compact
+.It
+1.0 = disabled
+.El
+.Pp
+Default: 1.0
 .It Fl Fl repeat-last-n Ar N
-Last n tokens to consider for penalize (default: 64, 0 = disabled, -1 = ctx_size)
+Last n tokens to consider for penalize.
+.Pp
+.Bl -dash -compact
+.It
+0 = disabled
+.It
+-1 = ctx_size
+.El
+.Pp
+Default: 64
 .It Fl Fl repeat-penalty Ar N
-Penalize repeat sequence of tokens (default: 1.1, 1.0 = disabled)
+Penalize repeat sequence of tokens.
+.Pp
+.Bl -dash -compact
+.It
+1.0 = disabled
+.El
+.Pp
+Default: 1.1
 .It Fl Fl presence-penalty Ar N
-Repeat alpha presence penalty (default: 0.0, 0.0 = disabled)
+Repeat alpha presence penalty.
+.Pp
+.Bl -dash -compact
+.It
+0.0 = disabled
+.El
+.Pp
+Default: 0.0
 .It Fl Fl frequency-penalty Ar N
-Repeat alpha frequency penalty (default: 0.0, 0.0 = disabled)
+Repeat alpha frequency penalty.
+.Pp
+.Bl -dash -compact
+.It
+0.0 = disabled
+.El
+.Pp
+Default: 0.0
 .It Fl Fl mirostat Ar N
-Use Mirostat sampling. Top K, Nucleus, Tail Free and Locally Typical samplers are ignored if used. (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)
+Use Mirostat sampling. Top K, Nucleus, Tail Free and Locally Typical samplers are ignored if used..
+.Pp
+.Bl -dash -compact
+.It
+0 = disabled
+.It
+1 = Mirostat
+.It
+2 = Mirostat 2.0
+.El
+.Pp
+Default: 0
 .It Fl Fl mirostat-lr Ar N
-Mirostat learning rate, parameter eta (default: 0.1)
+Mirostat learning rate, parameter eta.
+.Pp
+Default: 0.1
 .It Fl Fl mirostat-ent Ar N
-Mirostat target entropy, parameter tau (default: 5.0)
+Mirostat target entropy, parameter tau.
+.Pp
+Default: 5.0
 .It Fl l Ar TOKEN_ID(+/-)BIAS , Fl Fl logit-bias Ar TOKEN_ID(+/-)BIAS
 Modifies the likelihood of token appearing in the completion, i.e.
 .Fl Fl logit-bias Ar 15043+1
@@ -146,62 +279,124 @@ or
 to decrease likelihood of token
 .Ar ' Hello' .
 .It Fl md Ar FNAME , Fl Fl model-draft Ar FNAME
-Draft model for speculative decoding (default: models/7B/ggml-model-f16.gguf)
+Draft model for speculative decoding.
+.Pp
+Default: models/7B/ggml-model-f16.gguf
 .It Fl Fl grammar-file Ar FNAME
 File to read grammar from.
 .It Fl Fl cfg-negative-prompt Ar PROMPT
-Negative prompt to use for guidance. (default: empty)
+Negative prompt to use for guidance..
+.Pp
+Default: empty
 .It Fl Fl cfg-negative-prompt-file Ar FNAME
-Negative prompt file to use for guidance. (default: empty)
+Negative prompt file to use for guidance.
+.Pp
+Default: empty
 .It Fl Fl cfg-scale Ar N
-Strength of guidance (default: 1.000000, 1.0 = disable)
+Strength of guidance.
+.Pp
+.Bl -dash -compact
+.It
+1.0 = disable
+.El
+.Pp
+Default: 1.0
 .It Fl Fl rope-scaling Ar {none,linear,yarn}
 RoPE frequency scaling method, defaults to linear unless specified by the model
 .It Fl Fl rope-scale Ar N
 RoPE context scaling factor, expands context by a factor of N
 .It Fl Fl rope-freq-base Ar N
-RoPE base frequency, used by NTK-aware scaling (default: loaded from model)
+RoPE base frequency, used by NTK-aware scaling.
+.Pp
+Default: loaded from model
 .It Fl Fl rope-freq-scale Ar N
 RoPE frequency scaling factor, expands context by a factor of 1/N
 .It Fl Fl yarn-orig-ctx Ar N
-YaRN: original context size of model (default: 0 = model training context size)
+YaRN: original context size of model.
+.Pp
+Default: 0 = model training context size
 .It Fl Fl yarn-ext-factor Ar N
-YaRN: extrapolation mix factor (default: 1.0, 0.0 = full interpolation)
+YaRN: extrapolation mix factor.
+.Pp
+.Bl -dash -compact
+.It
+0.0 = full interpolation
+.El
+.Pp
+Default: 1.0
 .It Fl Fl yarn-attn-factor Ar N
-YaRN: scale sqrt(t) or attention magnitude (default: 1.0)
+YaRN: scale sqrt(t) or attention magnitude.
+.Pp
+Default: 1.0
 .It Fl Fl yarn-beta-slow Ar N
-YaRN: high correction dim or alpha (default: 1.0)
+YaRN: high correction dim or alpha.
+.Pp
+Default: 1.0
 .It Fl Fl yarn-beta-fast Ar N
-YaRN: low correction dim or beta (default: 32.0)
+YaRN: low correction dim or beta.
+.Pp
+Default: 32.0
 .It Fl Fl ignore-eos
 Ignore end of stream token and continue generating (implies
 .Fl Fl logit-bias Ar 2-inf )
 .It Fl Fl no-penalize-nl
 Do not penalize newline token.
 .It Fl Fl temp Ar N
-Temperature (default: 0.8)
+Temperature.
+.Pp
+Default: 0.8
 .It Fl Fl logits-all
-Return logits for all tokens in the batch (default: disabled)
+Return logits for all tokens in the batch.
+.Pp
+Default: disabled
 .It Fl Fl hellaswag
 Compute HellaSwag score over random tasks from datafile supplied with -f
 .It Fl Fl hellaswag-tasks Ar N
-Number of tasks to use when computing the HellaSwag score (default: 400)
+Number of tasks to use when computing the HellaSwag score.
+.Pp
+Default: 400
 .It Fl Fl keep Ar N
-Number of tokens to keep from the initial prompt (default: 0, -1 = all)
+Number of tokens to keep from the initial prompt.
+.Pp
+.Bl -dash -compact
+.It
+-1 = all
+.El
+.Pp
+Default: 0
 .It Fl Fl draft Ar N
-Number of tokens to draft for speculative decoding (default: 16)
+Number of tokens to draft for speculative decoding.
+.Pp
+Default: 16
 .It Fl Fl chunks Ar N
-Max number of chunks to process (default: -1, -1 = all)
+Max number of chunks to process.
+.Pp
+.Bl -dash -compact
+.It
+-1 = all
+.El
+.Pp
+Default: -1
 .It Fl np Ar N , Fl Fl parallel Ar N
-Number of parallel sequences to decode (default: 1)
+Number of parallel sequences to decode.
+.Pp
+Default: 1
 .It Fl ns Ar N , Fl Fl sequences Ar N
-Number of sequences to decode (default: 1)
+Number of sequences to decode.
+.Pp
+Default: 1
 .It Fl pa Ar N , Fl Fl p-accept Ar N
-speculative decoding accept probability (default: 0.5)
+speculative decoding accept probability.
+.Pp
+Default: 0.5
 .It Fl ps Ar N , Fl Fl p-split Ar N
-Speculative decoding split probability (default: 0.1)
+Speculative decoding split probability.
+.Pp
+Default: 0.1
 .It Fl cb , Fl Fl cont-batching
-Enable continuous batching (a.k.a dynamic batching) (default: disabled)
+Enable continuous batching (a.k.a dynamic batching).
+.Pp
+Default: disabled
 .It Fl Fl mlock
 Force system to keep model in RAM rather than swapping or compressing.
 .It Fl Fl no-mmap
@@ -249,7 +444,6 @@ Disable KV offload.
 KV cache data type for K.
 .It Fl ctv Ar TYPE , Fl Fl cache-type-v Ar TYPE
 KV cache data type for V.
-Disable KV offload.
 .El
 .Sh LOG OPTIONS
 The following log options are available:
