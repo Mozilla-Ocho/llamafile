@@ -16,6 +16,7 @@ enum cublasStatus_t {
 
 enum cublasComputeType_t {
   CUBLAS_COMPUTE_16F = 150,
+  CUBLAS_COMPUTE_32F = 151,
 };
 
 enum cublasGemmAlgo_t {

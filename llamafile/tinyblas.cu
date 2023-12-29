@@ -25,14 +25,19 @@ static __device__ __forceinline__ void matmul_single(int m, int n, int k,
                                                      int i, int j,
                                                      const half *A, int lda,
                                                      const half *B, int ldb,
-                                                     half       *C, int ldc) {
+                                                     void       *C,
+                                                     cudaDataType_t Ctype,
+                                                     int ldc) {
     float sum = 0.0f;
-    half *cptr = C + i + j * ldc;
     for (int l = 0; l < k; ++l) {
         sum += READ16(A, CUBLAS_OP_T, lda, i, l) *
                READ16(B, CUBLAS_OP_N, ldb, l, j);
     }
-    *cptr = __float2half(sum);
+    if (Ctype == CUDA_R_16F) {
+        *((half *)C + i + j * ldc) = __float2half(sum);
+    } else {
+        *((float *)C + i + j * ldc) = sum;
+    }
 }
 
 static __device__ __forceinline__ void matmul_single32(int m, int n, int k, int i, int j,
@@ -42,8 +47,8 @@ static __device__ __forceinline__ void matmul_single32(int m, int n, int k, int 
     float sum = 0.0f;
     float *cptr = C + i + j * ldc;
     for (int l = 0; l < k; ++l) {
-        sum += READ16(A, CUBLAS_OP_T, lda, i, l) *
-               READ16(B, CUBLAS_OP_N, ldb, l, j);
+        sum += READ(A, CUBLAS_OP_T, lda, i, l) *
+               READ(B, CUBLAS_OP_N, ldb, l, j);
     }
     *cptr = sum;
 }
@@ -52,11 +57,18 @@ static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
                        const void *pAlpha, cudaDataType_t Atype,
                        cudaDataType_t Btype, const void *pBeta,
                        cudaDataType_t Ctype, cublasComputeType_t computeType) {
-    return transa == CUBLAS_OP_T && transb == CUBLAS_OP_N &&
-            Atype == CUDA_R_16F && Btype == CUDA_R_16F && Ctype == CUDA_R_16F &&
-            computeType == CUBLAS_COMPUTE_16F &&
-            __half2float(*(half *)pAlpha) == 1.0f &&
-            __half2float(*(half *)pBeta) == 0.0f;
+    return (transa == CUBLAS_OP_T &&
+            transb == CUBLAS_OP_N &&
+            Atype == CUDA_R_16F &&
+            Btype == CUDA_R_16F &&
+            (Ctype == CUDA_R_16F ||
+             Ctype == CUDA_R_32F) &&
+            ((computeType == CUBLAS_COMPUTE_16F &&
+              __half2float(*(half *)pAlpha) == 1.0f &&
+              __half2float(*(half *)pBeta) == 0.0f) ||
+             (computeType == CUBLAS_COMPUTE_32F &&
+              *(float *)pAlpha == 1.0f &&
+              *(float *)pBeta == 0.0f)));
 }
 
 static __global__ void tinyblasS_entry(int m, int n, int k,
@@ -105,16 +117,17 @@ cublasStatus_t tinyblasSgemm(cudaStream_t stream,
 static __global__ void tinyblasGE_entry(int m, int n, int k,
                                         const half *A, int lda,
                                         const half *B, int ldb,
-                                        half       *C, int ldc) {
+                                        void       *C,
+                                        cudaDataType_t  Ctype,
+                                        int ldc) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int jump = blockDim.x * gridDim.x;
     int y = threadIdx.y;
     int jump2 = blockDim.y;
 
-
     for (; x < m; x += jump) {
         for (; y < n; y += jump2) {
-            matmul_single(m, n, k, x, y, A, lda, B, ldb, C, ldc);
+            matmul_single(m, n, k, x, y, A, lda, B, ldb, C, Ctype, ldc);
         }
     }
 }
@@ -150,7 +163,7 @@ cublasStatus_t tinyblasGemmEx(cudaStream_t stream,
     dim3 maxthreads(16, 64, 1);
 
     tinyblasGE_entry<<<maxblocks, maxthreads, 0, stream>>>(
-        m, n, k, (const half*)A, lda, (const half *)B, ldb, (half *)C, ldc);
+        m, n, k, (const half*)A, lda, (const half *)B, ldb, C, Ctype, ldc);
     return CUBLAS_STATUS_SUCCESS;
 }
 
@@ -159,7 +172,8 @@ cublasStatus_t tinyblasGemmEx(cudaStream_t stream,
 static __global__ void tinyblasGBE_entry(int m, int n, int k,
                                          const half *const  Aarray[], int lda,
                                          const half *const  Barray[], int ldb,
-                                         half *const        Carray[], int ldc,
+                                         void *const        Carray[],
+                                         cudaDataType_t     Ctype,    int ldc,
                                          int batchCount) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -171,7 +185,7 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
     for (; x < batchCount; x += jump) {
         for (y=blockIdx.y * blockDim.y + threadIdx.y; y < m; y += jump2) {
             for (z=threadIdx.z; z < n; z += jump3) {
-                matmul_single(m, n, k, y, z, Aarray[x], lda, Barray[x], ldb, Carray[x], ldc);
+                matmul_single(m, n, k, y, z, Aarray[x], lda, Barray[x], ldb, Carray[x], Ctype, ldc);
             }
         }
     }
@@ -211,7 +225,7 @@ cublasStatus_t tinyblasGemmBatchedEx(cudaStream_t stream,
 
     tinyblasGBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
         m, n, k, (const half **)Aarray, lda, (const half **)Barray, ldb,
-        (half **)Carray, ldc, batchCount);
+        Carray, Ctype, ldc, batchCount);
     return CUBLAS_STATUS_SUCCESS;
 }
 
@@ -234,7 +248,8 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
                                           const half      *B,
                                           int             ldb,
                                           long long int   strideB,
-                                          half            *C,
+                                          void            *C,
+                                          cudaDataType_t  Ctype,
                                           int             ldc,
                                           long long int   strideC,
                                           int batchCount) {
@@ -248,8 +263,11 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
     for (; x < batchCount; x += jump) {
         for (y=blockIdx.y * blockDim.y + threadIdx.y; y < m; y += jump2) {
             for (z=threadIdx.z; z < n; z += jump3) {
-                matmul_single(m, n, k, y, z, A + x * strideA, lda, B + x * strideB,
-                              ldb, C + x * strideC, ldc);
+                matmul_single(m, n, k, y, z, A + x * strideA, lda, B + x * strideB, ldb,
+                              (Ctype == CUDA_R_16F
+                               ? (void *)((half *)C + x * strideC)
+                               : (void *)((float *)C + x * strideC)),
+                              Ctype, ldc);
             }
         }
     }
@@ -291,7 +309,7 @@ cublasStatus_t tinyblasGemmStridedBatchedEx(cudaStream_t stream,
     // call the entry function
     tinyblasGSBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
         m, n, k, (const half*)A, lda, strideA, (const half*)B, ldb, strideB,
-        (half *)C, ldc, strideC, batchCount);
+        C, Ctype, ldc, strideC, batchCount);
 
     return CUBLAS_STATUS_SUCCESS;
 }
