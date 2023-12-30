@@ -893,8 +893,11 @@ struct llama_mmap {
             }
         }
 
-        // report terminal progress of loading weights
-        llamafile_schlep(addr, size);
+        // report terminal progress of loading weights off the disk into
+        // the cpu. if we're using gpu inference, then don't even bother
+        if (!ggml_metal_supported() && !ggml_cublas_loaded()) {
+            llamafile_schlep(addr, size);
+        }
     }
 
     ~llama_mmap() {
