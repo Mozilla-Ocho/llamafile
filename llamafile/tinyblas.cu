@@ -125,7 +125,7 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
     int x = blockIdx.x * BM;
     int jump1 = gridDim.x * BM;
     int y = blockIdx.y * BN;
-    int jump2 = gridDim.x * BN;
+    int jump2 = gridDim.y * BN;
 
     assert(blockDim.x == BM);
     extern __shared__ float svals[];  // shared across all threads in a block
@@ -178,8 +178,11 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
 
             // We write Cs out into C
             i = threadIdx.x;
-            for (j = 0; j < BN && y + j < n; ++j) {
-                *((half *)C + (x + i) + (y + j) * ldc) = __float2half(Cs[j]);
+            if (x + i < m) {
+                for (j = 0; j < BN && y + j < n; ++j) {
+                    *((half *)C + (x + i) + (y + j) * ldc) =
+                        __float2half(Cs[j]);
+                }
             }
             __syncthreads();
         }
@@ -227,17 +230,71 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
                                          void *const        Carray[],
                                          cudaDataType_t     Ctype,    int ldc,
                                          int batchCount) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int z = threadIdx.z;
-    int jump = blockDim.x * gridDim.x;
-    int jump2 = blockDim.y * gridDim.y;
-    int jump3 = blockDim.z;
+    int x = blockIdx.x * BM;
+    int jump1 = gridDim.x * BM;
+    int y = blockIdx.y * BN;
+    int jump2 = gridDim.y * BN;
 
-    for (; x < batchCount; x += jump) {
-        for (y=blockIdx.y * blockDim.y + threadIdx.y; y < m; y += jump2) {
-            for (z=threadIdx.z; z < n; z += jump3) {
-                matmul_single(m, n, k, y, z, Aarray[x], lda, Barray[x], ldb, Carray[x], Ctype, ldc);
+    assert(blockDim.x == BM);
+    extern __shared__ float svals[];  // shared across all threads in a block
+    float *As = svals;
+    float *Bs = svals + BM * BK;
+    float Cs[BN];  // only within a particular thread
+
+    int i, j, z, l;
+    int blob;
+
+    // each block handles a sub-matrix of C, of size BM * BN
+    // each thread handles a sub-row of size BN
+    for (z = blockIdx.z; z < batchCount; z += gridDim.z) {
+        for (x = blockIdx.x * BM; x < m; x += jump1) {
+            for (y = blockIdx.y * BN; y < n; y += jump2) {
+                // within each block
+                // we first zero out Cs
+                for (j = 0; j < BN; ++j) Cs[j] = 0;
+
+                for (blob = 0; blob < k; blob += BK) {
+                    // we copy into As from A
+                    for (i = threadIdx.x; i < BM && (x + i) < m;
+                         i += blockDim.x) {
+                        for (j = 0; j < BK && blob + j < k; ++j) {
+                            As[(i * BK) + j] = READ16(Aarray[z], CUBLAS_OP_T,
+                                                      lda, x + i, blob + j);
+                        }
+                        for (; j < BK; ++j) As[(i * BK) + j] = 0;
+                    }
+
+                    // we copy into Bs from B
+                    for (i = threadIdx.x; i < BK && (blob + i) < k;
+                         i += blockDim.x) {
+                        for (j = 0; j < BN && y + j < n; ++j) {
+                            Bs[(i * BN) + j] = READ16(Barray[z], CUBLAS_OP_N,
+                                                      ldb, blob + i, y + j);
+                        }
+                        for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
+                    }
+                    __syncthreads();
+
+                    // We matmul the blobs, basically Cs += matmul(As, Bs)
+                    // (thread-local stuff can happen here? bounds-check?)
+                    i = threadIdx.x;
+                    for (j = 0; j < BN; ++j) {
+                        for (l = 0; l < BK; ++l) {
+                            Cs[j] += As[(i * BK) + l] * Bs[(l * BN) + j];
+                        }
+                    }
+                    __syncthreads();
+                }
+
+                // We write Cs out into C
+                i = threadIdx.x;
+                if (x + i < m) {
+                    for (j = 0; j < BN && y + j < n; ++j) {
+                        *((half *)Carray[z] + (x + i) + (y + j) * ldc) =
+                            __float2half(Cs[j]);
+                    }
+                }
+                __syncthreads();
             }
         }
     }
@@ -268,14 +325,11 @@ cublasStatus_t tinyblasGemmBatchedEx(cudaStream_t stream,
         return CUBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    // https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
-    int numSMs, devId;
-    cudaGetDevice(&devId);
-    cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, devId);
-    dim3 maxblocks(numSMs, 16, 1);
-    dim3 maxthreads(4, 4, 64);
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
+    int maxthreads = BM;
 
-    tinyblasGBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
+    tinyblasGBE_entry<<<maxblocks, maxthreads,
+                       (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
         m, n, k, (const half **)Aarray, lda, (const half **)Barray, ldb,
         Carray, Ctype, ldc, batchCount);
     return CUBLAS_STATUS_SUCCESS;
