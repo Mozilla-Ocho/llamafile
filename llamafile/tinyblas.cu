@@ -113,21 +113,75 @@ cublasStatus_t tinyblasSgemm(cudaStream_t stream,
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
+#define BM 64
+#define BN 32
+#define BK BM
+#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
 
-static __global__ void tinyblasGE_entry(int m, int n, int k,
-                                        const half *A, int lda,
-                                        const half *B, int ldb,
-                                        void       *C,
-                                        cudaDataType_t  Ctype,
+static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
+                                        int lda, const half *B, int ldb,
+                                        void *C, cudaDataType_t Ctype,
                                         int ldc) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int jump = blockDim.x * gridDim.x;
-    int y = threadIdx.y;
-    int jump2 = blockDim.y;
+    int x = blockIdx.x * BM;
+    int jump1 = gridDim.x * BM;
+    int y = blockIdx.y * BN;
+    int jump2 = gridDim.x * BN;
 
-    for (; x < m; x += jump) {
-        for (; y < n; y += jump2) {
-            matmul_single(m, n, k, x, y, A, lda, B, ldb, C, Ctype, ldc);
+    assert(blockDim.x == BM);
+    extern __shared__ float svals[];  // shared across all threads in a block
+    float *As = svals;
+    float *Bs = svals + BM * BK;
+    float Cs[BN];  // only within a particular thread
+
+    int i, j, l;
+    int blob;
+
+    // each block handles a sub-matrix of C, of size BM * BN
+    // each thread handles a sub-row of size BN
+    for (x = blockIdx.x * BM; x < m; x += jump1) {
+        for (y = blockIdx.y * BN; y < n; y += jump2) {
+            // within each block
+            // we first zero out Cs
+            for (j = 0; j < BN; ++j) Cs[j] = 0;
+
+            for (blob = 0; blob < k; blob += BK) {
+                // we copy into As from A
+                for (i = threadIdx.x; i < BM && (x + i) < m; i += blockDim.x) {
+                    for (j = 0; j < BK && blob + j < k; ++j) {
+                        As[(i * BK) + j] =
+                            READ16(A, CUBLAS_OP_T, lda, x + i, blob + j);
+                    }
+                    for (; j < BK; ++j) As[(i * BK) + j] = 0;
+                }
+
+                // we copy into Bs from B
+                for (i = threadIdx.x; i < BK && (blob + i) < k;
+                     i += blockDim.x) {
+                    for (j = 0; j < BN && y + j < n; ++j) {
+                        Bs[(i * BN) + j] =
+                            READ16(B, CUBLAS_OP_N, ldb, blob + i, y + j);
+                    }
+                    for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
+                }
+                __syncthreads();
+
+                // We matmul the blobs, basically Cs += matmul(As, Bs)
+                // (thread-local stuff can happen here? bounds-check?)
+                i = threadIdx.x;
+                for (j = 0; j < BN; ++j) {
+                    for (l = 0; l < BK; ++l) {
+                        Cs[j] += As[(i * BK) + l] * Bs[(l * BN) + j];
+                    }
+                }
+                __syncthreads();
+            }
+
+            // We write Cs out into C
+            i = threadIdx.x;
+            for (j = 0; j < BN && y + j < n; ++j) {
+                *((half *)C + (x + i) + (y + j) * ldc) = __float2half(Cs[j]);
+            }
+            __syncthreads();
         }
     }
 }
@@ -156,14 +210,12 @@ cublasStatus_t tinyblasGemmEx(cudaStream_t stream,
         return CUBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    int numSMs, devId;
-    cudaGetDevice(&devId);
-    cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, devId);
-    int maxblocks = 16 * numSMs;
-    dim3 maxthreads(16, 64, 1);
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
+    int maxthreads = BM;
 
-    tinyblasGE_entry<<<maxblocks, maxthreads, 0, stream>>>(
-        m, n, k, (const half*)A, lda, (const half *)B, ldb, C, Ctype, ldc);
+    tinyblasGE_entry<<<maxblocks, maxthreads,
+                       (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
+        m, n, k, (const half *)A, lda, (const half *)B, ldb, C, Ctype, ldc);
     return CUBLAS_STATUS_SUCCESS;
 }
 
