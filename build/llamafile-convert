@@ -1,6 +1,5 @@
 #!/bin/sh
 FILE=$1
-TYPE=${2:-both}
 SCRIPTNAME=${0##*/}
 
 if [ -z "$FILE" ]; then
@@ -34,35 +33,18 @@ fi
 
 # replace .gguf with .llamafile
 LLAMAFILE_NAME=$(echo $FILE | sed 's/.gguf/.llamafile/g')
-# replace .gguf with -server.llamafile
-LLAMAFILE_SERVER_NAME=$(echo $FILE | sed 's/.gguf/-server.llamafile/g')
 LLAMAFILE_PATH=$(command -v llamafile)
-LLAMAFILE_SERVER_PATH=$(command -v llamafile-server)
 CLI_ARGS="-m
 $FILE
 ...
 "
-SERVER_ARGS="-m
-$FILE
---host
-0.0.0.0
-...
-"
 
-convert_to_cli() {
+convert() {
   echo "Converting $FILE to $LLAMAFILE_NAME"
   # print CLI args to .args
   printf %s "$CLI_ARGS" > .args
   cp $LLAMAFILE_PATH $LLAMAFILE_NAME
   zipalign -j0 $LLAMAFILE_NAME $FILE .args
-}
-
-convert_to_server() {
-  echo "Converting $FILE to $LLAMAFILE_SERVER_NAME"
-  # print server args to .args
-  printf %s "$SERVER_ARGS" > .args
-  cp $LLAMAFILE_SERVER_PATH $LLAMAFILE_SERVER_NAME
-  zipalign -j0 $LLAMAFILE_SERVER_NAME $FILE .args
 }
 
 cleanup() {
@@ -78,24 +60,5 @@ abort() {
   exit 1 
 } 
 
-case $TYPE in
-  cli)
-    echo "Building CLI llamafile"
-    convert_to_cli || abort
-    ;;
-  server)
-    echo "Building Server llamafile"
-    convert_to_server || abort
-    ;;
-  both)
-    echo "Building both CLI and Server llamafiles"
-    convert_to_cli || abort
-    convert_to_server || abort
-    ;;
-  *)
-    echo "Invalid type specified. Valid options are 'cli', 'server', or 'both'."
-    exit 1
-    ;;
-esac
-
+convert || abort
 cleanup
