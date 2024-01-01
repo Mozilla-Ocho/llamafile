@@ -36,6 +36,7 @@ install:	llamafile/zipalign.1					\
 	$(INSTALL) o/$(MODE)/llamafile/zipalign $(PREFIX)/bin/zipalign
 	$(INSTALL) o/$(MODE)/llama.cpp/main/main $(PREFIX)/bin/llamafile
 	$(INSTALL) o/$(MODE)/llama.cpp/quantize/quantize $(PREFIX)/bin/llamafile-quantize
+	$(INSTALL) build/llamafile-convert $(PREFIX)/bin/llamafile-convert
 	$(INSTALL) o/$(MODE)/llama.cpp/perplexity/perplexity $(PREFIX)/bin/llamafile-perplexity
 	$(INSTALL) o/$(MODE)/llama.cpp/llava/llava-quantize $(PREFIX)/bin/llava-quantize
 	mkdir -p $(PREFIX)/share/man/man1

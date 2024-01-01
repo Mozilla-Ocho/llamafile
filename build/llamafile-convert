@@ -1,0 +1,64 @@
+#!/bin/sh
+FILE=$1
+SCRIPTNAME=${0##*/}
+
+if [ -z "$FILE" ]; then
+  echo "Usage: $SCRIPTNAME <gguf file or url> [cli|server|both]"
+  exit 1
+fi
+
+# if the file starts with http
+if [ x"$FILE" != x"${FILE#http*}" ]; then
+  # download the file
+  # if the filename contains ?download=true, remove it
+  FILE=$(echo $FILE | sed 's/?download=true//g')
+  # get the filename
+  FILENAME=$(echo $FILE | sed 's/.*\///g')
+  echo "Downloading $FILENAME" >&2
+  if WGET=$(command -v wget 2>/dev/null); then
+    DOWNLOAD=$WGET
+    DOWNLOAD_ARGS=-O
+  elif CURL=$(command -v curl 2>/dev/null); then
+    DOWNLOAD=$CURL
+    DOWNLOAD_ARGS=-fLo
+  else
+    printf '%s\n' "$0: fatal error: you need to install either wget or curl" >&2
+    printf '%s\n' "please download https://cosmo.zip/pub/cosmos/bin/wget and put it on the system path" >&2
+    abort
+  fi
+  "${DOWNLOAD}" ${DOWNLOAD_ARGS} $FILENAME $FILE
+  # get the filename
+  FILE=$FILENAME
+fi
+
+# replace .gguf with .llamafile
+LLAMAFILE_NAME=$(echo $FILE | sed 's/.gguf/.llamafile/g')
+LLAMAFILE_PATH=$(command -v llamafile)
+CLI_ARGS="-m
+$FILE
+...
+"
+
+convert() {
+  echo "Converting $FILE to $LLAMAFILE_NAME"
+  # print CLI args to .args
+  printf %s "$CLI_ARGS" > .args
+  cp $LLAMAFILE_PATH $LLAMAFILE_NAME
+  zipalign -j0 $LLAMAFILE_NAME $FILE .args
+}
+
+cleanup() {
+  echo "Cleaning up"
+  rm -f .args
+  # remove the downloaded file
+  rm -f $FILE
+  echo "Done"
+}
+
+abort() { 
+  printf '%s\n' "conversion terminated." >&2 
+  exit 1 
+} 
+
+convert || abort
+cleanup
