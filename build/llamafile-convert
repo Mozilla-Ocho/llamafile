@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/sh
 FILE=$1
 TYPE=${2:-both}
-SCRIPTNAME=$(basename $0)
+SCRIPTNAME=${0##*/}
 
 if [ -z "$FILE" ]; then
   echo "Usage: $SCRIPTNAME <gguf file or url> [cli|server|both]"
@@ -9,14 +9,25 @@ if [ -z "$FILE" ]; then
 fi
 
 # if the file starts with http
-if [[ $FILE == http* ]]; then
+if [ x"$FILE" != x"${FILE#http*}" ]; then
   # download the file
   # if the filename contains ?download=true, remove it
   FILE=$(echo $FILE | sed 's/?download=true//g')
   # get the filename
   FILENAME=$(echo $FILE | sed 's/.*\///g')
-  echo "Downloading $FILENAME"
-  wget -O $FILENAME $FILE
+  echo "Downloading $FILENAME" >&2
+  if WGET=$(command -v wget 2>/dev/null); then
+    DOWNLOAD=$WGET
+    DOWNLOAD_ARGS=-O
+  elif CURL=$(command -v curl 2>/dev/null); then
+    DOWNLOAD=$CURL
+    DOWNLOAD_ARGS=-fLo
+  else
+    printf '%s\n' "$0: fatal error: you need to install either wget or curl" >&2
+    printf '%s\n' "please download https://cosmo.zip/pub/cosmos/bin/wget and put it on the system path" >&2
+    abort
+  fi
+  "${DOWNLOAD}" ${DOWNLOAD_ARGS} $FILENAME $FILE
   # get the filename
   FILE=$FILENAME
 fi
@@ -25,27 +36,23 @@ fi
 LLAMAFILE_NAME=$(echo $FILE | sed 's/.gguf/.llamafile/g')
 # replace .gguf with -server.llamafile
 LLAMAFILE_SERVER_NAME=$(echo $FILE | sed 's/.gguf/-server.llamafile/g')
-LLAMAFILE_PATH=$(which llamafile)
-LLAMAFILE_SERVER_PATH=$(which llamafile-server)
-CLI_ARGS=$(cat <<EOF
--m
+LLAMAFILE_PATH=$(command -v llamafile)
+LLAMAFILE_SERVER_PATH=$(command -v llamafile-server)
+CLI_ARGS="-m
 $FILE
 ...
-EOF
-)
-SERVER_ARGS=$(cat <<EOF
--m
+"
+SERVER_ARGS="-m
 $FILE
 --host
 0.0.0.0
 ...
-EOF
-)
+"
 
 convert_to_cli() {
   echo "Converting $FILE to $LLAMAFILE_NAME"
   # print CLI args to .args
-  echo "$CLI_ARGS" > .args
+  printf %s "$CLI_ARGS" > .args
   cp $LLAMAFILE_PATH $LLAMAFILE_NAME
   zipalign -j0 $LLAMAFILE_NAME $FILE .args
 }
@@ -53,33 +60,37 @@ convert_to_cli() {
 convert_to_server() {
   echo "Converting $FILE to $LLAMAFILE_SERVER_NAME"
   # print server args to .args
-  echo "$SERVER_ARGS" > .args
+  printf %s "$SERVER_ARGS" > .args
   cp $LLAMAFILE_SERVER_PATH $LLAMAFILE_SERVER_NAME
   zipalign -j0 $LLAMAFILE_SERVER_NAME $FILE .args
 }
 
 cleanup() {
   echo "Cleaning up"
-  # remove .args
-  rm .args
+  rm -f .args
   # remove the downloaded file
-  rm $FILE
+  rm -f $FILE
   echo "Done"
 }
+
+abort() { 
+  printf '%s\n' "conversion terminated." >&2 
+  exit 1 
+} 
 
 case $TYPE in
   cli)
     echo "Building CLI llamafile"
-    convert_to_cli
+    convert_to_cli || abort
     ;;
   server)
     echo "Building Server llamafile"
-    convert_to_server
+    convert_to_server || abort
     ;;
   both)
     echo "Building both CLI and Server llamafiles"
-    convert_to_cli
-    convert_to_server
+    convert_to_cli || abort
+    convert_to_server || abort
     ;;
   *)
     echo "Invalid type specified. Valid options are 'cli', 'server', or 'both'."
