@@ -1,20 +1,22 @@
-.Dd December 5, 2023
-.Dt llamafile 1
-.Os
+.Dd January 1, 2024
+.Dt LLAMAFILE 1
+.Os Mozilla Ocho
 .Sh NAME
 .Nm llamafile
 .Nd large language model runner
 .Sh SYNOPSIS
 .Nm
+.Op Fl Fl server
+.Op flags...
+.Fl m Ar model.gguf
+.Op Fl Fl mmproj Ar vision.gguf
+.Nm
+.Op Fl Fl cli
 .Op flags...
 .Fl m Ar model.gguf
 .Fl p Ar prompt
 .Nm
-.Op flags...
-.Op Fl Fl server
-.Fl m Ar model.gguf
-.Op Fl Fl mmproj Ar vision.gguf
-.Nm
+.Op Fl Fl cli
 .Op flags...
 .Fl m Ar model.gguf
 .Fl Fl mmproj Ar vision.gguf
@@ -37,84 +39,41 @@ Text/image summarization and analysis
 .Sh OPTIONS
 The following options are available:
 .Bl -tag -width indent
+.It Fl Fl version
+Print version and exit.
 .It Fl h , Fl Fl help
 Show help message and exit.
-.It Fl Fl version
-Print llamafile version and exit.
+.It Fl Fl cli
+Puts program in command line interface mode. This flag is implied when a
+prompt is supplied using either the
+.Fl p
+or
+.Fl f
+flags.
 .It Fl Fl server
-.Xr llamafile-server 1
-is launched via the
-.Nm llamafile
-command when the
+Puts program in server mode. This will launch an HTTP server on a local
+port. This server has both a web UI and an OpenAI API compatible
+completions endpoint. When the server is run on a desk system, a tab
+browser tab will be launched automatically that displays the web UI.
+This
 .Fl Fl server
-flag is passed. The server flag is implied by default if no prompt is
-specified, i.e. neither the
+flag is implied if no prompt is specified, i.e. neither the
 .Fl p
 or
 .Fl f
 flags are passed.
 .It Fl m Ar FNAME , Fl Fl model Ar FNAME
-Model path in GGUF file format.
+Model path in the GGUF file format.
 .Pp
-Default: models/7B/ggml-model-f16.gguf
-.It Fl p Ar STRING , Fl Fl prompt Ar STRING
-Prompt to start text generation. Your LLM works by auto-completing this
-text. For example:
-.Bd -literal -offset indent
-.Nm Fl m Li model.gguf Fl p Li \[dq]four score and\[dq]
-.Ed
-.Pp
-Stands a pretty good chance of printing Lincoln's Gettysburg Address.
-Prompts can take on a structured format too. Depending on how your model
-was trained, it may specify in its docs an instruction notation. With
-some models that might be:
-.Bd -literal -offset indent
-.Nm Fl p Li \[dq][INST]Summarize this: $(cat file)[/INST]\[dq]
-.Ed
-.Pp
-In most cases, simply colons and newlines will work too:
-.Bd -literal -offset indent
-.Nm Fl e Fl p Li \[dq]User: What is best in life?\[rs]nAssistant:\[dq]
-.Ed
-.Pp
+Default:
+.Pa models/7B/ggml-model-f16.gguf
 .It Fl Fl mmproj Ar FNAME
-Specifies path of vision model in the GGUF file format. If this flag is supplied, then the
+Specifies path of the LLaVA vision model in the GGUF file format. If
+this flag is supplied, then the
 .Fl Fl model
 and
 .Fl Fl image
 flags should also be supplied.
-.It Fl Fl image Ar IMAGE_FILE
-Path to an image file. This should be used with multimodal models.
-Alternatively, it's possible to embed an image directly into the prompt
-instead; in which case, it must be base64 encoded into an HTML img tag
-URL with the image/jpeg MIME type. See also the
-.Fl Fl mmproj
-flag for supplying the vision model.
-.It Fl Fl grammar Ar GRAMMAR
-BNF-like grammar to constrain which tokens may be selected when
-generating text. For example, the grammar:
-.Bd -literal -offset indent
-root ::= "yes" | "no"
-.Ed
-.Pp
-will force the LLM to only output yes or no before exiting. This is
-useful for shell scripts when the
-.Fl Fl silent-prompt
-flag is also supplied.
-.It Fl i , Fl Fl interactive
-Run in interactive mode.
-.It Fl Fl interactive-first
-Run in interactive mode and wait for input right away.
-.It Fl ins , Fl Fl instruct
-Run in instruction mode (use with Alpaca models).
-.It Fl Fl multiline-input
-Allows you to write or paste multiple lines without ending each in '\[rs]'.
-.It Fl r Ar PROMPT , Fl Fl reverse-prompt Ar PROMPT
-Halt generation at
-.Ar PROMPT
-and return control in interactive mode (can be specified more than once for multiple prompts).
-.It Fl Fl color
-colorise output to distinguish prompt and user input from generations
 .It Fl s Ar SEED , Fl Fl seed Ar SEED
 Random Number Generator (RNG) seed. A random seed is used if this is
 less than zero.
@@ -129,22 +88,6 @@ Number of threads to use during batch and prompt processing.
 .Pp
 Default: Same as
 .Fl Fl threads
-.It Fl f Ar FNAME , Fl Fl file Ar FNAME
-Prompt file to start generation.
-.It Fl e , Fl Fl escape
-Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]\[dq], \[rs]\[rs])
-.It Fl Fl prompt-cache Ar FNAME
-File to cache prompt state for faster startup.
-.Pp
-Default: none
-.It Fl Fl prompt-cache-all
-If specified, saves user input and generations to cache as well. Not supported with
-.Fl Fl interactive
-or other interactive options.
-.It Fl Fl prompt-cache-ro
-If specified, uses the prompt cache but does not update it.
-.It Fl Fl random-prompt
-Start with a randomized prompt.
 .It Fl Fl in-prefix-bos
 Prefix BOS to user inputs, preceding the
 .Fl Fl in-prefix
@@ -297,9 +240,8 @@ to decrease likelihood of token
 .It Fl md Ar FNAME , Fl Fl model-draft Ar FNAME
 Draft model for speculative decoding.
 .Pp
-Default: models/7B/ggml-model-f16.gguf
-.It Fl Fl grammar-file Ar FNAME
-File to read grammar from.
+Default:
+.Pa models/7B/ggml-model-f16.gguf
 .It Fl Fl cfg-negative-prompt Ar PROMPT
 Negative prompt to use for guidance..
 .Pp
@@ -393,10 +335,6 @@ Max number of chunks to process.
 .El
 .Pp
 Default: -1
-.It Fl np Ar N , Fl Fl parallel Ar N
-Number of parallel sequences to decode.
-.Pp
-Default: 1
 .It Fl ns Ar N , Fl Fl sequences Ar N
 Number of sequences to decode.
 .Pp
@@ -409,10 +347,6 @@ Default: 0.5
 Speculative decoding split probability.
 .Pp
 Default: 0.1
-.It Fl cb , Fl Fl cont-batching
-Enable continuous batching (a.k.a dynamic batching).
-.Pp
-Default: disabled
 .It Fl Fl mlock
 Force system to keep model in RAM rather than swapping or compressing.
 .It Fl Fl no-mmap
@@ -431,8 +365,6 @@ The GPU to use for scratch and small tensors.
 Use cuBLAS instead of custom mul_mat_q CUDA kernels. Not recommended since this is both slower and uses more VRAM.
 .It Fl Fl verbose-prompt
 Print prompt before generation.
-.It Fl Fl silent-prompt
-Don't echo the prompt itself to standard output.
 .It Fl Fl simple-io
 Use basic IO for better compatibility in subprocesses and limited consoles.
 .It Fl Fl lora Ar FNAME
@@ -461,6 +393,128 @@ KV cache data type for K.
 .It Fl ctv Ar TYPE , Fl Fl cache-type-v Ar TYPE
 KV cache data type for V.
 .El
+.Sh CLI OPTIONS
+The following options may be specified when
+.Nm
+is running in
+.Fl Fl cli
+mode.
+.Bl -tag -width indent
+.It Fl e , Fl Fl escape
+Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]\[dq], \[rs]\[rs])
+.It Fl p Ar STRING , Fl Fl prompt Ar STRING
+Prompt to start text generation. Your LLM works by auto-completing this
+text. For example:
+.Pp
+.Dl "llamafile -m model.gguf -p \[dq]four score and\[dq]"
+.Pp
+Stands a pretty good chance of printing Lincoln's Gettysburg Address.
+Prompts can take on a structured format too. Depending on how your model
+was trained, it may specify in its docs an instruction notation. With
+some models that might be:
+.Pp
+.Dl "llamafile -p \[dq][INST]Summarize this: $(cat file)[/INST]\[dq]"
+.Pp
+In most cases, simply colons and newlines will work too:
+.Pp
+.Dl "llamafile -e -p \[dq]User: What is best in life?\[rs]nAssistant:\[dq]"
+.Pp
+.It Fl f Ar FNAME , Fl Fl file Ar FNAME
+Prompt file to start generation.
+.It Fl Fl grammar Ar GRAMMAR
+BNF-like grammar to constrain which tokens may be selected when
+generating text. For example, the grammar:
+.Pp
+.Dl "root ::= \[dq]yes\[dq] | \[dq]no\[dq]"
+.Pp
+will force the LLM to only output yes or no before exiting. This is
+useful for shell scripts when the
+.It Fl Fl grammar-file Ar FNAME
+File to read grammar from.
+.It Fl Fl prompt-cache Ar FNAME
+File to cache prompt state for faster startup.
+.Pp
+Default: none
+.It Fl Fl prompt-cache-all
+If specified, saves user input and generations to cache as well. Not supported with
+.Fl Fl interactive
+or other interactive options.
+.It Fl Fl prompt-cache-ro
+If specified, uses the prompt cache but does not update it.
+.It Fl Fl random-prompt
+Start with a randomized prompt.
+.It Fl Fl image Ar IMAGE_FILE
+Path to an image file. This should be used with multimodal models.
+Alternatively, it's possible to embed an image directly into the prompt
+instead; in which case, it must be base64 encoded into an HTML img tag
+URL with the image/jpeg MIME type. See also the
+.Fl Fl mmproj
+flag for supplying the vision model.
+.It Fl i , Fl Fl interactive
+Run in interactive mode.
+.It Fl Fl interactive-first
+Run in interactive mode and wait for input right away.
+.It Fl ins , Fl Fl instruct
+Run in instruction mode (use with Alpaca models).
+.Fl Fl silent-prompt
+flag is also supplied.
+.It Fl r Ar PROMPT , Fl Fl reverse-prompt Ar PROMPT
+Halt generation at
+.Ar PROMPT
+and return control in interactive mode (can be specified more than once for multiple prompts).
+.It Fl Fl color
+Colorise output to distinguish prompt and user input from generations.
+.It Fl Fl silent-prompt
+Don't echo the prompt itself to standard output.
+.It Fl Fl multiline-input
+Allows you to write or paste multiple lines without ending each in '\[rs]'.
+.El
+.Sh SERVER OPTIONS
+The following options may be specified when
+.Nm
+is running in
+.Fl Fl server
+mode.
+.Bl -tag -width indent
+.It Fl Fl port Ar PORT
+Port to listen
+.Pp
+Default: 8080
+.It Fl Fl host Ar IPADDR
+IP address to listen.
+.Pp
+Default: 127.0.0.1
+.It Fl to Ar N , Fl Fl timeout Ar N
+Server read/write timeout in seconds.
+.Pp
+Default: 600
+.It Fl np Ar N , Fl Fl parallel Ar N
+Number of slots for process requests.
+.Pp
+Default: 1
+.It Fl cb , Fl Fl cont-batching
+Enable continuous batching (a.k.a dynamic batching).
+.Pp
+Default: disabled
+.It Fl spf Ar FNAME , Fl Fl system-prompt-file Ar FNAME
+Set a file to load a system prompt (initial prompt of all slots), this
+is useful for chat applications.
+.It Fl a Ar ALIAS , Fl Fl alias Ar ALIAS
+Set an alias for the model. This will be added as the
+.Ar model
+field in completion responses.
+.It Fl Fl path Ar PUBLIC_PATH
+Path from which to serve static files.
+.Pp
+Default:
+.Pa /zip/llama.cpp/server/public
+.It Fl Fl embedding
+Enable embedding vector output.
+.Pp
+Default: disabled
+.It Fl Fl nobrowser
+Do not attempt to open a web browser tab at startup.
+.El
 .Sh LOG OPTIONS
 The following log options are available:
 .Bl -tag -width indent
@@ -475,12 +529,136 @@ Enable trace logs
 .It Fl Fl log-file
 Specify a log filename (without extension)
 .It Fl Fl log-new
-Create a separate new log file on start. Each log file will have unique name: "<name>.<ID>.log"
+Create a separate new log file on start. Each log file will have unique name:
+.Fa <name>.<ID>.log
 .It Fl Fl log-append
 Don't truncate the old log file.
 .El
+.Sh EXAMPLES
+Here's an example of how to run llama.cpp's built-in HTTP server. This
+example uses LLaVA v1.5-7B, a multimodal LLM that works with llama.cpp's
+recently-added support for image inputs.
+.Bd -literal -offset indent
+llamafile \[rs]
+  -m llava-v1.5-7b-Q8_0.gguf \[rs]
+  --mmproj llava-v1.5-7b-mmproj-Q8_0.gguf \[rs]
+  --host 0.0.0.0
+.Ed
+.Pp
+Here's an example of how to generate code for a libc function using the
+llama.cpp command line interface, utilizing WizardCoder-Python-13B
+weights:
+.Bd -literal -offset indent
+llamafile \[rs]
+  -m wizardcoder-python-13b-v1.0.Q8_0.gguf \[rs]
+  --temp 0 -r '}\[rs]n' -r '\`\`\`\[rs]n' \[rs]
+  -e -p '\`\`\`c\[rs]nvoid *memcpy(void *dst, const void *src, size_t size) {\[rs]n'
+.Ed
+.Pp
+Here's a similar example that instead utilizes Mistral-7B-Instruct
+weights for prose composition:
+.Bd -literal -offset indent
+llamafile \[rs]
+  -m mistral-7b-instruct-v0.2.Q5_K_M.gguf \[rs]
+  -p '[INST]Write a story about llamas[/INST]'
+.Ed
+.Pp
+Here's an example of how llamafile can be used as an interactive chatbot
+that lets you query knowledge contained in training data:
+.Bd -literal -offset indent
+llamafile -m llama-65b-Q5_K.gguf -p '
+The following is a conversation between a Researcher and their helpful AI
+assistant Digital Athena which is a large language model trained on the
+sum of human knowledge.
+Researcher: Good morning.
+Digital Athena: How can I help you today?
+Researcher:' --interactive --color --batch_size 1024 --ctx_size 4096 \[rs]
+--keep -1 --temp 0 --mirostat 2 --in-prefix ' ' --interactive-first \[rs]
+--in-suffix 'Digital Athena:' --reverse-prompt 'Researcher:'
+.Ed
+.Pp
+Here's an example of how you can use llamafile to summarize HTML URLs:
+.Bd -literal -offset indent
+(
+  echo '[INST]Summarize the following text:'
+  links -codepage utf-8 \[rs]
+        -force-html \[rs]
+        -width 500 \[rs]
+        -dump https://www.poetryfoundation.org/poems/48860/the-raven |
+    sed 's/   */ /g'
+  echo '[/INST]'
+) | llamafile \[rs]
+      -m mistral-7b-instruct-v0.2.Q5_K_M.gguf \[rs]
+      -f /dev/stdin \[rs]
+      -c 0 \[rs]
+      --temp 0 \[rs]
+      -n 500 \[rs]
+      --silent-prompt 2>/dev/null
+.Ed
+.Pp
+Here's how you can use llamafile to describe a jpg/png/gif/bmp image:
+.Bd -literal -offset indent
+llamafile --temp 0 \[rs]
+  --image lemurs.jpg \[rs]
+  -m llava-v1.5-7b-Q4_K.gguf \[rs]
+  --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \[rs]
+  -e -p '### User: What do you see?\[rs]n### Assistant: ' \[rs]
+  --silent-prompt 2>/dev/null
+.Ed
+.Pp
+If you wanted to write a script to rename all your image files, you
+could use the following command to generate a safe filename:
+.Bd -literal -offset indent
+llamafile --temp 0 \[rs]
+    --image ~/Pictures/lemurs.jpg \[rs]
+    -m llava-v1.5-7b-Q4_K.gguf \[rs]
+    --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \[rs]
+    --grammar 'root ::= [a-z]+ (" " [a-z]+)+' \[rs]
+    -e -p '### User: What do you see?\[rs]n### Assistant: ' \[rs]
+    --silent-prompt 2>/dev/null |
+  sed -e's/ /_/g' -e's/$/.jpg/'
+a_baby_monkey_on_the_back_of_a_mother.jpg
+.Ed
+.Pp
+Here's an example of how to make an API request to the OpenAI API
+compatible completions endpoint when your
+.Nm
+is running in the background in
+.Fl Fl server
+mode.
+.Bd -literal -offset indent
+curl -s http://localhost:8080/v1/chat/completions \[rs]
+     -H "Content-Type: application/json" -d '{
+  "model": "gpt-3.5-turbo",
+  "stream": true,
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a poetic assistant."
+    },
+    {
+      "role": "user",
+      "content": "Compose a poem that explains FORTRAN."
+    }
+  ]
+}' | python3 -c '
+import json
+import sys
+json.dump(json.load(sys.stdin), sys.stdout, indent=2)
+print()
+'
+.Ed
+.Sh BUGS
+Your HTTP server is great for local hosting, but it would need much more
+work to be a production worthy component of a public-facing service. For
+example, C++ exceptions caused by JSON parsing errors will make it abort
+and print a backtrace.
+.Sh PROTIP
+NVIDIA users need to pass the
+.Fl ngl Ar 35
+flag to enable GPU acceleration. It's not enabled by default since it
+sometimes needs to be tuned for system hardware and model architecture.
 .Sh SEE ALSO
-.Xr llamafile-server 1 ,
 .Xr llamafile-quantize 1 ,
 .Xr llamafile-perplexity 1 ,
 .Xr llava-quantize 1 ,

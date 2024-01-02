@@ -154,7 +154,9 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             std::replace(arg.begin(), arg.end(), '_', '-');
         }
 
-        if (arg == "-s" || arg == "--seed") {
+        if (arg == "--cli") {
+            // do nothing
+        } else if (arg == "-s" || arg == "--seed") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;

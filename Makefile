@@ -23,7 +23,6 @@ o/$(MODE)/: o/$(MODE)/llama.cpp o/$(MODE)/llamafile
 .PHONY: install
 install:	llamafile/zipalign.1					\
 		llama.cpp/main/main.1					\
-		llama.cpp/server/server.1				\
 		llama.cpp/quantize/quantize.1				\
 		llama.cpp/perplexity/perplexity.1			\
 		llama.cpp/llava/llava-quantize.1			\
@@ -42,7 +41,6 @@ install:	llamafile/zipalign.1					\
 	mkdir -p $(PREFIX)/share/man/man1
 	$(INSTALL) -m 0644 llamafile/zipalign.1 $(PREFIX)/share/man/man1/zipalign.1
 	$(INSTALL) -m 0644 llama.cpp/main/main.1 $(PREFIX)/share/man/man1/llamafile.1
-	$(INSTALL) -m 0644 llama.cpp/server/server.1 $(PREFIX)/share/man/man1/llamafile-server.1
 	$(INSTALL) -m 0644 llama.cpp/quantize/quantize.1 $(PREFIX)/share/man/man1/llamafile-quantize.1
 	$(INSTALL) -m 0644 llama.cpp/perplexity/perplexity.1 $(PREFIX)/share/man/man1/llamafile-perplexity.1
 	$(INSTALL) -m 0644 llama.cpp/llava/llava-quantize.1 $(PREFIX)/share/man/man1/llava-quantize.1

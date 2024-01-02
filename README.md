@@ -275,9 +275,8 @@ weights:
 ```sh
 llamafile \
   -m wizardcoder-python-13b-v1.0.Q8_0.gguf \
-  --temp 0 -e \
-  -r '```\n' \
-  -p '```c\nvoid *memcpy(char *dst, const char *src, size_t size) {\n'
+  --temp 0 -r '}\n' -r '```\n' \
+  -e -p '```c\nvoid *memcpy(void *dst, const void *src, size_t size) {\n'
 ```
 
 Here's a similar example that instead utilizes Mistral-7B-Instruct
@@ -314,7 +313,7 @@ Here's an example of how you can use llamafile to summarize HTML URLs:
     sed 's/   */ /g'
   echo '[/INST]'
 ) | llamafile \
-      -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
+      -m mistral-7b-instruct-v0.2.Q5_K_M.gguf \
       -f /dev/stdin \
       -c 0 \
       --temp 0 \
@@ -329,7 +328,7 @@ llamafile --temp 0 \
   --image ~/Pictures/lemurs.jpg \
   -m llava-v1.5-7b-Q4_K.gguf \
   --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \
-  -p $'### User: What do you see?\n### Assistant: ' \
+  -e -p '### User: What do you see?\n### Assistant: ' \
   --silent-prompt 2>/dev/null
 ```
 
@@ -341,11 +340,11 @@ wanted to write a script to rename all your image files, you could say:
 
 ```sh
 llamafile --temp 0 \
-    --image ~/Pictures/lemurs.jpg \
+    --image lemurs.jpg \
     -m llava-v1.5-7b-Q4_K.gguf \
     --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \
     --grammar 'root ::= [a-z]+ (" " [a-z]+)+' \
-    -p $'### User: What do you see?\n### Assistant: ' \
+    -e -p '### User: What do you see?\n### Assistant: ' \
     --silent-prompt 2>/dev/null |
   sed -e's/ /_/g' -e's/$/.jpg/'
 a_baby_monkey_on_the_back_of_a_mother.jpg

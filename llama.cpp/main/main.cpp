@@ -109,22 +109,27 @@ static bool has_argument(int argc, char ** argv, const char * arg) {
 }
 
 int main(int argc, char ** argv) {
-
-    if (has_argument(argc, argv, "--version")) {
-        printf("llamafile v" LLAMAFILE_VERSION_STRING "\n");
-        exit(0);
-    }
-
-    if (has_argument(argc, argv, "--server") ||
-        (!has_argument(argc, argv, "-p") &&
-         !has_argument(argc, argv, "-f"))) {
-        return server_cli(argc, argv);
-    }
-
     llamafile_init();
     llamafile_check_cpu();
     ShowCrashReports();
     LoadZipArgs(&argc, &argv);
+
+    if (has_argument(argc, argv, "--version")) {
+        printf("llamafile v" LLAMAFILE_VERSION_STRING "\n");
+        return 0;
+    }
+
+    if (has_argument(argc, argv, "--help")) {
+        llamafile_help("/zip/llama.cpp/main/main.1.asc");
+    }
+
+    if (!has_argument(argc, argv, "--cli") &&
+        (has_argument(argc, argv, "--server") ||
+         (!has_argument(argc, argv, "-p") &&
+          !has_argument(argc, argv, "-f") &&
+          !has_argument(argc, argv, "--random-prompt")))) {
+        return server_cli(argc, argv);
+    }
 
     if (has_argument(argc, argv, "--mmproj")) {
         return llava_cli(argc, argv);

@@ -2,9 +2,7 @@
 #define LLAMAFILE_H_
 #include <stdio.h>
 #include <stdbool.h>
-#ifdef  __cplusplus
-extern "C" {
-#endif
+COSMOPOLITAN_C_START_
 
 struct llamafile;
 struct llamafile *llamafile_open(const char *, const char *);
@@ -19,6 +17,7 @@ FILE *llamafile_fp(struct llamafile *);
 
 void llamafile_init(void);
 void llamafile_check_cpu(void);
+void llamafile_help(const char *) wontreturn;
 const char *llamafile_get_tmp_dir(void);
 bool llamafile_extract(const char *, const char *);
 int llamafile_is_file_newer_than(const char *, const char *);
@@ -26,7 +25,5 @@ void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 bool llamafile_launch_browser(const char *);
 
-#ifdef  __cplusplus
-}
-#endif
+COSMOPOLITAN_C_END_
 #endif /* LLAMAFILE_H_ */

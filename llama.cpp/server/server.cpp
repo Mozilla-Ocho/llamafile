@@ -2651,17 +2651,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
     }
 }
 
-int server_cli(int argc, char ** argv)
-{
-    if (argc == 2 && !strcmp(argv[1], "--version")) {
-        printf("llamafile v" LLAMAFILE_VERSION_STRING " server\n");
-        exit(0);
-    }
-
-    llamafile_init();
-    llamafile_check_cpu();
-    LoadZipArgs(&argc, &argv);
-    ShowCrashReports();
+int server_cli(int argc, char ** argv) {
 
     // own arguments required by this example
     gpt_params params;
