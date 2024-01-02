@@ -2,7 +2,9 @@
 #define LLAMAFILE_H_
 #include <stdio.h>
 #include <stdbool.h>
-COSMOPOLITAN_C_START_
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct llamafile;
 struct llamafile *llamafile_open(const char *, const char *);
@@ -25,5 +27,7 @@ void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 bool llamafile_launch_browser(const char *);
 
-COSMOPOLITAN_C_END_
+#ifdef __cplusplus
+}
+#endif
 #endif /* LLAMAFILE_H_ */
