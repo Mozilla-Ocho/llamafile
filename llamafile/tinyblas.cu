@@ -21,36 +21,93 @@
     (((trans) == CUBLAS_OP_N) ? (A)[(i) + (j) * (ld)] : (A)[(j) + (i) * (ld)])
 #define READ16(A, trans, ld, i, j) __half2float(READ(A, trans, ld, i, j))
 
-static __device__ __forceinline__ void matmul_single(int m, int n, int k, 
-                                                     int i, int j,
-                                                     const half *A, int lda,
-                                                     const half *B, int ldb,
-                                                     void       *C,
-                                                     cudaDataType_t Ctype,
-                                                     int ldc) {
-    float sum = 0.0f;
-    for (int l = 0; l < k; ++l) {
-        sum += READ16(A, CUBLAS_OP_T, lda, i, l) *
-               READ16(B, CUBLAS_OP_N, ldb, l, j);
+#define BM 64
+#define BN 32
+#define BK BM
+#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+
+static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
+                                        const float *A, int lda, float *As,
+                                        const float *B, int ldb, float *Bs,
+                                        void *C, int ldc, float *Cs) {
+    assert(blockDim.x == BM);
+    static_assert(BK <= BM);
+    const int i = threadIdx.x;
+    int j, l, blob;
+    // within each block
+    // we first zero out Cs
+    for (j = 0; j < BN; ++j) Cs[j] = 0;
+
+    for (blob = 0; blob < k; blob += BK) {
+        // we copy into As from A
+        if (i < BM) {
+            if ((x + i) < m) {
+                for (j = 0; j < BK && blob + j < k; ++j) {
+                    As[(i * BK) + j] =
+                        READ(A, CUBLAS_OP_T, lda, x + i, blob + j);
+                }
+                for (; j < BK; ++j) As[(i * BK) + j] = 0;
+            } else {  // UNLIKELY
+                for (j = 0; j < BK; ++j) As[(i * BK) + j] = 0;
+            }
+        }
+
+        // we copy into Bs from B
+        if (i < BK) {
+            if ((blob + i) < k) {
+                for (j = 0; j < BN && y + j < n; ++j) {
+                    Bs[(i * BN) + j] =
+                        READ(B, CUBLAS_OP_N, ldb, blob + i, y + j);
+                }
+                for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
+            } else {  // UNLIKELY
+                for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
+            }
+        }
+        __syncthreads();
+
+        // We matmul the blobs, basically Cs += matmul(As, Bs)
+        for (j = 0; j < BN; ++j) {
+            for (l = 0; l < BK; ++l) {
+                Cs[j] += As[(i * BK) + l] * Bs[(l * BN) + j];
+            }
+        }
+        __syncthreads();
     }
-    if (Ctype == CUDA_R_16F) {
-        *((half *)C + i + j * ldc) = __float2half(sum);
-    } else {
-        *((float *)C + i + j * ldc) = sum;
+
+    // We write Cs out into C
+    if (x + i < m) {
+        for (j = 0; j < BN && y + j < n; ++j) {
+            *((float *)C + (x + i) + (y + j) * ldc) = Cs[j];
+        }
     }
+    __syncthreads();
 }
 
-static __device__ __forceinline__ void matmul_single32(int m, int n, int k, int i, int j,
-                                                       const float *A, int lda,
-                                                       const float *B, int ldb,
-                                                       float       *C, int ldc) {
-    float sum = 0.0f;
-    float *cptr = C + i + j * ldc;
-    for (int l = 0; l < k; ++l) {
-        sum += READ(A, CUBLAS_OP_T, lda, i, l) *
-               READ(B, CUBLAS_OP_N, ldb, l, j);
+static __global__ void tinyblasS_entry(int m, int n, int k,
+                                       const float *A, int lda,
+                                       const float *B, int ldb,
+                                       float       *C, int ldc) {
+    int x = blockIdx.x * BM;
+    const int jump1 = gridDim.x * BM;
+    int y = blockIdx.y * BN;
+    const int jump2 = gridDim.y * BN;
+
+    extern __shared__ float svals[];  // shared across all threads in a block
+    float *As = svals;
+    float *Bs = svals + BM * BK;
+    float Cs[BN];  // only within a particular thread
+
+    // each block handles a sub-matrix of C, of size BM * BN
+    // each thread handles a sub-row of size BN
+    for (x = blockIdx.x * BM; x < m; x += jump1) {
+        for (y = blockIdx.y * BN; y < n; y += jump2) {
+            matmul32_block2d(m, n, k, x, y,  //
+                           A, lda, As,     //
+                           B, ldb, Bs,     //
+                           C, ldc, Cs);
+        }
     }
-    *cptr = sum;
 }
 
 static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
@@ -71,22 +128,6 @@ static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
               *(float *)pBeta == 0.0f)));
 }
 
-static __global__ void tinyblasS_entry(int m, int n, int k,
-                                       const float *A, int lda,
-                                       const float *B, int ldb,
-                                       float       *C, int ldc) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int jump = blockDim.x * gridDim.x;
-    int y = threadIdx.y;
-    int jump2 = blockDim.y;
-
-    for (; x < m; x += jump) {
-        for (y=threadIdx.y; y < n; y += jump2) {
-            matmul_single32(m, n, k, x, y, A, lda, B, ldb, C, ldc);
-        }
-    }
-}
-
 cublasStatus_t tinyblasSgemm(cudaStream_t stream,
                              cublasOperation_t transa,
                              cublasOperation_t transb,
@@ -101,87 +142,103 @@ cublasStatus_t tinyblasSgemm(cudaStream_t stream,
         return CUBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    int numSMs, devId;
-    cudaGetDevice(&devId);
-    cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, devId);
-    int maxblocks = 16 * numSMs;
-    dim3 maxthreads(16, 64, 1);
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
+    int maxthreads = BM;
 
-    tinyblasS_entry<<<maxblocks, maxthreads, 0, stream>>>(
+    tinyblasS_entry<<<maxblocks, maxthreads,
+                       (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
         m, n, k, A, lda, B, ldb, C, ldc);
     return CUBLAS_STATUS_SUCCESS;
 }
 
-// https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
-#define BM 64
-#define BN 32
-#define BK BM
-#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
+                                      const half *A, int lda, float *As,
+                                      const half *B, int ldb, float *Bs,
+                                      void *C, cudaDataType_t Ctype, int ldc,
+                                      float *Cs) {
+    assert(blockDim.x == BM);
+    static_assert(BK <= BM);
+    const int i = threadIdx.x;
+    int j, l, blob;
+    // within each block
+    // we first zero out Cs
+    for (j = 0; j < BN; ++j) Cs[j] = 0;
 
+    for (blob = 0; blob < k; blob += BK) {
+        // we copy into As from A
+        if (i < BM) {
+            if ((x + i) < m) {
+                for (j = 0; j < BK && blob + j < k; ++j) {
+                    As[(i * BK) + j] =
+                        READ16(A, CUBLAS_OP_T, lda, x + i, blob + j);
+                }
+                for (; j < BK; ++j) As[(i * BK) + j] = 0;
+            } else {  // UNLIKELY
+                for (j = 0; j < BK; ++j) As[(i * BK) + j] = 0;
+            }
+        }
+
+        // we copy into Bs from B
+        if (i < BK) {
+            if ((blob + i) < k) {
+                for (j = 0; j < BN && y + j < n; ++j) {
+                    Bs[(i * BN) + j] =
+                        READ16(B, CUBLAS_OP_N, ldb, blob + i, y + j);
+                }
+                for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
+            } else {  // UNLIKELY
+                for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
+            }
+        }
+        __syncthreads();
+
+        // We matmul the blobs, basically Cs += matmul(As, Bs)
+        for (j = 0; j < BN; ++j) {
+            for (l = 0; l < BK; ++l) {
+                Cs[j] += As[(i * BK) + l] * Bs[(l * BN) + j];
+            }
+        }
+        __syncthreads();
+    }
+
+    // We write Cs out into C
+    if (x + i < m) {
+        if (Ctype == CUDA_R_16F) {
+            for (j = 0; j < BN && y + j < n; ++j) {
+                *((half *)C + (x + i) + (y + j) * ldc) = __float2half(Cs[j]);
+            }
+        } else {
+            for (j = 0; j < BN && y + j < n; ++j) {
+                *((float *)C + (x + i) + (y + j) * ldc) = Cs[j];
+            }
+        }
+    }
+    __syncthreads();
+}
+
+// https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
 static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
                                         int lda, const half *B, int ldb,
                                         void *C, cudaDataType_t Ctype,
                                         int ldc) {
     int x = blockIdx.x * BM;
-    int jump1 = gridDim.x * BM;
+    const int jump1 = gridDim.x * BM;
     int y = blockIdx.y * BN;
-    int jump2 = gridDim.x * BN;
+    const int jump2 = gridDim.y * BN;
 
-    assert(blockDim.x == BM);
     extern __shared__ float svals[];  // shared across all threads in a block
     float *As = svals;
     float *Bs = svals + BM * BK;
     float Cs[BN];  // only within a particular thread
 
-    int i, j, l;
-    int blob;
-
     // each block handles a sub-matrix of C, of size BM * BN
     // each thread handles a sub-row of size BN
     for (x = blockIdx.x * BM; x < m; x += jump1) {
         for (y = blockIdx.y * BN; y < n; y += jump2) {
-            // within each block
-            // we first zero out Cs
-            for (j = 0; j < BN; ++j) Cs[j] = 0;
-
-            for (blob = 0; blob < k; blob += BK) {
-                // we copy into As from A
-                for (i = threadIdx.x; i < BM && (x + i) < m; i += blockDim.x) {
-                    for (j = 0; j < BK && blob + j < k; ++j) {
-                        As[(i * BK) + j] =
-                            READ16(A, CUBLAS_OP_T, lda, x + i, blob + j);
-                    }
-                    for (; j < BK; ++j) As[(i * BK) + j] = 0;
-                }
-
-                // we copy into Bs from B
-                for (i = threadIdx.x; i < BK && (blob + i) < k;
-                     i += blockDim.x) {
-                    for (j = 0; j < BN && y + j < n; ++j) {
-                        Bs[(i * BN) + j] =
-                            READ16(B, CUBLAS_OP_N, ldb, blob + i, y + j);
-                    }
-                    for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
-                }
-                __syncthreads();
-
-                // We matmul the blobs, basically Cs += matmul(As, Bs)
-                // (thread-local stuff can happen here? bounds-check?)
-                i = threadIdx.x;
-                for (j = 0; j < BN; ++j) {
-                    for (l = 0; l < BK; ++l) {
-                        Cs[j] += As[(i * BK) + l] * Bs[(l * BN) + j];
-                    }
-                }
-                __syncthreads();
-            }
-
-            // We write Cs out into C
-            i = threadIdx.x;
-            for (j = 0; j < BN && y + j < n; ++j) {
-                *((half *)C + (x + i) + (y + j) * ldc) = __float2half(Cs[j]);
-            }
-            __syncthreads();
+            matmul_block2d(m, n, k, x, y,  //
+                           A, lda, As,     //
+                           B, ldb, Bs,     //
+                           C, Ctype, ldc, Cs);
         }
     }
 }
@@ -222,22 +279,32 @@ cublasStatus_t tinyblasGemmEx(cudaStream_t stream,
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmbatchedex
 
 static __global__ void tinyblasGBE_entry(int m, int n, int k,
-                                         const half *const  Aarray[], int lda,
-                                         const half *const  Barray[], int ldb,
-                                         void *const        Carray[],
-                                         cudaDataType_t     Ctype,    int ldc,
+                                         const half *const Aarray[], int lda,
+                                         const half *const Barray[], int ldb,
+                                         void *const Carray[],
+                                         cudaDataType_t Ctype, int ldc,
                                          int batchCount) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int z = threadIdx.z;
-    int jump = blockDim.x * gridDim.x;
-    int jump2 = blockDim.y * gridDim.y;
-    int jump3 = blockDim.z;
+    int x = blockIdx.x * BM;
+    const int jump1 = gridDim.x * BM;
+    int y = blockIdx.y * BN;
+    const int jump2 = gridDim.y * BN;
+    int z = blockIdx.z;
+    const int jump3 = gridDim.z;
 
-    for (; x < batchCount; x += jump) {
-        for (y=blockIdx.y * blockDim.y + threadIdx.y; y < m; y += jump2) {
-            for (z=threadIdx.z; z < n; z += jump3) {
-                matmul_single(m, n, k, y, z, Aarray[x], lda, Barray[x], ldb, Carray[x], Ctype, ldc);
+    extern __shared__ float svals[];  // shared across all threads in a block
+    float *As = svals;
+    float *Bs = svals + BM * BK;
+    float Cs[BN];  // only within a particular thread
+
+    // each block handles a sub-matrix of C, of size BM * BN
+    // each thread handles a sub-row of size BN
+    for (z = blockIdx.z; z < batchCount; z += jump3) {
+        for (x = blockIdx.x * BM; x < m; x += jump1) {
+            for (y = blockIdx.y * BN; y < n; y += jump2) {
+                matmul_block2d(m, n, k, x, y,       //
+                               Aarray[z], lda, As,  //
+                               Barray[z], ldb, Bs,  //
+                               Carray[z], Ctype, ldc, Cs);
             }
         }
     }
@@ -268,30 +335,17 @@ cublasStatus_t tinyblasGemmBatchedEx(cudaStream_t stream,
         return CUBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    // https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
-    int numSMs, devId;
-    cudaGetDevice(&devId);
-    cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, devId);
-    dim3 maxblocks(numSMs, 16, 1);
-    dim3 maxthreads(4, 4, 64);
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
+    int maxthreads = BM;
 
-    tinyblasGBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
+    tinyblasGBE_entry<<<maxblocks, maxthreads,
+                       (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
         m, n, k, (const half **)Aarray, lda, (const half **)Barray, ldb,
         Carray, Ctype, ldc, batchCount);
     return CUBLAS_STATUS_SUCCESS;
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmstridedbatchedex
-
-#define STRIDE0(A, i, stride) ((A) + (i) * (stride))
-#define STRIDE(A, type, i, stride)                      \
-    ((type) == CUDA_R_16F                               \
-     ? (void *)STRIDE0((half *)(A), (i), (stride))      \
-     : (void *)STRIDE0((float *)(A), (i), (stride)))
-#define STRIDE_CONST(A, type, i, stride)                                \
-    ((type) == CUDA_R_16F                                               \
-     ? (const void *)STRIDE0((const half *)(A), (i), (stride))          \
-     : (const void *)STRIDE0((const float *)(A), (i), (stride)))
 
 static __global__ void tinyblasGSBE_entry(int m, int n, int k,
                                           const half      *A,
@@ -305,21 +359,30 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
                                           int             ldc,
                                           long long int   strideC,
                                           int batchCount) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int z = threadIdx.z;
-    int jump = blockDim.x * gridDim.x;
-    int jump2 = blockDim.y * gridDim.y;
-    int jump3 = blockDim.z;
+    int x = blockIdx.x * BM;
+    const int jump1 = gridDim.x * BM;
+    int y = blockIdx.y * BN;
+    const int jump2 = gridDim.y * BN;
+    int z = blockIdx.z;
+    const int jump3 = gridDim.z;
 
-    for (; x < batchCount; x += jump) {
-        for (y=blockIdx.y * blockDim.y + threadIdx.y; y < m; y += jump2) {
-            for (z=threadIdx.z; z < n; z += jump3) {
-                matmul_single(m, n, k, y, z, A + x * strideA, lda, B + x * strideB, ldb,
+    extern __shared__ float svals[];  // shared across all threads in a block
+    float *As = svals;
+    float *Bs = svals + BM * BK;
+    float Cs[BN];  // only within a particular thread
+
+    // each block handles a sub-matrix of C, of size BM * BN
+    // each thread handles a sub-row of size BN
+    for (z = blockIdx.z; z < batchCount; z += jump3) {
+        for (x = blockIdx.x * BM; x < m; x += jump1) {
+            for (y = blockIdx.y * BN; y < n; y += jump2) {
+                matmul_block2d(m, n, k, x, y,       //
+                               A + z * strideA, lda, As,  //
+                               B + z * strideB, ldb, Bs,  //
                               (Ctype == CUDA_R_16F
-                               ? (void *)((half *)C + x * strideC)
-                               : (void *)((float *)C + x * strideC)),
-                              Ctype, ldc);
+                               ? (void *)((half *)C + z * strideC)
+                               : (void *)((float *)C + z * strideC)),
+                              Ctype, ldc, Cs);
             }
         }
     }
@@ -351,15 +414,12 @@ cublasStatus_t tinyblasGemmStridedBatchedEx(cudaStream_t stream,
         return CUBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    // https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
-    int numSMs, devId;
-    cudaGetDevice(&devId);
-    cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, devId);
-    dim3 maxblocks(numSMs, 16, 1);
-    dim3 maxthreads(4, 4, 64);
-
     // call the entry function
-    tinyblasGSBE_entry<<<maxblocks, maxthreads, 0, stream>>>(
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
+    int maxthreads = BM;
+
+    tinyblasGSBE_entry<<<maxblocks, maxthreads,
+                       (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
         m, n, k, (const half*)A, lda, strideA, (const half*)B, ldb, strideB,
         C, Ctype, ldc, strideC, batchCount);
 
