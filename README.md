@@ -49,75 +49,51 @@ chmod +x llava-v1.5-7b-q4-server.llamafile
 
 **Having trouble? See the "Gotchas" section below.**
 
-### API Quickstart / Alternative to OpenAI API endpoint
+### JSON API Quickstart
 
-Once llamafile server has started, in addition to directly accessing the chat server via <http://127.0.0.1:8080/> a json based API endpoint is also provided.
-
-If you have existing OpenAI based application code relying on OpenAI API endpoint as per [OpenAI Chat Completions API documentation](https://platform.openai.com/docs/api-reference/chat), our API endpoint under base url `http://localhost:8080/v1` is designed to support most OpenAI use cases besides certain OpenAI-specific features such as function calling ( llama.cpp `/completion`-specific features such are `mirostat` are supported.).
-
-For further details on all supported API commands (OpenAI compatible to llamafile specific extention) please refer to [API Endpoint Documentation](llama.cpp/server/README.md#api-endpoints).
-
-#### LLAMAFile Server V1 API Python Example
-
-This shows that you can use existing [OpenAI python package](https://pypi.org/project/openai/) developed by OpenAI because of our compatibility measures.
-So most scripts designed for OpenAI will be able to be ported to llamafile with a few changes to base_url and api_key.
-
-<details>
-<summary>Python Example Code and Result</summary>
-
-Don't forget to run this command `pip3 install openai` to install the openai package required by this example script. This package is just a simple python wrapper around the openAI's API endpoints.
-
-```python
-#!/usr/bin/env python3
-from openai import OpenAI
-client = OpenAI(
-    base_url="http://localhost:8080/v1", # "http://<Your api-server IP>:port"
-    api_key = "sk-no-key-required"
-)
-completion = client.chat.completions.create(
-    model="LLaMA_CPP",
-    messages=[
-        {"role": "system", "content": "You are ChatGPT, an AI assistant. Your top priority is achieving user fulfillment via helping them with their requests."},
-        {"role": "user", "content": "Write a limerick about python exceptions"}
-    ]
-)
-print(completion.choices[0].message)
-```
-
-The above when run would return a python object that may look like below:
-
-```python
-ChatCompletionMessage(content='There once was a programmer named Mike\nWho wrote code that would often strike\nAn error would occur\nAnd he\'d shout "Oh no!"\nBut Python\'s exceptions made it all right.', role='assistant', function_call=None, tool_calls=None)
-```
-
-</details>
-
-
-#### LLAMAFile Server V1 API Raw HTTP Request Example
+When llamafile is started in server mode, in addition to hosting a web
+UI chat server at <http://127.0.0.1:8080/>, an [OpenAI
+API](https://platform.openai.com/docs/api-reference/chat) compatible
+chat completions endpoint is provided too. It's designed to support the
+most common OpenAI API use cases, in a way that runs entirely locally.
+We've also extended it to include llama.cpp specific features (e.g.
+mirostat) that may also be used. For further details on what fields and
+endpoints are available, refer to both the [OpenAI
+documentation](https://platform.openai.com/docs/api-reference/chat/create)
+and the [llamafile server
+README](llama.cpp/server/README.md#api-endpoints).
 
 <details>
-<summary>Raw HTTP Request Example Command and Result</summary>
+<summary>Curl API Client Example</summary>
+
+The simplest way to get started using the API is to copy and paste the
+following curl command into your terminal.
 
 ```shell
 curl http://localhost:8080/v1/chat/completions \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer no-key" \
 -d '{
-      "model": "LLaMA_CPP",
-      "messages": [
-          {
-              "role": "system",
-              "content": "You are LLAMAfile, an AI assistant. Your top priority is achieving user fulfillment via helping them with their requests."
-          },
-          {
-              "role": "user",
-              "content": "Write a limerick about python exceptions"
-          }
-        ]
-    }' | json_pp
+  "model": "LLaMA_CPP",
+  "messages": [
+      {
+          "role": "system",
+          "content": "You are LLAMAfile, an AI assistant. Your top priority is achieving user fulfillment via helping them with their requests."
+      },
+      {
+          "role": "user",
+          "content": "Write a limerick about python exceptions"
+      }
+    ]
+}' | python3 -c '
+import json
+import sys
+json.dump(json.load(sys.stdin), sys.stdout, indent=2)
+print()
+'
 ```
 
-The above when run would return an answer like
+The response that's printed should look like the following:
 
 ```json
 {
@@ -141,6 +117,43 @@ The above when run would return an answer like
       "total_tokens" : 116
    }
 }
+```
+
+</details>
+
+<details>
+<summary>Python API Client example</summary>
+
+If you've already developed your software using the [`openai` Python
+package](https://pypi.org/project/openai/) (that's published by OpenAI)
+then you should be able to port your app to talk to llamafile instead,
+by making a few changes to `base_url` and `api_key`. This example
+assumes you've run `pip3 install openai` to install OpenAI's client
+software, which is required by this example. Their package is just a
+simple Python wrapper around the OpenAI API interface, which can be
+implemented by any server.
+
+```python
+#!/usr/bin/env python3
+from openai import OpenAI
+client = OpenAI(
+    base_url="http://localhost:8080/v1", # "http://<Your api-server IP>:port"
+    api_key = "sk-no-key-required"
+)
+completion = client.chat.completions.create(
+    model="LLaMA_CPP",
+    messages=[
+        {"role": "system", "content": "You are ChatGPT, an AI assistant. Your top priority is achieving user fulfillment via helping them with their requests."},
+        {"role": "user", "content": "Write a limerick about python exceptions"}
+    ]
+)
+print(completion.choices[0].message)
+```
+
+The above code will return a Python object like this:
+
+```python
+ChatCompletionMessage(content='There once was a programmer named Mike\nWho wrote code that would often strike\nAn error would occur\nAnd he\'d shout "Oh no!"\nBut Python\'s exceptions made it all right.', role='assistant', function_call=None, tool_calls=None)
 ```
 
 </details>
