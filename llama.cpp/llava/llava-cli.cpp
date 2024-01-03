@@ -231,8 +231,9 @@ int llava_cli(int argc, char ** argv) {
         show_additional_info(argc, argv);
         return 1;
     }
-    if (params.mmproj.empty() || (params.image.empty() && !prompt_contains_image(params.prompt))) {
-        fprintf(stderr, "%s: fatal error: --image flag missing\n", argv[0]);
+
+    if (params.mmproj.empty()) {
+        fprintf(stderr, "%s: fatal error: --mmproj must also be passed when an --image is specified in cli mode\n", argv[0]);
         return 1;
     }
 

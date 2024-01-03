@@ -27,6 +27,7 @@ void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 bool llamafile_launch_browser(const char *);
 
+#define LLAMAFILE_GPU_DISABLED -1
 #define LLAMAFILE_GPU_AUTO 0
 #define LLAMAFILE_GPU_AMD 1
 #define LLAMAFILE_GPU_APPLE 2
@@ -34,6 +35,7 @@ bool llamafile_launch_browser(const char *);
 extern int FLAG_gpu;
 extern bool FLAG_tinyblas;
 extern bool FLAG_nocompile;
+extern bool FLAG_recompile;
 int llamafile_gpu_supported(void);
 int llamafile_gpu_parse(const char *);
 

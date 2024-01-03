@@ -13,6 +13,7 @@ scp llama.cpp/ggml-cuda.cu \
     llamafile/tinyblas.h \
     llamafile/tinyblas.cu \
     llamafile/llamafile.h \
+    llamafile/rocm.bat \
     llamafile/cuda.bat \
     llamafile/cuda.sh \
     $HOST:lfbuild/

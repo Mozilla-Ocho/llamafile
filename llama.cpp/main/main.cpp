@@ -132,7 +132,7 @@ int main(int argc, char ** argv) {
         return server_cli(argc, argv);
     }
 
-    if (has_argument(argc, argv, "--mmproj")) {
+    if (has_argument(argc, argv, "--image")) {
         return llava_cli(argc, argv);
     }
 
@@ -140,10 +140,6 @@ int main(int argc, char ** argv) {
     g_params = &params;
 
     if (!gpt_params_parse(argc, argv, params)) {
-        return 1;
-    }
-    if (!params.image.empty()) {
-        fprintf(stderr, "%s: fatal error: --mmproj must also be passed if --image is passed\n", argv[0]);
         return 1;
     }
     llama_sampling_params & sparams = params.sparams;

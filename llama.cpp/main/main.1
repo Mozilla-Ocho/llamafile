@@ -353,15 +353,19 @@ Force system to keep model in RAM rather than swapping or compressing.
 Do not memory-map model (slower load but may reduce pageouts if not using mlock).
 .It Fl Fl numa
 Attempt optimizations that help on some NUMA systems if run without this previously, it is recommended to drop the system page cache before using this. See https://github.com/ggerganov/llama.cpp/issues/1437.
+.It Fl Fl recompile
+Force GPU support to be recompiled at runtime if possible.
 .It Fl Fl nocompile
 Never compile GPU support at runtime.
 .Pp
-If
-.Pa ~/.llamafile/ggml-cuda.dll
-already exists on the file system (or .so for UNIX and .dylib for
-MacOS), then it'll be linked as-is without question. Otherwise,
+If the appropriate DSO file already exists under
+.Pa ~/.llamafile/
+then it'll be linked as-is without question. If a prebuilt DSO is
+present in the PKZIP content of the executable, then it'll be extracted
+and linked if possible. Otherwise,
 .Nm
-will fall back to CPU inference.
+will skip any attempt to compile GPU support and simply fall back to
+using CPU inference.
 .It Fl Fl gpu Ar GPU
 Specifies which brand of GPU should be used. Valid choices are:
 .Pp
@@ -370,25 +374,39 @@ Specifies which brand of GPU should be used. Valid choices are:
 .Ar AUTO :
 Use any GPU if possible, otherwise fall back to CPU inference (default)
 .It
-.Ar AMD :
-Use AMD GPU. The AMD ROCm SDK must be installed and the HIP_PATH
-environment variable must be defined. If an AMD GPU could not be used
-for any reason, then a fatal error will be raised.
-.It
 .Ar APPLE :
 Use Apple Metal GPU. This is only available on MacOS ARM64. If Metal
 could not be used for any reason, then a fatal error will be raised.
 .It
-.Ar NVIDIA :
-Use NVIDIA GPU. If an NVIDIA GPU could not be used for any reason, a
-fatal error will be raised. On Windows, NVIDIA GPU support will use our
-tinyBLAS library, since it works on stock Windows installs. If both MSVC
-and CUDA are installed beforehand, and
+.Ar AMD :
+Use AMD GPUs. The AMD HIP ROCm SDK should be installed in which case we
+assume the HIP_PATH environment variable has been defined. The set of
+gfx microarchitectures needed to run on the host machine is determined
+automatically based on the output of the hipInfo command. On Windows,
 .Nm
-is run for the first time on the x64 command prompt, then llamafile will
-use NVIDIA's faster cuBLAS library instead. On Linux and other systems,
-the CUDA SDK must always be installed, so that native GPU support can be
-compiled on the fly.
+release binaries are distributed with a tinyBLAS DLL so it'll work out
+of the box without requiring the HIP SDK to be installed. However,
+tinyBLAS is slower than rocBLAS for batch and image processing, so it's
+recommended that the SDK be installed anyway. If an AMD GPU could not be
+used for any reason, then a fatal error will be raised.
+.It
+.Ar NVIDIA :
+Use NVIDIA GPUs. If an NVIDIA GPU could not be used for any reason, a
+fatal error will be raised. On Windows, NVIDIA GPU support will use our
+tinyBLAS library, since it works on stock Windows installs. However,
+tinyBLAS goes slower for batch and image processing. It's possible to
+use NVIDIA's closed-source cuBLAS library instead. To do that, both MSVC
+and CUDA need to be installed and the
+.Nm
+command should be run once from the x64 MSVC command prompt with the
+.Fl Fl recompile
+flag passed. The GGML library will then be compiled and saved to
+.Pa ~/.llamafile/
+so the special process only needs to happen a single time.
+.It
+.Ar DISABLED :
+Never use GPU and instead use CPU inference. This setting is implied by
+.Fl ngl Ar 0 .
 .El
 .Pp
 .It Fl ngl Ar N , Fl Fl n-gpu-layers Ar N
@@ -588,8 +606,7 @@ llama.cpp command line interface, utilizing WizardCoder-Python-13B
 weights:
 .Bd -literal -offset indent
 llamafile \[rs]
-  -m wizardcoder-python-13b-v1.0.Q8_0.gguf \[rs]
-  --temp 0 -r '}\[rs]n' -r '\`\`\`\[rs]n' \[rs]
+  -m wizardcoder-python-13b-v1.0.Q8_0.gguf --temp 0 -r '}\[rs]n' -r '\`\`\`\[rs]n' \[rs]
   -e -p '\`\`\`c\[rs]nvoid *memcpy(void *dst, const void *src, size_t size) {\[rs]n'
 .Ed
 .Pp
@@ -692,10 +709,12 @@ work to be a production worthy component of a public-facing service. For
 example, C++ exceptions caused by JSON parsing errors will make it abort
 and print a backtrace.
 .Sh PROTIP
-NVIDIA users need to pass the
+The
 .Fl ngl Ar 35
-flag to enable GPU acceleration. It's not enabled by default since it
-sometimes needs to be tuned for system hardware and model architecture.
+flag needs to be passed in order to use GPUs made by NVIDIA and AMD.
+It's not enabled by default since it sometimes needs to be tuned based
+on the system hardware and model architecture, in order to achieve
+optimal performance, and avoid compromising a shared display.
 .Sh SEE ALSO
 .Xr llamafile-quantize 1 ,
 .Xr llamafile-perplexity 1 ,

@@ -523,6 +523,8 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             params.unsecure = true;
         } else if (arg == "--nocompile") {
             FLAG_nocompile = true;
+        } else if (arg == "--recompile") {
+            FLAG_recompile = true;
         } else if (arg == "--tinyblas") {
             FLAG_tinyblas = true;  // undocumented
         } else if (arg == "--gpu") {
@@ -560,6 +562,9 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             params.n_gpu_layers = std::stoi(argv[i]);
+            if (params.n_gpu_layers == 0) {
+                FLAG_gpu = LLAMAFILE_GPU_DISABLED;
+            }
         } else if (arg == "--gpu-layers-draft" || arg == "-ngld" || arg == "--n-gpu-layers-draft") {
             passed_gpu_flags = true;
             if (++i >= argc) {

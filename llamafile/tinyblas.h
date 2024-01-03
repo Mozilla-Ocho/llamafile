@@ -1,29 +1,12 @@
 #pragma once
 
+#ifdef GGML_USE_HIPBLAS
+#include <hipblas/hipblas.h>
+#include <hip/hip_fp16.h>
+#else
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
-
-enum cublasOperation_t {
-  CUBLAS_OP_N = 111,
-  CUBLAS_OP_T = 112,
-  CUBLAS_OP_C = 113,
-};
-
-enum cublasStatus_t {
-  CUBLAS_STATUS_SUCCESS = 0,
-  CUBLAS_STATUS_NOT_SUPPORTED = 7,
-};
-
-enum cublasComputeType_t {
-  CUBLAS_COMPUTE_16F = 150,
-  CUBLAS_COMPUTE_32F = 151,
-};
-
-enum cublasGemmAlgo_t {
-  CUBLAS_GEMM_DEFAULT_TENSOR_OP  = 160,
-};
-
-#define cublasHandle_t cudaStream_t
+#endif
 
 cublasStatus_t tinyblasSgemm(cublasHandle_t handle,
                              cublasOperation_t transa,

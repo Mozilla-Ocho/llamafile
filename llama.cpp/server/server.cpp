@@ -2331,6 +2331,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             FLAG_nocompile = true;
         }
+        else if (arg == "--recompile")
+        {
+            FLAG_recompile = true;
+        }
         else if (arg == "--gpu")
         {
             if (++i >= argc)

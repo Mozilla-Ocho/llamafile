@@ -17,7 +17,87 @@
 #error "you need to use a 64-bit compiler for llamafile"
 #endif
 
-#if defined(GGML_USE_HIPBLAS)
+#if defined(GGML_USE_TINYBLAS) && defined(GGML_USE_HIPBLAS)
+#include <hip/hip_runtime.h>
+#include <hipblas/hipblas.h>
+#include <hip/hip_fp16.h>
+#define CUBLAS_COMPUTE_16F HIPBLAS_R_16F
+#define CUBLAS_COMPUTE_32F HIPBLAS_R_32F
+#define CUBLAS_COMPUTE_32F_FAST_16F HIPBLAS_R_32F
+#define CUBLAS_GEMM_DEFAULT HIPBLAS_GEMM_DEFAULT
+#define CUBLAS_GEMM_DEFAULT_TENSOR_OP HIPBLAS_GEMM_DEFAULT
+#define CUBLAS_OP_N HIPBLAS_OP_N
+#define CUBLAS_OP_T HIPBLAS_OP_T
+#define CUBLAS_STATUS_SUCCESS HIPBLAS_STATUS_SUCCESS
+#define CUBLAS_STATUS_NOT_SUPPORTED HIPBLAS_STATUS_NOT_SUPPORTED
+#define CUBLAS_TF32_TENSOR_OP_MATH 0
+#define CUDA_R_16F  HIPBLAS_R_16F
+#define CUDA_R_32F  HIPBLAS_R_32F
+#define __shfl_xor_sync(mask, var, laneMask, width) __shfl_xor(var, laneMask, width)
+#define cublasGemmAlgo_t hipblasGemmAlgo_t
+#define cublasOperation_t hipblasOperation_t
+#define cublasComputeType_t hipblasDatatype_t //deprecated, new hipblasComputeType_t not in 5.6
+#define cublasCreate hipblasCreate
+#define cublasHandle_t hipblasHandle_t
+#define cublasSetMathMode(handle, mode) CUBLAS_STATUS_SUCCESS
+#define cublasSetStream hipblasSetStream
+#define cublasStatus_t hipblasStatus_t
+#define cudaDataType_t hipblasDatatype_t //deprecated, new hipblasDatatype not in 5.6
+#define cudaDeviceCanAccessPeer hipDeviceCanAccessPeer
+#define cudaDeviceDisablePeerAccess hipDeviceDisablePeerAccess
+#define cudaDeviceEnablePeerAccess hipDeviceEnablePeerAccess
+#define cudaDeviceProp hipDeviceProp_t
+#define cudaDeviceSynchronize hipDeviceSynchronize
+#define cudaError_t hipError_t
+#define cudaEventCreateWithFlags hipEventCreateWithFlags
+#define cudaEventDisableTiming hipEventDisableTiming
+#define cudaEventRecord hipEventRecord
+#define cudaEvent_t hipEvent_t
+#define cudaEventDestroy hipEventDestroy
+#define cudaFree hipFree
+#define cudaFreeHost hipHostFree
+#define cudaGetDevice hipGetDevice
+#define cudaGetDeviceCount hipGetDeviceCount
+#define cudaGetDeviceProperties hipGetDeviceProperties
+#define cudaGetErrorString hipGetErrorString
+#define cudaGetLastError hipGetLastError
+#define cudaMalloc hipMalloc
+#define cudaMallocHost(ptr, size) hipHostMalloc(ptr, size, hipHostMallocDefault)
+#define cudaMemcpy hipMemcpy
+#define cudaMemcpy2DAsync hipMemcpy2DAsync
+#define cudaMemcpyAsync hipMemcpyAsync
+#define cudaMemcpyDeviceToDevice hipMemcpyDeviceToDevice
+#define cudaMemcpyDeviceToHost hipMemcpyDeviceToHost
+#define cudaMemcpyHostToDevice hipMemcpyHostToDevice
+#define cudaMemcpyKind hipMemcpyKind
+#define cudaMemset hipMemset
+#define cudaMemsetAsync hipMemsetAsync
+#define cudaOccupancyMaxPotentialBlockSize hipOccupancyMaxPotentialBlockSize
+#define cudaSetDevice hipSetDevice
+#define cudaStreamCreateWithFlags hipStreamCreateWithFlags
+#define cudaStreamFireAndForget hipStreamFireAndForget
+#define cudaStreamNonBlocking hipStreamNonBlocking
+#define cudaStreamSynchronize hipStreamSynchronize
+#define cudaStreamWaitEvent(stream, event, flags) hipStreamWaitEvent(stream, event, flags)
+#define cudaStream_t hipStream_t
+#define cudaSuccess hipSuccess
+#include "tinyblas.cu"
+#define cublasSgemm tinyblasSgemm
+#define cublasGemmEx tinyblasGemmEx
+#define cublasGemmBatchedEx tinyblasGemmBatchedEx
+#define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
+#define cublasGetStatusString(x) "REDACTED!cublasGetStatusString"
+
+#elif defined(GGML_USE_TINYBLAS)
+#include "tinyblas.cu"
+#define cublasHandle_t cudaStream_t
+#define cublasSgemm tinyblasSgemm
+#define cublasGemmEx tinyblasGemmEx
+#define cublasGemmBatchedEx tinyblasGemmBatchedEx
+#define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
+#define cublasGetStatusString(x) "REDACTED!cublasGetStatusString"
+
+#elif defined(GGML_USE_HIPBLAS)
 #include <hip/hip_runtime.h>
 #include <hipblas/hipblas.h>
 #include <hip/hip_fp16.h>
@@ -86,15 +166,6 @@
 #define cudaStreamWaitEvent(stream, event, flags) hipStreamWaitEvent(stream, event, flags)
 #define cudaStream_t hipStream_t
 #define cudaSuccess hipSuccess
-
-#elif defined(GGML_USE_TINYBLAS)
-
-#include "tinyblas.cu"
-#define cublasSgemm tinyblasSgemm
-#define cublasGemmEx tinyblasGemmEx
-#define cublasGemmBatchedEx tinyblasGemmBatchedEx
-#define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
-#define cublasGetStatusString(x) "REDACTED!cublasGetStatusString"
 
 #else
 #include <cuda_runtime.h>
@@ -6961,9 +7032,11 @@ void ggml_init_cublas() {
     if (!initialized) {
 
 #ifdef __HIP_PLATFORM_AMD__
+#ifndef GGML_USE_TINYBLAS
         // Workaround for a rocBLAS bug when using multiple graphics cards:
         // https://github.com/ROCmSoftwarePlatform/rocBLAS/issues/1346
         rocblas_initialize();
+#endif
         CUDA_CHECK(cudaDeviceSynchronize());
 #endif
 

@@ -23,8 +23,10 @@
 #include "llama.cpp/ggml-metal.h"
 
 int FLAG_gpu;
+bool FLAG_nogpu;
 bool FLAG_tinyblas;
 bool FLAG_nocompile;
+bool FLAG_recompile;
 
 static const char *describe_required_gpu(void) {
     switch (FLAG_gpu) {
@@ -36,6 +38,8 @@ static const char *describe_required_gpu(void) {
             return "apple";
         case LLAMAFILE_GPU_NVIDIA:
             return "nvidia";
+        case LLAMAFILE_GPU_DISABLED:
+            return "disabled";
         default:
             __builtin_unreachable();
     }
@@ -52,12 +56,12 @@ int llamafile_gpu_supported(void) {
     }
 
     // Auto-configure AMD or NVIDIA GPU support.
-    if (ggml_cublas_loaded()) {
+    if (ggml_cuda_supported()) {
         return LLAMAFILE_GPU_NVIDIA;
     }
 
     // Abort if user wants specific GPU but it's unavailable.
-    if (FLAG_gpu != LLAMAFILE_GPU_AUTO || FLAG_tinyblas) {
+    if (FLAG_gpu > 0 || FLAG_tinyblas) {
         tinyprint(2, "fatal error: support for --gpu ",
                   describe_required_gpu(), FLAG_tinyblas ? " --tinyblas" : "",
                   " was explicitly requested, but it wasn't available\n", NULL);
@@ -74,6 +78,7 @@ int llamafile_gpu_supported(void) {
 int llamafile_gpu_parse(const char *s) {
 
     // Parse canonical names for GPUs.
+    if (!strcasecmp(s, "disabled")) return LLAMAFILE_GPU_DISABLED;
     if (!strcasecmp(s, "auto")) return LLAMAFILE_GPU_AUTO;
     if (!strcasecmp(s, "amd")) return LLAMAFILE_GPU_AMD;
     if (!strcasecmp(s, "apple")) return LLAMAFILE_GPU_APPLE;
