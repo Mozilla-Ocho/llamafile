@@ -38,7 +38,7 @@ static const char *describe_required_gpu(void) {
             return "apple";
         case LLAMAFILE_GPU_NVIDIA:
             return "nvidia";
-        case LLAMAFILE_GPU_DISABLED:
+        case LLAMAFILE_GPU_DISABLE:
             return "disabled";
         default:
             __builtin_unreachable();
@@ -78,13 +78,14 @@ int llamafile_gpu_supported(void) {
 int llamafile_gpu_parse(const char *s) {
 
     // Parse canonical names for GPUs.
-    if (!strcasecmp(s, "disabled")) return LLAMAFILE_GPU_DISABLED;
+    if (!strcasecmp(s, "disable")) return LLAMAFILE_GPU_DISABLE;
     if (!strcasecmp(s, "auto")) return LLAMAFILE_GPU_AUTO;
     if (!strcasecmp(s, "amd")) return LLAMAFILE_GPU_AMD;
     if (!strcasecmp(s, "apple")) return LLAMAFILE_GPU_APPLE;
     if (!strcasecmp(s, "nvidia")) return LLAMAFILE_GPU_NVIDIA;
 
     // Parse aliases.
+    if (!strcasecmp(s, "disabled")) return LLAMAFILE_GPU_DISABLE;
     if (!strcasecmp(s, "metal")) return LLAMAFILE_GPU_APPLE;
     if (!strcasecmp(s, "cublas")) return LLAMAFILE_GPU_NVIDIA;
     if (!strcasecmp(s, "rocblas")) return LLAMAFILE_GPU_AMD;

@@ -59,6 +59,8 @@
 #define cudaGetDevice hipGetDevice
 #define cudaGetDeviceCount hipGetDeviceCount
 #define cudaGetDeviceProperties hipGetDeviceProperties
+#define cudaDeviceGetAttribute hipDeviceGetAttribute
+#define cudaDevAttrMultiProcessorCount hipDeviceAttributeMultiprocessorCount
 #define cudaGetErrorString hipGetErrorString
 #define cudaGetLastError hipGetLastError
 #define cudaMalloc hipMalloc

@@ -404,7 +404,7 @@ flag passed. The GGML library will then be compiled and saved to
 .Pa ~/.llamafile/
 so the special process only needs to happen a single time.
 .It
-.Ar DISABLED :
+.Ar DISABLE :
 Never use GPU and instead use CPU inference. This setting is implied by
 .Fl ngl Ar 0 .
 .El
@@ -485,6 +485,8 @@ generating text. For example, the grammar:
 .Pp
 will force the LLM to only output yes or no before exiting. This is
 useful for shell scripts when the
+.Fl Fl silent-prompt
+flag is also supplied.
 .It Fl Fl grammar-file Ar FNAME
 File to read grammar from.
 .It Fl Fl prompt-cache Ar FNAME
@@ -512,8 +514,6 @@ Run in interactive mode.
 Run in interactive mode and wait for input right away.
 .It Fl ins , Fl Fl instruct
 Run in instruction mode (use with Alpaca models).
-.Fl Fl silent-prompt
-flag is also supplied.
 .It Fl r Ar PROMPT , Fl Fl reverse-prompt Ar PROMPT
 Halt generation at
 .Ar PROMPT
