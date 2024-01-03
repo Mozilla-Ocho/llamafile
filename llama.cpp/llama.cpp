@@ -734,12 +734,13 @@ static void ggml_graph_compute_helper(std::vector<uint8_t> & buf, ggml_cgraph * 
 //
 
 inline void * llama_host_malloc(size_t n) {
-    if (ggml_metal_supported()) {
-        return ggml_metal_host_malloc(n);
-    } else if (ggml_cublas_loaded()) {
-        return ggml_cuda_host_malloc(n);
-    } else {
-        return malloc(n);
+    switch (llamafile_gpu_supported()) {
+        case LLAMAFILE_GPU_APPLE:
+            return ggml_metal_host_malloc(n);
+        case LLAMAFILE_GPU_NVIDIA:
+            return ggml_cuda_host_malloc(n);
+        default:
+            return malloc(n);
     }
 #if GGML_USE_CPU_HBM
 #error fix me
@@ -747,12 +748,13 @@ inline void * llama_host_malloc(size_t n) {
 }
 
 inline void llama_host_free(void * ptr) {
-    if (ggml_metal_supported()) {
-        return ggml_metal_host_free(ptr);
-    } else if (ggml_cublas_loaded()) {
-        return ggml_cuda_host_free(ptr);
-    } else {
-        return free(ptr);
+    switch (llamafile_gpu_supported()) {
+        case LLAMAFILE_GPU_APPLE:
+            return ggml_metal_host_free(ptr);
+        case LLAMAFILE_GPU_NVIDIA:
+            return ggml_cuda_host_free(ptr);
+        default:
+            return free(ptr);
     }
 #if GGML_USE_CPU_HBM
 #error fix me
@@ -895,7 +897,7 @@ struct llama_mmap {
 
         // report terminal progress of loading weights off the disk into
         // the cpu. if we're using gpu inference, then don't even bother
-        if (!ggml_metal_supported() && !ggml_cublas_loaded()) {
+        if (!llamafile_gpu_supported()) {
             llamafile_schlep(addr, size);
         }
     }
@@ -1276,7 +1278,7 @@ struct llama_kv_cache {
             ggml_free(ctx);
         }
 
-        if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
             for (size_t i = 0; i < k_l.size(); ++i) {
                 ggml_cuda_free_data(k_l[i]);
                 ggml_cuda_free_data(v_l[i]);
@@ -1387,7 +1389,7 @@ struct llama_model {
             ggml_free(ctx);
         }
 
-        if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
             for (size_t i = 0; i < tensors_by_name.size(); ++i) {
                 ggml_cuda_free_data(tensors_by_name[i].second);
             }
@@ -1515,7 +1517,7 @@ static bool llama_kv_cache_init(
         ggml_format_name(v, "cache_v_l%d", i);
         cache.k_l.push_back(k);
         cache.v_l.push_back(v);
-        if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
         if (i >= i_gpu_start) {
             if (offload) {
                 ggml_cuda_assign_buffers_no_scratch(k);
@@ -2923,7 +2925,7 @@ static void llm_load_tensors(
     enum ggml_backend_type llama_backend_offload       = GGML_BACKEND_CPU;
     enum ggml_backend_type llama_backend_offload_split = GGML_BACKEND_CPU;
 
-    if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
         LLAMA_LOG_INFO("%s: using " GGML_CUDA_NAME " for GPU acceleration\n", __func__);
         ggml_cuda_set_main_device(main_gpu);
 
@@ -3645,7 +3647,7 @@ static void llm_load_tensors(
 
         LLAMA_LOG_INFO("%s: mem required  = %7.2f MiB\n", __func__, mem_required / 1024.0 / 1024.0);
 
-        if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
         const int n_gpu = std::min(n_gpu_layers, int(hparams.n_layer));
 
         LLAMA_LOG_INFO("%s: offloading %d repeating layers to GPU\n", __func__, n_gpu);
@@ -3668,7 +3670,7 @@ static void llm_load_tensors(
     }
 
     (void) tensor_split;
-    if (!ggml_metal_supported() && ggml_cublas_loaded())
+    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA)
     {
         ggml_cuda_set_tensor_split(tensor_split);
     }
@@ -5975,7 +5977,7 @@ static struct ggml_cgraph * llama_build_graph(
 
         // this is needed for compatibility with Metal for example
         static offload_func_t ggml_offload_gpu;
-        if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
             ggml_offload_gpu = ggml_cuda_assign_buffers_no_alloc;
         } else {
             ggml_offload_gpu = ggml_offload_nop;
@@ -6197,7 +6199,7 @@ static int llama_decode_internal(
         GGML_ASSERT(strcmp(embeddings->name, "result_norm") == 0);
     }
 
-    if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
     for (int i = 0; i < gf->n_leafs; i++) {
         ggml_tensor * node = gf->leafs[i];
         if (node->backend == GGML_BACKEND_GPU && node->extra == NULL) {
@@ -8916,7 +8918,7 @@ static int llama_apply_lora_from_file_internal(
             offload_func_t offload_func               = ggml_offload_nop;
             offload_func_t offload_func_force_inplace = ggml_offload_nop;
 
-            if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+            if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
             if (dest_t->backend == GGML_BACKEND_GPU || dest_t->backend == GGML_BACKEND_GPU_SPLIT) {
                 if (dest_t->type != GGML_TYPE_F16) {
                     ThrowRuntimeError(format(
@@ -9042,7 +9044,7 @@ struct llama_model_params llama_model_default_params() {
         /*.use_mlock                   =*/ false,
     };
 
-    if (ggml_metal_supported()) {
+    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
         result.n_gpu_layers = 1;
     }
 
@@ -9277,7 +9279,7 @@ struct llama_context * llama_new_context_with_model(
             llama_token token = llama_token_bos(&ctx->model); // not actually used by llama_build_graph, but required to choose between token and embedding inputs graph
             ggml_cgraph * gf = llama_build_graph(*ctx, llama_batch_get_one(&token, n_tokens, n_past, 0));
 
-            if (ggml_metal_supported()) {
+            if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
             if (model->n_gpu_layers > 0) {
                 ctx->ctx_metal = ggml_metal_init(1);
                 if (!ctx->ctx_metal) {
@@ -9303,7 +9305,7 @@ struct llama_context * llama_new_context_with_model(
             if (ctx->ctx_metal) {
                 //ggml_allocr_set_parse_seq(ctx->alloc, ggml_metal_get_concur_list(ctx->ctx_metal), ggml_metal_if_optimized(ctx->ctx_metal));
             }
-            if (!ggml_metal_supported() && ggml_cuda_supported()) {
+            if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
             ggml_cuda_set_scratch_size(alloc_size);
             LLAMA_LOG_INFO("%s: VRAM scratch buffer: %.2f MiB\n", __func__, alloc_size / 1024.0 / 1024.0);
 
@@ -9336,7 +9338,7 @@ struct llama_context * llama_new_context_with_model(
             }
         }
 
-        if (ggml_metal_supported()) {
+        if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
         if (model->n_gpu_layers > 0) {
             // this allocates all Metal resources and memory buffers
 

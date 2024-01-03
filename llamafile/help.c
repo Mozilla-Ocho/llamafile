@@ -33,7 +33,7 @@
  *     ascii combining characters (for bold and underscore text)
  * @noreturn
  */
-wontreturn void llamafile_help(const char *path) {
+void llamafile_help(const char *path) {
 
     // slurp rendered `man llamafile` page
     int fd;

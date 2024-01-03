@@ -121,6 +121,7 @@ int main(int argc, char ** argv) {
 
     if (has_argument(argc, argv, "--help")) {
         llamafile_help("/zip/llama.cpp/main/main.1.asc");
+        __builtin_unreachable();
     }
 
     if (!has_argument(argc, argv, "--cli") &&
@@ -162,7 +163,7 @@ int main(int argc, char ** argv) {
     console::init(params.simple_io, params.use_color);
     atexit([]() { console::cleanup(); });
 
-    if (!params.unsecure && !ggml_metal_supported() && !ggml_cuda_supported()) {
+    if (!params.unsecure && !llamafile_gpu_supported()) {
         // Enable pledge() security on Linux and OpenBSD.
         // - We do this *after* opening the log file for writing.
         // - We do this *before* loading any weights or graphdefs.

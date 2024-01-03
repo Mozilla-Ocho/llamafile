@@ -6,8 +6,6 @@
 extern "C" {
 #endif
 
-extern bool FLAG_nocompile;
-
 struct llamafile;
 struct llamafile *llamafile_open(const char *, const char *);
 void llamafile_close(struct llamafile *);
@@ -21,13 +19,23 @@ FILE *llamafile_fp(struct llamafile *);
 
 void llamafile_init(void);
 void llamafile_check_cpu(void);
-void llamafile_help(const char *) __attribute__((__noreturn__));
+void llamafile_help(const char *);
 const char *llamafile_get_tmp_dir(void);
 bool llamafile_extract(const char *, const char *);
 int llamafile_is_file_newer_than(const char *, const char *);
 void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 bool llamafile_launch_browser(const char *);
+
+#define LLAMAFILE_GPU_AUTO 0
+#define LLAMAFILE_GPU_AMD 1
+#define LLAMAFILE_GPU_APPLE 2
+#define LLAMAFILE_GPU_NVIDIA 3
+extern int FLAG_gpu;
+extern bool FLAG_tinyblas;
+extern bool FLAG_nocompile;
+int llamafile_gpu_supported(void);
+int llamafile_gpu_parse(const char *);
 
 #ifdef __cplusplus
 }

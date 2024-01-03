@@ -1979,9 +1979,6 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("                        Set a file to load a system prompt (initial prompt of all slots), this is useful for chat applications.\n");
     printf("  --mmproj MMPROJ_FILE  path to a multimodal projector file for LLaVA.\n");
     printf("  --log-disable         disables logging to a file.\n");
-    printf("  --nobrowser           Do not attempt to open a web browser tab at startup.\n");
-    printf("  --unsecure            disables pledge() sandboxing on Linux and OpenBSD\n");
-    printf("  --nocompile           disables runtime compilation of gpu support\n");
     printf("\n");
 }
 
@@ -2333,6 +2330,20 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         else if (arg == "--nocompile")
         {
             FLAG_nocompile = true;
+        }
+        else if (arg == "--gpu")
+        {
+            if (++i >= argc)
+            {
+                invalid_param = true;
+                break;
+            }
+            FLAG_gpu = llamafile_gpu_parse(argv[i]);
+            if (FLAG_gpu == -1)
+            {
+                fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
+                exit(1);
+            }
         }
         else
         {
@@ -3043,7 +3054,7 @@ int server_cli(int argc, char ** argv) {
         llamafile_launch_browser(url);
     }
 
-    if (!sparams.unsecure && !ggml_metal_supported() && !ggml_cuda_supported()) {
+    if (!sparams.unsecure && !llamafile_gpu_supported()) {
         // Enables pledge() security on Linux and OpenBSD.
         // - We do this *after* binding the server socket.
         // - We do this *after* opening the log file for writing.

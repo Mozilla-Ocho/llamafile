@@ -353,6 +353,44 @@ Force system to keep model in RAM rather than swapping or compressing.
 Do not memory-map model (slower load but may reduce pageouts if not using mlock).
 .It Fl Fl numa
 Attempt optimizations that help on some NUMA systems if run without this previously, it is recommended to drop the system page cache before using this. See https://github.com/ggerganov/llama.cpp/issues/1437.
+.It Fl Fl nocompile
+Never compile GPU support at runtime.
+.Pp
+If
+.Pa ~/.llamafile/ggml-cuda.dll
+already exists on the file system (or .so for UNIX and .dylib for
+MacOS), then it'll be linked as-is without question. Otherwise,
+.Nm
+will fall back to CPU inference.
+.It Fl Fl gpu Ar GPU
+Specifies which brand of GPU should be used. Valid choices are:
+.Pp
+.Bl -dash
+.It
+.Ar AUTO :
+Use any GPU if possible, otherwise fall back to CPU inference (default)
+.It
+.Ar AMD :
+Use AMD GPU. The AMD ROCm SDK must be installed and the HIP_PATH
+environment variable must be defined. If an AMD GPU could not be used
+for any reason, then a fatal error will be raised.
+.It
+.Ar APPLE :
+Use Apple Metal GPU. This is only available on MacOS ARM64. If Metal
+could not be used for any reason, then a fatal error will be raised.
+.It
+.Ar NVIDIA :
+Use NVIDIA GPU. If an NVIDIA GPU could not be used for any reason, a
+fatal error will be raised. On Windows, NVIDIA GPU support will use our
+tinyBLAS library, since it works on stock Windows installs. If both MSVC
+and CUDA are installed beforehand, and
+.Nm
+is run for the first time on the x64 command prompt, then llamafile will
+use NVIDIA's faster cuBLAS library instead. On Linux and other systems,
+the CUDA SDK must always be installed, so that native GPU support can be
+compiled on the fly.
+.El
+.Pp
 .It Fl ngl Ar N , Fl Fl n-gpu-layers Ar N
 Number of layers to store in VRAM.
 .It Fl ngld Ar N , Fl Fl n-gpu-layers-draft Ar N

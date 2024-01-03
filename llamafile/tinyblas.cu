@@ -31,8 +31,8 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
                                         const float *B, int ldb, float *Bs,
                                         void *C, int ldc, float *Cs) {
     assert(blockDim.x == BK);
-    static_assert(BK == BM);
-    static_assert(BN <= BM);
+    static_assert(BK == BM, "");
+    static_assert(BN <= BM, "");
     const int i = threadIdx.x;
     int j, l, blob;
     // within each block
@@ -157,8 +157,8 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
                                       void *C, cudaDataType_t Ctype, int ldc,
                                       float *Cs) {
     assert(blockDim.x == BK);
-    static_assert(BK == BM);
-    static_assert(BN <= BM);
+    static_assert(BK == BM, "");
+    static_assert(BN <= BM, "");
     const int i = threadIdx.x;
     int j, l, blob;
     // within each block
@@ -358,8 +358,8 @@ static __device__ void matmul_block2d_sb(int m, int n, int k, int x, int y,
                                       void *C, cudaDataType_t Ctype, int ldc,
                                       float *Cs) {
     assert(blockDim.x == BK);
-    static_assert(BK == BM);
-    static_assert(BN <= BM);
+    static_assert(BK == BM, "");
+    static_assert(BN <= BM, "");
     const int i = threadIdx.x;
     int j, l, blob;
     // within each block

@@ -224,6 +224,15 @@ static bool ImportMetalImpl(void) {
         return false;
     }
 
+    // Check if we're allowed to even try.
+    switch (FLAG_gpu) {
+        case LLAMAFILE_GPU_AUTO:
+        case LLAMAFILE_GPU_APPLE:
+            break;
+        default:
+            return false;
+    }
+
     // Get path of DSO.
     char dso[PATH_MAX];
     llamafile_get_app_dir(dso, PATH_MAX);

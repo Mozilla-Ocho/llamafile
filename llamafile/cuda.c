@@ -43,12 +43,17 @@ __static_yoink("llama.cpp/ggml-cuda.cu");
 __static_yoink("llama.cpp/ggml-backend.h");
 __static_yoink("llama.cpp/ggml-backend-impl.h");
 
-#define NVCC_LIBS "-lcublas"
+#define NVCC_LIBS (FLAG_tinyblas                \
+                   ? "-DIGNORE"                 \
+                   : "-lcublas")
 
 #define NVCC_FLAGS "--shared",                                          \
         "--forward-unknown-to-host-compiler",                           \
         "-use_fast_math",                                               \
-        "--compiler-options", "-fPIC -O3 -march=native -mtune=native",  \
+        "--compiler-options",                                           \
+        (!IsWindows()                                                   \
+         ? "-fPIC -O3 -march=native -mtune=native"                      \
+         : "/nologo /EHsc /O2 /GR /MT"),                                \
         "-DNDEBUG",                                                     \
         "-DGGML_BUILD=1",                                               \
         "-DGGML_SHARED=1",                                              \
@@ -56,7 +61,9 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
         "-DGGML_CUDA_MMV_Y=1",                                          \
         "-DK_QUANTS_PER_ITERATION=2",                                   \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
-        "-DGGML_USE_CUBLAS"
+        (FLAG_tinyblas                                                  \
+         ? "-DGGML_USE_TINYBLAS"                                        \
+         : "-DGGML_USE_CUBLAS")
 
 static const struct Source {
     const char *zip;
@@ -449,6 +456,16 @@ static bool LinkCudaDso(char *dso) {
 }
 
 static bool ImportCudaImpl(void) {
+
+    // Check if we're allowed to even try.
+    switch (FLAG_gpu) {
+        case LLAMAFILE_GPU_AUTO:
+        case LLAMAFILE_GPU_AMD:
+        case LLAMAFILE_GPU_NVIDIA:
+            break;
+        default:
+            return false;
+    }
 
     // No dynamic linking support on OpenBSD yet.
     if (IsOpenbsd()) {

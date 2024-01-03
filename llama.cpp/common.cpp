@@ -523,6 +523,18 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             params.unsecure = true;
         } else if (arg == "--nocompile") {
             FLAG_nocompile = true;
+        } else if (arg == "--tinyblas") {
+            FLAG_tinyblas = true;  // undocumented
+        } else if (arg == "--gpu") {
+            if (++i >= argc) {
+                invalid_param = true;
+                break;
+            }
+            FLAG_gpu = llamafile_gpu_parse(argv[i]);
+            if (FLAG_gpu == -1) {
+                fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
+                exit(1);
+            }
         } else if (arg == "-dkvc" || arg == "--dump-kv-cache") {
             params.dump_kv_cache = true;
         } else if (arg == "-nkvo" || arg == "--no-kv-offload") {
@@ -930,8 +942,6 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("                        draft model for speculative decoding (default: %s)\n", params.model.c_str());
     printf("  -ld LOGDIR, --logdir LOGDIR\n");
     printf("                        path under which to save YAML logs (no logging if unset)\n");
-    printf("  --unsecure            disables pledge() sandboxing on Linux and OpenBSD\n");
-    printf("  --nocompile           disables runtime compilation of gpu support\n");
     printf("  --override-kv KEY=TYPE:VALUE\n");
     printf("                        advanced option to override model metadata by key. may be specified multiple times.\n");
     printf("                        types: int, float, bool. example: --override-kv tokenizer.ggml.add_bos_token=bool:false\n");
