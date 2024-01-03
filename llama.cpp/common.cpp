@@ -521,6 +521,8 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             params.infill = true;
         } else if (arg == "--unsecure") {
             params.unsecure = true;
+        } else if (arg == "--nocompile") {
+            FLAG_nocompile = true;
         } else if (arg == "-dkvc" || arg == "--dump-kv-cache") {
             params.dump_kv_cache = true;
         } else if (arg == "-nkvo" || arg == "--no-kv-offload") {
@@ -929,6 +931,7 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  -ld LOGDIR, --logdir LOGDIR\n");
     printf("                        path under which to save YAML logs (no logging if unset)\n");
     printf("  --unsecure            disables pledge() sandboxing on Linux and OpenBSD\n");
+    printf("  --nocompile           disables runtime compilation of gpu support\n");
     printf("  --override-kv KEY=TYPE:VALUE\n");
     printf("                        advanced option to override model metadata by key. may be specified multiple times.\n");
     printf("                        types: int, float, bool. example: --override-kv tokenizer.ggml.add_bos_token=bool:false\n");

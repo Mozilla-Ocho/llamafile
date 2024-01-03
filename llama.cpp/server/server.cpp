@@ -1981,6 +1981,7 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("  --log-disable         disables logging to a file.\n");
     printf("  --nobrowser           Do not attempt to open a web browser tab at startup.\n");
     printf("  --unsecure            disables pledge() sandboxing on Linux and OpenBSD\n");
+    printf("  --nocompile           disables runtime compilation of gpu support\n");
     printf("\n");
 }
 
@@ -2328,6 +2329,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         }
         else if (arg == "--server")
         {
+        }
+        else if (arg == "--nocompile")
+        {
+            FLAG_nocompile = true;
         }
         else
         {

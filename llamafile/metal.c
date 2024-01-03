@@ -80,7 +80,12 @@ static const char *Dlerror(void) {
     return msg;
 }
 
-static bool ImportMetalImpl(void) {
+static bool FileExists(const char *path) {
+    struct stat st;
+    return !stat(path, &st);
+}
+
+static bool BuildMetal(const char *dso) {
 
     // extract source code
     char src[PATH_MAX];
@@ -109,9 +114,6 @@ static bool ImportMetalImpl(void) {
     }
 
     // determine if we need to build
-    char dso[PATH_MAX];
-    llamafile_get_app_dir(dso, PATH_MAX);
-    strlcat(dso, "ggml-metal.dylib", sizeof(dso));
     if (!needs_rebuild) {
         switch (llamafile_is_file_newer_than(src, dso)) {
             case -1:
@@ -180,6 +182,11 @@ static bool ImportMetalImpl(void) {
         }
     }
 
+    return true;
+}
+
+static bool LinkMetal(const char *dso) {
+
     // runtime link dynamic shared object
     void *lib;
     lib = cosmo_dlopen(dso, RTLD_LAZY);
@@ -210,8 +217,31 @@ static bool ImportMetalImpl(void) {
     return true;
 }
 
+static bool ImportMetalImpl(void) {
+
+    // Ensure this is MacOS ARM64.
+    if (!IsXnuSilicon()) {
+        return false;
+    }
+
+    // Get path of DSO.
+    char dso[PATH_MAX];
+    llamafile_get_app_dir(dso, PATH_MAX);
+    strlcat(dso, "ggml-metal.dylib", sizeof(dso));
+    if (FLAG_nocompile) {
+        return LinkMetal(dso);
+    }
+
+    // Build and link Metal support DSO if possible.
+    if (BuildMetal(dso)) {
+        return LinkMetal(dso);
+    } else {
+        return false;
+    }
+}
+
 static void ImportMetal(void) {
-    if (IsXnuSilicon() && ImportMetalImpl()) {
+    if (ImportMetalImpl()) {
         ggml_metal.supported = true;
         ggml_metal.backend_init();
         tinyprint(2, "Apple Metal GPU support successfully loaded\n", NULL);

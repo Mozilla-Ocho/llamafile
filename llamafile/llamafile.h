@@ -6,6 +6,8 @@
 extern "C" {
 #endif
 
+extern bool FLAG_nocompile;
+
 struct llamafile;
 struct llamafile *llamafile_open(const char *, const char *);
 void llamafile_close(struct llamafile *);
@@ -19,7 +21,7 @@ FILE *llamafile_fp(struct llamafile *);
 
 void llamafile_init(void);
 void llamafile_check_cpu(void);
-void llamafile_help(const char *) wontreturn;
+void llamafile_help(const char *) __attribute__((__noreturn__));
 const char *llamafile_get_tmp_dir(void);
 bool llamafile_extract(const char *, const char *);
 int llamafile_is_file_newer_than(const char *, const char *);

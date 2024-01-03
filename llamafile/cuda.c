@@ -307,7 +307,7 @@ static dontinline bool GetNvccArchFlag(char *nvcc, char flag[static 32]) {
     return true;
 }
 
-static bool CompileNativeCuda(char dso[static PATH_MAX]) {
+static bool CompileNativeCuda(const char *dso) {
 
     // extract source code
     char src[PATH_MAX];
@@ -336,9 +336,6 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
     }
 
     // check if dso is already compiled
-    llamafile_get_app_dir(dso, PATH_MAX);
-    strlcat(dso, "ggml-cuda.", PATH_MAX);
-    strlcat(dso, GetDsoExtension(), PATH_MAX);
     if (!needs_rebuild) {
         switch (llamafile_is_file_newer_than(src, dso)) {
             case -1:
@@ -390,7 +387,7 @@ static bool CompileNativeCuda(char dso[static PATH_MAX]) {
     return false;
 }
 
-static bool ExtractCudaDso(char dso[static PATH_MAX]) {
+static bool ExtractCudaDso(const char *dso) {
 
     // see if prebuilt dso is bundled in zip assets
     char zip[80];
@@ -400,11 +397,6 @@ static bool ExtractCudaDso(char dso[static PATH_MAX]) {
         tinyprint(2, "prebuilt binary ", zip, " not found\n", NULL);
         return false;
     }
-
-    // get destination path
-    llamafile_get_app_dir(dso, PATH_MAX);
-    strlcat(dso, "ggml-cuda.", PATH_MAX);
-    strlcat(dso, GetDsoExtension(), PATH_MAX);
 
     // extract prebuilt dso
     return llamafile_extract(zip, dso);
@@ -418,7 +410,7 @@ static bool LinkCudaDso(char *dso) {
     if (!lib) {
         tinyprint(2, Dlerror(), ": failed to load library\n", NULL);
         if ((IsLinux() || IsBsd()) && !commandv("cc", dso, PATH_MAX)) {
-            tinyprint(2, "you need to install a c compiler for gpu support\n", NULL);
+            tinyprint(2, "you need to install cc for gpu support\n", NULL);
         }
         return false;
     }
@@ -457,21 +449,29 @@ static bool LinkCudaDso(char *dso) {
 }
 
 static bool ImportCudaImpl(void) {
-    char path[PATH_MAX];
 
     // No dynamic linking support on OpenBSD yet.
     if (IsOpenbsd()) {
         return false;
     }
 
-    // try building cuda code from source using cublas
-    if (CompileNativeCuda(path)) {
-        return LinkCudaDso(path);
+    // Get path of CUDA support DSO.
+    char dso[PATH_MAX];
+    llamafile_get_app_dir(dso, PATH_MAX);
+    strlcat(dso, "ggml-cuda.", PATH_MAX);
+    strlcat(dso, GetDsoExtension(), PATH_MAX);
+    if (FLAG_nocompile) {
+        return LinkCudaDso(dso);
     }
 
-    // try using a prebuilt path
-    if (ExtractCudaDso(path)) {
-        return LinkCudaDso(path);
+    // Try building CUDA from source with mighty cuBLAS.
+    if (CompileNativeCuda(dso)) {
+        return LinkCudaDso(dso);
+    }
+
+    // Try extracting prebuilt tinyBLAS DSO from PKZIP.
+    if (ExtractCudaDso(dso)) {
+        return LinkCudaDso(dso);
     }
 
     // too bad
