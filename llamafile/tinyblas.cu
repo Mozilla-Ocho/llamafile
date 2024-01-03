@@ -32,6 +32,7 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
                                         void *C, int ldc, float *Cs) {
     assert(blockDim.x == BK);
     static_assert(BK == BM);
+    static_assert(BN <= BM);
     const int i = threadIdx.x;
     int j, l, blob;
     // within each block
@@ -70,10 +71,14 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
         __syncthreads();
     }
 
+    for (j = 0; j < BN;  ++j) {
+        As[(i*BN) + j] = Cs[j];
+    }
+
     // We write Cs out into C
-    if (x + i < m) {
-        for (j = 0; j < BN && y + j < n; ++j) {
-            *((float *)C + (x + i) + (y + j) * ldc) = Cs[j];
+    if (y + i < n && i < BN) {
+        for (j = 0; j < BM && x + j < m; ++j) {
+            *((float *)C + (x + j) + (y + i) * ldc) = As[j*BN + i];
         }
     }
     __syncthreads();
@@ -153,6 +158,7 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
                                       float *Cs) {
     assert(blockDim.x == BK);
     static_assert(BK == BM);
+    static_assert(BN <= BM);
     const int i = threadIdx.x;
     int j, l, blob;
     // within each block
@@ -190,15 +196,19 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
         __syncthreads();
     }
 
+    for (j = 0; j < BN;  ++j) {
+        As[(i*BN) + j] = Cs[j];
+    }
+
     // We write Cs out into C
-    if (x + i < m) {
+    if (y + i < n && i < BN) {
         if (Ctype == CUDA_R_16F) {
-            for (j = 0; j < BN && y + j < n; ++j) {
-                *((half *)C + (x + i) + (y + j) * ldc) = __float2half(Cs[j]);
+            for (j = 0; j < BM && x + j < m; ++j) {
+                *((half *)C + (x + j) + (y + i) * ldc) = __float2half(As[j*BN + i]);
             }
         } else {
-            for (j = 0; j < BN && y + j < n; ++j) {
-                *((float *)C + (x + i) + (y + j) * ldc) = Cs[j];
+            for (j = 0; j < BM && x + j < m; ++j) {
+                *((float *)C + (x + j) + (y + i) * ldc) = As[j*BN + i];
             }
         }
     }
@@ -349,6 +359,7 @@ static __device__ void matmul_block2d_sb(int m, int n, int k, int x, int y,
                                       float *Cs) {
     assert(blockDim.x == BK);
     static_assert(BK == BM);
+    static_assert(BN <= BM);
     const int i = threadIdx.x;
     int j, l, blob;
     // within each block
@@ -386,15 +397,19 @@ static __device__ void matmul_block2d_sb(int m, int n, int k, int x, int y,
         __syncthreads();
     }
 
+    for (j = 0; j < BN;  ++j) {
+        As[(i*BN) + j] = Cs[j];
+    }
+
     // We write Cs out into C
-    if (x + i < m) {
+    if (y + i < n && i < BN) {
         if (Ctype == CUDA_R_16F) {
-            for (j = 0; j < BN && y + j < n; ++j) {
-                *((half *)C + (x + i) + (y + j) * ldc) = __float2half(Cs[j]);
+            for (j = 0; j < BM && x + j < m; ++j) {
+                *((half *)C + (x + j) + (y + i) * ldc) = __float2half(As[j*BN + i]);
             }
         } else {
-            for (j = 0; j < BN && y + j < n; ++j) {
-                *((float *)C + (x + i) + (y + j) * ldc) = Cs[j];
+            for (j = 0; j < BM && x + j < m; ++j) {
+                *((float *)C + (x + j) + (y + i) * ldc) = As[j*BN + i];
             }
         }
     }
