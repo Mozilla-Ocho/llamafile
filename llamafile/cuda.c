@@ -701,7 +701,9 @@ static bool ImportCudaImpl(void) {
             strlcat(dso, "ggml-rocm.", PATH_MAX);
             strlcat(dso, GetDsoExtension(), PATH_MAX);
             if (FLAG_nocompile) {
-                if (LinkCudaDso(dso, library_path)) {
+                if ((FileExists(dso) ||
+                     ExtractCudaDso(dso, "ggml-rocm")) &&
+                    LinkCudaDso(dso, library_path)) {
                     return true;
                 } else {
                     goto TryNvidia;
@@ -776,7 +778,9 @@ TryNvidia:
             strlcat(dso, "ggml-cuda.", PATH_MAX);
             strlcat(dso, GetDsoExtension(), PATH_MAX);
             if (FLAG_nocompile) {
-                return LinkCudaDso(dso, library_path);
+                return ((FileExists(dso) ||
+                         ExtractCudaDso(dso, "ggml-cuda")) &&
+                        LinkCudaDso(dso, library_path));
             }
 
             // Check if DSO is already compiled.
