@@ -31,7 +31,7 @@
 #define die_fmt(fmt, ...) do { fprintf(stderr, "error: " fmt "\n", __VA_ARGS__); exit(1); } while (0)
 
 #define print_build_info() do {  \
-    LOG("%s: llamafile version " LLAMAFILE_VERSION_STRING "\n", __func__, LLAMA_BUILD_NUMBER, LLAMA_COMMIT);  \
+        tinylog(__func__, ": llamafile version " LLAMAFILE_VERSION_STRING "\n", NULL); \
 } while(0)
 
 // build info
