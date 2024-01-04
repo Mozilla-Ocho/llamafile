@@ -487,7 +487,7 @@ static bool CompileAmd(const char *clangxx, const char *dso, const char *src) {
                     "-DGGML_USE_HIPBLAS",
                     (FLAG_tinyblas
                      ? "-DGGML_USE_TINYBLAS"
-                     : "-DGGML_USE_CUBLAS"),
+                     : "-DIGNORE"),
                     "-DK_QUANTS_PER_ITERATION=2",
                     "-D_CRT_SECURE_NO_WARNINGS",
                     "-D_XOPEN_SOURCE=600",

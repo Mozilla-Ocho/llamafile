@@ -18,12 +18,12 @@
 #include "tinyblas.h"
 
 #define READ(A, trans, ld, i, j)                                        \
-    (((trans) == CUBLAS_OP_N) ? (A)[(i) + (j) * (ld)] : (A)[(j) + (i) * (ld)])
+    (((trans) == TINYBLAS_OP_N) ? (A)[(i) + (j) * (ld)] : (A)[(j) + (i) * (ld)])
 #define READ16(A, trans, ld, i, j) __half2float(READ(A, trans, ld, i, j))
 
-#define BM 64
-#define BN 32
-#define BK 64
+#define BM 48
+#define BN 12
+#define BK 48
 #define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
 
 static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
@@ -45,13 +45,13 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
                     As[(j * BK) + i] =
-                        READ(A, CUBLAS_OP_T, lda, x + j, blob + i);
+                        READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
                 for (; j < BM; ++j) As[(j * BK) + i] = 0;
                 // we copy into Bs from B
                 for (j = 0; j < BN && y + j < n; ++j) {
                     Bs[(i * BN) + j] =
-                        READ(B, CUBLAS_OP_N, ldb, blob + i, y + j);
+                        READ(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
                 }
                 for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
             } else {  // UNLIKELY
@@ -110,36 +110,36 @@ static __global__ void tinyblasS_entry(int m, int n, int k,
     }
 }
 
-static bool check_args(cublasOperation_t transa, cublasOperation_t transb,
+static bool check_args(tinyblasOperation_t transa, tinyblasOperation_t transb,
                        const void *pAlpha, cudaDataType_t Atype,
                        cudaDataType_t Btype, const void *pBeta,
-                       cudaDataType_t Ctype, cublasComputeType_t computeType) {
-    return (transa == CUBLAS_OP_T &&
-            transb == CUBLAS_OP_N &&
+                       cudaDataType_t Ctype, tinyblasComputeType_t computeType) {
+    return (transa == TINYBLAS_OP_T &&
+            transb == TINYBLAS_OP_N &&
             Atype == CUDA_R_16F &&
             Btype == CUDA_R_16F &&
             (Ctype == CUDA_R_16F ||
              Ctype == CUDA_R_32F) &&
-            ((computeType == CUBLAS_COMPUTE_16F &&
+            ((computeType == TINYBLAS_COMPUTE_16F &&
               __half2float(*(half *)pAlpha) == 1.0f &&
               __half2float(*(half *)pBeta) == 0.0f) ||
-             (computeType == CUBLAS_COMPUTE_32F &&
+             (computeType == TINYBLAS_COMPUTE_32F &&
               *(float *)pAlpha == 1.0f &&
               *(float *)pBeta == 0.0f)));
 }
 
-cublasStatus_t tinyblasSgemm(cudaStream_t stream,
-                             cublasOperation_t transa,
-                             cublasOperation_t transb,
-                             int m, int n, int k,
-                             const float *alpha,
-                             const float *A, int lda,
-                             const float *B, int ldb,
-                             const float *beta,
-                             float       *C, int ldc) {
-    if (transa != CUBLAS_OP_T || transb != CUBLAS_OP_N ||
+tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t stream,
+                               tinyblasOperation_t transa,
+                               tinyblasOperation_t transb,
+                               int m, int n, int k,
+                               const float *alpha,
+                               const float *A, int lda,
+                               const float *B, int ldb,
+                               const float *beta,
+                               float       *C, int ldc) {
+    if (transa != TINYBLAS_OP_T || transb != TINYBLAS_OP_N ||
         *alpha != 1.0f || *beta != 0.0f) {
-        return CUBLAS_STATUS_NOT_SUPPORTED;
+        return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
@@ -148,7 +148,7 @@ cublasStatus_t tinyblasSgemm(cudaStream_t stream,
     tinyblasS_entry<<<maxblocks, maxthreads,
                        (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
         m, n, k, A, lda, B, ldb, C, ldc);
-    return CUBLAS_STATUS_SUCCESS;
+    return TINYBLAS_STATUS_SUCCESS;
 }
 
 static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
@@ -171,13 +171,13 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
                     As[(j * BK) + i] =
-                        READ16(A, CUBLAS_OP_T, lda, x + j, blob + i);
+                        READ16(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
                 for (; j < BM; ++j) As[(j * BK) + i] = 0;
                 // we copy into Bs from B
                 for (j = 0; j < BN && y + j < n; ++j) {
                     Bs[(i * BN) + j] =
-                        READ16(B, CUBLAS_OP_N, ldb, blob + i, y + j);
+                        READ16(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
                 }
                 for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
             } else {  // UNLIKELY
@@ -242,28 +242,28 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
     }
 }
 
-cublasStatus_t tinyblasGemmEx(cudaStream_t stream,
-                              cublasOperation_t transa,
-                              cublasOperation_t transb,
-                              int m,
-                              int n,
-                              int k,
-                              const void    *alpha,
-                              const void     *A,
-                              cudaDataType_t Atype,
-                              int lda,
-                              const void     *B,
-                              cudaDataType_t Btype,
-                              int ldb,
-                              const void    *beta,
-                              void           *C,
-                              cudaDataType_t Ctype,
-                              int ldc,
-                              cublasComputeType_t computeType,
-                              cublasGemmAlgo_t algo) {
+tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t stream,
+                                tinyblasOperation_t transa,
+                                tinyblasOperation_t transb,
+                                int m,
+                                int n,
+                                int k,
+                                const void    *alpha,
+                                const void     *A,
+                                cudaDataType_t Atype,
+                                int lda,
+                                const void     *B,
+                                cudaDataType_t Btype,
+                                int ldb,
+                                const void    *beta,
+                                void           *C,
+                                cudaDataType_t Ctype,
+                                int ldc,
+                                tinyblasComputeType_t computeType,
+                                tinyblasGemmAlgo_t algo) {
     if (!check_args(transa, transb, alpha, Atype, Btype, beta, Ctype,
                     computeType)) {
-        return CUBLAS_STATUS_NOT_SUPPORTED;
+        return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
@@ -272,7 +272,7 @@ cublasStatus_t tinyblasGemmEx(cudaStream_t stream,
     tinyblasGE_entry<<<maxblocks, maxthreads,
                        (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
         m, n, k, (const half *)A, lda, (const half *)B, ldb, C, Ctype, ldc);
-    return CUBLAS_STATUS_SUCCESS;
+    return TINYBLAS_STATUS_SUCCESS;
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmbatchedex
@@ -309,29 +309,29 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
     }
 }
 
-cublasStatus_t tinyblasGemmBatchedEx(cudaStream_t stream,
-                                     cublasOperation_t transa,
-                                     cublasOperation_t transb,
-                                     int m,
-                                     int n,
-                                     int k,
-                                     const void    *alpha,
-                                     const void     *const Aarray[],
-                                     cudaDataType_t Atype,
-                                     int lda,
-                                     const void     *const Barray[],
-                                     cudaDataType_t Btype,
-                                     int ldb,
-                                     const void    *beta,
-                                     void           *const Carray[],
-                                     cudaDataType_t Ctype,
-                                     int ldc,
-                                     int batchCount,
-                                     cublasComputeType_t computeType,
-                                     cublasGemmAlgo_t algo) {
+tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t stream,
+                                       tinyblasOperation_t transa,
+                                       tinyblasOperation_t transb,
+                                       int m,
+                                       int n,
+                                       int k,
+                                       const void    *alpha,
+                                       const void     *const Aarray[],
+                                       cudaDataType_t Atype,
+                                       int lda,
+                                       const void     *const Barray[],
+                                       cudaDataType_t Btype,
+                                       int ldb,
+                                       const void    *beta,
+                                       void           *const Carray[],
+                                       cudaDataType_t Ctype,
+                                       int ldc,
+                                       int batchCount,
+                                       tinyblasComputeType_t computeType,
+                                       tinyblasGemmAlgo_t algo) {
     if (!check_args(transa, transb, alpha, Atype, Btype, beta, Ctype,
                     computeType)) {
-        return CUBLAS_STATUS_NOT_SUPPORTED;
+        return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
@@ -341,7 +341,7 @@ cublasStatus_t tinyblasGemmBatchedEx(cudaStream_t stream,
                        (sizeof(float) * (BM * BK + BK * BN)), stream>>>(
         m, n, k, (const half **)Aarray, lda, (const half **)Barray, ldb,
         Carray, Ctype, ldc, batchCount);
-    return CUBLAS_STATUS_SUCCESS;
+    return TINYBLAS_STATUS_SUCCESS;
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmstridedbatchedex
@@ -372,13 +372,13 @@ static __device__ void matmul_block2d_sb(int m, int n, int k, int x, int y,
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
                     As[(j * BK) + i] =
-                        READ16(A, CUBLAS_OP_T, lda, x + j, blob + i);
+                        READ16(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
                 for (; j < BM; ++j) As[(j * BK) + i] = 0;
                 // we copy into Bs from B
                 for (j = 0; j < BN && y + j < n; ++j) {
                     Bs[(i * BN) + j] =
-                        READ16(B, CUBLAS_OP_N, ldb, blob + i, y + j);
+                        READ16(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
                 }
                 for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
             } else {  // UNLIKELY
@@ -457,30 +457,30 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
     }
 }
 
-cublasStatus_t tinyblasGemmStridedBatchedEx(cudaStream_t stream,
-                                            cublasOperation_t transa,
-                                            cublasOperation_t transb,
-                                            int m, int n, int k,
-                                            const void    *pAlpha,
-                                            const void     *A,
-                                            cudaDataType_t Atype,
-                                            int lda,
-                                            long long int strideA,
-                                            const void     *B,
-                                            cudaDataType_t Btype,
-                                            int ldb,
-                                            long long int strideB,
-                                            const void    *pBeta,
-                                            void           *C,
-                                            cudaDataType_t Ctype,
-                                            int ldc,
-                                            long long int strideC,
-                                            int batchCount,
-                                            cublasComputeType_t computeType,
-                                            cublasGemmAlgo_t algo) {
+tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t stream,
+                                              tinyblasOperation_t transa,
+                                              tinyblasOperation_t transb,
+                                              int m, int n, int k,
+                                              const void    *pAlpha,
+                                              const void     *A,
+                                              cudaDataType_t Atype,
+                                              int lda,
+                                              long long int strideA,
+                                              const void     *B,
+                                              cudaDataType_t Btype,
+                                              int ldb,
+                                              long long int strideB,
+                                              const void    *pBeta,
+                                              void           *C,
+                                              cudaDataType_t Ctype,
+                                              int ldc,
+                                              long long int strideC,
+                                              int batchCount,
+                                              tinyblasComputeType_t computeType,
+                                              tinyblasGemmAlgo_t algo) {
     if (!check_args(transa, transb, pAlpha, Atype, Btype, pBeta, Ctype,
                     computeType)) {
-        return CUBLAS_STATUS_NOT_SUPPORTED;
+        return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
     // call the entry function
@@ -492,5 +492,5 @@ cublasStatus_t tinyblasGemmStridedBatchedEx(cudaStream_t stream,
         m, n, k, (const half*)A, lda, strideA, (const half*)B, ldb, strideB,
         C, Ctype, ldc, strideC, batchCount);
 
-    return CUBLAS_STATUS_SUCCESS;
+    return TINYBLAS_STATUS_SUCCESS;
 }
