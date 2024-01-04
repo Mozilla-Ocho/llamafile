@@ -130,7 +130,7 @@ static bool BuildMetal(const char *dso) {
 
     // compile dynamic shared object
     if (needs_rebuild) {
-        tinyprint(2, "building ggml-metal.dylib with xcode...\n", NULL);
+        tinylog("building ggml-metal.dylib with xcode...\n", NULL);
         int fd;
         char tmpdso[PATH_MAX];
         strlcpy(tmpdso, dso, sizeof(tmpdso));
@@ -162,7 +162,7 @@ static bool BuildMetal(const char *dso) {
         if (err) {
             perror("cc");
             if (err == ENOENT) {
-                tinyprint(2, "PLEASE RUN: xcode-select --install\n", NULL);
+                tinylog("PLEASE RUN: xcode-select --install\n", NULL);
             }
             return false;
         }
@@ -173,7 +173,7 @@ static bool BuildMetal(const char *dso) {
             }
         }
         if (ws) {
-            tinyprint(2, "compiler returned nonzero exit status\n", NULL);
+            tinylog("compiler returned nonzero exit status\n", NULL);
             return false;
         }
         if (rename(tmpdso, dso)) {
@@ -191,7 +191,7 @@ static bool LinkMetal(const char *dso) {
     void *lib;
     lib = cosmo_dlopen(dso, RTLD_LAZY);
     if (!lib) {
-        tinyprint(2, Dlerror(), ": failed to load library\n", NULL);
+        tinylog(Dlerror(), ": failed to load library\n", NULL);
         return false;
     }
 
@@ -209,7 +209,7 @@ static bool LinkMetal(const char *dso) {
     ok &= !!(ggml_metal.set_n_cb = cosmo_dlsym(lib, "ggml_metal_set_n_cb"));
     ok &= !!(ggml_metal.backend_init = cosmo_dlsym(lib, "ggml_backend_metal_init"));
     if (!ok) {
-        tinyprint(2, Dlerror(), ": not all symbols could be imported\n", NULL);
+        tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
     }
 
@@ -253,7 +253,7 @@ static void ImportMetal(void) {
     if (ImportMetalImpl()) {
         ggml_metal.supported = true;
         ggml_metal.backend_init();
-        tinyprint(2, "Apple Metal GPU support successfully loaded\n", NULL);
+        tinylog("Apple Metal GPU support successfully loaded\n", NULL);
     }
 }
 

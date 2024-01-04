@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include "llamafile.h"
+#include "llamafile/log.h"
 
 /**
  * Returns true if `zip` was successfully copied to `to`.
@@ -35,7 +36,7 @@
 bool llamafile_extract(const char *zip, const char *to) {
     int fdin, fdout;
     char stage[PATH_MAX];
-    tinyprint(2, "extracting ", zip, " to ", to, "\n", NULL);
+    tinylog("extracting ", zip, " to ", to, "\n", NULL);
     strlcpy(stage, to, sizeof(stage));
     if (strlcat(stage, ".XXXXXX", sizeof(stage)) >= sizeof(stage)) {
         errno = ENAMETOOLONG;

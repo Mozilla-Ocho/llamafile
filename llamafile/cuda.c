@@ -31,6 +31,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdatomic.h>
+#include "llamafile/log.h"
 #include "llama.cpp/ggml-cuda.h"
 
 __static_yoink("llama.cpp/ggml.h");
@@ -160,20 +161,20 @@ static bool CreateTempPath(const char *path, char tmp[static PATH_MAX]) {
 static void LogCommand(char *args[]) {
     for (int i = 0; args[i]; ++i) {
         if (i) {
-            tinyprint(2, " ", NULL);
+            tinylog(" ", NULL);
         }
         // this quoting should be close enough to correct to be
         // copy/pastable on both unix and windows command terms
         bool need_quotes = !!strchr(args[i], ' ');
         if (need_quotes) {
-            tinyprint(2, "\"", NULL);
+            tinylog("\"", NULL);
         }
-        tinyprint(2, args[i], NULL);
+        tinylog(args[i], NULL);
         if (need_quotes) {
-            tinyprint(2, "\"", NULL);
+            tinylog("\"", NULL);
         }
     }
-    tinyprint(2, "\n", NULL);
+    tinylog("\n", NULL);
 }
 
 static bool Compile(const char *src,
@@ -196,7 +197,7 @@ static bool Compile(const char *src,
         }
     }
     if (ws) {
-        tinyprint(2, args[0], ": returned nonzero exit status\n", NULL);
+        tinylog(args[0], ": returned nonzero exit status\n", NULL);
         unlink(tmp);
         return false;
     }
@@ -318,13 +319,13 @@ static bool GetAmdOffloadArchFlag(char out[static 64]) {
         }
     }
     if (ws) {
-        tinyprint(2, "error: hipInfo returned non-zero exit status\n", NULL);
+        tinylog("error: hipInfo returned non-zero exit status\n", NULL);
         return false;
     }
 
     // Serialize value for --offload-arch=LIST flag.
     if (!archs) {
-        tinyprint(2, "warning: hipInfo output didn't list any graphics cards\n", NULL);
+        tinylog("warning: hipInfo output didn't list any graphics cards\n", NULL);
         return false;
     }
     bool gotsome = false;
@@ -396,7 +397,7 @@ static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
     // nvidia-smi in cuda 11.5+ can do this but (1) it takes longer to
     // run than compiling / running this script and (2) the nvidia-smi
     // command isn't available on Jetson devices.
-    tinyprint(2, "building nvidia compute capability detector...\n", NULL);
+    tinylog("building nvidia compute capability detector...\n", NULL);
     if (!Compile(src, tmp, exe, (char *[]){(char *)nvcc, "-o", tmp, src, 0})) {
         return false;
     }
@@ -434,14 +435,14 @@ static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
         }
     }
     if (ws) {
-        tinyprint(2, "error: compute capability detector returned nonzero exit status\n", NULL);
+        tinylog("error: compute capability detector returned nonzero exit status\n", NULL);
         return false;
     }
 
     // parse output of detector
     char *endptr;
     if (!*ibuf || !strtol(ibuf, &endptr, 10) || *endptr) {
-        tinyprint(2, "error: bad compute capability detector output\n", NULL);
+        tinylog("error: bad compute capability detector output\n", NULL);
         return false;
     }
 
@@ -528,7 +529,7 @@ static bool CompileNvidia(const char *nvcc, const char *dso, const char *src) {
     }
 
     // try building dso with host nvidia microarchitecture
-    tinyprint(2, "building ggml-cuda with nvcc -arch=native...\n", NULL);
+    tinylog("building ggml-cuda with nvcc -arch=native...\n", NULL);
     if (Compile(src, tmpdso, dso, (char *[]){
                 (char *)nvcc, "-arch=native", NVCC_FLAGS, "-o", tmpdso,
                 (char *)src, NVCC_LIBS, NULL})) {
@@ -540,7 +541,7 @@ static bool CompileNvidia(const char *nvcc, const char *dso, const char *src) {
     if (!GetNvccArchFlag(nvcc, archflag)) {
         return false;
     }
-    tinyprint(2, "building ggml-cuda with nvcc ", archflag, "...\n", NULL);
+    tinylog("building ggml-cuda with nvcc ", archflag, "...\n", NULL);
     if (Compile(src, tmpdso, dso, (char *[]){
                 (char *)nvcc, archflag, NVCC_FLAGS, "-o", tmpdso,
                 (char *)src, NVCC_LIBS, NULL})) {
@@ -560,7 +561,7 @@ static bool ExtractCudaDso(const char *dso, const char *name) {
     strlcat(zip, ".", sizeof(zip));
     strlcat(zip, GetDsoExtension(), sizeof(zip));
     if (!FileExists(zip)) {
-        tinyprint(2, "prebuilt binary ", zip, " not found\n", NULL);
+        tinylog("prebuilt binary ", zip, " not found\n", NULL);
         return false;
     }
 
@@ -579,16 +580,16 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
 
     // runtime link dynamic shared object
     void *lib;
-    tinyprint(2, "dynamically linking ", dso, "\n", NULL);
+    tinylog("dynamically linking ", dso, "\n", NULL);
     lib = cosmo_dlopen(dso, RTLD_LAZY);
     if (dir) {
         chdir(cwd);
     }
     if (!lib) {
         char cc[PATH_MAX];
-        tinyprint(2, Dlerror(), ": failed to load library\n", NULL);
+        tinylog(Dlerror(), ": failed to load library\n", NULL);
         if ((IsLinux() || IsBsd()) && !commandv("cc", cc, PATH_MAX)) {
-            tinyprint(2, "you need to install cc for gpu support\n", NULL);
+            tinylog("you need to install cc for gpu support\n", NULL);
         }
         return false;
     }
@@ -618,7 +619,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.reg_cuda_init = cosmo_dlsym(lib, "ggml_backend_reg_cuda_init"));
     ok &= !!(ggml_cuda.buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_buffer_type"));
     if (!ok) {
-        tinyprint(2, Dlerror(), ": not all symbols could be imported\n", NULL);
+        tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
     }
 
@@ -643,7 +644,7 @@ static bool ImportCudaImpl(void) {
         default:
             return false;
     }
-    tinyprint(2, "initializing gpu module...\n", NULL);
+    tinylog("initializing gpu module...\n", NULL);
 
     // extract source code
     char src[PATH_MAX];
@@ -738,7 +739,7 @@ static bool ImportCudaImpl(void) {
                     }
                 }
             } else {
-                tinyprint(2, "note: won't compile AMD GPU support because $HIP_PATH/bin/clang++ is missing\n", NULL);
+                tinylog("note: won't compile AMD GPU support because $HIP_PATH/bin/clang++ is missing\n", NULL);
             }
 
             // Try extracting prebuilt tinyBLAS DSO from PKZIP.
@@ -818,7 +819,7 @@ TryNvidia:
 
 static void ImportCuda(void) {
     if (!ggml_cuda.disabled && ImportCudaImpl()) {
-        tinyprint(2, "GPU support successfully linked and loaded\n", NULL);
+        tinylog("GPU support successfully linked and loaded\n", NULL);
         ggml_cuda.supported = true;
     }
 }

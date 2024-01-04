@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <cinttypes>
 
+#include "llamafile/log.h"
+
 // --------------------------------
 //
 // Basic usage:
@@ -430,6 +432,7 @@ inline FILE *log_handler2_impl(bool change = false, LogTriState append = LogTriS
 // INTERNAL, DO NOT USE
 inline FILE *log_disable_impl()
 {
+    FLAG_log_disable = true;
     return log_handler1_impl(true, LogTriStateSame, LogTriStateTrue);
 }
 
@@ -439,6 +442,7 @@ inline FILE *log_disable_impl()
 // INTERNAL, DO NOT USE
 inline FILE *log_enable_impl()
 {
+    FLAG_log_disable = false;
     return log_handler1_impl(true, LogTriStateSame, LogTriStateFalse);
 }
 

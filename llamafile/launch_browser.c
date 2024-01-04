@@ -22,12 +22,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
+#include "llamafile/log.h"
 
 static void report_failure(const char *url,
                            const char *cmd,
                            const char *reason) {
-    tinyprint(2, "failed to open ", url, " in a browser tab using ", cmd,
-              ": ", reason, "\n", NULL);
+    tinylog("failed to open ", url, " in a browser tab using ", cmd,
+            ": ", reason, "\n", NULL);
 }
 
 /**

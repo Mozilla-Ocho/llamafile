@@ -12,6 +12,7 @@
 #include "llama.cpp/ggml-cuda.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/version.h"
+#include "llamafile/log.h"
 
 #define CPPHTTPLIB_NO_EXCEPTIONS 1
 #define CPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH 1048576
@@ -2313,6 +2314,7 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         }
         else if (arg == "--log-disable")
         {
+            FLAG_log_disable = true;
             log_set_target(stdout);
             LOG_INFO("logging to file is disabled.", {});
         }
@@ -3086,7 +3088,7 @@ int server_cli(int argc, char ** argv) {
         }
     }
 
-    tinyprint(2, "loading weights...\n", NULL);
+    tinylog("loading weights...\n", NULL);
 
     LOG_INFO("HTTP server listening", {
                                           {"hostname", sparams.hostname},

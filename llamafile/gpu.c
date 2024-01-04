@@ -1,7 +1,7 @@
 // -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
-// Copyright 2023 Mozilla Foundation
+// Copyright 2024 Mozilla Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
