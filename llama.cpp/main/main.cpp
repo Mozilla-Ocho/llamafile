@@ -124,6 +124,13 @@ int main(int argc, char ** argv) {
         __builtin_unreachable();
     }
 
+    if (!IsXnuSilicon() &&
+        (!has_argument(argc, argv, "-ngl") &&
+         !has_argument(argc, argv, "--gpu-layers") &&
+         !has_argument(argc, argv, "--n-gpu-layers"))) {
+        FLAG_gpu = LLAMAFILE_GPU_DISABLE;
+    }
+
     if (!has_argument(argc, argv, "--cli") &&
         (has_argument(argc, argv, "--server") ||
          (!has_argument(argc, argv, "-p") &&

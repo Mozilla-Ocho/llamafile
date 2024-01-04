@@ -562,7 +562,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             params.n_gpu_layers = std::stoi(argv[i]);
-            if (params.n_gpu_layers == 0) {
+            if (params.n_gpu_layers <= 0) {
                 FLAG_gpu = LLAMAFILE_GPU_DISABLE;
             }
         } else if (arg == "--gpu-layers-draft" || arg == "-ngld" || arg == "--n-gpu-layers-draft") {
