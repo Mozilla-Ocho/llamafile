@@ -19,9 +19,6 @@ static ggml_backend_buffer_t ggml_backend_buffer_init(
         struct ggml_backend_buffer_i           iface,
                ggml_backend_buffer_context_t   context,
                size_t                          size) {
-    // TODO(jart): this malloc() looks problematic
-    //             what does this backend framework do?
-    fprintf(stderr, "WARNING: using untested foreign malloc due to ggml backend\n");
     ggml_backend_buffer_t buffer = malloc(sizeof(struct ggml_backend_buffer));
     (*buffer) = (struct ggml_backend_buffer) {
         /* .interface = */ iface,

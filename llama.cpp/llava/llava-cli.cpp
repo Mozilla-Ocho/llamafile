@@ -126,7 +126,7 @@ static struct llava_image_embed * load_image(llava_context * ctx_llava, gpt_para
     auto prompt = params->prompt;
     if (prompt_contains_image(prompt)) {
         if (!params->image.empty()) {
-            fprintf(stderr, "using base64 encoded image instead of command line image path\n");
+            tinylogf("using base64 encoded image instead of command line image path\n");
         }
         embed = llava_image_embed_make_with_prompt_base64(ctx_llava->ctx_clip, params->n_threads, prompt);
         if (!embed) {
@@ -158,7 +158,7 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
 
     // generate the response
 
-    fprintf(stderr, "\n");
+    tinylogf("\n");
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(params->sparams);
 

@@ -17,8 +17,11 @@
 #include <vector>
 
 #include "clip.h"
+#include "llamafile/log.h"
 #include "llama.cpp/ggml.h"
 #include "llama.cpp/runtime.h"
+#include "llama.cpp/ggml-cuda.h"
+#include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/ggml-alloc.h"
 #include "llama.cpp/ggml-backend.h"
 
@@ -494,15 +497,15 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         const int idx_name = gguf_find_key(ctx, KEY_NAME);
         if (idx_name != -1) { // make name optional temporarily as some of the uploaded models missing it due to a bug
             const std::string name = gguf_get_val_str(ctx, idx_name);
-            fprintf(stderr, "%s: model name:   %s\n", __func__, name.c_str());
+            tinylogf("%s: model name:   %s\n", __func__, name.c_str());
         }
-        fprintf(stderr, "%s: description:  %s\n", __func__, description.c_str());
-        fprintf(stderr, "%s: GGUF version: %d\n", __func__, gguf_get_version(ctx));
-        fprintf(stderr, "%s: alignment:    %zu\n", __func__, gguf_get_alignment(ctx));
-        fprintf(stderr, "%s: n_tensors:    %d\n", __func__, n_tensors);
-        fprintf(stderr, "%s: n_kv:         %d\n", __func__, n_kv);
-        fprintf(stderr, "%s: ftype:        %s\n", __func__, ftype_str.c_str());
-        fprintf(stderr, "\n");
+        tinylogf("%s: description:  %s\n", __func__, description.c_str());
+        tinylogf("%s: GGUF version: %d\n", __func__, gguf_get_version(ctx));
+        tinylogf("%s: alignment:    %zu\n", __func__, gguf_get_alignment(ctx));
+        tinylogf("%s: n_tensors:    %d\n", __func__, n_tensors);
+        tinylogf("%s: n_kv:         %d\n", __func__, n_kv);
+        tinylogf("%s: ftype:        %s\n", __func__, ftype_str.c_str());
+        tinylogf("\n");
     }
     const int n_tensors = gguf_get_n_tensors(ctx);
     // kv
@@ -512,9 +515,9 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         for (int i = 0; i < n_kv; ++i) {
             const char * key = gguf_get_key(ctx, i);
 
-            fprintf(stderr, "%s: kv[%d]: key = %s\n", __func__, i, key);
+            tinylogf("%s: kv[%d]: key = %s\n", __func__, i, key);
         }
-        fprintf(stderr, "\n");
+        tinylogf("\n");
     }
 
     // data
@@ -527,7 +530,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             size_t tensor_size = ggml_nbytes(cur);
             buffer_size += tensor_size;
             if (verbosity >= 3) {
-                fprintf(stderr, "%s: tensor[%d]: n_dims = %d, name = %s, tensor_size=%zu, offset=%zu\n", __func__, i,
+                tinylogf("%s: tensor[%d]: n_dims = %d, name = %s, tensor_size=%zu, offset=%zu\n", __func__, i,
                        ggml_n_dims(cur), cur->name, tensor_size, offset);
             }
         }
@@ -537,21 +540,18 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
     clip_ctx * new_clip = new clip_ctx;
 
-#if 0
-    // TODO(jart): destroy this backend framework
     if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
-    new_clip->backend = ggml_backend_cuda_init(0);
-    fprintf(stderr, "%s: CLIP using CUDA backend\n", __func__);
+        new_clip->backend = ggml_backend_cuda_init(0);
+        tinylogf("%s: CLIP using CUDA backend\n", __func__);
     }
     if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
-    new_clip->backend = ggml_backend_metal_init();
-    fprintf(stderr, "%s: CLIP using Metal backend\n", __func__);
+        new_clip->backend = ggml_backend_metal_init();
+        tinylogf("%s: CLIP using Metal backend\n", __func__);
     }
-#endif
 
     if (!new_clip->backend) {
         new_clip->backend = ggml_backend_cpu_init();
-        fprintf(stderr, "%s: CLIP using CPU backend\n", __func__);
+        tinylogf("%s: CLIP using CPU backend\n", __func__);
     }
 
     // model size and capabilities
@@ -575,15 +575,15 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         new_clip->use_gelu = gguf_get_val_bool(ctx, idx);
 
         if (verbosity >= 1) {
-            fprintf(stderr, "%s: text_encoder:   %d\n", __func__, new_clip->has_text_encoder);
-            fprintf(stderr, "%s: vision_encoder: %d\n", __func__, new_clip->has_vision_encoder);
-            fprintf(stderr, "%s: llava_projector:  %d\n", __func__, new_clip->has_llava_projector);
-            fprintf(stderr, "%s: model size:     %.2f MB\n", __func__, buffer_size / 1024.0 / 1024.0);
-            fprintf(stderr, "%s: metadata size:  %.2f MB\n", __func__, ggml_get_mem_size(meta) / 1024.0 / 1024.0);
+            tinylogf("%s: text_encoder:   %d\n", __func__, new_clip->has_text_encoder);
+            tinylogf("%s: vision_encoder: %d\n", __func__, new_clip->has_vision_encoder);
+            tinylogf("%s: llava_projector:  %d\n", __func__, new_clip->has_llava_projector);
+            tinylogf("%s: model size:     %.2f MB\n", __func__, buffer_size / 1024.0 / 1024.0);
+            tinylogf("%s: metadata size:  %.2f MB\n", __func__, ggml_get_mem_size(meta) / 1024.0 / 1024.0);
         }
     }
 
-    fprintf(stderr, "%s: params backend buffer size = % 6.2f MB (%i tensors)\n", __func__, buffer_size / (1024.0 * 1024.0), n_tensors);
+    tinylogf("%s: params backend buffer size = % 6.2f MB (%i tensors)\n", __func__, buffer_size / (1024.0 * 1024.0), n_tensors);
 
     // load tensors
     {
@@ -596,7 +596,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
         new_clip->ctx_data = ggml_init(params);
         if (!new_clip->ctx_data) {
-            fprintf(stderr, "%s: ggml_init() failed\n", __func__);
+            tinylogf("%s: ggml_init() failed\n", __func__);
             clip_free(new_clip);
             return nullptr;
         }
@@ -667,14 +667,14 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         }
 
         if (verbosity >= 2) {
-            fprintf(stderr, "\n%s: vision model hparams\n", __func__);
-            fprintf(stderr, "image_size         %d\n", hparams.image_size);
-            fprintf(stderr, "patch_size         %d\n", hparams.patch_size);
-            fprintf(stderr, "v_hidden_size      %d\n", hparams.hidden_size);
-            fprintf(stderr, "v_n_intermediate   %d\n", hparams.n_intermediate);
-            fprintf(stderr, "v_projection_dim   %d\n", hparams.projection_dim);
-            fprintf(stderr, "v_n_head           %d\n", hparams.n_head);
-            fprintf(stderr, "v_n_layer          %d\n", hparams.n_layer);
+            tinylogf("\n%s: vision model hparams\n", __func__);
+            tinylogf("image_size         %d\n", hparams.image_size);
+            tinylogf("patch_size         %d\n", hparams.patch_size);
+            tinylogf("v_hidden_size      %d\n", hparams.hidden_size);
+            tinylogf("v_n_intermediate   %d\n", hparams.n_intermediate);
+            tinylogf("v_projection_dim   %d\n", hparams.projection_dim);
+            tinylogf("v_n_head           %d\n", hparams.n_head);
+            tinylogf("v_n_layer          %d\n", hparams.n_layer);
         }
 
         vision_model.patch_embeddings    = get_tensor(new_clip->ctx_data, TN_PATCH_EMBD);
@@ -725,7 +725,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         new_clip->compute_buffer = ggml_backend_alloc_buffer(new_clip->backend, compute_memory_buffer_size);
         new_clip->compute_alloc = ggml_allocr_new_from_buffer(new_clip->compute_buffer);
 
-        fprintf(stderr, "%s: compute allocated memory: %.2f MB\n", __func__, compute_memory_buffer_size /1024.0/1024.0);
+        tinylogf("%s: compute allocated memory: %.2f MB\n", __func__, compute_memory_buffer_size /1024.0/1024.0);
     }
 
     return new_clip;
@@ -1088,7 +1088,7 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
             fout.put(0);
         }
 
-        fprintf(stderr, "%s: n_dims = %d | quantize=%d | size = %f MB -> %f MB\n", name.c_str(), ggml_n_dims(cur), quantize,
+        tinylogf("%s: n_dims = %d | quantize=%d | size = %f MB -> %f MB\n", name.c_str(), ggml_n_dims(cur), quantize,
                 orig_size / 1024.0 / 1024.0, new_size / 1024.0 / 1024.0);
     }
 
@@ -1104,19 +1104,19 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
     gguf_free(ctx_out);
 
     {
-        fprintf(stderr, "%s: original  size = %8.2f MB\n", __func__, total_size_org / 1024.0 / 1024.0);
-        fprintf(stderr, "%s: quantized size = %8.2f MB\n", __func__, total_size_new / 1024.0 / 1024.0);
+        tinylogf("%s: original  size = %8.2f MB\n", __func__, total_size_org / 1024.0 / 1024.0);
+        tinylogf("%s: quantized size = %8.2f MB\n", __func__, total_size_new / 1024.0 / 1024.0);
 
         int64_t sum_all = 0;
         for (size_t i = 0; i < hist_all.size(); ++i) {
             sum_all += hist_all[i];
         }
 
-        fprintf(stderr, "%s: hist: ", __func__);
+        tinylogf("%s: hist: ", __func__);
         for (size_t i = 0; i < hist_all.size(); ++i) {
-            fprintf(stderr, "%5.3f ", hist_all[i] / (float)sum_all);
+            tinylogf("%5.3f ", hist_all[i] / (float)sum_all);
         }
-        fprintf(stderr, "\n");
+        tinylogf("\n");
     }
 
     return true;

@@ -118,6 +118,7 @@ static struct Cuda {
     typeof(ggml_backend_cuda_buffer_type) *buffer_type;
     typeof(ggml_backend_reg_cuda_init) *backend_reg_init;
     typeof(ggml_backend_cuda_host_buffer_type) *backend_host_buffer_type;
+    typeof(ggml_backend_cuda_init) *backend_init;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -622,6 +623,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.get_device_description = cosmo_dlsym(lib, "ggml_cuda_get_device_description"));
     ok &= !!(ggml_cuda.backend_reg_init = cosmo_dlsym(lib, "ggml_backend_reg_cuda_init"));
     ok &= !!(ggml_cuda.backend_host_buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_host_buffer_type"));
+    ok &= !!(ggml_cuda.backend_init = cosmo_dlsym(lib, "ggml_backend_cuda_init"));
     if (!ok) {
         tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
@@ -967,4 +969,9 @@ int ggml_backend_cuda_reg_devices(void) {
         ggml_backend_register(name, ggml_backend_reg_cuda_init, ggml_backend_cuda_buffer_type(i), (void *) (intptr_t) i);
     }
     return device_count;
+}
+
+ggml_backend_t ggml_backend_cuda_init(int device) {
+    if (!ggml_cuda_supported()) return 0;
+    return ggml_cuda.backend_init(device);
 }

@@ -14,6 +14,8 @@
 #include "ggml-metal.h"
 #include "ggml-cuda.h"
 
+#include "llamafile/log.h"
+
 #if defined(GGML_USE_CLBLAST)
 #  include "ggml-opencl.h"
 #endif
@@ -10823,6 +10825,7 @@ static void llama_log_internal_v(ggml_log_level level, const char * format, va_l
 
 static void llama_log_internal(ggml_log_level level, const char * format, ...) {
     va_list args;
+    if (FLAG_log_disable) return;
     va_start(args, format);
     llama_log_internal_v(level, format, args);
     va_end(args);

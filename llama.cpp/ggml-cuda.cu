@@ -403,7 +403,6 @@ static ggml_backend_buffer_t ggml_backend_buffer_init(
         struct ggml_backend_buffer_i           iface,
                ggml_backend_buffer_context_t   context,
                size_t                          size) {
-    fprintf(stderr, "WARNING: using untested foreign malloc due to ggml backend\n");
     ggml_backend_buffer_t buffer = (ggml_backend_buffer_t)malloc(sizeof(struct ggml_backend_buffer));
     memset(buffer, 0, sizeof(*buffer));
     buffer->iface = iface;
@@ -512,7 +511,6 @@ static struct ggml_backend_buffer_i cpu_backend_buffer_i = {
 
 static ggml_backend_buffer_t ggml_backend_cpu_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     size += TENSOR_ALIGNMENT;   // malloc may return an address that is not aligned
-    fprintf(stderr, "WARNING: using untested foreign malloc due to ggml backend\n");
     void * data = malloc(size); // TODO: maybe use GGML_ALIGNED_MALLOC?
     return ggml_backend_buffer_init(buft, cpu_backend_buffer_i, data, size);
 }
