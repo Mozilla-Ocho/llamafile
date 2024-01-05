@@ -17,6 +17,14 @@
 #define CPPHTTPLIB_NO_EXCEPTIONS 1
 #define CPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH 1048576
 
+#define JSON_THROW_USER(exception)                                      \
+    {std::clog << program_invocation_name                               \
+               << ": error in " << __FILE__ << ":" << __LINE__          \
+               << " (function " << __FUNCTION__ << ")" << std::endl     \
+               << (exception).what() << std::endl                       \
+               << "Server terminated." << std::endl;                    \
+        std::exit(1);}
+
 #include "httplib.h"
 #include "json.h"
 
