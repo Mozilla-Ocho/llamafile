@@ -8,8 +8,12 @@
 .Nm
 .Op flags...
 .Sh DESCRIPTION
+Perplexity is one of the most common metrics for evaluating language
+models. The
 .Nm
-can be used to gauge the quality of an LLM implementation.
+program can be used to gauge the quality of an LLM implementation. It is
+defined as the exponentiated average negative log-likelihood of a
+sequence, calculated with exponent base e.
 .Sh OPTIONS
 The following options are available:
 .Bl -tag -width indent
@@ -23,5 +27,16 @@ Raw data input file.
 Number of threads to use during generation (default: nproc/2)
 .It Fl s Ar SEED , Fl Fl seed Ar SEED
 Random Number Generator (RNG) seed (default: -1, use random seed for < 0)
+.Sh EXAMPLE
+One dataset commonly used in the llama.cpp community for measuring
+perplexity is wikitext-2-raw. To use it when testing how well both your
+model and llamafile are performing you could run the following:
+.Bd -literal
+wget https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.test.raw
+llamafile-perplexity -m model.gguf -f wiki.test.raw -s 31337
+.Pp
+This can sometimes lead to surprising conclusions, like how Q5 weights
+might be better for a particular model than Q6.
+.Ed
 .Sh SEE ALSO
 .Xr llamafile 1
