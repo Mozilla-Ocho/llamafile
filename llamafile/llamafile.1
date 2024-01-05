@@ -682,10 +682,10 @@ llamafile --temp 0 \[rs]
     -m llava-v1.5-7b-Q4_K.gguf \[rs]
     --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \[rs]
     --grammar 'root ::= [a-z]+ (" " [a-z]+)+' \[rs]
-    -e -p '### User: What do you see?\[rs]n### Assistant: ' \[rs]
+    -e -p '### User: The image has...\[rs]n### Assistant: ' \[rs]
     --silent-prompt 2>/dev/null |
   sed -e's/ /_/g' -e's/$/.jpg/'
-a_baby_monkey_on_the_back_of_a_mother.jpg
+three_baby_lemurs_on_the_back_of_an_adult_lemur.jpg
 .Ed
 .Pp
 Here's an example of how to make an API request to the OpenAI API
