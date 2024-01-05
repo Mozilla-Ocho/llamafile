@@ -13,7 +13,7 @@
 #include "llama.cpp/base64.h"
 
 static bool encode_image_with_clip(clip_ctx * ctx_clip, int n_threads, const clip_image_u8 * img, float * image_embd, int * n_img_pos) {
-    clip_image_f32 * img_res = make_clip_image_f32();
+    clip_image_f32 * img_res = clip_image_f32_init();
     if (!clip_image_preprocess(ctx_clip, img, img_res, /*pad2square =*/ true)) {
         fprintf(stderr, "%s: unable to preprocess image\n", __func__);
         clip_image_f32_free(img_res);
@@ -34,7 +34,7 @@ static bool encode_image_with_clip(clip_ctx * ctx_clip, int n_threads, const cli
     const int64_t t_img_enc_end_us = ggml_time_us();
     float t_img_enc_ms = (t_img_enc_end_us - t_img_enc_start_us) / 1000.0;
 
-    fprintf(stderr, "%s: image encoded in %8.2f ms by CLIP (%8.2f ms per image patch)\n", __func__, t_img_enc_ms, t_img_enc_ms / *n_img_pos);
+    printf("\n%s: image encoded in %8.2f ms by CLIP (%8.2f ms per image patch)\n", __func__, t_img_enc_ms, t_img_enc_ms / *n_img_pos);
 
     return true;
 }
@@ -44,7 +44,7 @@ bool llava_validate_embed_size(const llama_context * ctx_llama, const clip_ctx *
     int n_llama_embd = llama_n_embd(llama_get_model(ctx_llama));
     auto n_image_embd = clip_n_mmproj_embd(ctx_clip);
     if (n_image_embd != n_llama_embd) {
-        fprintf(stderr, "%s: embedding dim of the multimodal projector (%d) is not equal to that of LLaMA (%d). Make sure that you use the correct mmproj file.\n", __func__, n_image_embd, n_llama_embd);
+        printf("%s: embedding dim of the multimodal projector (%d) is not equal to that of LLaMA (%d). Make sure that you use the correct mmproj file.\n", __func__, n_image_embd, n_llama_embd);
         return false;
     }
     return true;
@@ -89,7 +89,7 @@ bool llava_eval_image_embed(llama_context * ctx_llama, const struct llava_image_
 }
 
 LLAVA_API struct llava_image_embed * llava_image_embed_make_with_bytes(struct clip_ctx * ctx_clip, int n_threads, const unsigned char * image_bytes, int image_bytes_length) {
-    clip_image_u8 * img = make_clip_image_u8();
+    clip_image_u8 * img = clip_image_u8_init();
     if (!clip_image_load_from_bytes(image_bytes, image_bytes_length, img)) {
         clip_image_u8_free(img);
         fprintf(stderr, "%s: can't load image from bytes, is it a valid image?", __func__);
@@ -113,7 +113,7 @@ LLAVA_API struct llava_image_embed * llava_image_embed_make_with_bytes(struct cl
 }
 
 static bool load_file_to_bytes(const char* path, unsigned char** bytesOut, long *sizeOut) {
-    auto file = fopen(path, "rbe");
+    auto file = fopen(path, "rb");
     if (file == NULL) {
         fprintf(stderr, "%s: can't read file %s\n", __func__, path);
         return false;
@@ -130,7 +130,14 @@ static bool load_file_to_bytes(const char* path, unsigned char** bytesOut, long 
         fclose(file);
         return false;
     }
-    fread(buffer, 1, fileSize, file); // Read the file into the buffer
+    errno = 0;
+    size_t ret = fread(buffer, 1, fileSize, file); // Read the file into the buffer
+    if (ferror(file)) {
+        die_fmt("read error: %s", strerror(errno));
+    }
+    if (ret != (size_t) fileSize) {
+        die("unexpectedly reached end of file");
+    }
     fclose(file); // Close the file
 
     *bytesOut = buffer;

@@ -1,3 +1,9 @@
+:: Compiles distributable DLL for NVIDIA GPU support
+::
+:: The artifact will only depend on KERNEL32.DLL and NVCUDA.DLL.
+:: NVCUDA DLLs are provided by the installation of the windows GPU
+:: driver on a Windows system that has a CUDA-capable GPU installed.
+
 nvcc -arch=all ^
      --shared ^
      --forward-unknown-to-host-compiler ^
@@ -12,4 +18,5 @@ nvcc -arch=all ^
      -DGGML_CUDA_PEER_MAX_BATCH_SIZE=128 ^
      -DGGML_USE_TINYBLAS ^
      -o ggml-cuda.dll ^
-     ggml-cuda.cu
+     ggml-cuda.cu ^
+     -lcuda

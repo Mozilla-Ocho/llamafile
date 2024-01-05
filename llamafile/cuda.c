@@ -33,6 +33,7 @@
 #include <stdatomic.h>
 #include "llamafile/log.h"
 #include "llama.cpp/ggml-cuda.h"
+#include "llama.cpp/ggml-backend-impl.h"
 
 __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llamafile/compcap.cu");
@@ -51,7 +52,7 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 #define WIND_ONLY(x) (!IsWindows() ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
 #define BLAS_ONLY(x) (FLAG_tinyblas ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
 
-#define NVCC_LIBS BLAS_ONLY("-lcublas")
+#define NVCC_LIBS BLAS_ONLY("-lcublas"), "-lcuda"
 
 #define NVCC_FLAGS "--shared",                                          \
         "--forward-unknown-to-host-compiler",                           \
@@ -70,6 +71,8 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
         (FLAG_tinyblas                                                  \
          ? "-DGGML_USE_TINYBLAS"                                        \
          : "-DGGML_USE_CUBLAS")
+
+int ggml_backend_cuda_reg_devices(void);
 
 static const struct Source {
     const char *zip;
@@ -112,8 +115,9 @@ static struct Cuda {
     typeof(ggml_cuda_compute_forward) *compute_forward;
     typeof(ggml_cuda_get_device_count) *get_device_count;
     typeof(ggml_cuda_get_device_description) *get_device_description;
-    typeof(ggml_backend_reg_cuda_init) *reg_cuda_init;
     typeof(ggml_backend_cuda_buffer_type) *buffer_type;
+    typeof(ggml_backend_reg_cuda_init) *backend_reg_init;
+    typeof(ggml_backend_cuda_host_buffer_type) *backend_host_buffer_type;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -616,8 +620,8 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.compute_forward = cosmo_dlsym(lib, "ggml_cuda_compute_forward"));
     ok &= !!(ggml_cuda.get_device_count = cosmo_dlsym(lib, "ggml_cuda_get_device_count"));
     ok &= !!(ggml_cuda.get_device_description = cosmo_dlsym(lib, "ggml_cuda_get_device_description"));
-    ok &= !!(ggml_cuda.reg_cuda_init = cosmo_dlsym(lib, "ggml_backend_reg_cuda_init"));
-    ok &= !!(ggml_cuda.buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_buffer_type"));
+    ok &= !!(ggml_cuda.backend_reg_init = cosmo_dlsym(lib, "ggml_backend_reg_cuda_init"));
+    ok &= !!(ggml_cuda.backend_host_buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_host_buffer_type"));
     if (!ok) {
         tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
@@ -939,13 +943,28 @@ void ggml_cuda_get_device_description(int device,
                                             description_size);
 }
 
-ggml_backend_t ggml_backend_reg_cuda_init(const char * params,
-                                          void * user_data) {
-    if (!ggml_cuda_supported()) return 0;
-    return ggml_cuda.reg_cuda_init(params, user_data);
-}
-
 ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
     if (!ggml_cuda_supported()) return 0;
     return ggml_cuda.buffer_type(device);
+}
+
+ggml_backend_t ggml_backend_reg_cuda_init(const char * params, void * user_data) {
+    if (!ggml_cuda_supported()) return 0;
+    ggml_cuda.backend_reg_init(params, user_data);
+}
+
+ggml_backend_buffer_type_t ggml_backend_cuda_host_buffer_type() {
+    if (!ggml_cuda_supported()) return 0;
+    ggml_cuda.backend_host_buffer_type();
+}
+
+int ggml_backend_cuda_reg_devices(void) {
+    int device_count = ggml_cuda_get_device_count();
+    //int device_count = 1; // DEBUG: some tools require delaying CUDA initialization
+    for (int i = 0; i < device_count; i++) {
+        char name[128];
+        snprintf(name, sizeof(name), "%s%d", GGML_CUDA_NAME, i);
+        ggml_backend_register(name, ggml_backend_reg_cuda_init, ggml_backend_cuda_buffer_type(i), (void *) (intptr_t) i);
+    }
+    return device_count;
 }

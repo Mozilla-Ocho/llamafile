@@ -494,3 +494,28 @@ tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t stream,
 
     return TINYBLAS_STATUS_SUCCESS;
 }
+
+const char *tinyblasGetStatusString(tinyblasStatus_t err) {
+    switch (err) {
+        case TINYBLAS_STATUS_SUCCESS:
+            return "TINYBLAS_STATUS_SUCCESS";
+        case TINYBLAS_STATUS_NOT_INITIALIZED:
+            return "TINYBLAS_STATUS_NOT_INITIALIZED";
+        case TINYBLAS_STATUS_ALLOC_FAILED:
+            return "TINYBLAS_STATUS_ALLOC_FAILED";
+        case TINYBLAS_STATUS_INVALID_VALUE:
+            return "TINYBLAS_STATUS_INVALID_VALUE";
+        case TINYBLAS_STATUS_ARCH_MISMATCH:
+            return "TINYBLAS_STATUS_ARCH_MISMATCH";
+        case TINYBLAS_STATUS_MAPPING_ERROR:
+            return "TINYBLAS_STATUS_MAPPING_ERROR";
+        case TINYBLAS_STATUS_EXECUTION_FAILED:
+            return "TINYBLAS_STATUS_EXECUTION_FAILED";
+        case TINYBLAS_STATUS_INTERNAL_ERROR:
+            return "TINYBLAS_STATUS_INTERNAL_ERROR";
+        case TINYBLAS_STATUS_NOT_SUPPORTED:
+            return "TINYBLAS_STATUS_NOT_SUPPORTED";
+        default:
+            return "unknown error";
+    }
+}

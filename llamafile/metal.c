@@ -42,6 +42,8 @@ __static_yoink("llama.cpp/ggml-backend.h");
 __static_yoink("llama.cpp/ggml-metal.metal");
 __static_yoink("llama.cpp/ggml-backend-impl.h");
 
+ggml_backend_t ggml_backend_reg_metal_init(const char *, void *);
+
 static const struct Source {
     const char *zip;
     const char *name;
@@ -72,6 +74,9 @@ static struct Metal {
     typeof(ggml_metal_init) *init;
     typeof(ggml_metal_set_n_cb) *set_n_cb;
     typeof(ggml_backend_metal_init) *backend_init;
+    typeof(ggml_backend_metal_buffer_type) *backend_buffer_type;
+    typeof(ggml_backend_reg_metal_init) *backend_reg_init;
+    typeof(ggml_backend_metal_buffer_from_ptr) *backend_buffer_from_ptr;
 } ggml_metal;
 
 static const char *Dlerror(void) {
@@ -209,6 +214,9 @@ static bool LinkMetal(const char *dso) {
     ok &= !!(ggml_metal.init = cosmo_dlsym(lib, "ggml_metal_init"));
     ok &= !!(ggml_metal.set_n_cb = cosmo_dlsym(lib, "ggml_metal_set_n_cb"));
     ok &= !!(ggml_metal.backend_init = cosmo_dlsym(lib, "ggml_backend_metal_init"));
+    ok &= !!(ggml_metal.backend_buffer_type = cosmo_dlsym(lib, "ggml_backend_metal_buffer_type"));
+    ok &= !!(ggml_metal.backend_reg_init = cosmo_dlsym(lib, "ggml_backend_reg_metal_init"));
+    ok &= !!(ggml_metal.backend_buffer_from_ptr = cosmo_dlsym(lib, "ggml_backend_metal_buffer_from_ptr"));
     if (!ok) {
         tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
@@ -316,4 +324,19 @@ int ggml_metal_if_optimized(struct ggml_metal_context *ctx) {
 void ggml_metal_set_n_cb(struct ggml_metal_context * ctx, int n_cb) {
     if (!ggml_metal_supported()) return;
     return ggml_metal.set_n_cb(ctx, n_cb);
+}
+
+ggml_backend_buffer_type_t ggml_backend_metal_buffer_type(void) {
+    if (!ggml_metal_supported()) return 0;
+    return ggml_metal.backend_buffer_type();
+}
+
+ggml_backend_t ggml_backend_reg_metal_init(const char * params, void * user_data) {
+    if (!ggml_metal_supported()) return 0;
+    return ggml_metal.backend_reg_init(params, user_data);
+}
+
+ggml_backend_buffer_t ggml_backend_metal_buffer_from_ptr(void * data, size_t size, size_t max_size) {
+    if (!ggml_metal_supported()) return 0;
+    return ggml_metal.backend_buffer_from_ptr(data, size, max_size);
 }

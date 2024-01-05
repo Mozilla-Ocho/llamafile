@@ -15,8 +15,15 @@ enum tinyblasOperation_t {
 };
 
 enum tinyblasStatus_t {
-  TINYBLAS_STATUS_SUCCESS = 0,
-  TINYBLAS_STATUS_NOT_SUPPORTED = 7,
+  TINYBLAS_STATUS_SUCCESS,
+  TINYBLAS_STATUS_NOT_INITIALIZED,
+  TINYBLAS_STATUS_ALLOC_FAILED,
+  TINYBLAS_STATUS_INVALID_VALUE,
+  TINYBLAS_STATUS_ARCH_MISMATCH,
+  TINYBLAS_STATUS_MAPPING_ERROR,
+  TINYBLAS_STATUS_EXECUTION_FAILED,
+  TINYBLAS_STATUS_INTERNAL_ERROR,
+  TINYBLAS_STATUS_NOT_SUPPORTED,
 };
 
 enum tinyblasComputeType_t {
@@ -29,6 +36,8 @@ enum tinyblasGemmAlgo_t {
 };
 
 #define tinyblasHandle_t cudaStream_t
+
+const char *tinyblasGetStatusString(tinyblasStatus_t);
 
 tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t handle,
                                tinyblasOperation_t transa,
