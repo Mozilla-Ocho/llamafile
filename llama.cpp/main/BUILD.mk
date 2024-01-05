@@ -13,12 +13,8 @@ o/$(MODE)/llama.cpp/main/main:					\
 		o/$(MODE)/llama.cpp/server/server.a		\
 		o/$(MODE)/llama.cpp/llava/llava.a		\
 		o/$(MODE)/llama.cpp/llama.cpp.a			\
-		o/$(MODE)/llama.cpp/main/main.1.asc.zip.o	\
+		o/$(MODE)/llamafile/llamafile.1.asc.zip.o	\
 		$(LLAMA_CPP_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)
-
-llama.cpp/main/main.1.asc: llama.cpp/main/main.1
-	-man $< >$@.tmp && mv -f $@.tmp $@
-	@rm -f $@.tmp
 
 .PHONY: o/$(MODE)/llama.cpp/main
 o/$(MODE)/llama.cpp/main:					\

@@ -99,47 +99,41 @@ static void llama_log_callback_logTee(ggml_log_level level, const char * text, v
     LOG_TEE("%s", text);
 }
 
-static bool has_argument(int argc, char ** argv, const char * arg) {
-    for (int i = 1; i < argc; ++i) {
-        if (!strcmp(argv[i], arg)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 int main(int argc, char ** argv) {
+
+    if (llamafile_has(argv, "--version")) {
+        puts("llamafile v" LLAMAFILE_VERSION_STRING);
+        return 0;
+    }
+
+    if (llamafile_has(argv, "-h") ||
+        llamafile_has(argv, "-help") ||
+        llamafile_has(argv, "--help")) {
+        llamafile_help("/zip/llamafile/llamafile.1.asc");
+        __builtin_unreachable();
+    }
+
     llamafile_init();
     llamafile_check_cpu();
     ShowCrashReports();
     LoadZipArgs(&argc, &argv);
 
-    if (has_argument(argc, argv, "--version")) {
-        printf("llamafile v" LLAMAFILE_VERSION_STRING "\n");
-        return 0;
-    }
-
-    if (has_argument(argc, argv, "--help")) {
-        llamafile_help("/zip/llama.cpp/main/main.1.asc");
-        __builtin_unreachable();
-    }
-
     if (!IsXnuSilicon() &&
-        (!has_argument(argc, argv, "-ngl") &&
-         !has_argument(argc, argv, "--gpu-layers") &&
-         !has_argument(argc, argv, "--n-gpu-layers"))) {
+        (!llamafile_has(argv, "-ngl") &&
+         !llamafile_has(argv, "--gpu-layers") &&
+         !llamafile_has(argv, "--n-gpu-layers"))) {
         FLAG_gpu = LLAMAFILE_GPU_DISABLE;
     }
 
-    if (!has_argument(argc, argv, "--cli") &&
-        (has_argument(argc, argv, "--server") ||
-         (!has_argument(argc, argv, "-p") &&
-          !has_argument(argc, argv, "-f") &&
-          !has_argument(argc, argv, "--random-prompt")))) {
+    if (!llamafile_has(argv, "--cli") &&
+        (llamafile_has(argv, "--server") ||
+         (!llamafile_has(argv, "-p") &&
+          !llamafile_has(argv, "-f") &&
+          !llamafile_has(argv, "--random-prompt")))) {
         return server_cli(argc, argv);
     }
 
-    if (has_argument(argc, argv, "--image")) {
+    if (llamafile_has(argv, "--image")) {
         return llava_cli(argc, argv);
     }
 

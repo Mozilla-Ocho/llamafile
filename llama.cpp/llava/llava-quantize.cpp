@@ -8,23 +8,27 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-    if (argc == 2 && !strcmp(argv[1], "--version")) {
-        printf("llamafile v" LLAMAFILE_VERSION_STRING " llava-quantize\n");
-        exit(0);
+
+    if (llamafile_has(argv, "--version")) {
+        puts("llava-quantize v" LLAMAFILE_VERSION_STRING);
+        return 0;
     }
+
+    if (llamafile_has(argv, "-h") ||
+        llamafile_has(argv, "-help") ||
+        llamafile_has(argv, "--help")) {
+        llamafile_help("/zip/llama.cpp/llava/llava-quantize.1.asc");
+        __builtin_unreachable();
+    }
+
     llamafile_init();
     llamafile_check_cpu();
+
     if (argc != 4) {
-        fprintf(stderr,
-                "Usage: %s INPUT OUTPUT FORMAT\n"
-                "  - 2 is Q4_0\n"
-                "  - 3 is Q4_1\n"
-                "  - 6 is Q5_0\n"
-                "  - 7 is Q5_1\n"
-                "  - 8 is Q8_0\n",
-                argv[0]);
+        fprintf(stderr, "%s: missing argument\n", argv[0]);
         return 1;
     }
+
     if (!clip_model_quantize(argv[1], argv[2], atoi(argv[3]))) {
         exit(1);
     }

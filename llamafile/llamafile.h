@@ -21,6 +21,7 @@ void llamafile_init(void);
 void llamafile_check_cpu(void);
 void llamafile_help(const char *);
 const char *llamafile_get_tmp_dir(void);
+bool llamafile_has(char **, const char *);
 bool llamafile_extract(const char *, const char *);
 int llamafile_is_file_newer_than(const char *, const char *);
 void llamafile_schlep(const void *, size_t);

@@ -28,6 +28,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdatomic.h>
+#include "llamafile/log.h"
 #include "llama.cpp/ggml-metal.h"
 
 __static_yoink("llama.cpp/ggml.h");

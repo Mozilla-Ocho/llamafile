@@ -29,26 +29,8 @@
 #include <stdbool.h>
 #include <sys/uio.h>
 #include <sys/stat.h>
+#include "llamafile.h"
 #include <third_party/zlib/zlib.h>
-
-#define USAGE \
-  " ZIP FILE...\n\
-\n\
-DESCRIPTION\n\
-\n\
-  Adds aligned uncompressed files to PKZIP archive\n\
-\n\
-FLAGS\n\
-\n\
-  -h        help\n\
-  -v        verbose\n\
-  -N        nondeterministic mode\n\
-  -a INT    alignment (default 65536)\n\
-  -j        strip directory components\n\
-  -0        store uncompressed (default)\n\
-  -6        store with faster compression\n\
-  -9        store with maximum compression\n\
-\n"
 
 #define CHUNK 2097152
 
@@ -96,11 +78,6 @@ static void *Realloc(void *p, size_t n) {
     return p;
 }
 
-static wontreturn void PrintUsage(int fd, int rc) {
-    tinyprint(fd, "SYNOPSIS\n\n  ", prog, USAGE, NULL);
-    exit(rc);
-}
-
 static void GetDosLocalTime(int64_t utcunixts,
                             uint16_t *out_time,
                             uint16_t *out_date) {
@@ -112,13 +89,20 @@ static void GetDosLocalTime(int64_t utcunixts,
 
 int main(int argc, char *argv[]) {
 
+    if (llamafile_has(argv, "-h") ||
+        llamafile_has(argv, "-help") ||
+        llamafile_has(argv, "--help")) {
+        llamafile_help("/zip/llamafile/zipalign.1.asc");
+        __builtin_unreachable();
+    }
+
     // get name of program
     prog = argv[0];
     if (!prog) prog = "zipalign";
 
     // parse flags
     int opt;
-    while ((opt = getopt(argc, argv, "0123456789hvjNa:")) != -1) {
+    while ((opt = getopt(argc, argv, "0123456789vjNa:")) != -1) {
         switch (opt) {
             case '0':
             case '1':
@@ -150,10 +134,8 @@ int main(int argc, char *argv[]) {
                     Die(prog, "FLAG_alignment must be two power");
                 }
                 break;
-            case 'h':
-                PrintUsage(1, 0);
             default:
-                PrintUsage(2, 1);
+                return 1;
         }
     }
     if (optind == argc) {

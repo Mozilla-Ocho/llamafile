@@ -680,11 +680,23 @@ static void hellaswag_score(llama_context * ctx, const gpt_params & params) {
 }
 
 int main(int argc, char ** argv) {
-    gpt_params params;
+
+    if (llamafile_has(argv, "--version")) {
+        puts("llamafile-perplexity v" LLAMAFILE_VERSION_STRING);
+        return 0;
+    }
+
+    if (llamafile_has(argv, "-h") ||
+        llamafile_has(argv, "-help") ||
+        llamafile_has(argv, "--help")) {
+        llamafile_help("/zip/llama.cpp/perplexity/perplexity.1.asc");
+        __builtin_unreachable();
+    }
 
     llamafile_init();
     llamafile_check_cpu();
 
+    gpt_params params;
     params.n_batch = 512;
     if (!gpt_params_parse(argc, argv, params)) {
         return 1;

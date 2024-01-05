@@ -23,6 +23,11 @@ o/$(MODE)/%.o: %.cpp $(COSMOCC)
 o/$(MODE)/%: o/$(MODE)/%.o
 	$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
+.PRECIOUS: %.1.asc
+%.1.asc: %.1
+	-man $< >$@.tmp && mv -f $@.tmp $@
+	@rm -f $@.tmp
+
 o/$(MODE)/%.zip.o: % $(COSMOCC)
 	@mkdir -p $(dir $@)/.aarch64
 	$(ZIPOBJ) $(ZIPOBJ_FLAGS) -a x86_64 -o $@ $<

@@ -96,9 +96,17 @@ static void usage(const char * executable) {
 }
 
 int main(int argc, char ** argv) {
-    if (argc == 2 && !strcmp(argv[1], "--version")) {
-        printf("llamafile v" LLAMAFILE_VERSION_STRING " quantize\n");
-        exit(0);
+
+    if (llamafile_has(argv, "--version")) {
+        puts("llamafile-quantize v" LLAMAFILE_VERSION_STRING);
+        return 0;
+    }
+
+    if (llamafile_has(argv, "-h") ||
+        llamafile_has(argv, "-help") ||
+        llamafile_has(argv, "--help")) {
+        llamafile_help("/zip/llama.cpp/quantize/quantize.1.asc");
+        __builtin_unreachable();
     }
 
     llamafile_init();

@@ -9,9 +9,10 @@ LLAMA_CPP_QUANTIZE_SRCS = $(filter %.cpp,$(LLAMA_CPP_QUANTIZE_FILES))
 LLAMA_CPP_QUANTIZE_OBJS = $(LLAMA_CPP_QUANTIZE_SRCS:%.cpp=o/$(MODE)/%.o)
 
 .PHONY: o/$(MODE)/llama.cpp/quantize
-o/$(MODE)/llama.cpp/quantize:					\
+o/$(MODE)/llama.cpp/quantize:						\
 		o/$(MODE)/llama.cpp/quantize/quantize
 
-o/$(MODE)/llama.cpp/quantize/quantize:				\
-		o/$(MODE)/llama.cpp/quantize/quantize.o		\
+o/$(MODE)/llama.cpp/quantize/quantize:					\
+		o/$(MODE)/llama.cpp/quantize/quantize.o			\
+		o/$(MODE)/llama.cpp/quantize/quantize.1.asc.zip.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a
