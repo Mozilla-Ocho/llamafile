@@ -6580,11 +6580,11 @@ static int llama_decode_internal(
     ggml_mpi_graph_compute_pre(lctx.ctx_mpi, gf, n_layer);
 #endif
 
-#ifdef GGML_USE_METAL
+    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
     if (ggml_backend_is_metal(lctx.backend)) {
         ggml_backend_metal_set_n_cb(lctx.backend, n_threads);
     }
-#endif
+    }
 
     if (ggml_backend_is_cpu(lctx.backend)) {
         ggml_backend_cpu_set_n_threads(lctx.backend, n_threads);
@@ -9379,9 +9379,9 @@ struct llama_model_params llama_model_default_params() {
         /*.use_mlock                   =*/ false,
     };
 
-#ifdef GGML_USE_METAL
+    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
     result.n_gpu_layers = 1;
-#endif
+    }
 
     return result;
 }
@@ -9573,14 +9573,15 @@ struct llama_context * llama_new_context_with_model(
     // reserve memory for context buffers
     if (!hparams.vocab_only) {
         // initialize backend
-#ifdef GGML_USE_METAL
+        if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
         if (model->n_gpu_layers > 0) {
             ctx->backend = ggml_backend_metal_init();
             if (ctx->backend == nullptr) {
                 LLAMA_LOG_ERROR("%s: failed to initialize Metal backend\n", __func__);
             }
         }
-#elif defined(LLAMA_GGML_BACKEND_CUDA_TEST)
+        }
+#if defined(LLAMA_GGML_BACKEND_CUDA_TEST)
         if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
         // for testing only
         if (model->n_gpu_layers > 0) {

@@ -260,6 +260,11 @@ static const char * ggml_op_name(enum ggml_op op) {
     return "REDACTED!GGML_OP_NAME[op]";
 }
 
+#define ggml_op_desc ggml_op_desc_
+static const char * ggml_op_desc(const struct ggml_tensor * t) {
+    return "REDACTED!GGML_OP_DESC[t]";
+}
+
 // END: COPIED FROM GGML.C
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -421,7 +426,7 @@ struct ggml_metal_context {
 ggml_log_callback ggml_metal_log_callback = NULL;
 void * ggml_metal_log_user_data = NULL;
 
-static void ggml_metal_log_set_callback(ggml_log_callback log_callback, void * user_data) {
+void ggml_metal_log_set_callback(ggml_log_callback log_callback, void * user_data) {
     ggml_metal_log_callback  = log_callback;
     ggml_metal_log_user_data = user_data;
 }

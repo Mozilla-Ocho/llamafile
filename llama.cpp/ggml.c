@@ -172,13 +172,12 @@ inline static void * ggml_aligned_malloc(size_t size) {
         return NULL;
     }
     void * aligned_memory = NULL;
-#ifdef GGML_USE_CPU_HBM
-    int result = hbw_posix_memalign(&aligned_memory, 16, size);
-#elif GGML_USE_METAL
-    int result = posix_memalign(&aligned_memory, sysconf(_SC_PAGESIZE), size);
-#else
-    int result = posix_memalign(&aligned_memory, GGML_MEM_ALIGN, size);
-#endif
+    int result;
+    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
+        result = posix_memalign(&aligned_memory, 16384, size);
+    } else {
+        result = posix_memalign(&aligned_memory, GGML_MEM_ALIGN, size);
+    }
     if (result != 0) {
         // Handle allocation failure
         const char *error_desc = "unknown allocation error";
