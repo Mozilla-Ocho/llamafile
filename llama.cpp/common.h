@@ -45,10 +45,19 @@ extern char const *LLAMA_BUILD_TARGET;
 //
 int32_t get_num_physical_cores();
 
+static inline int pick_default_thread_count() {
+    int n = get_num_physical_cores();
+    // last thing we want is to have 63 threads on AMD EPYC fighting to
+    // acquire a spinlock while the 64th thread finishes evaluating the
+    // last item of work in a segment of the model's computation graph.
+    if (n > 12) n = 12;
+    return n;
+}
+
 struct gpt_params {
     uint32_t seed                           = -1;    // RNG seed
 
-    int32_t n_threads                       = get_num_physical_cores();
+    int32_t n_threads                       = pick_default_thread_count();
     int32_t n_threads_batch                 = -1;    // number of threads to use for batch processing (-1 = use n_threads)
     int32_t n_predict                       = -1;    // new tokens to predict
     int32_t n_ctx                           = 512;   // context size
