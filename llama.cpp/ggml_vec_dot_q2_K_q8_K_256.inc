@@ -6,12 +6,10 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
     const int nb = n / QK_K;
 
 #ifdef __ARM_NEON
-
     const uint8x16_t m3 = vdupq_n_u8(0x3);
     const uint8x16_t m4 = vdupq_n_u8(0xF);
-#if defined(__ARM_FEATURE_DOTPROD)
-    const int32x4_t  vzero = vdupq_n_s32(0);
-#endif
+
+    const int32x4_t vzero = vdupq_n_s32(0);
 
     ggml_int8x16x2_t q2bytes;
     uint8_t aux[16];
@@ -19,7 +17,6 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
     float sum = 0;
 
     for (int i = 0; i < nb; ++i) {
-
         const float d = y[i].d * GGML_FP16_TO_FP32(x[i].d);
         const float dmin = -y[i].d * GGML_FP16_TO_FP32(x[i].dmin);
 
@@ -33,7 +30,7 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
 
         const uint8x16_t mins = vshrq_n_u8(mins_and_scales, 4);
         const ggml_int16x8x2_t q8sums = ggml_vld1q_s16_x2(y[i].bsums);
-        const ggml_int16x8x2_t mins16 = {vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(mins))), vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(mins)))};
+        const ggml_int16x8x2_t mins16 = {{vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(mins))), vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(mins)))}};
         const int32x4_t s0 = vaddq_s32(vmull_s16(vget_low_s16 (mins16.val[0]), vget_low_s16 (q8sums.val[0])),
                                        vmull_s16(vget_high_s16(mins16.val[0]), vget_high_s16(q8sums.val[0])));
         const int32x4_t s1 = vaddq_s32(vmull_s16(vget_low_s16 (mins16.val[1]), vget_low_s16 (q8sums.val[1])),
@@ -45,20 +42,9 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
 
 // We use this macro instead of a function call because for some reason
 // the code runs 2-3% slower, even if the function is declared inline
-#if defined(__ARM_FEATURE_DOTPROD)
 #define MULTIPLY_ACCUM_WITH_SCALE(index)\
-        isum += vaddvq_s32(vdotq_s32(vzero, q2bytes.val[0], q8bytes.val[0])) * aux[is+(index)];\
-        isum += vaddvq_s32(vdotq_s32(vzero, q2bytes.val[1], q8bytes.val[1])) * aux[is+1+(index)];
-#else
-#define MULTIPLY_ACCUM_WITH_SCALE(index)\
-        {\
-    const int16x8_t p1 = vaddq_s16(vmull_s8(vget_low_s8 (q2bytes.val[0]), vget_low_s8 (q8bytes.val[0])),\
-                                   vmull_s8(vget_high_s8(q2bytes.val[0]), vget_high_s8(q8bytes.val[0])));\
-    const int16x8_t p2 = vaddq_s16(vmull_s8(vget_low_s8 (q2bytes.val[1]), vget_low_s8 (q8bytes.val[1])),\
-                                   vmull_s8(vget_high_s8(q2bytes.val[1]), vget_high_s8(q8bytes.val[1])));\
-    isum += vaddvq_s16(p1) * aux[is+(index)] + vaddvq_s16(p2) * aux[is+1+(index)];\
-        }
-#endif
+        isum += vaddvq_s32(ggml_vdotq_s32(vzero, q2bytes.val[0], q8bytes.val[0])) * aux[is+(index)];\
+        isum += vaddvq_s32(ggml_vdotq_s32(vzero, q2bytes.val[1], q8bytes.val[1])) * aux[is+1+(index)];
 
 #define SHIFT_MULTIPLY_ACCUM_WITH_SCALE(shift, index)\
         q8bytes = ggml_vld1q_s8_x2(q8); q8 += 32;\
@@ -66,26 +52,23 @@ static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void *
         q2bytes.val[1] = vreinterpretq_s8_u8(vandq_u8(vshrq_n_u8(q2bits.val[1], (shift)), m3));\
         MULTIPLY_ACCUM_WITH_SCALE((index));
 
-
         for (int j = 0; j < QK_K/128; ++j) {
-
             const ggml_uint8x16x2_t q2bits = ggml_vld1q_u8_x2(q2); q2 += 32;
 
             ggml_int8x16x2_t q8bytes = ggml_vld1q_s8_x2(q8); q8 += 32;
             q2bytes.val[0] = vreinterpretq_s8_u8(vandq_u8(q2bits.val[0], m3));
             q2bytes.val[1] = vreinterpretq_s8_u8(vandq_u8(q2bits.val[1], m3));
+
             MULTIPLY_ACCUM_WITH_SCALE(0);
 
             SHIFT_MULTIPLY_ACCUM_WITH_SCALE(2, 2);
-
             SHIFT_MULTIPLY_ACCUM_WITH_SCALE(4, 4);
-
             SHIFT_MULTIPLY_ACCUM_WITH_SCALE(6, 6);
 
             is += 8;
         }
-        sum += d * isum;
 
+        sum += d * isum;
     }
 
     *s = sum;
