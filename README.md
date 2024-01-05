@@ -21,7 +21,7 @@ than just chat; you can also upload images and ask it questions
 about them. With llamafile, this all happens locally; no data 
 ever leaves your computer.
 
-1. Download [llava-v1.5-7b-q4-main.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true) (3.97 GB).
+1. Download [llava-v1.5-7b-q4.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4.llamafile?download=true) (3.97 GB).
 
 2. Open your computer's terminal.
 
@@ -30,7 +30,7 @@ for your computer to execute this new file. (You only need to do this
 once.)
 
 ```sh
-chmod +x llava-v1.5-7b-q4-main.llamafile
+chmod +x llava-v1.5-7b-q4.llamafile
 ```
 
 4. If you're on Windows, rename the file by adding ".exe" on the end.
@@ -38,7 +38,7 @@ chmod +x llava-v1.5-7b-q4-main.llamafile
 5. Run the llamafile. e.g.:
 
 ```sh
-./llava-v1.5-7b-q4-main.llamafile
+./llava-v1.5-7b-q4.llamafile
 ```
 
 6. Your browser should open automatically and display a chat interface. 
@@ -166,10 +166,10 @@ try out llamafile with different kinds of LLMs.
 
 | Model                  | Size     | License                                                                        | llamafile                                                                                                                                                                                   |
 | ---                    | ---      | ---                                                                            | ---                                                                                                                                                                                         |
-| LLaVA 1.5              | 3.97 GB  | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [llava-v1.5-7b-q4-main.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true)                                             |
+| LLaVA 1.5              | 3.97 GB  | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [llava-v1.5-7b-q4.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4.llamafile?download=true)                                             |
 | Mistral-7B-Instruct    | 5.15 GB  | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/)                  | [mistral-7b-instruct-v0.2.Q5\_K\_M.llamafile](https://huggingface.co/jartine/Mistral-7B-Instruct-v0.2-llamafile/resolve/main/mistral-7b-instruct-v0.2.Q5_K_M.llamafile?download=true)       |
 | Mixtral-8x7B-Instruct  | 30.03 GB | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/)                  | [mixtral-8x7b-instruct-v0.1.Q5\_K\_M.llamafile](https://huggingface.co/jartine/Mixtral-8x7B-Instruct-v0.1-llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q5_K_M.llamafile?download=true) |
-| WizardCoder-Python-13B | 7.33 GB  | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b-main.llamafile](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true)                             |
+| WizardCoder-Python-13B | 7.33 GB  | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b.llamafile](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b.llamafile?download=true)                             |
 
 Here is an example for the Mistral command-line llamafile:
 
@@ -180,13 +180,13 @@ Here is an example for the Mistral command-line llamafile:
 And here is an example for WizardCoder-Python command-line llamafile:
 
 ```sh
-./wizardcoder-python-13b-main.llamafile --temp 0 -e -r '```\n' -p '```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
+./wizardcoder-python-13b.llamafile --temp 0 -e -r '```\n' -p '```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
 And here's an example for the LLaVA command-line llamafile:
 
 ```sh
-./llava-v1.5-7b-q4-main.llamafile --temp 0.2 --image lemurs.jpg -e -p '### User: What do you see?\n### Assistant:'
+./llava-v1.5-7b-q4.llamafile --temp 0.2 --image lemurs.jpg -e -p '### User: What do you see?\n### Assistant:'
 ```
 
 As before, macOS, Linux, and BSD users will need to use the "chmod"
