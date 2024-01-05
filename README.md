@@ -21,7 +21,7 @@ than just chat; you can also upload images and ask it questions
 about them. With llamafile, this all happens locally; no data 
 ever leaves your computer.
 
-1. Download [llava-v1.5-7b-q4-server.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true) (3.97 GB).
+1. Download [llava-v1.5-7b-q4-main.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true) (3.97 GB).
 
 2. Open your computer's terminal.
 
@@ -30,7 +30,7 @@ for your computer to execute this new file. (You only need to do this
 once.)
 
 ```sh
-chmod +x llava-v1.5-7b-q4-server.llamafile
+chmod +x llava-v1.5-7b-q4-main.llamafile
 ```
 
 4. If you're on Windows, rename the file by adding ".exe" on the end.
@@ -38,7 +38,7 @@ chmod +x llava-v1.5-7b-q4-server.llamafile
 5. Run the llamafile. e.g.:
 
 ```sh
-./llava-v1.5-7b-q4-server.llamafile
+./llava-v1.5-7b-q4-main.llamafile
 ```
 
 6. Your browser should open automatically and display a chat interface. 
@@ -164,25 +164,17 @@ ChatCompletionMessage(content='There once was a programmer named Mike\nWho wrote
 We also provide example llamafiles for other models, so you can easily
 try out llamafile with different kinds of LLMs.
 
-| Model | Size | License | Command-line llamafile | Server llamafile |
-| --- | --- | --- | --- | --- |
-| LLaVA 1.5 | 3.97 GB | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [llava-v1.5-7b-q4-main.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true) | **[llava-v1.5-7b-q4-server.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-server.llamafile?download=true)** |
-| Mistral-7B-Instruct | 4.07 GB | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mistral-7b-instruct-v0.1-Q4\_K\_M-main.llamafile](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile?download=true) | [mistral-7b-instruct-v0.1-Q4\_K\_M-server.llamafile](https://huggingface.co/jartine/mistral-7b.llamafile/resolve/main/mistral-7b-instruct-v0.1-Q4_K_M-server.llamafile?download=true) |
-| Mixtral-8x7B-Instruct | 30.03 GB | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/) | [mixtral-8x7b-instruct-v0.1.Q5\_K\_M.llamafile](https://huggingface.co/jartine/Mixtral-8x7B-Instruct-v0.1-llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q5_K_M.llamafile?download=true) | [mixtral-8x7b-instruct-v0.1.Q5\_K\_M-server.llamafile](https://huggingface.co/jartine/Mixtral-8x7B-Instruct-v0.1-llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q5_K_M.llamafile?download=true) |
-| WizardCoder-Python-13B | 7.33 GB | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b-main.llamafile](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true) | [wizardcoder-python-13b-server.llamafile](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-server.llamafile?download=true) |
-
-"Server llamafiles" work just like the LLaVA example above: you simply
-run them from your terminal and then access the chat UI in your web
-browser at <http://localhost:8080>.
-
-"Command-line llamafiles" run entirely inside your terminal and operate
-just like llama.cpp's "main" function. This means you have to provide
-some command-line parameters, just like with llama.cpp.
+| Model                  | Size     | License                                                                        | llamafile                                                                                                                                                                                   |
+| ---                    | ---      | ---                                                                            | ---                                                                                                                                                                                         |
+| LLaVA 1.5              | 3.97 GB  | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [llava-v1.5-7b-q4-main.llamafile](https://huggingface.co/jartine/llava-v1.5-7B-GGUF/resolve/main/llava-v1.5-7b-q4-main.llamafile?download=true)                                             |
+| Mistral-7B-Instruct    | 5.15 GB  | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/)                  | [mistral-7b-instruct-v0.2.Q5\_K\_M.llamafile](https://huggingface.co/jartine/Mistral-7B-Instruct-v0.2-llamafile/resolve/main/mistral-7b-instruct-v0.2.Q5_K_M.llamafile?download=true)       |
+| Mixtral-8x7B-Instruct  | 30.03 GB | [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/)                  | [mixtral-8x7b-instruct-v0.1.Q5\_K\_M.llamafile](https://huggingface.co/jartine/Mixtral-8x7B-Instruct-v0.1-llamafile/resolve/main/mixtral-8x7b-instruct-v0.1.Q5_K_M.llamafile?download=true) |
+| WizardCoder-Python-13B | 7.33 GB  | [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) | [wizardcoder-python-13b-main.llamafile](https://huggingface.co/jartine/wizardcoder-13b-python/resolve/main/wizardcoder-python-13b-main.llamafile?download=true)                             |
 
 Here is an example for the Mistral command-line llamafile:
 
 ```sh
-./mistral-7b-instruct-v0.1-Q4_K_M-main.llamafile --temp 0.7 -p '[INST]Write a story about llamas[/INST]'
+./mistral-7b-instruct-v0.2.Q5_K_M.llamafile --temp 0.7 -p '[INST]Write a story about llamas[/INST]'
 ```
 
 And here is an example for WizardCoder-Python command-line llamafile:
@@ -262,20 +254,13 @@ enable you to work around Windows' 4GB executable file size limit.
 For Windows users, here's an example for the Mistral LLM:
 
 ```sh
-curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.4.1/llamafile-server-0.4.1
+curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.5/llamafile-server-0.5
 curl -L -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
-.\llamafile.exe -m mistral.gguf
+./llamafile.exe -m mistral.gguf
 ```
 
-Here's the same example, but for macOS, Linux, and BSD users:
-
-```sh
-curl -L https://github.com/Mozilla-Ocho/llamafile/releases/download/0.4.1/llamafile-server-0.4.1 >llamafile
-curl -L https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf >mistral.gguf
-chmod +x llamafile
-./llamafile -m mistral.gguf
-```
-
+Windows users may need to change `./llamafile.exe` to `.\llamafile.exe`
+when running the above command.
 
 
 ## Gotchas
@@ -474,6 +459,8 @@ llamafile \
 The above command will launch a browser tab on your personal computer to
 display a web interface. It lets you chat with your LLM and upload
 images to it.
+
+## Creating llamafiles
 
 If you want to be able to just say:
 
