@@ -29,7 +29,14 @@ if ! UNZIP=$(command -v unzip 2>/dev/null); then
   printf '%s\n' "please download https://cosmo.zip/pub/cosmos/bin/unzip and put it on the system path" >&2
   abort
 fi
-if ! SHA256SUM=$(command -v sha256sum 2>/dev/null); then
+if command -v sha256sum >/dev/null 2>&1; then
+  # can use system sha256sum
+  true
+elif command -v shasum >/dev/null 2>&1; then
+  sha256sum() {
+    shasum -a 256 "$@"
+  }
+else
   if [ ! -f build/sha256sum.c ]; then
     printf '%s\n' "$0: fatal error: you need to install sha256sum" >&2
     printf '%s\n' "please download https://cosmo.zip/pub/cosmos/bin/sha256sum and put it on the system path" >&2
@@ -51,6 +58,9 @@ if ! SHA256SUM=$(command -v sha256sum 2>/dev/null); then
     "${CC}" -w -O2 -o "${SHA256SUM}.$$" build/sha256sum.c || abort
     mv -f "${SHA256SUM}.$$" "${SHA256SUM}" || abort
   fi
+  sha256sum() {
+    "${SHA256SUM}" "$@"
+  }
 fi
 if WGET=$(command -v wget 2>/dev/null); then
   DOWNLOAD=$WGET
@@ -82,7 +92,7 @@ if ! "${DOWNLOAD}" ${DOWNLOAD_ARGS} cosmocc.zip "${URL1}"; then
   "${DOWNLOAD}" ${DOWNLOAD_ARGS} cosmocc.zip "${URL2}" || die
 fi
 printf '%s\n' "${COSMOCC_SHA256SUM} *cosmocc.zip" >cosmocc.zip.sha256sum
-"${SHA256SUM}" -c cosmocc.zip.sha256sum || die
+sha256sum -c cosmocc.zip.sha256sum || die
 "${UNZIP}" cosmocc.zip || die
 rm -f cosmocc.zip cosmocc.zip.sha256sum
 
