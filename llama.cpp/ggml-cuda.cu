@@ -242,7 +242,6 @@
 
 #undef MIN
 #undef MAX
-
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -250,295 +249,31 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-////////////////////////////////////////////////////////////////////////////////
-// BEGIN: COPIED FROM GGML.C
+static const struct ggml_backend_api *g_backend;
+#define ggml_is_quantized g_backend->ggml_is_quantized
+#define ggml_type_size g_backend->ggml_type_size
+#define ggml_blck_size g_backend->ggml_blck_size
+#define ggml_is_transposed g_backend->ggml_is_transposed
+#define ggml_nbytes g_backend->ggml_nbytes
+#define ggml_get_unary_op g_backend->ggml_get_unary_op
+#define ggml_nelements g_backend->ggml_nelements
+#define ggml_nrows g_backend->ggml_nrows
+#define ggml_is_permuted g_backend->ggml_is_permuted
+#define ggml_is_contiguous g_backend->ggml_is_contiguous
+#define ggml_op_name g_backend->ggml_op_name
+#define ggml_type_name g_backend->ggml_type_name
+#define ggml_element_size g_backend->ggml_element_size
+#define ggml_row_size g_backend->ggml_row_size
+#define ggml_element_size g_backend->ggml_element_size
+#define ggml_element_size g_backend->ggml_element_size
+#define ggml_rope_yarn_corr_dims g_backend->ggml_rope_yarn_corr_dims
+#define ggml_backend_buft_alloc_buffer g_backend->ggml_backend_buft_alloc_buffer
+#define ggml_backend_buft_get_alloc_size g_backend->ggml_backend_buft_get_alloc_size
+#define ggml_backend_cpu_buffer_type g_backend->ggml_backend_cpu_buffer_type
 
-#define ggml_is_quantized ggml_is_quantized_
-static bool ggml_is_quantized(enum ggml_type type) {
-    switch (type) {
-        case GGML_TYPE_I8:
-            return false;
-        case GGML_TYPE_I16:
-            return false;
-        case GGML_TYPE_I32:
-            return false;
-        case GGML_TYPE_F32:
-            return false;
-        case GGML_TYPE_F16:
-            return false;
-        case GGML_TYPE_Q4_0:
-            return true;
-        case GGML_TYPE_Q4_1:
-            return true;
-        case GGML_TYPE_Q5_0:
-            return true;
-        case GGML_TYPE_Q5_1:
-            return true;
-        case GGML_TYPE_Q8_0:
-            return true;
-        case GGML_TYPE_Q8_1:
-            return true;
-        case GGML_TYPE_Q2_K:
-            return true;
-        case GGML_TYPE_Q3_K:
-            return true;
-        case GGML_TYPE_Q4_K:
-            return true;
-        case GGML_TYPE_Q5_K:
-            return true;
-        case GGML_TYPE_Q6_K:
-            return true;
-        case GGML_TYPE_Q8_K:
-            return true;
-        default:
-            return false;
-    }
+void ggml_cuda_link(const struct ggml_backend_api *backend_api) {
+    g_backend = backend_api;
 }
-
-#define ggml_type_size ggml_type_size_
-static size_t ggml_type_size(enum ggml_type type);
-
-#define ggml_blck_size ggml_blck_size_
-static int ggml_blck_size(enum ggml_type type);
-
-#define ggml_is_transposed ggml_is_transposed_
-static bool ggml_is_transposed(const struct ggml_tensor * tensor) {
-    return tensor->nb[0] > tensor->nb[1];
-}
-
-#define ggml_nbytes ggml_nbytes_
-static size_t ggml_nbytes(const struct ggml_tensor * tensor) {
-    size_t nbytes;
-    size_t blck_size = ggml_blck_size(tensor->type);
-    if (blck_size == 1) {
-        nbytes = ggml_type_size(tensor->type);
-        for (int i = 0; i < GGML_MAX_DIMS; ++i) {
-            nbytes += (tensor->ne[i] - 1)*tensor->nb[i];
-        }
-    }
-    else {
-        nbytes = tensor->ne[0]*tensor->nb[0]/blck_size;
-        for (int i = 1; i < GGML_MAX_DIMS; ++i) {
-            nbytes += (tensor->ne[i] - 1)*tensor->nb[i];
-        }
-    }
-    return nbytes;
-}
-
-static int32_t ggml_get_op_params_i32(const struct ggml_tensor * tensor, uint32_t i) {
-    return ((const int32_t *)(tensor->op_params))[i];
-}
-
-#define ggml_get_unary_op ggml_get_unary_op_
-static enum ggml_unary_op ggml_get_unary_op(const struct ggml_tensor * tensor) {
-    return (enum ggml_unary_op) ggml_get_op_params_i32(tensor, 0);
-}
-
-#define ggml_nelements ggml_nelements_
-static int64_t ggml_nelements(const struct ggml_tensor * tensor) {
-    return tensor->ne[0]*tensor->ne[1]*tensor->ne[2]*tensor->ne[3];
-}
-
-#define ggml_nrows ggml_nrows_
-static int64_t ggml_nrows(const struct ggml_tensor * tensor) {
-    return tensor->ne[1]*tensor->ne[2]*tensor->ne[3];
-}
-
-#define ggml_is_permuted ggml_is_permuted_
-static bool ggml_is_permuted(const struct ggml_tensor * tensor) {
-    return tensor->nb[0] > tensor->nb[1] || tensor->nb[1] > tensor->nb[2] || tensor->nb[2] > tensor->nb[3];
-}
-
-#define ggml_is_contiguous ggml_is_contiguous_
-static bool ggml_is_contiguous(const struct ggml_tensor * tensor) {
-    return
-        tensor->nb[0] == ggml_type_size(tensor->type) &&
-        tensor->nb[1] == (tensor->nb[0]*tensor->ne[0])/ggml_blck_size(tensor->type) &&
-        tensor->nb[2] == tensor->nb[1]*tensor->ne[1] &&
-        tensor->nb[3] == tensor->nb[2]*tensor->ne[2];
-}
-
-#define ggml_op_name ggml_op_name_
-static const char * ggml_op_name(enum ggml_op op) {
-    return "REDACTED!GGML_OP_NAME[op]";
-}
-
-#define ggml_type_name ggml_type_name_
-static const char * ggml_type_name(enum ggml_type type) {
-    return "REDACTED!GGML_TYPE_NAME[type]";
-}
-
-#define ggml_element_size ggml_element_size_
-static size_t ggml_element_size(const struct ggml_tensor * tensor) {
-    return ggml_type_size(tensor->type);
-}
-
-#define ggml_row_size ggml_row_size_
-static size_t ggml_row_size(enum ggml_type type, int64_t ne) {
-    return ggml_type_size(type)*ne/ggml_blck_size(type);
-}
-
-static float ggml_rope_yarn_corr_dim(int n_dims, int n_orig_ctx, float n_rot, float base) {
-    return n_dims * logf(n_orig_ctx / (n_rot * 2 * (float)M_PI)) / (2 * logf(base));
-}
-
-#define ggml_rope_yarn_corr_dims ggml_rope_yarn_corr_dims_
-static void ggml_rope_yarn_corr_dims(
-    int n_dims, int n_orig_ctx, float freq_base, float beta_fast, float beta_slow, float dims[2]
-) {
-    // start and end correction dims
-    dims[0] = MAX(0,         floorf(ggml_rope_yarn_corr_dim(n_dims, n_orig_ctx, beta_fast, freq_base)));
-    dims[1] = MIN(n_dims - 1, ceilf(ggml_rope_yarn_corr_dim(n_dims, n_orig_ctx, beta_slow, freq_base)));
-}
-
-// END: COPIED FROM GGML.C
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// BEGIN: COPIED FROM GGML-BACKEND.C
-
-#define ggml_backend_buffer_init ggml_backend_buffer_init_
-static ggml_backend_buffer_t ggml_backend_buffer_init(
-               ggml_backend_buffer_type_t      buft,
-        struct ggml_backend_buffer_i           iface,
-               ggml_backend_buffer_context_t   context,
-               size_t                          size) {
-    ggml_backend_buffer_t buffer = (ggml_backend_buffer_t)malloc(sizeof(struct ggml_backend_buffer));
-    memset(buffer, 0, sizeof(*buffer));
-    buffer->iface = iface;
-    buffer->buft = buft;
-    buffer->context = context;
-    buffer->size = size;
-    return buffer;
-}
-
-#define ggml_backend_cpu_buffer_type ggml_backend_cpu_buffer_type_
-static ggml_backend_buffer_type_t ggml_backend_cpu_buffer_type(void);
-
-GGML_BACKEND_ABI static void * ggml_backend_cpu_buffer_get_base(ggml_backend_buffer_t buffer);
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size);
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size);
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
-
-// for buffers from ptr, free is not called
-static struct ggml_backend_buffer_i cpu_backend_buffer_i_from_ptr = {
-    /* .free_buffer     = */ NULL, // ptr is not owned by the buffer, so it does not need to be freed
-    /* .get_base        = */ ggml_backend_cpu_buffer_get_base,
-    /* .init_tensor     = */ NULL, // no initialization required
-    /* .set_tensor      = */ ggml_backend_cpu_buffer_set_tensor,
-    /* .get_tensor      = */ ggml_backend_cpu_buffer_get_tensor,
-    /* .cpy_tensor_from = */ ggml_backend_cpu_buffer_cpy_tensor_from,
-    /* .cpy_tensor_to   = */ ggml_backend_cpu_buffer_cpy_tensor_to,
-};
-
-#define ggml_backend_cpu_buffer_from_ptr ggml_backend_cpu_buffer_from_ptr_
-static ggml_backend_buffer_t ggml_backend_cpu_buffer_from_ptr(void * ptr, size_t size) {
-    return ggml_backend_buffer_init(ggml_backend_cpu_buffer_type(), cpu_backend_buffer_i_from_ptr, ptr, size);
-}
-
-GGML_BACKEND_ABI static const char * ggml_backend_cpu_name(ggml_backend_t backend) {
-    return "CPU";
-    GGML_UNUSED(backend);
-}
-
-#define ggml_backend_is_cpu ggml_backend_is_cpu_
-static bool ggml_backend_is_cpu(ggml_backend_t backend) {
-    return backend->iface.get_name == ggml_backend_cpu_name;
-}
-
-static const size_t TENSOR_ALIGNMENT = 64; // should be enough for AVX 512
-
-GGML_BACKEND_ABI static size_t ggml_backend_cpu_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
-    return TENSOR_ALIGNMENT;
-    GGML_UNUSED(buft);
-}
-
-GGML_BACKEND_ABI static bool ggml_backend_cpu_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
-    return ggml_backend_is_cpu(backend);
-    GGML_UNUSED(buft);
-}
-
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_free_buffer(ggml_backend_buffer_t buffer) {
-    fprintf(stderr, "WARNING: using untested foreign free due to ggml backend\n");
-    free(buffer->context);
-    GGML_UNUSED(buffer);
-}
-
-GGML_BACKEND_ABI static void * ggml_backend_cpu_buffer_get_base(ggml_backend_buffer_t buffer) {
-    return (void *)buffer->context;
-}
-
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
-    memcpy((char *)tensor->data + offset, data, size);
-    GGML_UNUSED(buffer);
-}
-
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
-    memcpy(data, (const char *)tensor->data + offset, size);
-    GGML_UNUSED(buffer);
-}
-
-#define ggml_backend_tensor_get ggml_backend_tensor_get_
-static void ggml_backend_tensor_get(const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
-    tensor->buffer->iface.get_tensor(tensor->buffer, tensor, data, offset, size);
-}
-
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
-    ggml_backend_tensor_get(src, dst->data, 0, ggml_nbytes(src));
-    GGML_UNUSED(buffer);
-}
-
-#define ggml_backend_tensor_set ggml_backend_tensor_set_
-static void ggml_backend_tensor_set(struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
-    tensor->buffer->iface.set_tensor(tensor->buffer, tensor, data, offset, size);
-}
-
-GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
-    ggml_backend_tensor_set(dst, src->data, 0, ggml_nbytes(src));
-    GGML_UNUSED(buffer);
-}
-
-static struct ggml_backend_buffer_i cpu_backend_buffer_i = {
-    /* .free_buffer     = */ ggml_backend_cpu_buffer_free_buffer,
-    /* .get_base        = */ ggml_backend_cpu_buffer_get_base,
-    /* .init_tensor     = */ NULL, // no initialization required
-    /* .set_tensor      = */ ggml_backend_cpu_buffer_set_tensor,
-    /* .get_tensor      = */ ggml_backend_cpu_buffer_get_tensor,
-    /* .cpy_tensor_from = */ ggml_backend_cpu_buffer_cpy_tensor_from,
-    /* .cpy_tensor_to   = */ ggml_backend_cpu_buffer_cpy_tensor_to,
-};
-
-GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_cpu_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
-    size += TENSOR_ALIGNMENT;   // malloc may return an address that is not aligned
-    void * data = malloc(size); // TODO: maybe use GGML_ALIGNED_MALLOC?
-    return ggml_backend_buffer_init(buft, cpu_backend_buffer_i, data, size);
-}
-
-static ggml_backend_buffer_type_t ggml_backend_cpu_buffer_type(void) {
-    static struct ggml_backend_buffer_type ggml_backend_buffer_type_cpu = {
-        /* .iface = */ {
-            /* .alloc_buffer     = */ ggml_backend_cpu_buffer_type_alloc_buffer,
-            /* .get_alignment    = */ ggml_backend_cpu_buffer_type_get_alignment,
-            /* .get_alloc_size   = */ NULL, // defaults to ggml_nbytes
-            /* .supports_backend = */ ggml_backend_cpu_buffer_type_supports_backend,
-        },
-        /* .context = */ NULL,
-    };
-    return &ggml_backend_buffer_type_cpu;
-}
-
-#define ggml_backend_buft_get_alloc_size ggml_backend_buft_get_alloc_size_
-static size_t ggml_backend_buft_get_alloc_size(ggml_backend_buffer_type_t buft, struct ggml_tensor * tensor) {
-    // get_alloc_size is optional, defaults to ggml_nbytes
-    if (buft->iface.get_alloc_size) {
-        return buft->iface.get_alloc_size(buft, tensor);
-    }
-    return ggml_nbytes(tensor);
-}
-
-// END: COPIED FROM GGML-BACKEND.C
-////////////////////////////////////////////////////////////////////////////////
 
 #define MIN_CC_DP4A   610 // minimum compute capability for __dp4a, an intrinsic for byte-wise dot products
 #define CC_VOLTA      700
@@ -7229,7 +6964,7 @@ bool ggml_cublas_loaded(void) {
     return g_cublas_loaded;
 }
 
-void ggml_init_cublas() {
+void ggml_init_cublas(void) {
     static bool initialized = false;
 
     if (!initialized) {
@@ -10069,18 +9804,18 @@ struct ggml_backend_buffer_context_cuda {
     }
 };
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_free_buffer(ggml_backend_buffer_t buffer) {
+GGML_ABI static void ggml_backend_cuda_buffer_free_buffer(ggml_backend_buffer_t buffer) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
     CUDA_CHECK(cudaFree(ctx->dev_ptr));
     delete ctx;
 }
 
-GGML_BACKEND_ABI static void * ggml_backend_cuda_buffer_get_base(ggml_backend_buffer_t buffer) {
+GGML_ABI static void * ggml_backend_cuda_buffer_get_base(ggml_backend_buffer_t buffer) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
     return ctx->dev_ptr;
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_init_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor) {
+GGML_ABI static void ggml_backend_cuda_buffer_init_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
 
     if (tensor->view_src != NULL && tensor->view_offs == 0) {
@@ -10114,7 +9849,7 @@ GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_init_tensor(ggml_backend_b
     UNUSED(buffer);
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_set_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
+GGML_ABI static void ggml_backend_cuda_buffer_set_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
     GGML_ASSERT(tensor->backend == GGML_BACKEND_GPU);
 
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
@@ -10125,7 +9860,7 @@ GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_set_tensor(ggml_backend_bu
     CUDA_CHECK(cudaMemcpy((char *)tensor->data + offset, data, size, cudaMemcpyHostToDevice));
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_get_tensor(ggml_backend_buffer_t buffer, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+GGML_ABI static void ggml_backend_cuda_buffer_get_tensor(ggml_backend_buffer_t buffer, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
     GGML_ASSERT(tensor->backend == GGML_BACKEND_GPU);
 
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
@@ -10136,7 +9871,7 @@ GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_get_tensor(ggml_backend_bu
     CUDA_CHECK(cudaMemcpy(data, (const char *)tensor->data + offset, size, cudaMemcpyDeviceToHost));
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_clear(ggml_backend_buffer_t buffer, uint8_t value) {
+GGML_ABI static void ggml_backend_cuda_buffer_clear(ggml_backend_buffer_t buffer, uint8_t value) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
 
     ggml_cuda_set_device(ctx->device);
@@ -10158,7 +9893,7 @@ static struct ggml_backend_buffer_i cuda_backend_buffer_interface = {
 
 // cuda buffer type
 
-GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_cuda_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+GGML_ABI static ggml_backend_buffer_t ggml_backend_cuda_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     int device = (int) (intptr_t) buft->context;
 
     ggml_cuda_set_device(device);
@@ -10170,16 +9905,16 @@ GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_cuda_buffer_type_allo
 
     ggml_backend_buffer_context_cuda * ctx = new ggml_backend_buffer_context_cuda(device, dev_ptr);
 
-    return ggml_backend_buffer_init(buft, cuda_backend_buffer_interface, ctx, size);
+    return g_backend->ggml_backend_buffer_init(buft, cuda_backend_buffer_interface, ctx, size);
 }
 
-GGML_BACKEND_ABI static size_t ggml_backend_cuda_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
+GGML_ABI static size_t ggml_backend_cuda_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
     return 128;
 
     UNUSED(buft);
 }
 
-GGML_BACKEND_ABI static size_t ggml_backend_cuda_buffer_type_get_alloc_size(ggml_backend_buffer_type_t buft, ggml_tensor * tensor) {
+GGML_ABI static size_t ggml_backend_cuda_buffer_type_get_alloc_size(ggml_backend_buffer_type_t buft, ggml_tensor * tensor) {
     int64_t row_low = 0;
     int64_t row_high = ggml_nrows(tensor);
     int64_t nrows_split = row_high - row_low;
@@ -10199,7 +9934,7 @@ GGML_BACKEND_ABI static size_t ggml_backend_cuda_buffer_type_get_alloc_size(ggml
     UNUSED(buft);
 }
 
-GGML_BACKEND_ABI static bool ggml_backend_cuda_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
+GGML_ABI static bool ggml_backend_cuda_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
     return ggml_backend_is_cuda(backend);
 
     UNUSED(buft);
@@ -10233,21 +9968,20 @@ ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
 
 // host buffer type
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_host_buffer_free_buffer(ggml_backend_buffer_t buffer) {
+GGML_ABI static void ggml_backend_cuda_host_buffer_free_buffer(ggml_backend_buffer_t buffer) {
     ggml_cuda_host_free(buffer->context);
 }
 
-GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_cuda_host_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+GGML_ABI static ggml_backend_buffer_t ggml_backend_cuda_host_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     void * ptr = ggml_cuda_host_malloc(size);
 
     if (ptr == nullptr) {
         // fallback to cpu buffer
-        // return ggml_backend_buft_alloc_buffer(ggml_backend_cpu_buffer_type(), size);
-        GGML_ASSERT(!"ran out of gpu memory");
+        return ggml_backend_buft_alloc_buffer(ggml_backend_cpu_buffer_type(), size);
     }
 
     // FIXME: this is a hack to avoid having to implement a new buffer type
-    ggml_backend_buffer_t buffer = ggml_backend_cpu_buffer_from_ptr(ptr, size);
+    ggml_backend_buffer_t buffer = g_backend->ggml_backend_cpu_buffer_from_ptr(ptr, size);
     buffer->buft = buft;
     buffer->iface.free_buffer = ggml_backend_cuda_host_buffer_free_buffer;
 
@@ -10275,26 +10009,26 @@ struct ggml_backend_context_cuda {
     int device;
 };
 
-GGML_BACKEND_ABI static const char * ggml_backend_cuda_name(ggml_backend_t backend) {
+GGML_ABI static const char * ggml_backend_cuda_name(ggml_backend_t backend) {
     return GGML_CUDA_NAME;
 
     UNUSED(backend);
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_free(ggml_backend_t backend) {
+GGML_ABI static void ggml_backend_cuda_free(ggml_backend_t backend) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     delete cuda_ctx;
     delete backend;
 }
 
-GGML_BACKEND_ABI static ggml_backend_buffer_type_t ggml_backend_cuda_get_default_buffer_type(ggml_backend_t backend) {
+GGML_ABI static ggml_backend_buffer_type_t ggml_backend_cuda_get_default_buffer_type(ggml_backend_t backend) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     return ggml_backend_cuda_buffer_type(cuda_ctx->device);
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_set_tensor_async(ggml_backend_t backend, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
+GGML_ABI static void ggml_backend_cuda_set_tensor_async(ggml_backend_t backend, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     GGML_ASSERT(tensor->buffer->buft == ggml_backend_cuda_buffer_type(cuda_ctx->device) && "unsupported buffer type");
@@ -10303,7 +10037,7 @@ GGML_BACKEND_ABI static void ggml_backend_cuda_set_tensor_async(ggml_backend_t b
     CUDA_CHECK(cudaMemcpyAsync((char *)tensor->data + offset, data, size, cudaMemcpyHostToDevice, g_cudaStreams[cuda_ctx->device][0]));
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_get_tensor_async(ggml_backend_t backend, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+GGML_ABI static void ggml_backend_cuda_get_tensor_async(ggml_backend_t backend, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     GGML_ASSERT(tensor->buffer->buft == ggml_backend_cuda_buffer_type(cuda_ctx->device) && "unsupported buffer type");
@@ -10312,7 +10046,7 @@ GGML_BACKEND_ABI static void ggml_backend_cuda_get_tensor_async(ggml_backend_t b
     CUDA_CHECK(cudaMemcpyAsync(data, (const char *)tensor->data + offset, size, cudaMemcpyDeviceToHost, g_cudaStreams[cuda_ctx->device][0]));
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_synchronize(ggml_backend_t backend) {
+GGML_ABI static void ggml_backend_cuda_synchronize(ggml_backend_t backend) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     CUDA_CHECK(cudaStreamSynchronize(g_cudaStreams[cuda_ctx->device][0]));
@@ -10320,7 +10054,7 @@ GGML_BACKEND_ABI static void ggml_backend_cuda_synchronize(ggml_backend_t backen
     UNUSED(backend);
 }
 
-GGML_BACKEND_ABI static ggml_backend_graph_plan_t ggml_backend_cuda_graph_plan_create(ggml_backend_t backend, ggml_cgraph * cgraph) {
+GGML_ABI static ggml_backend_graph_plan_t ggml_backend_cuda_graph_plan_create(ggml_backend_t backend, ggml_cgraph * cgraph) {
     GGML_ASSERT(!"not implemented");
 
     return nullptr;
@@ -10329,21 +10063,21 @@ GGML_BACKEND_ABI static ggml_backend_graph_plan_t ggml_backend_cuda_graph_plan_c
     UNUSED(cgraph);
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_graph_plan_free(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
+GGML_ABI static void ggml_backend_cuda_graph_plan_free(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
     GGML_ASSERT(!"not implemented");
 
     UNUSED(backend);
     UNUSED(plan);
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_graph_plan_compute(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
+GGML_ABI static void ggml_backend_cuda_graph_plan_compute(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
     GGML_ASSERT(!"not implemented");
 
     UNUSED(backend);
     UNUSED(plan);
 }
 
-GGML_BACKEND_ABI static void ggml_backend_cuda_graph_compute(ggml_backend_t backend, ggml_cgraph * cgraph) {
+GGML_ABI static void ggml_backend_cuda_graph_compute(ggml_backend_t backend, ggml_cgraph * cgraph) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     ggml_cuda_set_main_device(cuda_ctx->device);
@@ -10402,7 +10136,7 @@ GGML_BACKEND_ABI static void ggml_backend_cuda_graph_compute(ggml_backend_t back
     UNUSED(backend);
 }
 
-GGML_BACKEND_ABI static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, const ggml_tensor * op) {
+GGML_ABI static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, const ggml_tensor * op) {
     switch (op->op) {
         case GGML_OP_UNARY:
             switch (ggml_get_unary_op(op)) {
@@ -10530,8 +10264,6 @@ static ggml_backend_i cuda_backend_i = {
 };
 
 ggml_backend_t ggml_backend_cuda_init(int device) {
-    ggml_init_cublas(); // TODO: remove from ggml.c
-
     if (device < 0 || device >= ggml_cuda_get_device_count()) {
         fprintf(stderr, "%s: error: invalid device %d\n", __func__, device);
         return nullptr;
@@ -10561,94 +10293,4 @@ ggml_backend_t ggml_backend_reg_cuda_init(const char * params, void * user_data)
     return cuda_backend;
 
     UNUSED(params);
-}
-
-static int ggml_blck_size(enum ggml_type type) {
-    switch (type) {
-        case GGML_TYPE_I8:
-            return 1;
-        case GGML_TYPE_I16:
-            return 1;
-        case GGML_TYPE_I32:
-            return 1;
-        case GGML_TYPE_F32:
-            return 1;
-        case GGML_TYPE_F16:
-            return 1;
-        case GGML_TYPE_Q4_0:
-            return QK4_0;
-        case GGML_TYPE_Q4_1:
-            return QK4_1;
-        case GGML_TYPE_Q5_0:
-            return QK5_0;
-        case GGML_TYPE_Q5_1:
-            return QK5_1;
-        case GGML_TYPE_Q8_0:
-            return QK8_0;
-        case GGML_TYPE_Q8_1:
-            return QK8_1;
-        case GGML_TYPE_Q2_K:
-            return QK_K;
-        case GGML_TYPE_Q3_K:
-            return QK_K;
-        case GGML_TYPE_Q4_K:
-            return QK_K;
-        case GGML_TYPE_Q5_K:
-            return QK_K;
-        case GGML_TYPE_Q6_K:
-            return QK_K;
-        case GGML_TYPE_Q8_K:
-            return QK_K;
-        default:
-            return 0;
-    }
-}
-
-// This is only used for intermediate quantization and dot products
-typedef struct {
-    float   d;              // delta
-    int8_t  qs[QK_K];       // quants
-    int16_t bsums[QK_K/16]; // sum of quants in groups of 16
-} block_q8_K;
-static_assert(sizeof(block_q8_K) == sizeof(float) + QK_K + QK_K/16*sizeof(int16_t), "wrong q8_K block size/padding");
-
-static size_t ggml_type_size(enum ggml_type type) {
-    switch (type) {
-        case GGML_TYPE_I8:
-            return sizeof(int8_t);
-        case GGML_TYPE_I16:
-            return sizeof(int16_t);
-        case GGML_TYPE_I32:
-            return sizeof(int32_t);
-        case GGML_TYPE_F32:
-            return sizeof(float);
-        case GGML_TYPE_F16:
-            return sizeof(ggml_fp16_t);
-        case GGML_TYPE_Q4_0:
-            return sizeof(block_q4_0);
-        case GGML_TYPE_Q4_1:
-            return sizeof(block_q4_1);
-        case GGML_TYPE_Q5_0:
-            return sizeof(block_q5_0);
-        case GGML_TYPE_Q5_1:
-            return sizeof(block_q5_1);
-        case GGML_TYPE_Q8_0:
-            return sizeof(block_q8_0);
-        case GGML_TYPE_Q8_1:
-            return sizeof(block_q8_1);
-        case GGML_TYPE_Q2_K:
-            return sizeof(block_q2_K);
-        case GGML_TYPE_Q3_K:
-            return sizeof(block_q3_K);
-        case GGML_TYPE_Q4_K:
-            return sizeof(block_q4_K);
-        case GGML_TYPE_Q5_K:
-            return sizeof(block_q5_K);
-        case GGML_TYPE_Q6_K:
-            return sizeof(block_q6_K);
-        case GGML_TYPE_Q8_K:
-            return sizeof(block_q8_K);
-        default:
-            return 0;
-    }
 }

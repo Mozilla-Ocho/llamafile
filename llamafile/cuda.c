@@ -50,6 +50,7 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 #define THESTRING(x) #x
 #define STRINGIFY(x) THESTRING(x)
 #define WIND_ONLY(x) (!IsWindows() ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
+#define ARMS_ONLY(x) (!IsAarch64() ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
 #define BLAS_ONLY(x) (FLAG_tinyblas ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
 
 #define NVCC_LIBS BLAS_ONLY("-lcublas"), "-lcuda"
@@ -59,7 +60,9 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
         "-use_fast_math",                                               \
         "--compiler-options",                                           \
         (!IsWindows()                                                   \
-         ? "-fPIC -O3 -march=native -mtune=native"                      \
+         ? (!IsAarch64()                                                \
+            ? "-fPIC -O3 -march=native -mtune=native"                   \
+            : "-fPIC -O3 -march=native -mtune=native -ffixed-x28")      \
          : "/nologo /EHsc /O2 /GR /MT"),                                \
         "-DNDEBUG",                                                     \
         "-DGGML_BUILD=1",                                               \
@@ -92,9 +95,9 @@ static const struct Source {
 };
 
 static struct Cuda {
-    bool disabled;
     bool supported;
     atomic_uint once;
+    typeof(ggml_cuda_link) *ggml_cuda_link;
     typeof(ggml_init_cublas) *init;
     typeof(ggml_cublas_loaded) *loaded;
     typeof(ggml_cuda_host_free) *host_free;
@@ -505,6 +508,7 @@ static bool CompileAmd(const char *clangxx, const char *dso, const char *src) {
                     "-D_DLL",
                     "-D_MT",
                     WIND_ONLY("-Xclang"), WIND_ONLY("--dependent-lib=msvcrt"),
+                    ARMS_ONLY("-ffixed-x28"),
                     "-std=gnu++14",
                     "-mllvm", "-amdgpu-early-inline-all=true",
                     "-mllvm", "-amdgpu-function-calls=false",
@@ -601,6 +605,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
 
     // import functions
     bool ok = true;
+    ok &= !!(ggml_cuda.ggml_cuda_link = cosmo_dlsym(lib, "ggml_cuda_link"));
     ok &= !!(ggml_cuda.init = cosmo_dlsym(lib, "ggml_init_cublas"));
     ok &= !!(ggml_cuda.loaded = cosmo_dlsym(lib, "ggml_cublas_loaded"));
     ok &= !!(ggml_cuda.host_free = cosmo_dlsym(lib, "ggml_cuda_host_free"));
@@ -625,11 +630,12 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.backend_host_buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_host_buffer_type"));
     ok &= !!(ggml_cuda.backend_init = cosmo_dlsym(lib, "ggml_backend_cuda_init"));
     if (!ok) {
-        tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
+        tinylog("error: not all cuda symbols could be imported\n", NULL);
         return false;
     }
 
     // ask the library if actual gpu devices exist
+    ggml_cuda.ggml_cuda_link(ggml_backend_api());
     ggml_cuda.init();
     return ggml_cuda.loaded();
 }
@@ -824,14 +830,10 @@ TryNvidia:
 }
 
 static void ImportCuda(void) {
-    if (!ggml_cuda.disabled && ImportCudaImpl()) {
+    if (ImportCudaImpl()) {
         tinylog("GPU support successfully linked and loaded\n", NULL);
         ggml_cuda.supported = true;
     }
-}
-
-void ggml_cuda_disable(void) {
-    ggml_cuda.disabled = true;
 }
 
 bool ggml_cuda_supported(void) {

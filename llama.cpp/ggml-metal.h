@@ -44,6 +44,7 @@ extern "C" {
 struct ggml_metal_context;
 
 bool ggml_metal_supported(void);
+void ggml_metal_link(const struct ggml_backend_api *);
 void ggml_metal_log_set_callback(ggml_log_callback log_callback, void * user_data);
 
 // number of command buffers to use

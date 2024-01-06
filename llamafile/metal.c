@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <stdatomic.h>
 #include "llamafile/log.h"
+#include "llamafile/llamafile.h"
 #include "llama.cpp/ggml-metal.h"
 
 __static_yoink("llama.cpp/ggml.h");
@@ -41,8 +42,6 @@ __static_yoink("llama.cpp/ggml-quants.h");
 __static_yoink("llama.cpp/ggml-backend.h");
 __static_yoink("llama.cpp/ggml-metal.metal");
 __static_yoink("llama.cpp/ggml-backend-impl.h");
-
-ggml_backend_t ggml_backend_reg_metal_init(const char *, void *);
 
 static const struct Source {
     const char *zip;
@@ -63,6 +62,7 @@ static const struct Source {
 static struct Metal {
     bool supported;
     atomic_uint once;
+    typeof(ggml_metal_link) *ggml_metal_link;
     typeof(ggml_metal_add_buffer) *add_buffer;
     typeof(ggml_metal_free) *free;
     typeof(ggml_metal_get_concur_list) *get_concur_list;
@@ -75,7 +75,6 @@ static struct Metal {
     typeof(ggml_metal_set_n_cb) *set_n_cb;
     typeof(ggml_backend_metal_init) *backend_init;
     typeof(ggml_backend_metal_buffer_type) *backend_buffer_type;
-    typeof(ggml_backend_reg_metal_init) *backend_reg_init;
     typeof(ggml_backend_metal_buffer_from_ptr) *backend_buffer_from_ptr;
     typeof(ggml_backend_is_metal) *backend_is_metal;
     typeof(ggml_backend_metal_set_n_cb) *backend_set_n_cb;
@@ -122,7 +121,7 @@ static bool BuildMetal(const char *dso) {
     }
 
     // determine if we need to build
-    if (!needs_rebuild) {
+    if (!needs_rebuild || FLAG_recompile) {
         switch (llamafile_is_file_newer_than(src, dso)) {
             case -1:
                 return false;
@@ -158,6 +157,7 @@ static bool BuildMetal(const char *dso) {
             "-DNDEBUG",
             "-fPIC",
             "-pthread",
+            "-ffixed-x28", // cosmo's tls register
             src,
             "-o", tmpdso,
             "-framework", "Foundation",
@@ -205,6 +205,7 @@ static bool LinkMetal(const char *dso) {
 
     // import functions
     bool ok = true;
+    ok &= !!(ggml_metal.ggml_metal_link = cosmo_dlsym(lib, "ggml_metal_link"));
     ok &= !!(ggml_metal.add_buffer = cosmo_dlsym(lib, "ggml_metal_add_buffer"));
     ok &= !!(ggml_metal.free = cosmo_dlsym(lib, "ggml_metal_free"));
     ok &= !!(ggml_metal.get_concur_list = cosmo_dlsym(lib, "ggml_metal_get_concur_list"));
@@ -217,7 +218,6 @@ static bool LinkMetal(const char *dso) {
     ok &= !!(ggml_metal.set_n_cb = cosmo_dlsym(lib, "ggml_metal_set_n_cb"));
     ok &= !!(ggml_metal.backend_init = cosmo_dlsym(lib, "ggml_backend_metal_init"));
     ok &= !!(ggml_metal.backend_buffer_type = cosmo_dlsym(lib, "ggml_backend_metal_buffer_type"));
-    ok &= !!(ggml_metal.backend_reg_init = cosmo_dlsym(lib, "ggml_backend_reg_metal_init"));
     ok &= !!(ggml_metal.backend_buffer_from_ptr = cosmo_dlsym(lib, "ggml_backend_metal_buffer_from_ptr"));
     ok &= !!(ggml_metal.backend_is_metal = cosmo_dlsym(lib, "ggml_backend_is_metal"));
     ok &= !!(ggml_metal.backend_set_n_cb = cosmo_dlsym(lib, "ggml_backend_metal_set_n_cb"));
@@ -227,6 +227,7 @@ static bool LinkMetal(const char *dso) {
     }
 
     // we're good
+    ggml_metal.ggml_metal_link(ggml_backend_api());
     return true;
 }
 
@@ -265,7 +266,6 @@ static bool ImportMetalImpl(void) {
 static void ImportMetal(void) {
     if (ImportMetalImpl()) {
         ggml_metal.supported = true;
-        ggml_metal.backend_init();
         tinylog("Apple Metal GPU support successfully loaded\n", NULL);
     }
 }
@@ -338,11 +338,6 @@ ggml_backend_t ggml_backend_metal_init(void) {
 ggml_backend_buffer_type_t ggml_backend_metal_buffer_type(void) {
     if (!ggml_metal_supported()) return 0;
     return ggml_metal.backend_buffer_type();
-}
-
-ggml_backend_t ggml_backend_reg_metal_init(const char * params, void * user_data) {
-    if (!ggml_metal_supported()) return 0;
-    return ggml_metal.backend_reg_init(params, user_data);
 }
 
 ggml_backend_buffer_t ggml_backend_metal_buffer_from_ptr(void * data, size_t size, size_t max_size) {

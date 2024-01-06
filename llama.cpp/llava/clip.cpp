@@ -23,7 +23,6 @@
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/ggml-alloc.h"
-#include "llama.cpp/ggml-backend.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "llama.cpp/stb_image.h"
