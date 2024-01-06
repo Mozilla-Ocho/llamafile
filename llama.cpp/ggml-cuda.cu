@@ -224,7 +224,20 @@
 #include <cuda.h>
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
+
+#if CUDART_VERSION < 11020
+#define CU_DEVICE_ATTRIBUTE_VIRTUAL_MEMORY_MANAGEMENT_SUPPORTED CU_DEVICE_ATTRIBUTE_VIRTUAL_ADDRESS_MANAGEMENT_SUPPORTED
+#define CUBLAS_TF32_TENSOR_OP_MATH CUBLAS_TENSOR_OP_MATH
+#define CUBLAS_COMPUTE_16F CUDA_R_16F
+#define CUBLAS_COMPUTE_32F CUDA_R_32F
+#define cublasComputeType_t cudaDataType_t
+#endif // CUDART_VERSION < 11020
+
 #endif // defined(GGML_USE_HIPBLAS)
+
+#include "ggml-cuda.h"
+#include "ggml.h"
+#include "ggml-backend-impl.h"
 
 #ifdef GGML_USE_TINYBLAS
 #define CUBLAS_ENTRY() cudaStream_t _ggml_stream = nullptr
@@ -234,19 +247,6 @@
 #define CUBLAS_ENTRY()
 #define CUBLAS_SET_STREAM(id, stream) CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream))
 #define CUBLAS_HANDLE(id) g_cublas_handles[id]
-#endif
-
-#include "ggml-cuda.h"
-#include "ggml.h"
-#include "ggml-backend-impl.h"
-
-#undef MIN
-#undef MAX
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
 #endif
 
 static const struct ggml_backend_api *g_backend;
@@ -10264,6 +10264,8 @@ static ggml_backend_i cuda_backend_i = {
 };
 
 ggml_backend_t ggml_backend_cuda_init(int device) {
+    ggml_init_cublas(); // TODO: remove from ggml.c
+
     if (device < 0 || device >= ggml_cuda_get_device_count()) {
         fprintf(stderr, "%s: error: invalid device %d\n", __func__, device);
         return nullptr;

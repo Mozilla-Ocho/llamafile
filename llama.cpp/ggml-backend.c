@@ -1432,9 +1432,17 @@ void ggml_backend_compare_graph_backend(ggml_backend_t backend1, ggml_backend_t 
     ggml_backend_graph_copy_free(copy);
 }
 
+GGML_ABI void system_free(void *p) {
+    free(p);
+}
+
+GGML_ABI void *system_malloc(size_t n) {
+    return malloc(n);
+}
+
 static const struct ggml_backend_api kGgmlBackendApi = {
-    free,
-    malloc,
+    system_free,
+    system_malloc,
     ggml_backend_buffer_init,
     ggml_backend_cpu_buffer_from_ptr,
     ggml_backend_cpu_buffer_type,

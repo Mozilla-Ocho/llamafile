@@ -121,32 +121,32 @@ extern "C" {
     //
 
     struct ggml_backend_api {
-        void (*free)(void *);
-        void *(*malloc)(size_t);
-        typeof(ggml_backend_buffer_init) *GGML_ABI ggml_backend_buffer_init;
-        typeof(ggml_backend_cpu_buffer_from_ptr) *GGML_ABI ggml_backend_cpu_buffer_from_ptr;
-        typeof(ggml_backend_cpu_buffer_type) *GGML_ABI ggml_backend_cpu_buffer_type;
-        typeof(ggml_backend_buft_get_alloc_size) *GGML_ABI ggml_backend_buft_get_alloc_size;
-        typeof(ggml_backend_buft_alloc_buffer) *GGML_ABI ggml_backend_buft_alloc_buffer;
-        typeof(ggml_backend_is_cpu) *GGML_ABI ggml_backend_is_cpu;
-        typeof(ggml_backend_tensor_get) *GGML_ABI ggml_backend_tensor_get;
-        typeof(ggml_backend_tensor_set) *GGML_ABI ggml_backend_tensor_set;
-        typeof(ggml_is_quantized) *GGML_ABI ggml_is_quantized;
-        typeof(ggml_type_size) *GGML_ABI ggml_type_size;
-        typeof(ggml_blck_size) *GGML_ABI ggml_blck_size;
-        typeof(ggml_is_transposed) *GGML_ABI ggml_is_transposed;
-        typeof(ggml_nbytes) *GGML_ABI ggml_nbytes;
-        typeof(ggml_get_unary_op) *GGML_ABI ggml_get_unary_op;
-        typeof(ggml_nelements) *GGML_ABI ggml_nelements;
-        typeof(ggml_nrows) *GGML_ABI ggml_nrows;
-        typeof(ggml_is_permuted) *GGML_ABI ggml_is_permuted;
-        typeof(ggml_is_contiguous) *GGML_ABI ggml_is_contiguous;
-        typeof(ggml_op_name) *GGML_ABI ggml_op_name;
-        typeof(ggml_type_name) *GGML_ABI ggml_type_name;
-        typeof(ggml_element_size) *GGML_ABI ggml_element_size;
-        typeof(ggml_row_size) *GGML_ABI ggml_row_size;
-        typeof(ggml_rope_yarn_corr_dims) *GGML_ABI ggml_rope_yarn_corr_dims;
-        typeof(ggml_op_desc) *GGML_ABI ggml_op_desc;
+        void (*GGML_ABI free)(void *);
+        void *(*GGML_ABI malloc)(size_t);
+        ggml_backend_buffer_t (*GGML_ABI ggml_backend_buffer_init)(ggml_backend_buffer_type_t, struct ggml_backend_buffer_i, ggml_backend_buffer_context_t, size_t);
+        ggml_backend_buffer_t (*GGML_ABI ggml_backend_cpu_buffer_from_ptr)(void *, size_t);
+        ggml_backend_buffer_type_t (*GGML_ABI ggml_backend_cpu_buffer_type)(void);
+        size_t (*GGML_ABI ggml_backend_buft_get_alloc_size)(ggml_backend_buffer_type_t, struct ggml_tensor *);
+        ggml_backend_buffer_t (*GGML_ABI ggml_backend_buft_alloc_buffer)(ggml_backend_buffer_type_t, size_t);
+        bool (*GGML_ABI ggml_backend_is_cpu)(ggml_backend_t);
+        void (*GGML_ABI ggml_backend_tensor_get)(const struct ggml_tensor *, void *, size_t, size_t);
+        void (*GGML_ABI ggml_backend_tensor_set)(struct ggml_tensor *, const void *, size_t, size_t);
+        bool (*GGML_ABI ggml_is_quantized)(enum ggml_type);
+        size_t (*GGML_ABI ggml_type_size)(enum ggml_type);
+        int (*GGML_ABI ggml_blck_size)(enum ggml_type);
+        bool (*GGML_ABI ggml_is_transposed)(const struct ggml_tensor *);
+        size_t (*GGML_ABI ggml_nbytes)(const struct ggml_tensor *);
+        enum ggml_unary_op (*GGML_ABI ggml_get_unary_op)(const struct ggml_tensor *);
+        int64_t (*GGML_ABI ggml_nelements)(const struct ggml_tensor *);
+        int64_t (*GGML_ABI ggml_nrows)(const struct ggml_tensor *);
+        bool (*GGML_ABI ggml_is_permuted)(const struct ggml_tensor *);
+        bool (*GGML_ABI ggml_is_contiguous)(const struct ggml_tensor *);
+        const char *(*GGML_ABI ggml_op_name)(enum ggml_op);
+        const char *(*GGML_ABI ggml_type_name)(enum ggml_type);
+        size_t (*GGML_ABI ggml_element_size)(const struct ggml_tensor *);
+        size_t (*GGML_ABI ggml_row_size)(enum ggml_type, int64_t);
+        void (*GGML_ABI ggml_rope_yarn_corr_dims)(int, int, float, float, float, float[2]);
+        const char *(*GGML_ABI ggml_op_desc)(const struct ggml_tensor *);
     };
 
 #ifdef  __cplusplus
