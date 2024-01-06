@@ -3,6 +3,12 @@
 #include "ggml.h"
 #include "ggml-alloc.h"
 
+#if defined(_WIN32)
+#define GGML_BACKEND_ABI
+#else
+#define GGML_BACKEND_ABI __attribute__((__ms_abi__))
+#endif
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -173,7 +179,7 @@ extern "C" {
     GGML_API struct ggml_backend_graph_copy ggml_backend_graph_copy(ggml_backend_t backend, struct ggml_cgraph * graph);
     GGML_API void                           ggml_backend_graph_copy_free(struct ggml_backend_graph_copy copy);
 
-    typedef bool (*ggml_backend_eval_callback)(int node_index, struct ggml_tensor * t1, struct ggml_tensor * t2, void * user_data);
+    typedef bool (*GGML_BACKEND_ABI ggml_backend_eval_callback)(int node_index, struct ggml_tensor * t1, struct ggml_tensor * t2, void * user_data);
 
     // Compare the output of two backends
     GGML_API void ggml_backend_compare_graph_backend(ggml_backend_t backend1, ggml_backend_t backend2, struct ggml_cgraph * graph, ggml_backend_eval_callback callback, void * user_data);

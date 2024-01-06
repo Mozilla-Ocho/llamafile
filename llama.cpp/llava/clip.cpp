@@ -540,12 +540,10 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
     clip_ctx * new_clip = new clip_ctx;
 
-#if 0
     if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
         new_clip->backend = ggml_backend_cuda_init(0);
         tinylogf("%s: CLIP using CUDA backend\n", __func__);
     }
-#endif
 
     if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
         new_clip->backend = ggml_backend_metal_init();

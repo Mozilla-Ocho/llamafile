@@ -29,7 +29,7 @@ static ggml_backend_buffer_t ggml_backend_buffer_init(
     return buffer;
 }
 
-static const char * ggml_backend_cpu_name(ggml_backend_t backend) {
+GGML_BACKEND_ABI static const char * ggml_backend_cpu_name(ggml_backend_t backend) {
     return "CPU";
     GGML_UNUSED(backend);
 }
@@ -2672,13 +2672,13 @@ static void ggml_backend_metal_free_device(void) {
     }
 }
 
-static void * ggml_backend_metal_buffer_get_base(ggml_backend_buffer_t buffer) {
+GGML_BACKEND_ABI static void * ggml_backend_metal_buffer_get_base(ggml_backend_buffer_t buffer) {
     struct ggml_backend_metal_buffer_context * ctx = (struct ggml_backend_metal_buffer_context *)buffer->context;
 
     return ctx->all_data;
 }
 
-static void ggml_backend_metal_buffer_free_buffer(ggml_backend_buffer_t buffer) {
+GGML_BACKEND_ABI static void ggml_backend_metal_buffer_free_buffer(ggml_backend_buffer_t buffer) {
     struct ggml_backend_metal_buffer_context * ctx = (struct ggml_backend_metal_buffer_context *)buffer->context;
 
     for (int i = 0; i < ctx->n_buffers; i++) {
@@ -2693,31 +2693,31 @@ static void ggml_backend_metal_buffer_free_buffer(ggml_backend_buffer_t buffer) 
     free(ctx);
 }
 
-static void ggml_backend_metal_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_metal_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
     memcpy((char *)tensor->data + offset, data, size);
 
     UNUSED(buffer);
 }
 
-static void ggml_backend_metal_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_metal_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
     memcpy(data, (const char *)tensor->data + offset, size);
 
     UNUSED(buffer);
 }
 
-static void ggml_backend_metal_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
+GGML_BACKEND_ABI static void ggml_backend_metal_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
     ggml_backend_tensor_get(src, dst->data, 0, ggml_nbytes(src));
 
     UNUSED(buffer);
 }
 
-static void ggml_backend_metal_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
+GGML_BACKEND_ABI static void ggml_backend_metal_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
     ggml_backend_tensor_set(dst, src->data, 0, ggml_nbytes(src));
 
     UNUSED(buffer);
 }
 
-static void ggml_backend_metal_buffer_clear(ggml_backend_buffer_t buffer, uint8_t value) {
+GGML_BACKEND_ABI static void ggml_backend_metal_buffer_clear(ggml_backend_buffer_t buffer, uint8_t value) {
     struct ggml_backend_metal_buffer_context * ctx = (struct ggml_backend_metal_buffer_context *)buffer->context;
 
     memset(ctx->all_data, value, ctx->all_size);
@@ -2736,7 +2736,7 @@ static struct ggml_backend_buffer_i ggml_backend_metal_buffer_i = {
 
 // default buffer type
 
-static ggml_backend_buffer_t ggml_backend_metal_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_metal_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     struct ggml_backend_metal_buffer_context * ctx = malloc(sizeof(struct ggml_backend_metal_buffer_context));
 
     const size_t size_page = sysconf(_SC_PAGESIZE);
@@ -2788,18 +2788,18 @@ static ggml_backend_buffer_t ggml_backend_metal_buffer_type_alloc_buffer(ggml_ba
     return ggml_backend_buffer_init(buft, ggml_backend_metal_buffer_i, ctx, size);
 }
 
-static size_t ggml_backend_metal_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
+GGML_BACKEND_ABI static size_t ggml_backend_metal_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
     return 32;
     UNUSED(buft);
 }
 
-static bool ggml_backend_metal_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
+GGML_BACKEND_ABI static bool ggml_backend_metal_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
     return ggml_backend_is_metal(backend) || ggml_backend_is_cpu(backend);
 
     UNUSED(buft);
 }
 
-static bool ggml_backend_metal_buffer_type_is_host(ggml_backend_buffer_type_t buft) {
+GGML_BACKEND_ABI static bool ggml_backend_metal_buffer_type_is_host(ggml_backend_buffer_type_t buft) {
     return true;
 
     UNUSED(buft);
@@ -2901,31 +2901,31 @@ ggml_backend_buffer_t ggml_backend_metal_buffer_from_ptr(void * data, size_t siz
 
 // backend
 
-static const char * ggml_backend_metal_name(ggml_backend_t backend) {
+GGML_BACKEND_ABI static const char * ggml_backend_metal_name(ggml_backend_t backend) {
     return "Metal";
 
     UNUSED(backend);
 }
 
-static void ggml_backend_metal_free(ggml_backend_t backend) {
+GGML_BACKEND_ABI static void ggml_backend_metal_free(ggml_backend_t backend) {
     struct ggml_metal_context * ctx = (struct ggml_metal_context *)backend->context;
     ggml_metal_free(ctx);
     free(backend);
 }
 
-static ggml_backend_buffer_type_t ggml_backend_metal_get_default_buffer_type(ggml_backend_t backend) {
+GGML_BACKEND_ABI static ggml_backend_buffer_type_t ggml_backend_metal_get_default_buffer_type(ggml_backend_t backend) {
     return ggml_backend_metal_buffer_type();
 
     UNUSED(backend);
 }
 
-static void ggml_backend_metal_graph_compute(ggml_backend_t backend, struct ggml_cgraph * cgraph) {
+GGML_BACKEND_ABI static void ggml_backend_metal_graph_compute(ggml_backend_t backend, struct ggml_cgraph * cgraph) {
     struct ggml_metal_context * metal_ctx = (struct ggml_metal_context *)backend->context;
 
     ggml_metal_graph_compute(metal_ctx, cgraph);
 }
 
-static bool ggml_backend_metal_supports_op(ggml_backend_t backend, const struct ggml_tensor * op) {
+GGML_BACKEND_ABI static bool ggml_backend_metal_supports_op(ggml_backend_t backend, const struct ggml_tensor * op) {
     return ggml_metal_supports_op(op);
 
     UNUSED(backend);

@@ -415,11 +415,11 @@ static ggml_backend_buffer_t ggml_backend_buffer_init(
 #define ggml_backend_cpu_buffer_type ggml_backend_cpu_buffer_type_
 static ggml_backend_buffer_type_t ggml_backend_cpu_buffer_type(void);
 
-static void * ggml_backend_cpu_buffer_get_base(ggml_backend_buffer_t buffer);
-static void ggml_backend_cpu_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size);
-static void ggml_backend_cpu_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size);
-static void ggml_backend_cpu_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
-static void ggml_backend_cpu_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
+GGML_BACKEND_ABI static void * ggml_backend_cpu_buffer_get_base(ggml_backend_buffer_t buffer);
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size);
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size);
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
 
 // for buffers from ptr, free is not called
 static struct ggml_backend_buffer_i cpu_backend_buffer_i_from_ptr = {
@@ -437,7 +437,7 @@ static ggml_backend_buffer_t ggml_backend_cpu_buffer_from_ptr(void * ptr, size_t
     return ggml_backend_buffer_init(ggml_backend_cpu_buffer_type(), cpu_backend_buffer_i_from_ptr, ptr, size);
 }
 
-static const char * ggml_backend_cpu_name(ggml_backend_t backend) {
+GGML_BACKEND_ABI static const char * ggml_backend_cpu_name(ggml_backend_t backend) {
     return "CPU";
     GGML_UNUSED(backend);
 }
@@ -449,32 +449,32 @@ static bool ggml_backend_is_cpu(ggml_backend_t backend) {
 
 static const size_t TENSOR_ALIGNMENT = 64; // should be enough for AVX 512
 
-static size_t ggml_backend_cpu_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
+GGML_BACKEND_ABI static size_t ggml_backend_cpu_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
     return TENSOR_ALIGNMENT;
     GGML_UNUSED(buft);
 }
 
-static bool ggml_backend_cpu_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
+GGML_BACKEND_ABI static bool ggml_backend_cpu_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
     return ggml_backend_is_cpu(backend);
     GGML_UNUSED(buft);
 }
 
-static void ggml_backend_cpu_buffer_free_buffer(ggml_backend_buffer_t buffer) {
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_free_buffer(ggml_backend_buffer_t buffer) {
     fprintf(stderr, "WARNING: using untested foreign free due to ggml backend\n");
     free(buffer->context);
     GGML_UNUSED(buffer);
 }
 
-static void * ggml_backend_cpu_buffer_get_base(ggml_backend_buffer_t buffer) {
+GGML_BACKEND_ABI static void * ggml_backend_cpu_buffer_get_base(ggml_backend_buffer_t buffer) {
     return (void *)buffer->context;
 }
 
-static void ggml_backend_cpu_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
     memcpy((char *)tensor->data + offset, data, size);
     GGML_UNUSED(buffer);
 }
 
-static void ggml_backend_cpu_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_get_tensor(ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
     memcpy(data, (const char *)tensor->data + offset, size);
     GGML_UNUSED(buffer);
 }
@@ -484,7 +484,7 @@ static void ggml_backend_tensor_get(const struct ggml_tensor * tensor, void * da
     tensor->buffer->iface.get_tensor(tensor->buffer, tensor, data, offset, size);
 }
 
-static void ggml_backend_cpu_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_from(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
     ggml_backend_tensor_get(src, dst->data, 0, ggml_nbytes(src));
     GGML_UNUSED(buffer);
 }
@@ -494,7 +494,7 @@ static void ggml_backend_tensor_set(struct ggml_tensor * tensor, const void * da
     tensor->buffer->iface.set_tensor(tensor->buffer, tensor, data, offset, size);
 }
 
-static void ggml_backend_cpu_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
+GGML_BACKEND_ABI static void ggml_backend_cpu_buffer_cpy_tensor_to(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst) {
     ggml_backend_tensor_set(dst, src->data, 0, ggml_nbytes(src));
     GGML_UNUSED(buffer);
 }
@@ -509,7 +509,7 @@ static struct ggml_backend_buffer_i cpu_backend_buffer_i = {
     /* .cpy_tensor_to   = */ ggml_backend_cpu_buffer_cpy_tensor_to,
 };
 
-static ggml_backend_buffer_t ggml_backend_cpu_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_cpu_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     size += TENSOR_ALIGNMENT;   // malloc may return an address that is not aligned
     void * data = malloc(size); // TODO: maybe use GGML_ALIGNED_MALLOC?
     return ggml_backend_buffer_init(buft, cpu_backend_buffer_i, data, size);
@@ -10069,18 +10069,18 @@ struct ggml_backend_buffer_context_cuda {
     }
 };
 
-static void ggml_backend_cuda_buffer_free_buffer(ggml_backend_buffer_t buffer) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_free_buffer(ggml_backend_buffer_t buffer) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
     CUDA_CHECK(cudaFree(ctx->dev_ptr));
     delete ctx;
 }
 
-static void * ggml_backend_cuda_buffer_get_base(ggml_backend_buffer_t buffer) {
+GGML_BACKEND_ABI static void * ggml_backend_cuda_buffer_get_base(ggml_backend_buffer_t buffer) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
     return ctx->dev_ptr;
 }
 
-static void ggml_backend_cuda_buffer_init_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_init_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
 
     if (tensor->view_src != NULL && tensor->view_offs == 0) {
@@ -10114,7 +10114,7 @@ static void ggml_backend_cuda_buffer_init_tensor(ggml_backend_buffer_t buffer, g
     UNUSED(buffer);
 }
 
-static void ggml_backend_cuda_buffer_set_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_set_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
     GGML_ASSERT(tensor->backend == GGML_BACKEND_GPU);
 
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
@@ -10125,7 +10125,7 @@ static void ggml_backend_cuda_buffer_set_tensor(ggml_backend_buffer_t buffer, gg
     CUDA_CHECK(cudaMemcpy((char *)tensor->data + offset, data, size, cudaMemcpyHostToDevice));
 }
 
-static void ggml_backend_cuda_buffer_get_tensor(ggml_backend_buffer_t buffer, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_get_tensor(ggml_backend_buffer_t buffer, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
     GGML_ASSERT(tensor->backend == GGML_BACKEND_GPU);
 
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
@@ -10136,7 +10136,7 @@ static void ggml_backend_cuda_buffer_get_tensor(ggml_backend_buffer_t buffer, co
     CUDA_CHECK(cudaMemcpy(data, (const char *)tensor->data + offset, size, cudaMemcpyDeviceToHost));
 }
 
-static void ggml_backend_cuda_buffer_clear(ggml_backend_buffer_t buffer, uint8_t value) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_buffer_clear(ggml_backend_buffer_t buffer, uint8_t value) {
     ggml_backend_buffer_context_cuda * ctx = (ggml_backend_buffer_context_cuda *)buffer->context;
 
     ggml_cuda_set_device(ctx->device);
@@ -10158,7 +10158,7 @@ static struct ggml_backend_buffer_i cuda_backend_buffer_interface = {
 
 // cuda buffer type
 
-static ggml_backend_buffer_t ggml_backend_cuda_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_cuda_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     int device = (int) (intptr_t) buft->context;
 
     ggml_cuda_set_device(device);
@@ -10173,13 +10173,13 @@ static ggml_backend_buffer_t ggml_backend_cuda_buffer_type_alloc_buffer(ggml_bac
     return ggml_backend_buffer_init(buft, cuda_backend_buffer_interface, ctx, size);
 }
 
-static size_t ggml_backend_cuda_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
+GGML_BACKEND_ABI static size_t ggml_backend_cuda_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
     return 128;
 
     UNUSED(buft);
 }
 
-static size_t ggml_backend_cuda_buffer_type_get_alloc_size(ggml_backend_buffer_type_t buft, ggml_tensor * tensor) {
+GGML_BACKEND_ABI static size_t ggml_backend_cuda_buffer_type_get_alloc_size(ggml_backend_buffer_type_t buft, ggml_tensor * tensor) {
     int64_t row_low = 0;
     int64_t row_high = ggml_nrows(tensor);
     int64_t nrows_split = row_high - row_low;
@@ -10199,7 +10199,7 @@ static size_t ggml_backend_cuda_buffer_type_get_alloc_size(ggml_backend_buffer_t
     UNUSED(buft);
 }
 
-static bool ggml_backend_cuda_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
+GGML_BACKEND_ABI static bool ggml_backend_cuda_buffer_type_supports_backend(ggml_backend_buffer_type_t buft, ggml_backend_t backend) {
     return ggml_backend_is_cuda(backend);
 
     UNUSED(buft);
@@ -10233,11 +10233,11 @@ ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
 
 // host buffer type
 
-static void ggml_backend_cuda_host_buffer_free_buffer(ggml_backend_buffer_t buffer) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_host_buffer_free_buffer(ggml_backend_buffer_t buffer) {
     ggml_cuda_host_free(buffer->context);
 }
 
-static ggml_backend_buffer_t ggml_backend_cuda_host_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+GGML_BACKEND_ABI static ggml_backend_buffer_t ggml_backend_cuda_host_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
     void * ptr = ggml_cuda_host_malloc(size);
 
     if (ptr == nullptr) {
@@ -10275,26 +10275,26 @@ struct ggml_backend_context_cuda {
     int device;
 };
 
-static const char * ggml_backend_cuda_name(ggml_backend_t backend) {
+GGML_BACKEND_ABI static const char * ggml_backend_cuda_name(ggml_backend_t backend) {
     return GGML_CUDA_NAME;
 
     UNUSED(backend);
 }
 
-static void ggml_backend_cuda_free(ggml_backend_t backend) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_free(ggml_backend_t backend) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     delete cuda_ctx;
     delete backend;
 }
 
-static ggml_backend_buffer_type_t ggml_backend_cuda_get_default_buffer_type(ggml_backend_t backend) {
+GGML_BACKEND_ABI static ggml_backend_buffer_type_t ggml_backend_cuda_get_default_buffer_type(ggml_backend_t backend) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     return ggml_backend_cuda_buffer_type(cuda_ctx->device);
 }
 
-static void ggml_backend_cuda_set_tensor_async(ggml_backend_t backend, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_set_tensor_async(ggml_backend_t backend, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     GGML_ASSERT(tensor->buffer->buft == ggml_backend_cuda_buffer_type(cuda_ctx->device) && "unsupported buffer type");
@@ -10303,7 +10303,7 @@ static void ggml_backend_cuda_set_tensor_async(ggml_backend_t backend, ggml_tens
     CUDA_CHECK(cudaMemcpyAsync((char *)tensor->data + offset, data, size, cudaMemcpyHostToDevice, g_cudaStreams[cuda_ctx->device][0]));
 }
 
-static void ggml_backend_cuda_get_tensor_async(ggml_backend_t backend, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_get_tensor_async(ggml_backend_t backend, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     GGML_ASSERT(tensor->buffer->buft == ggml_backend_cuda_buffer_type(cuda_ctx->device) && "unsupported buffer type");
@@ -10312,7 +10312,7 @@ static void ggml_backend_cuda_get_tensor_async(ggml_backend_t backend, const ggm
     CUDA_CHECK(cudaMemcpyAsync(data, (const char *)tensor->data + offset, size, cudaMemcpyDeviceToHost, g_cudaStreams[cuda_ctx->device][0]));
 }
 
-static void ggml_backend_cuda_synchronize(ggml_backend_t backend) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_synchronize(ggml_backend_t backend) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     CUDA_CHECK(cudaStreamSynchronize(g_cudaStreams[cuda_ctx->device][0]));
@@ -10320,7 +10320,7 @@ static void ggml_backend_cuda_synchronize(ggml_backend_t backend) {
     UNUSED(backend);
 }
 
-static ggml_backend_graph_plan_t ggml_backend_cuda_graph_plan_create(ggml_backend_t backend, ggml_cgraph * cgraph) {
+GGML_BACKEND_ABI static ggml_backend_graph_plan_t ggml_backend_cuda_graph_plan_create(ggml_backend_t backend, ggml_cgraph * cgraph) {
     GGML_ASSERT(!"not implemented");
 
     return nullptr;
@@ -10329,21 +10329,21 @@ static ggml_backend_graph_plan_t ggml_backend_cuda_graph_plan_create(ggml_backen
     UNUSED(cgraph);
 }
 
-static void ggml_backend_cuda_graph_plan_free(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_graph_plan_free(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
     GGML_ASSERT(!"not implemented");
 
     UNUSED(backend);
     UNUSED(plan);
 }
 
-static void ggml_backend_cuda_graph_plan_compute(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_graph_plan_compute(ggml_backend_t backend, ggml_backend_graph_plan_t plan) {
     GGML_ASSERT(!"not implemented");
 
     UNUSED(backend);
     UNUSED(plan);
 }
 
-static void ggml_backend_cuda_graph_compute(ggml_backend_t backend, ggml_cgraph * cgraph) {
+GGML_BACKEND_ABI static void ggml_backend_cuda_graph_compute(ggml_backend_t backend, ggml_cgraph * cgraph) {
     ggml_backend_context_cuda * cuda_ctx = (ggml_backend_context_cuda *)backend->context;
 
     ggml_cuda_set_main_device(cuda_ctx->device);
@@ -10402,7 +10402,7 @@ static void ggml_backend_cuda_graph_compute(ggml_backend_t backend, ggml_cgraph 
     UNUSED(backend);
 }
 
-static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, const ggml_tensor * op) {
+GGML_BACKEND_ABI static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, const ggml_tensor * op) {
     switch (op->op) {
         case GGML_OP_UNARY:
             switch (ggml_get_unary_op(op)) {
