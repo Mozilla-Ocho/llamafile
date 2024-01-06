@@ -19,6 +19,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
 
@@ -28,7 +29,7 @@ bool FLAG_tinyblas;
 bool FLAG_nocompile;
 bool FLAG_recompile;
 
-static const char *describe_required_gpu(void) {
+const char *llamafile_describe_gpu(void) {
     switch (FLAG_gpu) {
         case LLAMAFILE_GPU_AUTO:
             return "auto";
@@ -46,29 +47,10 @@ static const char *describe_required_gpu(void) {
 }
 
 /**
- * Returns GPU subsystem if GPU support is available.
+ * Returns true if GPU support is available.
  */
 int llamafile_gpu_supported(void) {
-
-    // Auto-configure Apple Metal GPU support.
-    if (ggml_metal_supported()) {
-        return LLAMAFILE_GPU_APPLE;
-    }
-
-    // Auto-configure AMD or NVIDIA GPU support.
-    if (ggml_cuda_supported()) {
-        return LLAMAFILE_GPU_NVIDIA;
-    }
-
-    // Abort if user wants specific GPU but it's unavailable.
-    if (FLAG_gpu > 0 || FLAG_tinyblas) {
-        tinyprint(2, "fatal error: support for --gpu ",
-                  describe_required_gpu(), FLAG_tinyblas ? " --tinyblas" : "",
-                  " was explicitly requested, but it wasn't available\n", NULL);
-        exit(1);
-    }
-
-    return 0;
+    return ggml_metal_supported() && ggml_cuda_supported();
 }
 
 /**
@@ -92,5 +74,5 @@ int llamafile_gpu_parse(const char *s) {
     if (!strcasecmp(s, "rocm")) return LLAMAFILE_GPU_AMD;
     if (!strcasecmp(s, "hip")) return LLAMAFILE_GPU_AMD;
 
-    return -1;
+    return INT_MIN;
 }

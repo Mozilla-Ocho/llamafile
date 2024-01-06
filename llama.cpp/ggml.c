@@ -173,7 +173,7 @@ inline static void * ggml_aligned_malloc(size_t size) {
     }
     void * aligned_memory = NULL;
     int result;
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
+    if (ggml_metal_supported()) {
         result = posix_memalign(&aligned_memory, 16384, size);
     } else {
         result = posix_memalign(&aligned_memory, GGML_MEM_ALIGN, size);
@@ -14464,7 +14464,7 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
         return;
     }
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+    if (ggml_cuda_supported()) {
     bool skip_cpu = ggml_cuda_compute_forward(params, tensor);
     if (skip_cpu) {
         return;
@@ -16342,7 +16342,7 @@ static int ggml_get_n_tasks(struct ggml_tensor * node, int n_threads) {
                 //n_tasks = MIN(n_threads, MAX(1, nr0/128));
                 //printf("nr0 = %8d, nr1 = %8d, nr0*nr1 = %8d, n_tasks%d\n", nr0, nr1, nr0*nr1, n_tasks);
 
-                if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+                if (ggml_cuda_supported()) {
                 if (ggml_cuda_can_mul_mat(node->src[0], node->src[1], node)) {
                     n_tasks = 1; // TODO: this actually is doing nothing
                                  //       the threads are still spinning

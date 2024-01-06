@@ -636,8 +636,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
 
     // ask the library if actual gpu devices exist
     ggml_cuda.ggml_cuda_link(ggml_backend_api());
-    ggml_cuda.init();
-    return ggml_cuda.loaded();
+    return true;
 }
 
 static bool ImportCudaImpl(void) {
@@ -833,6 +832,12 @@ static void ImportCuda(void) {
     if (ImportCudaImpl()) {
         tinylog("GPU support successfully linked and loaded\n", NULL);
         ggml_cuda.supported = true;
+    } else if (FLAG_gpu == LLAMAFILE_GPU_AMD ||
+               FLAG_gpu == LLAMAFILE_GPU_NVIDIA) {
+        tinyprint(2, "fatal error: support for --gpu ",
+                  llamafile_describe_gpu(), FLAG_tinyblas ? " --tinyblas" : "",
+                  " was explicitly requested, but it wasn't available\n", NULL);
+        exit(1);
     }
 }
 

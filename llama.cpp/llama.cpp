@@ -1031,13 +1031,11 @@ static std::string llama_token_to_piece(const struct llama_context * ctx, llama_
 static ggml_backend_buffer_type_t llama_default_buffer_type(int n_gpu_layers) {
     ggml_backend_buffer_type_t buft = nullptr;
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
     if (n_gpu_layers > 0) {
         buft = ggml_backend_metal_buffer_type();
     }
-    }
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+    if (buft == nullptr) {
 #if defined(LLAMA_GGML_BACKEND_CUDA_TEST)
     if (n_gpu_layers > 0) {
         buft = ggml_backend_cuda_buffer_type(0);
@@ -1270,7 +1268,7 @@ struct llama_kv_cache {
 
     ~llama_kv_cache() {
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+        if (ggml_cuda_supported()) {
             for (size_t i = 0; i < k_l.size(); ++i) {
                 ggml_cuda_free_data(k_l[i]);
                 ggml_cuda_free_data(v_l[i]);
@@ -1384,7 +1382,7 @@ struct llama_model {
 
     ~llama_model() {
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+        if (ggml_cuda_supported()) {
             for (size_t i = 0; i < tensors_by_name.size(); ++i) {
                 ggml_cuda_free_data(tensors_by_name[i].second);
             }
@@ -2260,7 +2258,7 @@ struct llama_model_loader {
         }
 
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        const bool legacy_offload = llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA;
+        const bool legacy_offload = ggml_cuda_supported();
 #else
         const bool legacy_offload = false;
 #endif
@@ -2997,7 +2995,7 @@ static bool llm_load_tensors(
     enum ggml_backend_type llama_backend_offload_split = GGML_BACKEND_CPU;
 
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+    if (ggml_cuda_supported()) {
         LLAMA_LOG_INFO("%s: using " GGML_CUDA_NAME " for GPU acceleration\n", __func__);
         ggml_cuda_set_main_device(main_gpu);
 
@@ -3693,7 +3691,7 @@ static bool llm_load_tensors(
     // create backend buffer
     ggml_backend_buffer_t buf_mmap = nullptr;
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
+    if (ggml_metal_supported()) {
     if (n_gpu_layers > 0) {
         if (ml.use_mmap) {
             const size_t max_size = ggml_get_max_tensor_size(ctx);
@@ -3705,7 +3703,7 @@ static bool llm_load_tensors(
     }
     }
 #if defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+    if (ggml_cuda_supported()) {
     // for testing only
     if (n_gpu_layers > 0) {
         model.buf = ggml_backend_alloc_ctx_tensors_from_buft(ctx, ggml_backend_cuda_buffer_type(0));
@@ -3748,7 +3746,7 @@ static bool llm_load_tensors(
         }
 
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+        if (ggml_cuda_supported()) {
         const int n_gpu = std::min(n_gpu_layers, int(hparams.n_layer));
 
         LLAMA_LOG_INFO("%s: offloading %d repeating layers to GPU\n", __func__, n_gpu);
@@ -6582,13 +6580,9 @@ static int llama_decode_internal(
     ggml_mpi_graph_compute_pre(lctx.ctx_mpi, gf, n_layer);
 #endif
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
     if (ggml_backend_is_metal(lctx.backend)) {
         ggml_backend_metal_set_n_cb(lctx.backend, n_threads);
-    }
-    }
-
-    if (ggml_backend_is_cpu(lctx.backend)) {
+    } else if (ggml_backend_is_cpu(lctx.backend)) {
         ggml_backend_cpu_set_n_threads(lctx.backend, n_threads);
     }
     ggml_backend_graph_compute(lctx.backend, gf);
@@ -9381,7 +9375,7 @@ struct llama_model_params llama_model_default_params() {
         /*.use_mlock                   =*/ false,
     };
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
+    if (ggml_metal_supported()) {
     result.n_gpu_layers = 1;
     }
 
@@ -9575,7 +9569,7 @@ struct llama_context * llama_new_context_with_model(
     // reserve memory for context buffers
     if (!hparams.vocab_only) {
         // initialize backend
-        if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
+        if (ggml_metal_supported()) {
         if (model->n_gpu_layers > 0) {
             ctx->backend = ggml_backend_metal_init();
             if (ctx->backend == nullptr) {
@@ -9584,7 +9578,7 @@ struct llama_context * llama_new_context_with_model(
         }
         }
 #if defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
+        else if (ggml_cuda_supported()) {
         // for testing only
         if (model->n_gpu_layers > 0) {
             ctx->backend = ggml_backend_cuda_init(0);

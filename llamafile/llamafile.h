@@ -32,13 +32,14 @@ bool llamafile_launch_browser(const char *);
 #define LLAMAFILE_GPU_AUTO 0
 #define LLAMAFILE_GPU_AMD 1
 #define LLAMAFILE_GPU_APPLE 2
-#define LLAMAFILE_GPU_NVIDIA 3
+#define LLAMAFILE_GPU_NVIDIA 4
 extern int FLAG_gpu;
 extern bool FLAG_tinyblas;
 extern bool FLAG_nocompile;
 extern bool FLAG_recompile;
 int llamafile_gpu_supported(void);
 int llamafile_gpu_parse(const char *);
+const char *llamafile_describe_gpu(void);
 
 #ifdef __cplusplus
 }

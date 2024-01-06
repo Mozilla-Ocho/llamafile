@@ -539,13 +539,12 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
     clip_ctx * new_clip = new clip_ctx;
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_NVIDIA) {
-        new_clip->backend = ggml_backend_cuda_init(0);
+    if ((new_clip->backend = ggml_backend_cuda_init(0))) {
         tinylogf("%s: CLIP using CUDA backend\n", __func__);
     }
 
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
-        new_clip->backend = ggml_backend_metal_init();
+    if (!new_clip->backend &&
+        (new_clip->backend = ggml_backend_metal_init())) {
         tinylogf("%s: CLIP using Metal backend\n", __func__);
     }
 
@@ -917,14 +916,9 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
         ggml_backend_cpu_set_n_threads(ctx->backend, n_threads);
     }
 
-#if 0
-    // TODO(jart): destroy this backend framework
-    if (llamafile_gpu_supported() == LLAMAFILE_GPU_APPLE) {
     if (ggml_backend_is_metal(ctx->backend)) {
         ggml_backend_metal_set_n_cb(ctx->backend, n_threads);
     }
-    }
-#endif
 
     ggml_backend_graph_compute(ctx->backend, gf);
 

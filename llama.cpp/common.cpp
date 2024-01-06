@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cerrno>
 #include <cstring>
+#include <climits>
 #include <ctime>
 #include <fstream>
 #include <iterator>
@@ -138,6 +139,9 @@ bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
         exit(1);
     }
 #endif
+    if (FLAG_gpu == LLAMAFILE_GPU_DISABLE) {
+        params.n_gpu_layers = 0;
+    }
     return result;
 }
 
@@ -533,7 +537,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             FLAG_gpu = llamafile_gpu_parse(argv[i]);
-            if (FLAG_gpu == -1) {
+            if (FLAG_gpu == INT_MIN) {
                 fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
                 exit(1);
             }

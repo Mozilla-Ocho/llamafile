@@ -599,18 +599,17 @@ The executable program is now in a weird hybrid state where two separate
 C libraries exist which have different ABIs. For example, thread local
 storage works differently on each operating system, and programs will
 crash if the TLS register doesn't point to the appropriate memory. The
-way Cosmopolitan Libc solves that is by JITing a trampoline around each
-dlsym() import, which blocks signals using `sigprocmask()` and changes
-the TLS register using `arch_prctl()`. Under normal circumstances,
-aspecting each function call with four additional system calls would be
-prohibitively expensive, but for llama.cpp that cost is infinitesimal
-compared to the amount of compute used for LLM inference. Our technique
-has no noticeable slowdown. The major tradeoff is that, right now, you
-can't pass callback pointers to the dlopen()'d module. Only one such
-function needed to be removed from the llama.cpp codebase, which was an
-API intended for customizing logging. In the future, Cosmoplitan will
-just trampoline signal handlers and code morph the TLS instructions to
-avoid these tradeoffs entirely. See
+way Cosmopolitan Libc solves that on AMD is by using SSE to recompile
+the executable at runtime to change `%fs` register accesses into `%gs`
+which takes a millisecond. On ARM, Cosmo uses the `x28` register for TLS
+which can be made safe by passing the `-ffixed-x28` flag when compiling
+GPU modules. Lastly, llamafile uses the `__ms_abi__` attribute so that
+function pointers passed between the application and GPU modules conform
+to the Windows calling convention. Amazingly enough, every compiler we
+tested, including nvcc on Linux and even Objective-C on MacOS, all
+support compiling WIN32 style functions, thus ensuring your llamafile
+will be able to talk to Windows drivers, when it's run on Windows,
+without needing to be recompiled as a separate file for Windows. See
 [cosmopolitan/dlopen.c](https://github.com/jart/cosmopolitan/blob/master/libc/dlopen/dlopen.c)
 for further details.
 

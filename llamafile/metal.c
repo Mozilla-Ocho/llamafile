@@ -267,6 +267,11 @@ static void ImportMetal(void) {
     if (ImportMetalImpl()) {
         ggml_metal.supported = true;
         tinylog("Apple Metal GPU support successfully loaded\n", NULL);
+    } else if (FLAG_gpu == LLAMAFILE_GPU_APPLE) {
+        tinyprint(2, "fatal error: support for --gpu ",
+                  llamafile_describe_gpu(), FLAG_tinyblas ? " --tinyblas" : "",
+                  " was explicitly requested, but it wasn't available\n", NULL);
+        exit(1);
     }
 }
 
