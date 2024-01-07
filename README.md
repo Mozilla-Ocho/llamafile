@@ -49,6 +49,18 @@ chmod +x llava-v1.5-7b-q4.llamafile
 
 **Having trouble? See the "Gotchas" section below.**
 
+### Installing A Llamafile
+
+Llamafile are completely standalone and portable so does not require installation.
+However we have a path convention for ease of discovery by local applications scripts/program.
+
+- **Linux** : `~/.llamafile/*.llamafile`
+
+<!-- TODO: Windows llamafile installation convention -->
+
+<!-- TODO: Mac llamafile installation convention -->
+
+
 ### JSON API Quickstart
 
 When llamafile is started in server mode, in addition to hosting a web
