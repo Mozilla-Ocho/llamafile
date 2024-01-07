@@ -50,7 +50,7 @@ const char *llamafile_describe_gpu(void) {
  * Returns true if GPU support is available.
  */
 int llamafile_gpu_supported(void) {
-    return ggml_metal_supported() && ggml_cuda_supported();
+    return ggml_metal_supported() || ggml_cuda_supported();
 }
 
 /**

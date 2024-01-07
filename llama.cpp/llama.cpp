@@ -815,14 +815,21 @@ struct llama_mmap {
             // therefore it's already mapped
             is_owned = false;
             addr = llamafile_content(file->file);
-            llamafile_schlep(addr, size);
+            if (!llamafile_gpu_supported()) {
+                llamafile_schlep(addr, size);
+            }
             return;
         }
         is_owned = true;
         int fd = fileno(llamafile_fp(file->file));
+        // advise the kernel to read the file sequentially (increases readahead)
+        if (posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) {
+            LLAMA_LOG_WARN("warning: posix_fadvise(.., POSIX_FADV_SEQUENTIAL) failed: %s\n",
+                    strerror(errno));
+        }
         // prefetch/readahead impairs performance on NUMA systems
         if (numa) { prefetch = 0; }
-        addr = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+        addr = mmap(NULL, size, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, 0);
         if (addr == MAP_FAILED) {
             ThrowRuntimeError(format("mmap failed: %s", strerror(errno)));
         }
@@ -886,9 +893,12 @@ struct llama_mmap {
         void * next_page_start = (uint8_t *) addr + first;
 
         // unmap the range
+#if 0
+        // TODO(jart): make this safe
         if (munmap(next_page_start, len)) {
             LLAMA_LOG_WARN("warning: munmap failed: %s\n", strerror(errno));
         }
+#endif
 
         // update the list of mapped fragments to avoid unmapping the same range again in the destructor
         std::vector<std::pair<size_t, size_t>> new_mapped_fragments;

@@ -98,14 +98,14 @@ static struct Cuda {
     bool supported;
     atomic_uint once;
     typeof(ggml_cuda_link) *ggml_cuda_link;
-    typeof(ggml_init_cublas) *init;
-    typeof(ggml_cublas_loaded) *loaded;
-    typeof(ggml_cuda_host_free) *host_free;
-    typeof(ggml_cuda_host_malloc) *host_malloc;
+    typeof(ggml_init_cublas) *ggml_init_cublas;
+    typeof(ggml_cublas_loaded) *ggml_cublas_loaded;
+    typeof(ggml_cuda_host_free) *ggml_cuda_host_free;
+    typeof(ggml_cuda_host_malloc) *ggml_cuda_host_malloc;
     typeof(ggml_cuda_can_mul_mat) *can_mul_mat;
     typeof(ggml_cuda_set_tensor_split) *set_tensor_split;
-    typeof(ggml_cuda_transform_tensor) *transform_tensor;
-    typeof(ggml_cuda_free_data) *free_data;
+    typeof(ggml_cuda_transform_tensor) *ggml_cuda_transform_tensor;
+    typeof(ggml_cuda_free_data) *ggml_cuda_free_data;
     typeof(ggml_cuda_assign_buffers) *assign_buffers;
     typeof(ggml_cuda_assign_buffers_no_scratch) *assign_buffers_no_scratch;
     typeof(ggml_cuda_assign_buffers_force_inplace) *assign_buffers_force_inplace;
@@ -118,10 +118,10 @@ static struct Cuda {
     typeof(ggml_cuda_compute_forward) *compute_forward;
     typeof(ggml_cuda_get_device_count) *get_device_count;
     typeof(ggml_cuda_get_device_description) *get_device_description;
-    typeof(ggml_backend_cuda_buffer_type) *buffer_type;
+    typeof(ggml_backend_cuda_buffer_type) *ggml_backend_cuda_buffer_type;
     typeof(ggml_backend_reg_cuda_init) *backend_reg_init;
-    typeof(ggml_backend_cuda_host_buffer_type) *backend_host_buffer_type;
-    typeof(ggml_backend_cuda_init) *backend_init;
+    typeof(ggml_backend_cuda_host_buffer_type) *ggml_backend_cuda_host_buffer_type;
+    typeof(ggml_backend_cuda_init) *ggml_backend_cuda_init;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -606,14 +606,14 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     // import functions
     bool ok = true;
     ok &= !!(ggml_cuda.ggml_cuda_link = cosmo_dlsym(lib, "ggml_cuda_link"));
-    ok &= !!(ggml_cuda.init = cosmo_dlsym(lib, "ggml_init_cublas"));
-    ok &= !!(ggml_cuda.loaded = cosmo_dlsym(lib, "ggml_cublas_loaded"));
-    ok &= !!(ggml_cuda.host_free = cosmo_dlsym(lib, "ggml_cuda_host_free"));
-    ok &= !!(ggml_cuda.host_malloc = cosmo_dlsym(lib, "ggml_cuda_host_malloc"));
+    ok &= !!(ggml_cuda.ggml_init_cublas = cosmo_dlsym(lib, "ggml_init_cublas"));
+    ok &= !!(ggml_cuda.ggml_cublas_loaded = cosmo_dlsym(lib, "ggml_cublas_loaded"));
+    ok &= !!(ggml_cuda.ggml_cuda_host_free = cosmo_dlsym(lib, "ggml_cuda_host_free"));
+    ok &= !!(ggml_cuda.ggml_cuda_host_malloc = cosmo_dlsym(lib, "ggml_cuda_host_malloc"));
     ok &= !!(ggml_cuda.can_mul_mat = cosmo_dlsym(lib, "ggml_cuda_can_mul_mat"));
     ok &= !!(ggml_cuda.set_tensor_split = cosmo_dlsym(lib, "ggml_cuda_set_tensor_split"));
-    ok &= !!(ggml_cuda.transform_tensor = cosmo_dlsym(lib, "ggml_cuda_transform_tensor"));
-    ok &= !!(ggml_cuda.free_data = cosmo_dlsym(lib, "ggml_cuda_free_data"));
+    ok &= !!(ggml_cuda.ggml_cuda_transform_tensor = cosmo_dlsym(lib, "ggml_cuda_transform_tensor"));
+    ok &= !!(ggml_cuda.ggml_cuda_free_data = cosmo_dlsym(lib, "ggml_cuda_free_data"));
     ok &= !!(ggml_cuda.assign_buffers = cosmo_dlsym(lib, "ggml_cuda_assign_buffers"));
     ok &= !!(ggml_cuda.assign_buffers_no_scratch = cosmo_dlsym(lib, "ggml_cuda_assign_buffers_no_scratch"));
     ok &= !!(ggml_cuda.assign_buffers_force_inplace = cosmo_dlsym(lib, "ggml_cuda_assign_buffers_force_inplace"));
@@ -627,8 +627,9 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.get_device_count = cosmo_dlsym(lib, "ggml_cuda_get_device_count"));
     ok &= !!(ggml_cuda.get_device_description = cosmo_dlsym(lib, "ggml_cuda_get_device_description"));
     ok &= !!(ggml_cuda.backend_reg_init = cosmo_dlsym(lib, "ggml_backend_reg_cuda_init"));
-    ok &= !!(ggml_cuda.backend_host_buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_host_buffer_type"));
-    ok &= !!(ggml_cuda.backend_init = cosmo_dlsym(lib, "ggml_backend_cuda_init"));
+    ok &= !!(ggml_cuda.ggml_backend_cuda_host_buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_host_buffer_type"));
+    ok &= !!(ggml_cuda.ggml_backend_cuda_buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_buffer_type"));
+    ok &= !!(ggml_cuda.ggml_backend_cuda_init = cosmo_dlsym(lib, "ggml_backend_cuda_init"));
     if (!ok) {
         tinylog("error: not all cuda symbols could be imported\n", NULL);
         return false;
@@ -848,22 +849,22 @@ bool ggml_cuda_supported(void) {
 
 void ggml_init_cublas(void) {
     if (!ggml_cuda_supported()) return;
-    return ggml_cuda.init();
+    return ggml_cuda.ggml_init_cublas();
 }
 
 bool ggml_cublas_loaded(void) {
     if (!ggml_cuda_supported()) return false;
-    return ggml_cuda.loaded();
+    return ggml_cuda.ggml_cublas_loaded();
 }
 
 void *ggml_cuda_host_malloc(size_t n) {
     if (!ggml_cuda_supported()) return NULL;
-    return ggml_cuda.host_malloc(n);
+    return ggml_cuda.ggml_cuda_host_malloc(n);
 }
 
 void ggml_cuda_host_free(void *data) {
     if (!ggml_cuda_supported()) return;
-    return ggml_cuda.host_free(data);
+    return ggml_cuda.ggml_cuda_host_free(data);
 }
 
 bool ggml_cuda_can_mul_mat(const struct ggml_tensor *src0,
@@ -880,12 +881,12 @@ void ggml_cuda_set_tensor_split(const float *tensor_split) {
 
 void ggml_cuda_transform_tensor(void *data, struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
-    return ggml_cuda.transform_tensor(data, tensor);
+    return ggml_cuda.ggml_cuda_transform_tensor(data, tensor);
 }
 
 void ggml_cuda_free_data(struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
-    return ggml_cuda.free_data(tensor);
+    return ggml_cuda.ggml_cuda_free_data(tensor);
 }
 
 void ggml_cuda_assign_buffers(struct ggml_tensor *tensor) {
@@ -954,7 +955,7 @@ void ggml_cuda_get_device_description(int device,
 
 ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
     if (!ggml_cuda_supported()) return 0;
-    return ggml_cuda.buffer_type(device);
+    return ggml_cuda.ggml_backend_cuda_buffer_type(device);
 }
 
 ggml_backend_t ggml_backend_reg_cuda_init(const char * params, void * user_data) {
@@ -964,7 +965,7 @@ ggml_backend_t ggml_backend_reg_cuda_init(const char * params, void * user_data)
 
 ggml_backend_buffer_type_t ggml_backend_cuda_host_buffer_type() {
     if (!ggml_cuda_supported()) return 0;
-    ggml_cuda.backend_host_buffer_type();
+    ggml_cuda.ggml_backend_cuda_host_buffer_type();
 }
 
 int ggml_backend_cuda_reg_devices(void) {
@@ -980,5 +981,5 @@ int ggml_backend_cuda_reg_devices(void) {
 
 ggml_backend_t ggml_backend_cuda_init(int device) {
     if (!ggml_cuda_supported()) return 0;
-    return ggml_cuda.backend_init(device);
+    return ggml_cuda.ggml_backend_cuda_init(device);
 }
