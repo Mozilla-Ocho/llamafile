@@ -16185,7 +16185,6 @@ typedef pthread_t ggml_thread_t;
 #endif
 
 // Android's libc implementation "bionic" does not support setting affinity
-#if defined(__linux__) && !defined(__BIONIC__)
 static void set_numa_thread_affinity(int thread_n, int n_threads) {
     if (!ggml_is_numa()) {
         return;
@@ -16232,12 +16231,6 @@ static void clear_numa_thread_affinity(void) {
 
     CPU_FREE(cpus);
 }
-#else
-// TODO: Windows etc.
-// (the linux implementation may also work on BSD, someone should test)
-static void set_numa_thread_affinity(int thread_n, int n_threads) { UNUSED(thread_n); UNUSED(n_threads);  }
-static void clear_numa_thread_affinity(void) {}
-#endif
 
 struct ggml_compute_state_shared {
     const struct ggml_cgraph * cgraph;
