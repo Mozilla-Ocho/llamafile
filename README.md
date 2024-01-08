@@ -49,16 +49,21 @@ chmod +x llava-v1.5-7b-q4.llamafile
 
 **Having trouble? See the "Gotchas" section below.**
 
-### Installing A Llamafile
+## Installing A Llamafile And Making It Accessible To Other Local Applications
 
-Llamafile are completely standalone and portable so does not require installation.
-However we have a path convention for ease of discovery by local applications scripts/program.
+Llamafiles are designed to be standalone and portable, eliminating the need for a traditional installation. For optimal discovery and integration with local application scripts/programs, we recommend the following install paths:
 
-- **Linux** : `~/.llamafile/*.llamafile`
+- **System-wide Paths**:
+    - `/opt/llamafile` (Linux/MacOS/BSD)
+    - `C:\llamafile` (Windows)
 
-<!-- TODO: Windows llamafile installation convention -->
+- **User-specific Path**:
+    - `~/.llamafile` (Linux/MacOS/BSD)
 
-<!-- TODO: Mac llamafile installation convention -->
+- **Additional Search Locations**: These path serves as a reference for applications or scripts that might expect to find the Llamafile here. However, direct installations to this directory are discouraged unless you know what you are doing.
+    - `/usr/share/llamafile` (Linux/MacOS/BSD)
+
+For applications or scripts referencing the Llamafile path, setting the environment variable `$LLAMAFILE_PATH` to a singular path.
 
 
 ### JSON API Quickstart
