@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compiles distributable DLL for NVIDIA GPU support
+# Compiles distributable DLL for AMD GPU support
 #
 # The artifact will only depend on KERNEL32.DLL and NVCUDA.DLL.
 # NVCUDA DLLs are provided by the installation of the windows GPU

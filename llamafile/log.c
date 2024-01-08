@@ -22,22 +22,22 @@
 bool FLAG_log_disable;
 
 void (tinylog)(const char *s, ...) {
-  size_t n;
-  int c, cs;
-  va_list va;
-  char buf[512];
-  pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-  va_start(va, s);
-  for (n = 0; s; s = va_arg(va, const char *)) {
-    while ((c = *s++)) {
-      buf[n++] = c;
-      if (n == sizeof(buf)) {
-        write(2, buf, n);
-        n = 0;
-      }
+    size_t n;
+    int c, cs;
+    va_list va;
+    char buf[512];
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
+    va_start(va, s);
+    for (n = 0; s; s = va_arg(va, const char *)) {
+        while ((c = *s++)) {
+            buf[n++] = c;
+            if (n == sizeof(buf)) {
+                write(2, buf, n);
+                n = 0;
+            }
+        }
     }
-  }
-  va_end(va);
-  write(2, buf, n);
-  pthread_setcancelstate(cs, 0);
+    va_end(va);
+    write(2, buf, n);
+    pthread_setcancelstate(cs, 0);
 }
