@@ -152,6 +152,8 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
     const std::string arg_prefix = "--";
     llama_sampling_params & sparams = params.sparams;
 
+    FLAG_gpu = LLAMAFILE_GPU_AUTO;
+
     for (int i = 1; i < argc; i++) {
         arg = argv[i];
         if (arg.compare(0, arg_prefix.size(), arg_prefix) == 0) {
@@ -537,7 +539,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             FLAG_gpu = llamafile_gpu_parse(argv[i]);
-            if (FLAG_gpu == INT_MIN) {
+            if (FLAG_gpu == LLAMAFILE_GPU_ERROR) {
                 fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
                 exit(1);
             }

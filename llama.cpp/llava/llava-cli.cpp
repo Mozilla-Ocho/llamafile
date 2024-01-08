@@ -12,6 +12,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <unistd.h>
+#include <signal.h>
 
 static bool eval_tokens(struct llama_context * ctx_llama, std::vector<llama_token> tokens, int n_batch, int * n_past) {
     int N = (int) tokens.size();
@@ -113,6 +115,16 @@ struct llava_context {
     struct llama_context * ctx_llama = NULL;
     struct llama_model * model = NULL;
 };
+
+struct llava_context * volatile g_ctx;
+
+static void sigint_handler(int signo) {
+    if (signo == SIGINT) {
+        printf("\n");
+        llama_print_timings(g_ctx->ctx_llama);
+        _exit(128 + SIGINT);
+    }
+}
 
 static void show_additional_info(int /*argc*/, char ** argv) {
     fprintf(stderr, "\n example usage: %s -m <llava-v1.5-7b/ggml-model-q5_k.gguf> --mmproj <llava-v1.5-7b/mmproj-model-f16.gguf> --image <path/to/an/image.jpg> [--temp 0.1] [-p \"describe the image in detail.\"]\n", argv[0]);
@@ -242,6 +254,13 @@ int llava_cli(int argc, char ** argv) {
         fprintf(stderr, "%s: error: failed to init llava\n", __func__);
         return 1;
     }
+    g_ctx = ctx_llava;
+
+    struct sigaction sa;
+    sa.sa_handler = sigint_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
 
     auto image_embed = load_image(ctx_llava, &params);
 

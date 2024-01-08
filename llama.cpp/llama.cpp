@@ -823,9 +823,10 @@ struct llama_mmap {
         is_owned = true;
         int fd = fileno(llamafile_fp(file->file));
         // advise the kernel to read the file sequentially (increases readahead)
-        if (posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) {
+        errno_t err;
+        if ((err = posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) && err != ENOSYS) {
             LLAMA_LOG_WARN("warning: posix_fadvise(.., POSIX_FADV_SEQUENTIAL) failed: %s\n",
-                    strerror(errno));
+                           strerror(err));
         }
         // prefetch/readahead impairs performance on NUMA systems
         if (numa) { prefetch = 0; }
@@ -836,17 +837,17 @@ struct llama_mmap {
 
         if (prefetch > 0) {
             // Advise the kernel to preload the mapped memory
-            if (posix_madvise(addr, std::min(size, prefetch), POSIX_MADV_WILLNEED)) {
+            if ((err = posix_madvise(addr, std::min(size, prefetch), POSIX_MADV_WILLNEED))) {
                 fprintf(stderr, "warning: posix_madvise(.., POSIX_MADV_WILLNEED) failed: %s\n",
-                        strerror(errno));
+                        strerror(err));
             }
         }
         if (numa) {
             // advise the kernel not to use readahead
             // (because the next page might not belong on the same node)
-            if (posix_madvise(addr, size, POSIX_MADV_RANDOM)) {
+            if ((err = posix_madvise(addr, size, POSIX_MADV_RANDOM))) {
                 fprintf(stderr, "warning: posix_madvise(.., POSIX_MADV_RANDOM) failed: %s\n",
-                        strerror(errno));
+                        strerror(err));
             }
         }
 
@@ -1017,9 +1018,9 @@ struct llama_mlock {
     }
 };
 
-typedef void (*offload_func_t)(struct ggml_tensor * tensor);
+typedef void (*GGML_CALL offload_func_t)(struct ggml_tensor * tensor);
 
-static void ggml_offload_nop(struct ggml_tensor * tensor) {
+GGML_CALL static void ggml_offload_nop(struct ggml_tensor * tensor) {
     (void) tensor;
 }
 
@@ -1070,9 +1071,8 @@ static ggml_backend_buffer_type_t llama_default_buffer_type(int n_gpu_layers) {
 
 struct llama_state {
     llama_state() {
-#ifdef GGML_USE_METAL
-        ggml_metal_log_set_callback(log_callback, log_callback_user_data);
-#endif
+        // [jart] don't load dso early in initialization
+        // ggml_metal_log_set_callback(log_callback, log_callback_user_data);
     }
 
     // We save the log callback globally
@@ -1278,7 +1278,7 @@ struct llama_kv_cache {
 
     ~llama_kv_cache() {
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        if (ggml_cuda_supported()) {
+        if (ggml_cublas_loaded()) {
             for (size_t i = 0; i < k_l.size(); ++i) {
                 ggml_cuda_free_data(k_l[i]);
                 ggml_cuda_free_data(v_l[i]);
@@ -1392,7 +1392,7 @@ struct llama_model {
 
     ~llama_model() {
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        if (ggml_cuda_supported()) {
+        if (ggml_cublas_loaded()) {
             for (size_t i = 0; i < tensors_by_name.size(); ++i) {
                 ggml_cuda_free_data(tensors_by_name[i].second);
             }
@@ -2268,7 +2268,7 @@ struct llama_model_loader {
         }
 
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        const bool legacy_offload = ggml_cuda_supported();
+        const bool legacy_offload = ggml_cublas_loaded();
 #else
         const bool legacy_offload = false;
 #endif
@@ -3005,7 +3005,7 @@ static bool llm_load_tensors(
     enum ggml_backend_type llama_backend_offload_split = GGML_BACKEND_CPU;
 
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-    if (ggml_cuda_supported()) {
+    if (ggml_cublas_loaded()) {
         LLAMA_LOG_INFO("%s: using " GGML_CUDA_NAME " for GPU acceleration\n", __func__);
         ggml_cuda_set_main_device(main_gpu);
 
@@ -3713,7 +3713,7 @@ static bool llm_load_tensors(
     }
     }
 #if defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-    if (ggml_cuda_supported()) {
+    if (ggml_cublas_loaded()) {
     // for testing only
     if (n_gpu_layers > 0) {
         model.buf = ggml_backend_alloc_ctx_tensors_from_buft(ctx, ggml_backend_cuda_buffer_type(0));
@@ -3756,7 +3756,7 @@ static bool llm_load_tensors(
         }
 
 #if !defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        if (ggml_cuda_supported()) {
+        if (ggml_cublas_loaded()) {
         const int n_gpu = std::min(n_gpu_layers, int(hparams.n_layer));
 
         LLAMA_LOG_INFO("%s: offloading %d repeating layers to GPU\n", __func__, n_gpu);
@@ -9588,7 +9588,7 @@ struct llama_context * llama_new_context_with_model(
         }
         }
 #if defined(LLAMA_GGML_BACKEND_CUDA_TEST)
-        else if (ggml_cuda_supported()) {
+        if (ggml_cublas_loaded()) {
         // for testing only
         if (model->n_gpu_layers > 0) {
             ctx->backend = ggml_backend_cuda_init(0);
@@ -10805,9 +10805,7 @@ const std::vector<std::pair<std::string, struct ggml_tensor *>> & llama_internal
 void llama_log_set(ggml_log_callback log_callback, void * user_data) {
     g_state.log_callback = log_callback ? log_callback : llama_log_callback_default;
     g_state.log_callback_user_data = user_data;
-#ifdef GGML_USE_METAL
     ggml_metal_log_set_callback(g_state.log_callback, g_state.log_callback_user_data);
-#endif
 }
 
 static void llama_log_internal_v(ggml_log_level level, const char * format, va_list args) {

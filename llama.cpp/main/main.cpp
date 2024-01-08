@@ -88,7 +88,7 @@ static void sigint_handler(int signo) {
             printf("\n");
             llama_print_timings(*g_ctx);
             write_logfile(*g_ctx, *g_params, *g_model, *g_input_tokens, g_output_ss->str(), *g_output_tokens);
-            _exit(130);
+            _exit(128 + SIGINT);
         }
     }
 }
@@ -143,6 +143,12 @@ int main(int argc, char ** argv) {
     if (!gpt_params_parse(argc, argv, params)) {
         return 1;
     }
+
+    if (params.n_gpu_layers > 0 && !llamafile_gpu_supported()) {
+        fprintf(stderr, "fatal error: --n-gpu-layers %d was passed but no gpus were found\n", params.n_gpu_layers);
+        exit(1);
+    }
+
     llama_sampling_params & sparams = params.sparams;
 
 #ifndef LOG_DISABLE_LOGS

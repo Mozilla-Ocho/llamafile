@@ -74,10 +74,11 @@ static struct Metal {
     typeof(ggml_metal_init) *init;
     typeof(ggml_metal_set_n_cb) *set_n_cb;
     typeof(ggml_backend_metal_init) *backend_init;
-    typeof(ggml_backend_metal_buffer_type) *backend_buffer_type;
-    typeof(ggml_backend_metal_buffer_from_ptr) *backend_buffer_from_ptr;
+    typeof(ggml_backend_metal_buffer_type) *GGML_CALL backend_buffer_type;
+    typeof(ggml_backend_metal_buffer_from_ptr) *GGML_CALL backend_buffer_from_ptr;
     typeof(ggml_backend_is_metal) *backend_is_metal;
     typeof(ggml_backend_metal_set_n_cb) *backend_set_n_cb;
+    typeof(ggml_metal_log_set_callback) *ggml_metal_log_set_callback;
 } ggml_metal;
 
 static const char *Dlerror(void) {
@@ -121,7 +122,7 @@ static bool BuildMetal(const char *dso) {
     }
 
     // determine if we need to build
-    if (!needs_rebuild || FLAG_recompile) {
+    if (!needs_rebuild) {
         switch (llamafile_is_file_newer_than(src, dso)) {
             case -1:
                 return false;
@@ -136,7 +137,7 @@ static bool BuildMetal(const char *dso) {
     }
 
     // compile dynamic shared object
-    if (needs_rebuild) {
+    if (needs_rebuild || FLAG_recompile) {
         tinylog("building ggml-metal.dylib with xcode...\n", NULL);
         int fd;
         char tmpdso[PATH_MAX];
@@ -221,6 +222,7 @@ static bool LinkMetal(const char *dso) {
     ok &= !!(ggml_metal.backend_buffer_from_ptr = cosmo_dlsym(lib, "ggml_backend_metal_buffer_from_ptr"));
     ok &= !!(ggml_metal.backend_is_metal = cosmo_dlsym(lib, "ggml_backend_is_metal"));
     ok &= !!(ggml_metal.backend_set_n_cb = cosmo_dlsym(lib, "ggml_backend_metal_set_n_cb"));
+    ok &= !!(ggml_metal.ggml_metal_log_set_callback = cosmo_dlsym(lib, "ggml_metal_log_set_callback"));
     if (!ok) {
         tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
@@ -264,6 +266,7 @@ static bool ImportMetalImpl(void) {
 }
 
 static void ImportMetal(void) {
+    assert(FLAG_gpu != LLAMAFILE_GPU_ERROR);
     if (ImportMetalImpl()) {
         ggml_metal.supported = true;
         tinylog("Apple Metal GPU support successfully loaded\n", NULL);
@@ -291,8 +294,11 @@ void ggml_metal_host_free(void *data) {
 }
 
 struct ggml_metal_context *ggml_metal_init(int n_cb) {
+    struct ggml_metal_context *res;
     if (!ggml_metal_supported()) return NULL;
-    return ggml_metal.init(n_cb);
+    if ((res = ggml_metal.init(n_cb))) return res;
+    ggml_metal.supported = false;
+    return NULL;
 }
 
 bool ggml_metal_add_buffer(struct ggml_metal_context *ctx,
@@ -312,9 +318,9 @@ int *ggml_metal_get_concur_list(struct ggml_metal_context *ctx) {
     return ggml_metal.get_concur_list(ctx);
 }
 
-void ggml_metal_graph_compute(struct ggml_metal_context *ctx,
+bool ggml_metal_graph_compute(struct ggml_metal_context *ctx,
                               struct ggml_cgraph *gf) {
-    if (!ggml_metal_supported()) return;
+    if (!ggml_metal_supported()) return false;
     return ggml_metal.graph_compute(ctx, gf);
 }
 
@@ -340,12 +346,12 @@ ggml_backend_t ggml_backend_metal_init(void) {
     return ggml_metal.backend_init();
 }
 
-ggml_backend_buffer_type_t ggml_backend_metal_buffer_type(void) {
+GGML_CALL ggml_backend_buffer_type_t ggml_backend_metal_buffer_type(void) {
     if (!ggml_metal_supported()) return 0;
     return ggml_metal.backend_buffer_type();
 }
 
-ggml_backend_buffer_t ggml_backend_metal_buffer_from_ptr(void * data, size_t size, size_t max_size) {
+GGML_CALL ggml_backend_buffer_t ggml_backend_metal_buffer_from_ptr(void * data, size_t size, size_t max_size) {
     if (!ggml_metal_supported()) return 0;
     return ggml_metal.backend_buffer_from_ptr(data, size, max_size);
 }
@@ -358,4 +364,16 @@ bool ggml_backend_is_metal(ggml_backend_t backend) {
 void ggml_backend_metal_set_n_cb(ggml_backend_t backend, int n_cb) {
     if (!ggml_metal_supported()) return;
     ggml_metal.backend_set_n_cb(backend, n_cb);
+}
+
+void ggml_metal_log_set_callback(ggml_log_callback log_callback, void * user_data) {
+    if (!ggml_metal_supported()) return;
+    //
+    // It's not possible to pass this callback from the application to
+    // the metal gpu module, because ggml-metal calls it from a worker
+    // thread, which hasn't set Cosmo's TLS register (x28).
+    //
+    if (!log_callback) {
+        ggml_metal.ggml_metal_log_set_callback(log_callback, user_data);
+    }
 }

@@ -3221,7 +3221,7 @@ int server_cli(int argc, char **argv)
         llamafile_launch_browser(url);
     }
 
-    if (!sparams.unsecure && !llamafile_gpu_supported()) {
+    if (!params.unsecure && !llamafile_gpu_supported()) {
         // Enables pledge() security on Linux and OpenBSD.
         // - We do this *after* binding the server socket.
         // - We do this *after* opening the log file for writing.

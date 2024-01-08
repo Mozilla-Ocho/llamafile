@@ -33,6 +33,7 @@
 #include <stdatomic.h>
 #include "llamafile/log.h"
 #include "llama.cpp/ggml-cuda.h"
+#include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/ggml-backend-impl.h"
 
 __static_yoink("llama.cpp/ggml.h");
@@ -49,7 +50,6 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 
 #define THESTRING(x) #x
 #define STRINGIFY(x) THESTRING(x)
-#define WIND_ONLY(x) (!IsWindows() ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
 #define ARMS_ONLY(x) (!IsAarch64() ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
 #define BLAS_ONLY(x) (FLAG_tinyblas ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
 
@@ -97,31 +97,31 @@ static const struct Source {
 static struct Cuda {
     bool supported;
     atomic_uint once;
-    typeof(ggml_cuda_link) *ggml_cuda_link;
-    typeof(ggml_init_cublas) *ggml_init_cublas;
-    typeof(ggml_cublas_loaded) *ggml_cublas_loaded;
-    typeof(ggml_cuda_host_free) *ggml_cuda_host_free;
-    typeof(ggml_cuda_host_malloc) *ggml_cuda_host_malloc;
-    typeof(ggml_cuda_can_mul_mat) *can_mul_mat;
-    typeof(ggml_cuda_set_tensor_split) *set_tensor_split;
-    typeof(ggml_cuda_transform_tensor) *ggml_cuda_transform_tensor;
-    typeof(ggml_cuda_free_data) *ggml_cuda_free_data;
-    typeof(ggml_cuda_assign_buffers) *assign_buffers;
-    typeof(ggml_cuda_assign_buffers_no_scratch) *assign_buffers_no_scratch;
-    typeof(ggml_cuda_assign_buffers_force_inplace) *assign_buffers_force_inplace;
-    typeof(ggml_cuda_assign_buffers_no_alloc) *assign_buffers_no_alloc;
-    typeof(ggml_cuda_assign_scratch_offset) *assign_scratch_offset;
-    typeof(ggml_cuda_copy_to_device) *copy_to_device;
-    typeof(ggml_cuda_set_main_device) *set_main_device;
-    typeof(ggml_cuda_set_scratch_size) *set_scratch_size;
-    typeof(ggml_cuda_free_scratch) *free_scratch;
-    typeof(ggml_cuda_compute_forward) *compute_forward;
-    typeof(ggml_cuda_get_device_count) *get_device_count;
-    typeof(ggml_cuda_get_device_description) *get_device_description;
-    typeof(ggml_backend_cuda_buffer_type) *ggml_backend_cuda_buffer_type;
-    typeof(ggml_backend_reg_cuda_init) *backend_reg_init;
-    typeof(ggml_backend_cuda_host_buffer_type) *ggml_backend_cuda_host_buffer_type;
-    typeof(ggml_backend_cuda_init) *ggml_backend_cuda_init;
+    typeof(ggml_cuda_link) *GGML_CALL ggml_cuda_link;
+    typeof(ggml_init_cublas) *GGML_CALL ggml_init_cublas;
+    typeof(ggml_cublas_loaded) *GGML_CALL ggml_cublas_loaded;
+    typeof(ggml_cuda_host_free) *GGML_CALL ggml_cuda_host_free;
+    typeof(ggml_cuda_host_malloc) *GGML_CALL ggml_cuda_host_malloc;
+    typeof(ggml_cuda_can_mul_mat) *GGML_CALL ggml_cuda_can_mul_mat;
+    typeof(ggml_cuda_set_tensor_split) *GGML_CALL set_tensor_split;
+    typeof(ggml_cuda_transform_tensor) *GGML_CALL ggml_cuda_transform_tensor;
+    typeof(ggml_cuda_free_data) *GGML_CALL ggml_cuda_free_data;
+    typeof(ggml_cuda_assign_buffers) *GGML_CALL assign_buffers;
+    typeof(ggml_cuda_assign_buffers_no_scratch) *GGML_CALL assign_buffers_no_scratch;
+    typeof(ggml_cuda_assign_buffers_force_inplace) *GGML_CALL assign_buffers_force_inplace;
+    typeof(ggml_cuda_assign_buffers_no_alloc) *GGML_CALL assign_buffers_no_alloc;
+    typeof(ggml_cuda_assign_scratch_offset) *GGML_CALL assign_scratch_offset;
+    typeof(ggml_cuda_copy_to_device) *GGML_CALL copy_to_device;
+    typeof(ggml_cuda_set_main_device) *GGML_CALL set_main_device;
+    typeof(ggml_cuda_set_scratch_size) *GGML_CALL set_scratch_size;
+    typeof(ggml_cuda_free_scratch) *GGML_CALL free_scratch;
+    typeof(ggml_cuda_compute_forward) *GGML_CALL compute_forward;
+    typeof(ggml_cuda_get_device_count) *GGML_CALL get_device_count;
+    typeof(ggml_cuda_get_device_description) *GGML_CALL get_device_description;
+    typeof(ggml_backend_cuda_buffer_type) *GGML_CALL ggml_backend_cuda_buffer_type;
+    typeof(ggml_backend_reg_cuda_init) *GGML_CALL backend_reg_init;
+    typeof(ggml_backend_cuda_host_buffer_type) *GGML_CALL ggml_backend_cuda_host_buffer_type;
+    typeof(ggml_backend_cuda_init) *GGML_CALL ggml_backend_cuda_init;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -219,14 +219,17 @@ static bool Compile(const char *src,
 
 static bool GetRocmBinPath(char path[static PATH_MAX], const char *bin) {
     const char *hip_path = getenv("HIP_PATH");
-    if (!hip_path) return false;
-    strlcpy(path, hip_path, PATH_MAX);
-    strlcat(path, "/bin/", PATH_MAX);
-    strlcat(path, bin, PATH_MAX);
-    if (IsWindows()) {
-        strlcat(path, ".exe", PATH_MAX);
+    if (hip_path || FileExists((hip_path = "/opt/rocm"))) {
+        strlcpy(path, hip_path, PATH_MAX);
+        strlcat(path, "/bin/", PATH_MAX);
+        strlcat(path, bin, PATH_MAX);
+        if (IsWindows()) {
+            strlcat(path, ".exe", PATH_MAX);
+        }
+        return FileExists(path);
+    } else {
+        return false;
     }
-    return FileExists(path);
 }
 
 // Returns word-encoded array of 16-bit gfxXXXX gcnArchName numbers.
@@ -234,7 +237,9 @@ static bool GetAmdOffloadArchFlag(char out[static 64]) {
 
     // Get hipInfo executable path.
     char hip_info_path[PATH_MAX];
-    if (!GetRocmBinPath(hip_info_path, "hipInfo")) {
+    if (!GetRocmBinPath(hip_info_path, "hipInfo") &&
+        !GetRocmBinPath(hip_info_path, "rocminfo")) {
+        tinylog("note: can't find hipInfo/rocminfo commands for AMD GPU detection\n", NULL);
         return false;
     }
 
@@ -459,19 +464,14 @@ static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
     return true;
 }
 
-static bool CompileAmd(const char *clangxx, const char *dso, const char *src) {
+static bool CompileAmdWindows(const char *clangxx, const char *dso, const char *src, const char *tmpdso) {
     const char *lib = IsWindows() ? "lib" : GetDsoExtension();
     const char *hip_path = getenv("HIP_PATH");
 
     // get set of microarchitectures for all installed graphics cards
     char offload_arch[64];
     if (!GetAmdOffloadArchFlag(offload_arch)) {
-        return false;
-    }
-
-    // create temporary output path for atomicity
-    char tmpdso[PATH_MAX];
-    if (!CreateTempPath(dso, tmpdso)) {
+        unlink(tmpdso);
         return false;
     }
 
@@ -479,54 +479,90 @@ static bool CompileAmd(const char *clangxx, const char *dso, const char *src) {
     //
     // there's a higher level program called hipcc, but we can't use it,
     // since it's a perl script and rocm doesn't bundle perl on windows.
-    //
-    // TODO(jart): test this on linux computer
-    if (Compile(src, tmpdso, dso,
-                (char *[]){
-                    (char *)clangxx,
-                    "-fuse-ld=lld",
-                    "-shared",
-                    "-nostartfiles",
-                    "-nostdlib",
-                    "-DGGML_BUILD=1",
-                    "-DGGML_SHARED=1",
-                    "-Wno-ignored-attributes",
-                    "-DGGML_CUDA_DMMV_X=32",
-                    "-DGGML_CUDA_MMV_Y=1",
-                    "-DGGML_USE_HIPBLAS",
-                    (FLAG_tinyblas
-                     ? "-DGGML_USE_TINYBLAS"
-                     : "-DIGNORE"),
-                    "-DK_QUANTS_PER_ITERATION=2",
-                    "-D_CRT_SECURE_NO_WARNINGS",
-                    "-D_XOPEN_SOURCE=600",
-                    "-D__HIP_PLATFORM_AMD__=1",
-                    "-D__HIP_PLATFORM_HCC__=1",
-                    "-isystem", _gc(xasprintf("%s/include", hip_path)),
-                    "-O3",
-                    "-DNDEBUG",
-                    "-D_DLL",
-                    "-D_MT",
-                    WIND_ONLY("-Xclang"), WIND_ONLY("--dependent-lib=msvcrt"),
-                    ARMS_ONLY("-ffixed-x28"),
-                    "-std=gnu++14",
-                    "-mllvm", "-amdgpu-early-inline-all=true",
-                    "-mllvm", "-amdgpu-function-calls=false",
-                    "-x", "hip",
-                    "--hip-link",
-                    (char *)offload_arch,
-                    "-o", tmpdso,
-                    (char *)src,
-                    BLAS_ONLY("-l"), BLAS_ONLY(_gc(xasprintf("%s/lib/hipblas.%s", hip_path, lib))),
-                    BLAS_ONLY("-l"), BLAS_ONLY(_gc(xasprintf("%s/lib/rocblas.%s", hip_path, lib))),
-                    "-l", _gc(xasprintf("%s/lib/amdhip64.%s", hip_path, lib)),
-                    WIND_ONLY("-lkernel32"),
-                    0})) {
-        return true;
+    char *args[] = {
+        (char *)clangxx,
+        "-O3",
+        "-shared",
+        "-DNDEBUG",
+        "-x", "hip",
+        "--hip-link",
+        "-std=gnu++14",
+        "-fuse-ld=lld",
+        "-DGGML_BUILD=1",
+        "-DGGML_SHARED=1",
+        "-DGGML_USE_HIPBLAS",
+        (char *)offload_arch,
+        "-DGGML_CUDA_MMV_Y=1",
+        "-DGGML_CUDA_DMMV_X=32",
+        "-Wno-ignored-attributes",
+        "-D_CRT_SECURE_NO_WARNINGS",
+        "-DK_QUANTS_PER_ITERATION=2",
+        "-o", (char *)tmpdso, (char *)src,
+        "-Xclang", "--dependent-lib=msvcrt",
+        "-mllvm", "-amdgpu-function-calls=false",
+        "-mllvm", "-amdgpu-early-inline-all=true",
+        FLAG_tinyblas ? "-DGGML_USE_TINYBLAS" : "-DIGNORE",
+        "-isystem", _gc(xasprintf("%s/include", hip_path)),
+        BLAS_ONLY("-l"), BLAS_ONLY(_gc(xasprintf("%s/lib/hipblas.%s", hip_path, lib))),
+        BLAS_ONLY("-l"), BLAS_ONLY(_gc(xasprintf("%s/lib/rocblas.%s", hip_path, lib))),
+        "-l", _gc(xasprintf("%s/lib/amdhip64.%s", hip_path, lib)),
+        "-lkernel32",
+        NULL,
+    };
+    return Compile(src, tmpdso, dso, args);
+}
+
+static bool CompileAmdUnix(const char *dso, const char *src, const char *tmpdso) {
+
+    // get set of microarchitectures for all installed graphics cards
+    // it's possible to safe --offload-arch=native but we do it ourself
+    // the amdgpu-arch that hipcc runs fails to link libhsa-runtime64.so
+    char offload_arch[64];
+    if (!GetAmdOffloadArchFlag(offload_arch)) {
+        strcpy(offload_arch, "--offload-arch=native");
     }
 
-    // oh no
-    return false;
+    char *args[] = {
+        "hipcc",
+        "-O3",
+        "-fPIC",
+        "-shared",
+        "-DNDEBUG",
+        offload_arch,
+        "-march=native",
+        "-mtune=native",
+        "-use_fast_math",
+        "-DGGML_BUILD=1",
+        "-DGGML_SHARED=1",
+        "-Wno-unused-result",
+        "-DGGML_USE_HIPBLAS",
+        "-DGGML_CUDA_MMV_Y=1",
+        "-DGGML_CUDA_DMMV_X=32",
+        ARMS_ONLY("-ffixed-x28"),
+        "-DK_QUANTS_PER_ITERATION=2",
+        "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",
+        FLAG_tinyblas ? "-DGGML_USE_TINYBLAS" : "-DIGNORE",
+        "-o", (char *)tmpdso, (char *)src,
+        BLAS_ONLY("-lhipblas"),
+        BLAS_ONLY("-lrocblas"),
+        NULL,
+    };
+    return Compile(src, tmpdso, dso, args);
+}
+
+static bool CompileAmd(const char *clangxx, const char *dso, const char *src) {
+
+    // create temporary output path for atomicity
+    char tmpdso[PATH_MAX];
+    if (!CreateTempPath(dso, tmpdso)) {
+        return false;
+    }
+
+    if (!IsWindows()) {
+        return CompileAmdUnix(dso, src, tmpdso);
+    } else {
+        return CompileAmdWindows(clangxx, dso, src, tmpdso);
+    }
 }
 
 static bool CompileNvidia(const char *nvcc, const char *dso, const char *src) {
@@ -610,7 +646,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.ggml_cublas_loaded = cosmo_dlsym(lib, "ggml_cublas_loaded"));
     ok &= !!(ggml_cuda.ggml_cuda_host_free = cosmo_dlsym(lib, "ggml_cuda_host_free"));
     ok &= !!(ggml_cuda.ggml_cuda_host_malloc = cosmo_dlsym(lib, "ggml_cuda_host_malloc"));
-    ok &= !!(ggml_cuda.can_mul_mat = cosmo_dlsym(lib, "ggml_cuda_can_mul_mat"));
+    ok &= !!(ggml_cuda.ggml_cuda_can_mul_mat = cosmo_dlsym(lib, "ggml_cuda_can_mul_mat"));
     ok &= !!(ggml_cuda.set_tensor_split = cosmo_dlsym(lib, "ggml_cuda_set_tensor_split"));
     ok &= !!(ggml_cuda.ggml_cuda_transform_tensor = cosmo_dlsym(lib, "ggml_cuda_transform_tensor"));
     ok &= !!(ggml_cuda.ggml_cuda_free_data = cosmo_dlsym(lib, "ggml_cuda_free_data"));
@@ -641,6 +677,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
 }
 
 static bool ImportCudaImpl(void) {
+    assert(FLAG_gpu != LLAMAFILE_GPU_ERROR);
 
     // No dynamic linking support on OpenBSD yet.
     if (IsOpenbsd()) {
@@ -699,7 +736,8 @@ static bool ImportCudaImpl(void) {
 
             // Get some essential paths.
             // ROCm SDK puts BLAS DLLs in same folder as clang++
-            if (GetRocmBinPath(compiler_path_buf, "clang++")) {
+            if (GetRocmBinPath(compiler_path_buf, "amdclang++") ||
+                GetRocmBinPath(compiler_path_buf, "clang++")) {
                 strcpy(library_path_buf, compiler_path_buf);
                 dirname(library_path_buf);
                 compiler_path = compiler_path_buf;
@@ -830,6 +868,9 @@ TryNvidia:
 }
 
 static void ImportCuda(void) {
+    if (ggml_metal_supported()) {
+        return;
+    }
     if (ImportCudaImpl()) {
         tinylog("GPU support successfully linked and loaded\n", NULL);
         ggml_cuda.supported = true;
@@ -847,123 +888,123 @@ bool ggml_cuda_supported(void) {
     return ggml_cuda.supported;
 }
 
-void ggml_init_cublas(void) {
+GGML_CALL void ggml_init_cublas(void) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.ggml_init_cublas();
 }
 
-bool ggml_cublas_loaded(void) {
+GGML_CALL bool ggml_cublas_loaded(void) {
     if (!ggml_cuda_supported()) return false;
     return ggml_cuda.ggml_cublas_loaded();
 }
 
-void *ggml_cuda_host_malloc(size_t n) {
+GGML_CALL void *ggml_cuda_host_malloc(size_t n) {
     if (!ggml_cuda_supported()) return NULL;
     return ggml_cuda.ggml_cuda_host_malloc(n);
 }
 
-void ggml_cuda_host_free(void *data) {
+GGML_CALL void ggml_cuda_host_free(void *data) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.ggml_cuda_host_free(data);
 }
 
-bool ggml_cuda_can_mul_mat(const struct ggml_tensor *src0,
-                           const struct ggml_tensor *src1,
-                           struct ggml_tensor *dst) {
+GGML_CALL bool ggml_cuda_can_mul_mat(const struct ggml_tensor *src0,
+                                    const struct ggml_tensor *src1,
+                                    struct ggml_tensor *dst) {
     if (!ggml_cuda_supported()) return false;
-    return ggml_cuda.can_mul_mat(src0, src1, dst);
+    return ggml_cuda.ggml_cuda_can_mul_mat(src0, src1, dst);
 }
 
-void ggml_cuda_set_tensor_split(const float *tensor_split) {
+GGML_CALL void ggml_cuda_set_tensor_split(const float *tensor_split) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.set_tensor_split(tensor_split);
 }
 
-void ggml_cuda_transform_tensor(void *data, struct ggml_tensor *tensor) {
+GGML_CALL void ggml_cuda_transform_tensor(void *data, struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.ggml_cuda_transform_tensor(data, tensor);
 }
 
-void ggml_cuda_free_data(struct ggml_tensor *tensor) {
+GGML_CALL void ggml_cuda_free_data(struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.ggml_cuda_free_data(tensor);
 }
 
-void ggml_cuda_assign_buffers(struct ggml_tensor *tensor) {
+GGML_CALL void ggml_cuda_assign_buffers(struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.assign_buffers(tensor);
 }
 
-void ggml_cuda_assign_buffers_no_scratch(struct ggml_tensor *tensor) {
+GGML_CALL void ggml_cuda_assign_buffers_no_scratch(struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.assign_buffers_no_scratch(tensor);
 }
 
-void ggml_cuda_assign_buffers_force_inplace(struct ggml_tensor *tensor) {
+GGML_CALL void ggml_cuda_assign_buffers_force_inplace(struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.assign_buffers_force_inplace(tensor);
 }
 
-void ggml_cuda_assign_buffers_no_alloc(struct ggml_tensor *tensor) {
+GGML_CALL void ggml_cuda_assign_buffers_no_alloc(struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.assign_buffers_no_alloc(tensor);
 }
 
-void ggml_cuda_assign_scratch_offset(struct ggml_tensor *tensor, size_t offset) {
+GGML_CALL void ggml_cuda_assign_scratch_offset(struct ggml_tensor *tensor, size_t offset) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.assign_scratch_offset(tensor, offset);
 }
 
-void ggml_cuda_copy_to_device(struct ggml_tensor *tensor) {
+GGML_CALL void ggml_cuda_copy_to_device(struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.copy_to_device(tensor);
 }
 
-void ggml_cuda_set_main_device(int main_device) {
+GGML_CALL void ggml_cuda_set_main_device(int main_device) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.set_main_device(main_device);
 }
 
-void ggml_cuda_set_scratch_size(size_t scratch_size) {
+GGML_CALL void ggml_cuda_set_scratch_size(size_t scratch_size) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.set_scratch_size(scratch_size);
 }
 
-void ggml_cuda_free_scratch(void) {
+GGML_CALL void ggml_cuda_free_scratch(void) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.free_scratch();
 }
 
-bool ggml_cuda_compute_forward(struct ggml_compute_params *params,
-                               struct ggml_tensor *tensor) {
+GGML_CALL bool ggml_cuda_compute_forward(struct ggml_compute_params *params,
+                                        struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return false;
     return ggml_cuda.compute_forward(params, tensor);
 }
 
-int ggml_cuda_get_device_count(void) {
+GGML_CALL int ggml_cuda_get_device_count(void) {
     if (!ggml_cuda_supported()) return 0;
     return ggml_cuda.get_device_count();
 }
 
-void ggml_cuda_get_device_description(int device,
-                                      char *description,
-                                      size_t description_size) {
+GGML_CALL void ggml_cuda_get_device_description(int device,
+                                               char *description,
+                                               size_t description_size) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.get_device_description(device, description,
                                             description_size);
 }
 
-ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
+GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
     if (!ggml_cuda_supported()) return 0;
     return ggml_cuda.ggml_backend_cuda_buffer_type(device);
 }
 
-ggml_backend_t ggml_backend_reg_cuda_init(const char * params, void * user_data) {
+GGML_CALL ggml_backend_t ggml_backend_reg_cuda_init(const char * params, void * user_data) {
     if (!ggml_cuda_supported()) return 0;
     ggml_cuda.backend_reg_init(params, user_data);
 }
 
-ggml_backend_buffer_type_t ggml_backend_cuda_host_buffer_type() {
+GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_host_buffer_type() {
     if (!ggml_cuda_supported()) return 0;
     ggml_cuda.ggml_backend_cuda_host_buffer_type();
 }
@@ -979,7 +1020,7 @@ int ggml_backend_cuda_reg_devices(void) {
     return device_count;
 }
 
-ggml_backend_t ggml_backend_cuda_init(int device) {
+GGML_CALL ggml_backend_t ggml_backend_cuda_init(int device) {
     if (!ggml_cuda_supported()) return 0;
     return ggml_cuda.ggml_backend_cuda_init(device);
 }

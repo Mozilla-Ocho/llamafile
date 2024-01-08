@@ -23,11 +23,11 @@
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
 
-int FLAG_gpu;
 bool FLAG_nogpu;
 bool FLAG_tinyblas;
 bool FLAG_nocompile;
 bool FLAG_recompile;
+int FLAG_gpu = LLAMAFILE_GPU_ERROR;
 
 const char *llamafile_describe_gpu(void) {
     switch (FLAG_gpu) {
@@ -42,15 +42,19 @@ const char *llamafile_describe_gpu(void) {
         case LLAMAFILE_GPU_DISABLE:
             return "disabled";
         default:
-            __builtin_unreachable();
+            return "error";
     }
 }
 
 /**
  * Returns true if GPU support is available.
  */
-int llamafile_gpu_supported(void) {
-    return ggml_metal_supported() || ggml_cuda_supported();
+bool llamafile_gpu_supported(void) {
+    if (ggml_metal_supported()) {
+        return true;
+    }
+    ggml_init_cublas();
+    return ggml_cublas_loaded();
 }
 
 /**

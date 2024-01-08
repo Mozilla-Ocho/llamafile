@@ -17,12 +17,15 @@ LOCAL MODIFICATIONS
   - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
   - Unify main, server, and llava-cli into single llamafile program
   - Make cuBLAS / hipBLAS optional by introducing tinyBLAS library
+  - Use Microsoft ABI on CUDA module and ggml-backend interfaces
   - Add support to main() programs for Cosmo /zip/.args files
   - Introduce pledge() SECCOMP sandboxing to improve security
+  - Call exit() rather than abort() when GGML_ASSERT() fails
   - Fix OpenAI server sampling w.r.t. temperature and seed
   - Remove log callback pointer API from Metal GPU module
   - Write log to /dev/null when main.log fails to open
   - Use _rand64() rather than time() as default seed
+  - Make main and llava-cli print timings on ctrl-c
   - Avoid bind() conflicts on port 8080 w/ server
   - Allow --grammar to be used on --image prompts
   - Use runtime dispatching for matmul quants
