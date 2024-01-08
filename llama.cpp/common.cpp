@@ -152,6 +152,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
     const std::string arg_prefix = "--";
     llama_sampling_params & sparams = params.sparams;
 
+    assert(FLAG_gpu == LLAMAFILE_GPU_ERROR);
     FLAG_gpu = LLAMAFILE_GPU_AUTO;
 
     for (int i = 1; i < argc; i++) {
@@ -821,6 +822,8 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
         params.kv_overrides.emplace_back(llama_model_kv_override());
         params.kv_overrides.back().key[0] = 0;
     }
+
+    params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
 
     return true;
 }

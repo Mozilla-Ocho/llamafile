@@ -2044,6 +2044,9 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
     std::string arg;
     bool invalid_param = false;
 
+    assert(FLAG_gpu == LLAMAFILE_GPU_ERROR);
+    FLAG_gpu = LLAMAFILE_GPU_AUTO;
+
     for (int i = 1; i < argc; i++)
     {
         arg = argv[i];
@@ -2462,6 +2465,9 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
             exit(1);
         }
     }
+
+    params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
+
     if (!params.kv_overrides.empty()) {
         params.kv_overrides.emplace_back(llama_model_kv_override());
         params.kv_overrides.back().key[0] = 0;

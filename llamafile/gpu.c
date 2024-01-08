@@ -58,6 +58,24 @@ bool llamafile_gpu_supported(void) {
 }
 
 /**
+ * Figures out the GPU story after config is loaded.
+ */
+int llamafile_gpu_layers(int n_gpu_layers) {
+    if (n_gpu_layers > 0) {
+        if (!llamafile_gpu_supported()) {
+            fprintf(stderr, "fatal error: --n-gpu-layers %d was passed but no gpus were found\n",
+                    n_gpu_layers);
+            exit(1);
+        }
+    } else if (n_gpu_layers == -1 && ggml_metal_supported()) {
+        n_gpu_layers = 1;
+    } else {
+        FLAG_gpu = LLAMAFILE_GPU_DISABLE;
+    }
+    return n_gpu_layers;
+}
+
+/**
  * Parses `--gpu` flag.
  * @return GPU configuration, or -1 if `s` is a bad value
  */

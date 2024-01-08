@@ -534,6 +534,7 @@ static bool CompileAmdUnix(const char *dso, const char *src, const char *tmpdso)
         "-use_fast_math",
         "-DGGML_BUILD=1",
         "-DGGML_SHARED=1",
+        "-Wno-return-type",
         "-Wno-unused-result",
         "-DGGML_USE_HIPBLAS",
         "-DGGML_CUDA_MMV_Y=1",

@@ -118,13 +118,6 @@ int main(int argc, char ** argv) {
     ShowCrashReports();
     LoadZipArgs(&argc, &argv);
 
-    if (!IsXnuSilicon() &&
-        (!llamafile_has(argv, "-ngl") &&
-         !llamafile_has(argv, "--gpu-layers") &&
-         !llamafile_has(argv, "--n-gpu-layers"))) {
-        FLAG_gpu = LLAMAFILE_GPU_DISABLE;
-    }
-
     if (!llamafile_has(argv, "--cli") &&
         (llamafile_has(argv, "--server") ||
          (!llamafile_has(argv, "-p") &&
@@ -143,12 +136,6 @@ int main(int argc, char ** argv) {
     if (!gpt_params_parse(argc, argv, params)) {
         return 1;
     }
-
-    if (params.n_gpu_layers > 0 && !llamafile_gpu_supported()) {
-        fprintf(stderr, "fatal error: --n-gpu-layers %d was passed but no gpus were found\n", params.n_gpu_layers);
-        exit(1);
-    }
-
     llama_sampling_params & sparams = params.sparams;
 
 #ifndef LOG_DISABLE_LOGS
