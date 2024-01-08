@@ -478,7 +478,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
     struct llamafile * file;
     struct gguf_context * ctx;
-    file = llamafile_open(fname, "rbe");
+    file = llamafile_open_gguf(fname, "rbe");
     if (file) ctx = gguf_init_from_file(file, params);
     if (file) llamafile_close(file);
     if (!file || !ctx) {
@@ -600,7 +600,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             return nullptr;
         }
 
-        struct llamafile * fin = llamafile_open(fname, "rbe");
+        struct llamafile * fin = llamafile_open_gguf(fname, "rbe");
         if (!fin) {
             fprintf(stderr, "cannot open model file for loading tensors\n");
             clip_free(new_clip);

@@ -746,7 +746,7 @@ struct llama_file {
     struct llamafile * file;
 
     llama_file(const char * fname, const char * mode) {
-        file = llamafile_open(fname, mode);
+        file = llamafile_open_gguf(fname, mode);
         if (!file) {
             ThrowRuntimeError(format("failed to open %s: %s", fname, strerror(errno)));
         }
@@ -757,7 +757,7 @@ struct llama_file {
     }
 
     void seek(size_t offset, int whence) const {
-        return llamafile_seek(file, offset, whence);
+        llamafile_seek(file, offset, whence);
     }
 
     void read_raw(void * ptr, size_t len) const {

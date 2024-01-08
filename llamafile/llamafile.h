@@ -7,11 +7,11 @@ extern "C" {
 #endif
 
 struct llamafile;
-struct llamafile *llamafile_open(const char *, const char *);
+struct llamafile *llamafile_open_gguf(const char *, const char *);
 void llamafile_close(struct llamafile *);
 long llamafile_read(struct llamafile *, void *, size_t);
 long llamafile_write(struct llamafile *, const void *, size_t);
-void llamafile_seek(struct llamafile *, size_t, int);
+bool llamafile_seek(struct llamafile *, size_t, int);
 void *llamafile_content(struct llamafile *);
 size_t llamafile_tell(struct llamafile *);
 size_t llamafile_size(struct llamafile *);

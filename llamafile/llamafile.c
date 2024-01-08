@@ -54,39 +54,28 @@ struct llamafile {
     size_t position;
     void *mapping;
     size_t mapsize;
+    char fname[PATH_MAX];
 };
 
-struct llamafile *llamafile_open(const char *fname, const char *mode) {
+static struct llamafile *llamafile_open_zip(const char *prog, const char *fname, const char *mode) {
     int fd = -1;
     uint8_t *bufdata = NULL;
     size_t cdirsize = 0;
     uint8_t *cdirdata = NULL;
     struct llamafile *file = NULL;
 
-    if (!(file = malloc(sizeof(struct llamafile)))) {
-        goto Failure;
+    if (!(file = calloc(1, sizeof(struct llamafile)))) {
+        return 0;
     }
-
-    // open from the filesystem if it exists
-    if ((file->fp = fopen(fname, mode))) {
-        llamafile_seek(file, 0, SEEK_END);
-        file->size = llamafile_tell(file);
-        llamafile_seek(file, 0, SEEK_SET);
-        return file;
-    }
-    if (errno != ENOENT) {
-        goto Failure;
-    }
+    strlcpy(file->fname, prog, PATH_MAX);
 
     // try opening from this executable's zip store
-    const char *prog = GetProgramExecutableName();
     if ((fd = open(prog, O_RDONLY | O_CLOEXEC)) == -1) {
-        errno = ENOENT;
-        goto Failure;
+        free(file);
+        return 0;
     }
     ssize_t rc;
     if ((rc = lseek(fd, 0, SEEK_END)) == -1) {
-        fprintf(stderr, "warning: failed to seek executable: %s: %s\n", prog, strerror(errno));
         goto Failure;
     }
     file->size = rc;
@@ -102,11 +91,11 @@ struct llamafile *llamafile_open(const char *fname, const char *mode) {
         off = file->size - 65536;
         amt = file->size - off;
     }
-    if (!(bufdata = malloc(65536))) {
+    if (!(bufdata = _gc(malloc(65536)))) {
         goto Failure;
     }
     if (pread(fd, bufdata, amt, off) != amt) {
-        fprintf(stderr, "warning: failed to pread end of file: %s: %s\n", prog, strerror(errno));
+        fprintf(stderr, "%s: warning: failed to read last 64kb of file: %s\n", prog, strerror(errno));
         goto Failure;
     }
 
@@ -139,74 +128,108 @@ struct llamafile *llamafile_open(const char *fname, const char *mode) {
     }
     if (cnt <= 0) {
         // this executable isn't a zip file
-        goto Failure;
+        fprintf(stderr, "%s: warning: not a pkzip archive\n", prog);
+        goto Invalid;
     }
 
     // read the central directory
     cdirsize = amt;
-    if (!(cdirdata = malloc(cdirsize))) {
+    if (!(cdirdata = _gc(malloc(cdirsize)))) {
         goto Failure;
     }
     if (pread(fd, cdirdata, cdirsize, off) != (long)cdirsize) {
-        fprintf(stderr, "warning: failed to pread zip cdir: %s: %s\n", prog, strerror(errno));
+        fprintf(stderr, "%s: warning: failed to pread zip cdir: %s\n", prog, strerror(errno));
         goto Failure;
     }
     if (ZIP_READ32(cdirdata) != kZipCfileHdrMagic) {
-        fprintf(stderr, "warning: failed to locate zip central directory: %s\n", prog);
-        goto Failure;
+        fprintf(stderr, "%s: warning: failed to locate zip central directory\n", prog);
+        goto Invalid;
     }
 
     // look for filename in the directory
-    bool found = false;
-    int fname_len = strlen(fname);
+    int found = 0;
+    char *zip_name = 0;
+    unsigned cdir_offset;
+    int fname_len = fname ? strlen(fname) : 0;
     unsigned entry_index, entry_offset;
     for (entry_index = entry_offset = 0;
          entry_index < cnt && entry_offset + kZipCfileHdrMinSize <= cdirsize &&
                        entry_offset + ZIP_CFILE_HDRSIZE(cdirdata + entry_offset) <= cdirsize;
          ++entry_index, entry_offset += ZIP_CFILE_HDRSIZE(cdirdata + entry_offset)) {
         if (ZIP_CFILE_MAGIC(cdirdata + entry_offset) != kZipCfileHdrMagic) {
-            fprintf(stderr, "error: corrupted zip central directory entry magic\n");
+            fprintf(stderr, "error: corrupted zip central directory entry magic: %s\n", prog);
+            errno = EINVAL;
             goto Failure;
         }
-        if (fname_len == ZIP_CFILE_NAMESIZE(cdirdata + entry_offset) &&
-            !memcmp(fname, ZIP_CFILE_NAME(cdirdata + entry_offset), fname_len)) {
+        int entry_name_len = ZIP_CFILE_NAMESIZE(cdirdata + entry_offset);
+        const char *entry_name_bytes = ZIP_CFILE_NAME(cdirdata + entry_offset);
+        if ((fname
+             ? (fname_len == entry_name_len &&
+                !memcmp(fname, entry_name_bytes, fname_len))
+             : (entry_name_len > 5 &&
+                !memcasecmp(entry_name_bytes + entry_name_len - 5, ".gguf", 5)))) {
+            zip_name = _gc(strndup(entry_name_bytes, entry_name_len));
             off = get_zip_cfile_offset(cdirdata + entry_offset);
             file->size = get_zip_cfile_compressed_size(cdirdata + entry_offset);
-            found = true;
-            break;
+            cdir_offset = entry_offset;
+            ++found;
         }
     }
     if (!found) {
-        goto Failure;
+        fprintf(stderr, "%s: error: no %s file found in zip archive\n",
+                prog, fname ? fname : ".gguf");
+        goto Invalid;
     }
-    if (ZIP_CFILE_COMPRESSIONMETHOD(cdirdata + entry_offset) != kZipCompressionNone) {
-        fprintf(stderr, "error: weights stored in the zip executable can't be stored using compression (try zip -0 flag)\n");
-        goto Failure;
+    if (found != 1) {
+        // TODO: Support opening LLaVA llamafiles.
+        fprintf(stderr, "%s: error: multiple %s files found in zip archive\n",
+                prog, fname ? fname : ".gguf");
+        goto Invalid;
+    }
+    strlcat(file->fname, "@", PATH_MAX);
+    strlcat(file->fname, zip_name, PATH_MAX);
+    if (ZIP_CFILE_COMPRESSIONMETHOD(cdirdata + cdir_offset) != kZipCompressionNone) {
+        fprintf(stderr, "%s: error: weights stored in the zip executable can't be stored using compression\n",
+                file->fname);
+        goto Invalid;
     }
 
     // read the zip local file header
     // this is needed to determine offset of file content
     uint8_t lfile[kZipLfileHdrMinSize];
     if (pread(fd, lfile, kZipLfileHdrMinSize, off) != kZipLfileHdrMinSize) {
-        fprintf(stderr, "error: failed to pread lfile: %s\n", prog);
+        fprintf(stderr, "%s: error: failed to pread lfile\n", file->fname);
         goto Failure;
     }
     if (ZIP_LFILE_MAGIC(lfile) != kZipLfileHdrMagic) {
-        fprintf(stderr, "error: corrupted zip local file magic\n");
-        goto Failure;
+        fprintf(stderr, "%s: error: corrupted zip local file magic\n", file->fname);
+        goto Invalid;
     }
     off += ZIP_LFILE_HDRSIZE(lfile);
+
+    // perform sanity check
+    // mapping weights for apple metal gpu requires 16kb alignment
+    if (off & 16383) {
+        fprintf(stderr, "%s: warning: use zipalign (rather than zip) to create llamafiles\n",
+                file->fname);
+    }
 
     // map the file into memory
     long pagesz = sysconf(_SC_PAGESIZE);
     off_t mapoff = off & -pagesz;
     long skew = off - mapoff;
     file->mapsize = skew + file->size;
-    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED, fd, mapoff);
+    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, mapoff);
     if (file->mapping == MAP_FAILED) {
-        fprintf(stderr, "warning: failed to map %s from %s: %s\n",
-                fname, prog, strerror(errno));
+        fprintf(stderr, "%s: warning: failed to map zip file: %s\n",
+                file->fname, strerror(errno));
         goto Failure;
+    }
+
+    errno_t err;
+    if ((err = posix_fadvise(fd, mapoff, file->mapsize, POSIX_FADV_SEQUENTIAL)) && err != ENOSYS) {
+        fprintf(stderr, "%s: warning: posix_fadvise(.., POSIX_FADV_SEQUENTIAL) failed: %s\n",
+                file->fname, strerror(err));
     }
 
     // setup our synthetic file
@@ -214,19 +237,78 @@ struct llamafile *llamafile_open(const char *fname, const char *mode) {
     file->content = (char *)file->mapping + skew;
 
     // return object
-    free(cdirdata);
-    free(bufdata);
     close(fd);
     return file;
 
+Invalid:
+    errno = EINVAL;
 Failure:
-    if (fd != -1) {
-        close(fd);
+    free(file);
+    close(fd);
+    return 0;
+}
+
+static struct llamafile *llamafile_open_file(const char *fname, const char *mode) {
+    struct llamafile *file;
+    if (!(file = calloc(1, sizeof(struct llamafile)))) {
+        return 0;
     }
-    free(cdirdata);
-    free(bufdata);
+    strlcpy(file->fname, fname, PATH_MAX);
+    if ((file->fp = fopen(fname, mode))) {
+        if (!llamafile_seek(file, 0, SEEK_END)) {
+            llamafile_close(file);
+            return 0;
+        }
+        file->size = llamafile_tell(file);
+        llamafile_seek(file, 0, SEEK_SET);
+        return file;
+    }
     free(file);
     return 0;
+}
+
+struct llamafile *llamafile_open_gguf(const char *fname, const char *mode) {
+
+    // support filenames like `foo.zip@weights.gguf`
+    const char *p;
+    if ((p = strchr(fname, '@'))) {
+        return llamafile_open_zip(_gc(strndup(fname, p - fname)), p + 1, mode);
+    }
+
+    // open from file or from our own executable if it doesn't exist
+    struct llamafile *file;
+    if (!(file = llamafile_open_file(fname, mode))) {
+        if (errno == ENOENT) {
+            if (!(file = llamafile_open_zip(GetProgramExecutableName(), fname, mode))) {
+                errno = ENOENT;
+                return 0;
+            }
+            return file;
+        } else {
+            return 0;
+        }
+    }
+
+    // check that this is a .gguf file
+    ssize_t rc;
+    char buf[8];
+    if ((rc = pread(fileno(file->fp), buf, 8, 0)) == -1) {
+        llamafile_close(file);
+        return 0;
+    }
+    if (rc != 8) {
+        llamafile_close(file);
+        errno = EIO;
+        return 0;
+    }
+    if (ZIP_READ32(buf) == ZIP_READ32("GGUF")) {
+        errno = EINVAL;
+        return file;
+    }
+
+    // otherwise assume user opened a .zip or .llamafile
+    llamafile_close(file);
+    return llamafile_open_zip(fname, 0, mode);
 }
 
 FILE *llamafile_fp(struct llamafile *file) {
@@ -250,7 +332,7 @@ size_t llamafile_tell(struct llamafile *file) {
     return (size_t) ret;
 }
 
-void llamafile_seek(struct llamafile *file, size_t offset, int whence) {
+bool llamafile_seek(struct llamafile *file, size_t offset, int whence) {
     if (!file->fp) {
         switch (whence) {
             case SEEK_SET:
@@ -263,9 +345,9 @@ void llamafile_seek(struct llamafile *file, size_t offset, int whence) {
                 file->position = file->size + offset;
                 break;
         }
-        return;
+        return true;
     }
-    unassert(!fseek(file->fp, (long) offset, whence));
+    return !fseek(file->fp, (long) offset, whence);
 }
 
 long llamafile_read(struct llamafile *file, void *ptr, size_t len) {
@@ -320,4 +402,5 @@ void llamafile_close(struct llamafile *file) {
         // TODO(jart): reference count this mapping w/ llama_mmap
         // munmap(file->mapping, file->mapsize);
     }
+    free(file);
 }
