@@ -344,7 +344,7 @@ binaries, and (2) you pass the `-ngl 35` flag. You also need an NVIDIA
 graphics card that supports CUDA. There's no support yet for AMD GPUs. 
 You can also use CUDA via WSL by enabling [Nvidia CUDA on WSL](https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl)
 and running your llamafiles inside of WSL. This will also allow you to use
-llamafiles greater than 4GB on Windows.
+llamafiles greater than 4GB on Windows. NOTE: If you have two different GPUs(integrated AMD, and dedicated NVIDIA like a laptop) then you need to add -ngl 35 --gpu NVIDIA
 
 On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
 you have the `cc` compiler installed, (2) you pass the `-ngl 35` flag to
