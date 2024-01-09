@@ -15,6 +15,7 @@ hipcc \
   -use_fast_math \
   -DGGML_BUILD=1 \
   -DGGML_SHARED=1 \
+  -Wno-return-type \
   -Wno-unused-result \
   -DGGML_CUDA_DMMV_X=32 \
   -DGGML_CUDA_MMV_Y=1 \

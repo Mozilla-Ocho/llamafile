@@ -91,7 +91,7 @@ static struct llamafile *llamafile_open_zip(const char *prog, const char *fname,
         off = file->size - 65536;
         amt = file->size - off;
     }
-    if (!(bufdata = _gc(malloc(65536)))) {
+    if (!(bufdata = gc(malloc(65536)))) {
         goto Failure;
     }
     if (pread(fd, bufdata, amt, off) != amt) {
@@ -134,7 +134,7 @@ static struct llamafile *llamafile_open_zip(const char *prog, const char *fname,
 
     // read the central directory
     cdirsize = amt;
-    if (!(cdirdata = _gc(malloc(cdirsize)))) {
+    if (!(cdirdata = gc(malloc(cdirsize)))) {
         goto Failure;
     }
     if (pread(fd, cdirdata, cdirsize, off) != (long)cdirsize) {
@@ -168,7 +168,7 @@ static struct llamafile *llamafile_open_zip(const char *prog, const char *fname,
                 !memcmp(fname, entry_name_bytes, fname_len))
              : (entry_name_len > 5 &&
                 !memcasecmp(entry_name_bytes + entry_name_len - 5, ".gguf", 5)))) {
-            zip_name = _gc(strndup(entry_name_bytes, entry_name_len));
+            zip_name = gc(strndup(entry_name_bytes, entry_name_len));
             off = get_zip_cfile_offset(cdirdata + entry_offset);
             file->size = get_zip_cfile_compressed_size(cdirdata + entry_offset);
             cdir_offset = entry_offset;
@@ -272,7 +272,7 @@ struct llamafile *llamafile_open_gguf(const char *fname, const char *mode) {
     // support filenames like `foo.zip@weights.gguf`
     const char *p;
     if ((p = strchr(fname, '@'))) {
-        return llamafile_open_zip(_gc(strndup(fname, p - fname)), p + 1, mode);
+        return llamafile_open_zip(gc(strndup(fname, p - fname)), p + 1, mode);
     }
 
     // open from file or from our own executable if it doesn't exist

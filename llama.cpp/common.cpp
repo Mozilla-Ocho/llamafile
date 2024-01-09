@@ -4,7 +4,6 @@
 #include "llama.h"
 #include "ggml-cuda.h"
 #include "ggml-metal.h"
-#include "runtime.h"
 
 #include <algorithm>
 #include <cassert>
@@ -124,21 +123,17 @@ void process_escapes(std::string& input) {
 
 bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
     bool result = true;
-#ifndef _LIBCPP_NO_EXCEPTIONS
     try {
-#endif
         if (!gpt_params_parse_ex(argc, argv, params)) {
             gpt_print_usage(argc, argv, gpt_params());
             exit(0);
         }
-#ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (const std::invalid_argument & ex) {
         fprintf(stderr, "%s\n", ex.what());
         gpt_print_usage(argc, argv, gpt_params());
         exit(1);
     }
-#endif
     if (FLAG_gpu == LLAMAFILE_GPU_DISABLE) {
         params.n_gpu_layers = 0;
     }
@@ -669,7 +664,6 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             llama_token key;
             char sign = 0;
             std::string value_str;
-#ifndef _LIBCPP_NO_EXCEPTIONS
             try {
                 if (ss >> key && ss >> sign && std::getline(ss, value_str) && (sign == '+' || sign == '-')) {
                     sparams.logit_bias[key] = std::stof(value_str) * ((sign == '-') ? -1.0f : 1.0f);
@@ -680,19 +674,6 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-#else
-            if (ss >> key && ss >> sign && std::getline(ss, value_str) && (sign == '+' || sign == '-')) {
-                errno = 0;
-                sparams.logit_bias[key] = std::stof(value_str) * ((sign == '-') ? -1.0f : 1.0f);
-                if (errno) {
-                    invalid_param = true;
-                    break;
-                }
-            } else {
-                invalid_param = true;
-                break;
-            }
-#endif
         } else if (arg == "-h" || arg == "--help") {
             return false;
 
@@ -795,17 +776,17 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
         // End of Parse args for logging parameters
 #endif // LOG_DISABLE_LOGS
         } else {
-            ThrowInvalidArgument("error: unknown argument: " + arg);
+            throw std::invalid_argument("error: unknown argument: " + arg);
         }
     }
     if (invalid_param) {
-        ThrowInvalidArgument("error: invalid parameter for argument: " + arg);
+        throw std::invalid_argument("error: invalid parameter for argument: " + arg);
     }
     if (params.prompt_cache_all &&
             (params.interactive || params.interactive_first ||
              params.instruct)) {
 
-        ThrowInvalidArgument("error: --prompt-cache-all not supported in interactive mode yet\n");
+        throw std::invalid_argument("error: --prompt-cache-all not supported in interactive mode yet\n");
     }
 
     if (params.escape) {
@@ -1081,7 +1062,7 @@ static ggml_type kv_cache_type_from_str(const std::string & s) {
         return GGML_TYPE_Q5_1;
     }
 
-    ThrowRuntimeError("Invalid cache type: " + s);
+    throw std::runtime_error("Invalid cache type: " + s);
 }
 
 struct llama_context_params llama_context_params_from_gpt_params(const gpt_params & params) {

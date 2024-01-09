@@ -15,9 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "x.h"
-#include <cosmo.h>
 #include <time.h>
+#include <cosmo.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <spawn.h>
@@ -31,6 +30,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdatomic.h>
+#include "llamafile/x.h"
 #include "llamafile/log.h"
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
@@ -485,10 +485,10 @@ static bool CompileAmdWindows(const char *clangxx, const char *dso, const char *
         "-mllvm", "-amdgpu-function-calls=false",
         "-mllvm", "-amdgpu-early-inline-all=true",
         FLAG_tinyblas ? "-DGGML_USE_TINYBLAS" : "-DIGNORE",
-        "-isystem", _gc(xasprintf("%s/include", hip_path)),
-        BLAS_ONLY("-l"), BLAS_ONLY(_gc(xasprintf("%s/lib/hipblas.%s", hip_path, lib))),
-        BLAS_ONLY("-l"), BLAS_ONLY(_gc(xasprintf("%s/lib/rocblas.%s", hip_path, lib))),
-        "-l", _gc(xasprintf("%s/lib/amdhip64.%s", hip_path, lib)),
+        "-isystem", gc(xasprintf("%s/include", hip_path)),
+        BLAS_ONLY("-l"), BLAS_ONLY(gc(xasprintf("%s/lib/hipblas.%s", hip_path, lib))),
+        BLAS_ONLY("-l"), BLAS_ONLY(gc(xasprintf("%s/lib/rocblas.%s", hip_path, lib))),
+        "-l", gc(xasprintf("%s/lib/amdhip64.%s", hip_path, lib)),
         "-lkernel32",
         NULL,
     };

@@ -19,7 +19,6 @@
 #include "clip.h"
 #include "llamafile/log.h"
 #include "llama.cpp/ggml.h"
-#include "llama.cpp/runtime.h"
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/ggml-alloc.h"
@@ -98,7 +97,7 @@ static int get_key_idx(const gguf_context * ctx, const char * key) {
     int i = gguf_find_key(ctx, key);
     if (i == -1) {
         fprintf(stderr, "key %s not found in file\n", key);
-        ThrowRuntimeError(format("Missing required key: %s", key));
+        throw std::runtime_error(format("Missing required key: %s", key));
     }
 
     return i;
@@ -119,7 +118,7 @@ static float get_f32(const gguf_context * ctx, const std::string & key) {
 static struct ggml_tensor * get_tensor(struct ggml_context * ctx, const std::string & name) {
     struct ggml_tensor * cur = ggml_get_tensor(ctx, name.c_str());
     if (!cur) {
-        ThrowRuntimeError(format("%s: unable to find tensor %s\n", __func__, name.c_str()));
+        throw std::runtime_error(format("%s: unable to find tensor %s\n", __func__, name.c_str()));
     }
 
     return cur;
@@ -142,7 +141,7 @@ static std::string get_ftype(int ftype) {
     case 8:
         return "q8_0";
     default:
-        ThrowRuntimeError(format("%s: Unrecognized file type: %d\n", __func__, ftype));
+        throw std::runtime_error(format("%s: Unrecognized file type: %d\n", __func__, ftype));
     }
 }
 
@@ -483,7 +482,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
     if (file) llamafile_close(file);
     if (!file || !ctx) {
       OpenFailed:
-        ThrowRuntimeError(format("%s: failed to load CLIP model from %s. Does this file exist?\n", __func__, fname));
+        throw std::runtime_error(format("%s: failed to load CLIP model from %s. Does this file exist?\n", __func__, fname));
     }
 
     if (verbosity >= 1) {

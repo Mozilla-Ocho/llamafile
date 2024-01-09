@@ -177,17 +177,13 @@ int main(int argc, char ** argv) {
 
     // parse nthreads
     if (argc > arg_idx) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
         try {
-#endif
             params.nthread = std::stoi(argv[arg_idx]);
-#ifndef _LIBCPP_NO_EXCEPTIONS
         }
         catch (const std::exception & e) {
             fprintf(stderr, "%s: invalid nthread '%s' (%s)\n", __func__, argv[arg_idx], e.what());
             return 1;
         }
-#endif
     }
 
     print_build_info();
