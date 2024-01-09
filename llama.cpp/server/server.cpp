@@ -2787,6 +2787,18 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
     }
 }
 
+static const char *sockaddr2str(const struct sockaddr *sa, char *buf, size_t size) {
+  if (sa->sa_family == AF_INET) {
+    return inet_ntop(AF_INET, &(((const struct sockaddr_in *)sa)->sin_addr),
+                     buf, size);
+  } else if (sa->sa_family == AF_INET6) {
+    return inet_ntop(AF_INET6, &(((const struct sockaddr_in6 *)sa)->sin6_addr),
+                     buf, size);
+  } else {
+    return 0;
+  }
+}
+
 int server_cli(int argc, char **argv)
 {
 #if SERVER_VERBOSE != 1
@@ -3217,13 +3229,37 @@ int server_cli(int argc, char **argv)
     svr.set_base_dir(sparams.public_path);
 
     // to make it ctrl+clickable:
-    LOG_TEE("\nllama server listening at http://%s:%d\n\n", sparams.hostname.c_str(), sparams.port);
+    const char *connect_host;
+    if (sparams.hostname != "0.0.0.0") {
+        connect_host = sparams.hostname.c_str();
+        LOG_TEE("\nllama server listening at http://%s:%d\n\n",
+                sparams.hostname.c_str(), sparams.port);
+    } else {
+        struct ifaddrs *ifaddrs;
+        connect_host = "127.0.0.1";
+        if (!getifaddrs(&ifaddrs)) {
+            LOG_TEE("\n");
+            for (struct ifaddrs *ifa = ifaddrs; ifa; ifa = ifa->ifa_next) {
+                char buf[128];
+                if (!(ifa->ifa_flags & IFF_UP)) continue;
+                LOG_TEE("llama server listening at http://%s%s%s:%d\n",
+                        ifa->ifa_addr->sa_family == AF_INET6 ? "[" : "",
+                        sockaddr2str(ifa->ifa_addr, buf, sizeof(buf)),
+                        ifa->ifa_addr->sa_family == AF_INET6 ? "]" : "",
+                        sparams.port);
+            }
+            LOG_TEE("\n");
+        } else {
+            perror("getifaddrs");
+            LOG_TEE("\nllama server listening at http://%s:%d\n\n",
+                    sparams.hostname.c_str(), sparams.port);
+        }
+    }
 
+    // launch browser tab
     if (!sparams.nobrowser) {
         char url[128];
-        snprintf(url, sizeof(url), "http://%s:%d/",
-                 sparams.hostname == "0.0.0.0" ? "127.0.0.1" : sparams.hostname.c_str(),
-                 sparams.port);
+        snprintf(url, sizeof(url), "http://%s:%d/", connect_host, sparams.port);
         llamafile_launch_browser(url);
     }
 
