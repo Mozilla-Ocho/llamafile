@@ -166,31 +166,12 @@ static bool CreateTempPath(const char *path, char tmp[static PATH_MAX]) {
     }
 }
 
-static void LogCommand(char *args[]) {
-    for (int i = 0; args[i]; ++i) {
-        if (i) {
-            tinylog(" ", NULL);
-        }
-        // this quoting should be close enough to correct to be
-        // copy/pastable on both unix and windows command terms
-        bool need_quotes = !!strchr(args[i], ' ');
-        if (need_quotes) {
-            tinylog("\"", NULL);
-        }
-        tinylog(args[i], NULL);
-        if (need_quotes) {
-            tinylog("\"", NULL);
-        }
-    }
-    tinylog("\n", NULL);
-}
-
 static bool Compile(const char *src,
                     const char *tmp,
                     const char *out,
                     char *args[]) {
     int pid, ws;
-    LogCommand(args);
+    llamafile_log_command(args);
     errno_t err = posix_spawnp(&pid, args[0], NULL, NULL, args, environ);
     if (err) {
         perror(args[0]);
@@ -253,6 +234,7 @@ static bool GetAmdOffloadArchFlag(char out[static 64]) {
     // Run HIP info program.
     int pid;
     char *args[] = {hip_info_path, 0};
+    llamafile_log_command(args);
     posix_spawn_file_actions_t fa;
     posix_spawn_file_actions_init(&fa);
     posix_spawn_file_actions_adddup2(&fa, pipefds[1], 1);
@@ -425,6 +407,7 @@ static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
     // run nvidia compute capability detector
     int pid;
     char *args[] = {exe, 0};
+    llamafile_log_command(args);
     posix_spawn_file_actions_t fa;
     posix_spawn_file_actions_init(&fa);
     posix_spawn_file_actions_adddup2(&fa, pipefds[1], 1);

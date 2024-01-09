@@ -167,6 +167,7 @@ static bool BuildMetal(const char *dso) {
             NULL,
         };
         int pid, ws;
+        llamafile_log_command(args);
         errno_t err = posix_spawnp(&pid, "cc", NULL, NULL, args, environ);
         if (err) {
             perror("cc");

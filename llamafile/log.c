@@ -17,6 +17,7 @@
 
 #include "log.h"
 #include <unistd.h>
+#include <string.h>
 #include <pthread.h>
 
 bool FLAG_log_disable;
@@ -40,4 +41,23 @@ void (tinylog)(const char *s, ...) {
     va_end(va);
     write(2, buf, n);
     pthread_setcancelstate(cs, 0);
+}
+
+void llamafile_log_command(char *args[]) {
+    for (int i = 0; args[i]; ++i) {
+        if (i) {
+            tinylog(" ", NULL);
+        }
+        // this quoting should be close enough to correct to be
+        // copy/pastable on both unix and windows command terms
+        bool need_quotes = !!strchr(args[i], ' ');
+        if (need_quotes) {
+            tinylog("\"", NULL);
+        }
+        tinylog(args[i], NULL);
+        if (need_quotes) {
+            tinylog("\"", NULL);
+        }
+    }
+    tinylog("\n", NULL);
 }

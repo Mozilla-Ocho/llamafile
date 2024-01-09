@@ -20,9 +20,18 @@
 #include <spawn.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include "llamafile/log.h"
+
+static volatile bool g_timed_out;
+
+static void handle_timeout(int sig) {
+    g_timed_out = true;
+}
 
 static void report_failure(const char *url,
                            const char *cmd,
@@ -34,7 +43,19 @@ static void report_failure(const char *url,
 /**
  * Opens browser tab on host system.
  */
-bool llamafile_launch_browser(const char *url) {
+void llamafile_launch_browser(const char *url) {
+
+    // perform this task from a subprocess so it doesn't block server
+    tinylog("opening browser tab... (pass --nobrowser to disable)\n", NULL);
+    switch (fork()) {
+        case 0:
+            break;
+        default:
+            return;
+        case -1:
+            perror("fork");
+            return;
+    }
 
     // determine which command opens browser tab
     const char *cmd;
@@ -50,15 +71,24 @@ bool llamafile_launch_browser(const char *url) {
     // set process group so ctrl-c won't kill browser
     int pid, err;
     posix_spawnattr_t sa;
-    char *args[] = {(char *)cmd, (char *)url, NULL};
+    char *args[] = {(char *)cmd, (char *)url, 0};
     posix_spawnattr_init(&sa);
     posix_spawnattr_setflags(&sa, POSIX_SPAWN_SETPGROUP);
-    err = posix_spawnp(&pid, cmd, NULL, &sa, args, environ);
+    err = posix_spawnp(&pid, cmd, 0, &sa, args, environ);
     posix_spawnattr_destroy(&sa);
     if (err) {
         report_failure(url, cmd, strerror(err));
-        return false;
+        _exit(0);
     }
+
+    // kill command if it takes more than three seconds
+    // we need it because xdg-open acts weird on headless systems
+    struct sigaction hand;
+    hand.sa_flags = 0;
+    sigemptyset(&hand.sa_mask);
+    hand.sa_handler = handle_timeout;
+    sigaction(SIGALRM, &hand, 0);
+    alarm(3);
 
     // wait for tab to finish opening
     // the browser will still be running after this completes
@@ -66,14 +96,19 @@ bool llamafile_launch_browser(const char *url) {
     while (waitpid(pid, &ws, 0) == -1) {
         if (errno != EINTR) {
             report_failure(url, cmd, strerror(errno));
-            return false;
+            kill(pid, SIGKILL);
+            _exit(0);
+        }
+        if (g_timed_out) {
+            report_failure(url, cmd, "process timed out");
+            kill(pid, SIGKILL);
+            _exit(0);
         }
     }
     if (ws) {
         report_failure(url, cmd, "process exited with non-zero status");
-        return false;
     }
 
-    // report success
-    return true;
+    // we're done
+    _exit(0);
 }
