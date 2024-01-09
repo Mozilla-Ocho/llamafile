@@ -33,7 +33,7 @@ endif
 endif
 
 # make build more deterministic
-LC_ALL = C
+LC_ALL = C.UTF-8
 SOURCE_DATE_EPOCH = 0
 export MODE
 export TMPDIR

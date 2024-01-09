@@ -109,7 +109,7 @@ int main(int argc, char ** argv) {
     if (llamafile_has(argv, "-h") ||
         llamafile_has(argv, "-help") ||
         llamafile_has(argv, "--help")) {
-        llamafile_help("/zip/llamafile/llamafile.1.asc");
+        llamafile_help("/zip/llama.cpp/main/main.1.asc");
         __builtin_unreachable();
     }
 

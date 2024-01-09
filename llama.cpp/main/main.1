@@ -1,16 +1,3 @@
-.\" Copyright 2024 Mozilla Foundation
-.\"
-.\" Licensed under the Apache License, Version 2.0 (the "License");
-.\" you may not use this file except in compliance with the License.
-.\" You may obtain a copy of the License at
-.\"
-.\"     http://www.apache.org/licenses/LICENSE-2.0
-.\"
-.\" Unless required by applicable law or agreed to in writing, software
-.\" distributed under the License is distributed on an "AS IS" BASIS,
-.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-.\" See the License for the specific language governing permissions and
-.\" limitations under the License.
 .Dd January 1, 2024
 .Dt LLAMAFILE 1
 .Os Mozilla Ocho
@@ -106,11 +93,28 @@ Prefix BOS to user inputs, preceding the
 .Fl Fl in-prefix
 string.
 .It Fl Fl in-prefix Ar STRING
-String to prefix user inputs with.
+This flag is used to add a prefix to your input, primarily, this is used
+to insert a space after the reverse prompt. Here's an example of how to
+use the
+.Fl Fl in-prefix
+flag in conjunction with the
+.Fl Fl reverse-prompt
+flag:
+.Pp
+.Dl "./main -r \[dq]User:\[dq] --in-prefix \[dq] \[dq]"
 .Pp
 Default: empty
 .It Fl Fl in-suffix Ar STRING
-String to suffix after user inputs with.
+This flag is used to add a suffix after your input. This is useful for
+adding an \[dq]Assistant:\[dq] prompt after the user's input. It's added
+after the new-line character (\[rs]n) that's automatically added to the
+end of the user's input. Here's an example of how to use the
+.Fl Fl in-suffix
+flag in conjunction with the
+.Fl Fl reverse-prompt
+flag:
+.Pp
+.Dl "./main -r \[dq]User:\[dq] --in-prefix \[dq] \[dq] --in-suffix \[dq]Assistant:\[dq]"
 .Pp
 Default: empty
 .It Fl n Ar N , Fl Fl n-predict Ar N
@@ -125,11 +129,14 @@ Number of tokens to predict.
 .Pp
 Default: -1
 .It Fl c Ar N , Fl Fl ctx-size Ar N
-Size of the prompt context.
+Set the size of the prompt context. A larger context size helps the
+model to better comprehend and generate responses for longer input or
+conversations. The LLaMA models were built with a context of 2048, which
+yields the best results on longer input / inference.
 .Pp
 .Bl -dash -compact
 .It
-0 = loaded from model
+0 = loaded automatically from model
 .El
 .Pp
 Default: 512
@@ -275,7 +282,19 @@ Default: 1.0
 .It Fl Fl rope-scaling Ar {none,linear,yarn}
 RoPE frequency scaling method, defaults to linear unless specified by the model
 .It Fl Fl rope-scale Ar N
-RoPE context scaling factor, expands context by a factor of N
+RoPE context scaling factor, expands context by a factor of
+.Ar N
+where
+.Ar N
+is the linear scaling factor used by the fine-tuned model. Some
+fine-tuned models have extended the context length by scaling RoPE. For
+example, if the original pre-trained model have a context length (max
+sequence length) of 4096 (4k) and the fine-tuned model have 32k. That is
+a scaling factor of 8, and should work by setting the above
+.Fl Fl ctx-size
+to 32768 (32k) and
+.Fl Fl rope-scale
+to 8.
 .It Fl Fl rope-freq-base Ar N
 RoPE base frequency, used by NTK-aware scaling.
 .Pp
@@ -327,11 +346,18 @@ Number of tasks to use when computing the HellaSwag score.
 .Pp
 Default: 400
 .It Fl Fl keep Ar N
-Number of tokens to keep from the initial prompt.
+This flag allows users to retain the original prompt when the model runs
+out of context, ensuring a connection to the initial instruction or
+conversation topic is maintained, where
+.Ar N
+is the number of tokens from the initial prompt to retain when the model
+resets its internal context.
 .Pp
 .Bl -dash -compact
 .It
--1 = all
+0 = no tokens are kept from initial prompt
+.It
+-1 = retain all tokens from initial prompt
 .El
 .Pp
 Default: 0
@@ -522,17 +548,37 @@ URL with the image/jpeg MIME type. See also the
 .Fl Fl mmproj
 flag for supplying the vision model.
 .It Fl i , Fl Fl interactive
-Run in interactive mode.
+Run the program in interactive mode, allowing users to engage in
+real-time conversations or provide specific instructions to the model.
 .It Fl Fl interactive-first
-Run in interactive mode and wait for input right away.
+Run the program in interactive mode and immediately wait for user input
+before starting the text generation.
 .It Fl ins , Fl Fl instruct
-Run in instruction mode (use with Alpaca models).
+Run the program in instruction mode, which is specifically designed to
+work with Alpaca models that excel in completing tasks based on user
+instructions.
+.Pp
+Technical details: The user's input is internally prefixed with the
+reverse prompt (or \[dq]### Instruction:\[dq] as the default), and
+followed by \[dq]### Response:\[dq] (except if you just press Return
+without any input, to keep generating a longer response).
+.Pp
+By understanding and utilizing these interaction options, you can create
+engaging and dynamic experiences with the LLaMA models, tailoring the
+text generation process to your specific needs.
 .It Fl r Ar PROMPT , Fl Fl reverse-prompt Ar PROMPT
-Halt generation at
-.Ar PROMPT
-and return control in interactive mode (can be specified more than once for multiple prompts).
+Specify one or multiple reverse prompts to pause text generation and
+switch to interactive mode. For example,
+.Fl r Ar \[dq]User:\[dq]
+can be used to jump back into the conversation whenever it's the user's
+turn to speak. This helps create a more interactive and conversational
+experience. However, the reverse prompt doesn't work when it ends with a
+space. To overcome this limitation, you can use the
+.Fl Fl in-prefix
+flag to add a space or any other characters after the reverse prompt.
 .It Fl Fl color
-Colorise output to distinguish prompt and user input from generations.
+Enable colorized output to differentiate visually distinguishing between
+prompts, user input, and generated text.
 .It Fl Fl silent-prompt
 Don't echo the prompt itself to standard output.
 .It Fl Fl multiline-input
@@ -716,11 +762,6 @@ json.dump(json.load(sys.stdin), sys.stdout, indent=2)
 print()
 '
 .Ed
-.Sh BUGS
-Your HTTP server is great for local hosting, but it would need much more
-work to be a production worthy component of a public-facing service. For
-example, C++ exceptions caused by JSON parsing errors will make it abort
-and print a backtrace.
 .Sh PROTIP
 The
 .Fl ngl Ar 35

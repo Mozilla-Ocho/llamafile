@@ -25,7 +25,7 @@ o/$(MODE)/%: o/$(MODE)/%.o
 
 .PRECIOUS: %.1.asc
 %.1.asc: %.1
-	-man $< >$@.tmp && mv -f $@.tmp $@
+	-MANWIDTH=80 MAN_KEEP_FORMATTING=1 man $< >$@.tmp && mv -f $@.tmp $@
 	@rm -f $@.tmp
 
 o/$(MODE)/%.zip.o: % $(COSMOCC)
