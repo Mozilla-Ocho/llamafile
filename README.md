@@ -315,7 +315,7 @@ stock install:
 - Linux 2.6.18+ (ARM64 or AMD64) i.e. any distro RHEL5 or newer
 - Darwin (macOS) 23.1.0+ [1] (ARM64 or AMD64, with GPU only supported on ARM64)
 - Windows 8+ (AMD64)
-- FreeBSD 13+ (AMD64, GPU should work in theory)
+- FreeBSD 13+ (AMD64 or ARM64, GPU should work in theory)
 - NetBSD 9.2+ (AMD64, GPU should work in theory)
 - OpenBSD 7+ (AMD64, no GPU support)
 
