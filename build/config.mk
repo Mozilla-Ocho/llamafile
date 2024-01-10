@@ -14,8 +14,8 @@ INSTALL = install
 
 ARFLAGS = rcsD
 CCFLAGS = -g -O3 -fexceptions
-CPPFLAGS_ = -iquote. -mcosmo
 TARGET_ARCH = -Xx86_64-mssse3
+CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM
 
 TMPDIR = o//tmp
 IGNORE := $(shell mkdir -p $(TMPDIR))

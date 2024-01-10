@@ -201,11 +201,14 @@ void ggml_backend_graph_plan_compute(ggml_backend_t backend, ggml_backend_graph_
     ggml_backend_synchronize(backend);
 }
 
-void ggml_backend_graph_compute(ggml_backend_t backend, struct ggml_cgraph * cgraph) {
-    backend->iface.graph_compute(backend, cgraph);
+bool ggml_backend_graph_compute(ggml_backend_t backend, struct ggml_cgraph * cgraph) {
+    if (!backend->iface.graph_compute(backend, cgraph)) {
+        return false;
+    }
 
     // TODO: optional sync
     ggml_backend_synchronize(backend);
+    return true;
 }
 
 bool ggml_backend_supports_op(ggml_backend_t backend, const struct ggml_tensor * op) {
@@ -283,7 +286,7 @@ GGML_CALL ggml_backend_t ggml_backend_reg_metal_init(const char * params, void *
     GGML_UNUSED(user_data);
 }
 
-static void ggml_backend_registry_init(void) {
+GGML_CALL static void ggml_backend_registry_init(void) {
     static bool initialized = false;
 
     if (initialized) {

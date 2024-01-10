@@ -24,6 +24,8 @@ include llama.cpp/main/BUILD.mk
 include llama.cpp/quantize/BUILD.mk
 include llama.cpp/perplexity/BUILD.mk
 
+$(LLAMA_CPP_OBJS): private CCFLAGS += -DGGML_MULTIPLATFORM
+
 .PHONY: o/$(MODE)/llama.cpp
 o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/main		\

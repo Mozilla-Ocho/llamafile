@@ -13,7 +13,6 @@ extern "C" {
     typedef struct ggml_backend_buffer * ggml_backend_buffer_t;
     typedef struct ggml_backend * ggml_backend_t;
     typedef void * ggml_backend_graph_plan_t;
-    struct ggml_backend_api;
 
     //
     // Backend buffer
@@ -61,7 +60,7 @@ extern "C" {
 
     GGML_API void ggml_backend_graph_plan_free   (ggml_backend_t backend, ggml_backend_graph_plan_t plan);
     GGML_API void ggml_backend_graph_plan_compute(ggml_backend_t backend, ggml_backend_graph_plan_t plan);
-    GGML_API void ggml_backend_graph_compute     (ggml_backend_t backend, struct ggml_cgraph * cgraph);
+    GGML_API bool ggml_backend_graph_compute     (ggml_backend_t backend, struct ggml_cgraph * cgraph);
     GGML_API bool ggml_backend_supports_op       (ggml_backend_t backend, const struct ggml_tensor * op);
 
     // tensor copy between different backends
@@ -188,6 +187,7 @@ extern "C" {
     //
     // dynamic shared object api
     //
+    struct ggml_backend_api;
     const struct ggml_backend_api *ggml_backend_api(void);
 
 #ifdef  __cplusplus

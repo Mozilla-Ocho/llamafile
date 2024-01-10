@@ -151,14 +151,15 @@ static bool BuildMetal(const char *dso) {
         }
         char *args[] = {
             "cc",
-            "-shared",
-            "-O3",
             "-I.",
-            "-DTARGET_OS_OSX",
-            "-DNDEBUG",
+            "-O3",
             "-fPIC",
+            "-shared",
             "-pthread",
+            "-DNDEBUG",
             "-ffixed-x28", // cosmo's tls register
+            "-DTARGET_OS_OSX",
+            "-DGGML_MULTIPLATFORM",
             src,
             "-o", tmpdso,
             "-framework", "Foundation",

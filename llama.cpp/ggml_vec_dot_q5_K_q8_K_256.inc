@@ -12,7 +12,6 @@ static void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void *
 
     uint32_t utmp[4];
 
-
 #ifdef __ARM_NEON
     const uint8x16_t m4b = vdupq_n_u8(0xf);
     const uint8x16_t mone = vdupq_n_u8(1);

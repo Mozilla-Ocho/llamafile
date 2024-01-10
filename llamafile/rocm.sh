@@ -17,9 +17,10 @@ hipcc \
   -DGGML_SHARED=1 \
   -Wno-return-type \
   -Wno-unused-result \
-  -DGGML_CUDA_DMMV_X=32 \
-  -DGGML_CUDA_MMV_Y=1 \
   -DGGML_USE_HIPBLAS \
+  -DGGML_CUDA_MMV_Y=1 \
+  -DGGML_MULTIPLATFORM \
+  -DGGML_CUDA_DMMV_X=32 \
   -DK_QUANTS_PER_ITERATION=2 \
   -DGGML_CUDA_PEER_MAX_BATCH_SIZE=128 \
   -o ggml-rocm.so \

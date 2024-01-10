@@ -4,7 +4,6 @@
 
 // ggml-backend internal header
 
-#include "ggml.h"
 #include "ggml-backend.h"
 
 #ifdef  __cplusplus
@@ -17,6 +16,7 @@ extern "C" {
 
     // buffer type
     typedef void * ggml_backend_buffer_type_context_t;
+
     struct ggml_backend_buffer_type_i {
         ggml_backend_buffer_t (*GGML_CALL alloc_buffer)    (ggml_backend_buffer_type_t buft, size_t size);
         size_t                (*GGML_CALL get_alignment)   (ggml_backend_buffer_type_t buft); // tensor alignment

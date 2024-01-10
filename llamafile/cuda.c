@@ -67,8 +67,9 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
         "-DNDEBUG",                                                     \
         "-DGGML_BUILD=1",                                               \
         "-DGGML_SHARED=1",                                              \
-        "-DGGML_CUDA_DMMV_X=32",                                        \
         "-DGGML_CUDA_MMV_Y=1",                                          \
+        "-DGGML_MULTIPLATFORM",                                         \
+        "-DGGML_CUDA_DMMV_X=32",                                        \
         "-DK_QUANTS_PER_ITERATION=2",                                   \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",                          \
         (FLAG_tinyblas                                                  \
@@ -476,6 +477,7 @@ static bool CompileAmdWindows(const char *clangxx, const char *dso, const char *
         "-DGGML_USE_HIPBLAS",
         (char *)offload_arch,
         "-DGGML_CUDA_MMV_Y=1",
+        "-DGGML_MULTIPLATFORM",
         "-DGGML_CUDA_DMMV_X=32",
         "-Wno-ignored-attributes",
         "-D_CRT_SECURE_NO_WARNINGS",
@@ -521,6 +523,7 @@ static bool CompileAmdUnix(const char *dso, const char *src, const char *tmpdso)
         "-Wno-unused-result",
         "-DGGML_USE_HIPBLAS",
         "-DGGML_CUDA_MMV_Y=1",
+        "-DGGML_MULTIPLATFORM",
         "-DGGML_CUDA_DMMV_X=32",
         ARMS_ONLY("-ffixed-x28"),
         "-DK_QUANTS_PER_ITERATION=2",

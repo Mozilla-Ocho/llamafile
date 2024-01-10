@@ -264,7 +264,7 @@ int llava_cli(int argc, char ** argv) {
 
     auto image_embed = load_image(ctx_llava, &params);
     if (!image_embed) {
-        exit(1);
+        return 1;
     }
 
     // process the prompt
