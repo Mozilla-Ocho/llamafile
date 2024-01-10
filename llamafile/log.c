@@ -44,6 +44,7 @@ void (tinylog)(const char *s, ...) {
 }
 
 void llamafile_log_command(char *args[]) {
+    tinylog(__func__, ": ", NULL);
     for (int i = 0; args[i]; ++i) {
         if (i) {
             tinylog(" ", NULL);

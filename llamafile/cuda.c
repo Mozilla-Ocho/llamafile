@@ -187,7 +187,7 @@ static bool Compile(const char *src,
         }
     }
     if (ws) {
-        tinylog(args[0], ": returned nonzero exit status\n", NULL);
+        tinylog(__func__, ": warning: ", args[0], " returned nonzero exit status\n", NULL);
         unlink(tmp);
         return false;
     }
@@ -199,29 +199,51 @@ static bool Compile(const char *src,
     return true;
 }
 
-static bool GetRocmBinPath(char path[static PATH_MAX], const char *bin) {
-    const char *hip_path = getenv("HIP_PATH");
-    if (hip_path || FileExists((hip_path = "/opt/rocm"))) {
-        strlcpy(path, hip_path, PATH_MAX);
-        strlcat(path, "/bin/", PATH_MAX);
-        strlcat(path, bin, PATH_MAX);
-        if (IsWindows()) {
-            strlcat(path, ".exe", PATH_MAX);
-        }
-        return FileExists(path);
+static bool get_rocm_bin_path(char path[static PATH_MAX], const char *bin) {
+
+    // create filename of executable
+    char name[NAME_MAX];
+    strlcpy(name, bin, PATH_MAX);
+    if (IsWindows()) {
+        strlcat(name, ".exe", PATH_MAX);
+    }
+
+    // search for it on $PATH
+    if (commandv(name, path, PATH_MAX)) {
+        return path;
     } else {
+        tinylog(__func__, ": note: ", name, " not found on $PATH\n", NULL);
+    }
+
+    // 1. use $HIP_PATH/bin/$name if it exists
+    // 2. use /opt/rocm/bin/$name if it exists
+    const char *hip_path = getenv("HIP_PATH");
+    if (!hip_path) {
+        tinylog(__func__, ": note: $HIP_PATH/bin/", name, " does not exist\n", NULL);
+        if (!FileExists((hip_path = "/opt/rocm"))) {
+            tinylog(__func__, ": note: /opt/rocm/bin/", name, " does not exist\n", NULL);
+            return false;
+        }
+    }
+    strlcpy(path, hip_path, PATH_MAX);
+    strlcat(path, "/bin/", PATH_MAX);
+    strlcat(path, name, PATH_MAX);
+    if (FileExists(path)) {
+        return true;
+    } else {
+        tinylog(__func__, ": note: ", path, " does not exist\n", NULL);
         return false;
     }
 }
 
 // Returns word-encoded array of 16-bit gfxXXXX gcnArchName numbers.
-static bool GetAmdOffloadArchFlag(char out[static 64]) {
+static bool get_amd_offload_arch_flag(char out[static 64]) {
 
     // Get hipInfo executable path.
     char hip_info_path[PATH_MAX];
-    if (!GetRocmBinPath(hip_info_path, "hipInfo") &&
-        !GetRocmBinPath(hip_info_path, "rocminfo")) {
-        tinylog("note: can't find hipInfo/rocminfo commands for AMD GPU detection\n", NULL);
+    if (!get_rocm_bin_path(hip_info_path, "hipInfo") &&
+        !get_rocm_bin_path(hip_info_path, "rocminfo")) {
+        tinylog(__func__, ": warning: can't find hipInfo/rocminfo commands for AMD GPU detection\n", NULL);
         return false;
     }
 
@@ -315,13 +337,13 @@ static bool GetAmdOffloadArchFlag(char out[static 64]) {
         }
     }
     if (ws) {
-        tinylog("error: hipInfo returned non-zero exit status\n", NULL);
+        tinylog(__func__, ": error: hipInfo returned non-zero exit status\n", NULL);
         return false;
     }
 
     // Serialize value for --offload-arch=LIST flag.
     if (!archs) {
-        tinylog("warning: hipInfo output didn't list any graphics cards\n", NULL);
+        tinylog(__func__, ": warning: hipInfo output didn't list any graphics cards\n", NULL);
         return false;
     }
     bool gotsome = false;
@@ -344,27 +366,37 @@ static bool GetAmdOffloadArchFlag(char out[static 64]) {
 //   4. /usr/local/cuda/bin/nvcc
 //
 // set $CUDA_PATH to empty string to disable cuda
-static bool GetNvccPath(char path[static PATH_MAX]) {
-    const char *cuda_path;
-    if (commandv(IsWindows() ? "nvcc.exe" : "nvcc", path, PATH_MAX)) {
+static bool get_nvcc_path(char path[static PATH_MAX]) {
+    const char *name = IsWindows() ? "nvcc.exe" : "nvcc";
+    if (commandv(name, path, PATH_MAX)) {
         return true;
-    } else if ((cuda_path = getenv("CUDA_PATH"))) {
+    } else {
+        tinylog(__func__, ": note: ", name, " not found on $PATH\n", NULL);
+    }
+    const char *cuda_path;
+    if ((cuda_path = getenv("CUDA_PATH"))) {
         if (!*cuda_path) return false;
         strlcpy(path, cuda_path, PATH_MAX);
         strlcat(path, "/bin/", PATH_MAX);
-    } else if (FileExists("/opt/cuda")) {
-        strlcpy(path, "/opt/cuda/bin/", PATH_MAX);
     } else {
-        strlcpy(path, "/usr/local/cuda/bin/", PATH_MAX);
+        tinylog(__func__, ": note: $CUDA_PATH/bin/", name, " does not exist\n", NULL);
+        if (FileExists("/opt/cuda")) {
+            strlcpy(path, "/opt/cuda/bin/", PATH_MAX);
+        } else {
+            tinylog(__func__, ": note: /opt/cuda/bin/", name, " does not exist\n", NULL);
+            strlcpy(path, "/usr/local/cuda/bin/", PATH_MAX);
+        }
     }
-    strlcat(path, "nvcc", PATH_MAX);
-    if (IsWindows()) {
-        strlcat(path, ".exe", PATH_MAX);
+    strlcat(path, name, PATH_MAX);
+    if (IsExecutable(path)) {
+        return true;
+    } else {
+        tinylog(__func__, ": note: ", path, " does not exist\n", NULL);
+        return false;
     }
-    return IsExecutable(path);
 }
 
-static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
+static dontinline bool get_nvcc_arch_flag(const char *nvcc, char flag[static 32]) {
 
     // create path of exe
     char exe[PATH_MAX];
@@ -393,7 +425,7 @@ static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
     // nvidia-smi in cuda 11.5+ can do this but (1) it takes longer to
     // run than compiling / running this script and (2) the nvidia-smi
     // command isn't available on Jetson devices.
-    tinylog("building nvidia compute capability detector...\n", NULL);
+    tinylog(__func__, ": note: building nvidia compute capability detector...\n", NULL);
     if (!Compile(src, tmp, exe, (char *[]){(char *)nvcc, "-o", tmp, src, 0})) {
         return false;
     }
@@ -432,14 +464,14 @@ static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
         }
     }
     if (ws) {
-        tinylog("error: compute capability detector returned nonzero exit status\n", NULL);
+        tinylog(__func__, ": error: compute capability detector returned nonzero exit status\n", NULL);
         return false;
     }
 
     // parse output of detector
     char *endptr;
     if (!*ibuf || !strtol(ibuf, &endptr, 10) || *endptr) {
-        tinylog("error: bad compute capability detector output\n", NULL);
+        tinylog(__func__, ": error: bad compute capability detector output\n", NULL);
         return false;
     }
 
@@ -448,13 +480,13 @@ static dontinline bool GetNvccArchFlag(const char *nvcc, char flag[static 32]) {
     return true;
 }
 
-static bool CompileAmdWindows(const char *clangxx, const char *dso, const char *src, const char *tmpdso) {
+static bool compile_amd_windows(const char *clangxx, const char *dso, const char *src, const char *tmpdso) {
     const char *lib = IsWindows() ? "lib" : GetDsoExtension();
     const char *hip_path = getenv("HIP_PATH");
 
     // get set of microarchitectures for all installed graphics cards
     char offload_arch[64];
-    if (!GetAmdOffloadArchFlag(offload_arch)) {
+    if (!get_amd_offload_arch_flag(offload_arch)) {
         unlink(tmpdso);
         return false;
     }
@@ -497,13 +529,13 @@ static bool CompileAmdWindows(const char *clangxx, const char *dso, const char *
     return Compile(src, tmpdso, dso, args);
 }
 
-static bool CompileAmdUnix(const char *dso, const char *src, const char *tmpdso) {
+static bool compile_amd_unix(const char *dso, const char *src, const char *tmpdso) {
 
     // get set of microarchitectures for all installed graphics cards
     // it's possible to safe --offload-arch=native but we do it ourself
     // the amdgpu-arch that hipcc runs fails to link libhsa-runtime64.so
     char offload_arch[64];
-    if (!GetAmdOffloadArchFlag(offload_arch)) {
+    if (!get_amd_offload_arch_flag(offload_arch)) {
         strcpy(offload_arch, "--offload-arch=native");
     }
 
@@ -537,7 +569,7 @@ static bool CompileAmdUnix(const char *dso, const char *src, const char *tmpdso)
     return Compile(src, tmpdso, dso, args);
 }
 
-static bool CompileAmd(const char *clangxx, const char *dso, const char *src) {
+static bool compile_amd(const char *clangxx, const char *dso, const char *src) {
 
     // create temporary output path for atomicity
     char tmpdso[PATH_MAX];
@@ -546,13 +578,13 @@ static bool CompileAmd(const char *clangxx, const char *dso, const char *src) {
     }
 
     if (!IsWindows()) {
-        return CompileAmdUnix(dso, src, tmpdso);
+        return compile_amd_unix(dso, src, tmpdso);
     } else {
-        return CompileAmdWindows(clangxx, dso, src, tmpdso);
+        return compile_amd_windows(clangxx, dso, src, tmpdso);
     }
 }
 
-static bool CompileNvidia(const char *nvcc, const char *dso, const char *src) {
+static bool compile_nvidia(const char *nvcc, const char *dso, const char *src) {
 
     // create temporary output path for atomicity
     char tmpdso[PATH_MAX];
@@ -561,7 +593,7 @@ static bool CompileNvidia(const char *nvcc, const char *dso, const char *src) {
     }
 
     // try building dso with host nvidia microarchitecture
-    tinylog("building ggml-cuda with nvcc -arch=native...\n", NULL);
+    tinylog(__func__, ": note: building ggml-cuda with nvcc -arch=native...\n", NULL);
     if (Compile(src, tmpdso, dso, (char *[]){
                 (char *)nvcc, "-arch=native", NVCC_FLAGS, "-o", tmpdso,
                 (char *)src, NVCC_LIBS, NULL})) {
@@ -570,10 +602,10 @@ static bool CompileNvidia(const char *nvcc, const char *dso, const char *src) {
 
     // try again with different arch flag
     char archflag[32];
-    if (!GetNvccArchFlag(nvcc, archflag)) {
+    if (!get_nvcc_arch_flag(nvcc, archflag)) {
         return false;
     }
-    tinylog("building ggml-cuda with nvcc ", archflag, "...\n", NULL);
+    tinylog(__func__, ": note: building ggml-cuda with nvcc ", archflag, "...\n", NULL);
     if (Compile(src, tmpdso, dso, (char *[]){
                 (char *)nvcc, archflag, NVCC_FLAGS, "-o", tmpdso,
                 (char *)src, NVCC_LIBS, NULL})) {
@@ -584,7 +616,7 @@ static bool CompileNvidia(const char *nvcc, const char *dso, const char *src) {
     return false;
 }
 
-static bool ExtractCudaDso(const char *dso, const char *name) {
+static bool extract_cuda_dso(const char *dso, const char *name) {
 
     // see if prebuilt dso is bundled in zip assets
     char zip[80];
@@ -593,7 +625,7 @@ static bool ExtractCudaDso(const char *dso, const char *name) {
     strlcat(zip, ".", sizeof(zip));
     strlcat(zip, GetDsoExtension(), sizeof(zip));
     if (!FileExists(zip)) {
-        tinylog("prebuilt binary ", zip, " not found\n", NULL);
+        tinylog(__func__, ": note: prebuilt binary ", zip, " not found\n", NULL);
         return false;
     }
 
@@ -601,7 +633,7 @@ static bool ExtractCudaDso(const char *dso, const char *name) {
     return llamafile_extract(zip, dso);
 }
 
-static bool LinkCudaDso(const char *dso, const char *dir) {
+static bool link_cuda_dso(const char *dso, const char *dir) {
 
     // Change directory so BLAS library is more likely to be linked.
     char cwd[PATH_MAX];
@@ -612,16 +644,16 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
 
     // runtime link dynamic shared object
     void *lib;
-    tinylog("dynamically linking ", dso, "\n", NULL);
+    tinylog(__func__, ": note: dynamically linking ", dso, "\n", NULL);
     lib = cosmo_dlopen(dso, RTLD_LAZY);
     if (dir) {
         chdir(cwd);
     }
     if (!lib) {
         char cc[PATH_MAX];
-        tinylog(Dlerror(), ": failed to load library\n", NULL);
+        tinylog(__func__, ": warning: ", Dlerror(), ": failed to load library\n", NULL);
         if ((IsLinux() || IsBsd()) && !commandv("cc", cc, PATH_MAX)) {
-            tinylog("you need to install cc for gpu support\n", NULL);
+            tinylog(__func__, ": note: you need to install cc for gpu support\n", NULL);
         }
         return false;
     }
@@ -654,7 +686,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.ggml_backend_cuda_buffer_type = cosmo_dlsym(lib, "ggml_backend_cuda_buffer_type"));
     ok &= !!(ggml_cuda.ggml_backend_cuda_init = cosmo_dlsym(lib, "ggml_backend_cuda_init"));
     if (!ok) {
-        tinylog("error: not all cuda symbols could be imported\n", NULL);
+        tinylog(__func__, ": error: not all cuda symbols could be imported\n", NULL);
         return false;
     }
 
@@ -663,7 +695,7 @@ static bool LinkCudaDso(const char *dso, const char *dir) {
     return true;
 }
 
-static bool ImportCudaImpl(void) {
+static bool import_cuda_impl(void) {
     assert(FLAG_gpu != LLAMAFILE_GPU_ERROR);
 
     // No dynamic linking support on OpenBSD yet.
@@ -680,7 +712,7 @@ static bool ImportCudaImpl(void) {
         default:
             return false;
     }
-    tinylog("initializing gpu module...\n", NULL);
+    tinylog(__func__, ": initializing gpu module...\n", NULL);
 
     // extract source code
     char src[PATH_MAX];
@@ -723,8 +755,8 @@ static bool ImportCudaImpl(void) {
 
             // Get some essential paths.
             // ROCm SDK puts BLAS DLLs in same folder as clang++
-            if (GetRocmBinPath(compiler_path_buf, "amdclang++") ||
-                GetRocmBinPath(compiler_path_buf, "clang++")) {
+            if (get_rocm_bin_path(compiler_path_buf, "amdclang++") ||
+                get_rocm_bin_path(compiler_path_buf, "clang++")) {
                 strcpy(library_path_buf, compiler_path_buf);
                 dirname(library_path_buf);
                 compiler_path = compiler_path_buf;
@@ -740,8 +772,8 @@ static bool ImportCudaImpl(void) {
             strlcat(dso, GetDsoExtension(), PATH_MAX);
             if (FLAG_nocompile) {
                 if ((FileExists(dso) ||
-                     ExtractCudaDso(dso, "ggml-rocm")) &&
-                    LinkCudaDso(dso, library_path)) {
+                     extract_cuda_dso(dso, "ggml-rocm")) &&
+                    link_cuda_dso(dso, library_path)) {
                     return true;
                 } else {
                     goto TryNvidia;
@@ -754,7 +786,7 @@ static bool ImportCudaImpl(void) {
                     case -1:
                         return false;
                     case false:
-                        if (LinkCudaDso(dso, library_path)) {
+                        if (link_cuda_dso(dso, library_path)) {
                             return true;
                         } else {
                             goto TryNvidia;
@@ -768,20 +800,20 @@ static bool ImportCudaImpl(void) {
 
             // Try building CUDA with ROCm SDK.
             if (compiler_path) {
-                if (CompileAmd(compiler_path, dso, src)) {
-                    if (LinkCudaDso(dso, library_path)) {
+                if (compile_amd(compiler_path, dso, src)) {
+                    if (link_cuda_dso(dso, library_path)) {
                         return true;
                     } else {
                         goto TryNvidia;
                     }
                 }
             } else {
-                tinylog("note: won't compile AMD GPU support because $HIP_PATH/bin/clang++ is missing\n", NULL);
+                tinylog(__func__, ": won't compile AMD GPU support because $HIP_PATH/bin/clang++ is missing\n", NULL);
             }
 
             // Try extracting prebuilt tinyBLAS DSO from PKZIP.
-            if (ExtractCudaDso(dso, "ggml-rocm")) {
-                if (LinkCudaDso(dso, library_path)) {
+            if (extract_cuda_dso(dso, "ggml-rocm")) {
+                if (link_cuda_dso(dso, library_path)) {
                     return true;
                 } else {
                     goto TryNvidia;
@@ -801,7 +833,7 @@ TryNvidia:
 
             // Get some essential paths.
             // CUDA SDK puts cuBLAS DLL in same folder as NVCC
-            if (GetNvccPath(compiler_path_buf)) {
+            if (get_nvcc_path(compiler_path_buf)) {
                 strcpy(library_path_buf, compiler_path_buf);
                 dirname(library_path_buf);
                 compiler_path = compiler_path_buf;
@@ -817,8 +849,8 @@ TryNvidia:
             strlcat(dso, GetDsoExtension(), PATH_MAX);
             if (FLAG_nocompile) {
                 return ((FileExists(dso) ||
-                         ExtractCudaDso(dso, "ggml-cuda")) &&
-                        LinkCudaDso(dso, library_path));
+                         extract_cuda_dso(dso, "ggml-cuda")) &&
+                        link_cuda_dso(dso, library_path));
             }
 
             // Check if DSO is already compiled.
@@ -827,7 +859,7 @@ TryNvidia:
                     case -1:
                         return false;
                     case false:
-                        return LinkCudaDso(dso, library_path);
+                        return link_cuda_dso(dso, library_path);
                     case true:
                         break;
                     default:
@@ -836,13 +868,13 @@ TryNvidia:
             }
 
             // Try building CUDA from source with mighty cuBLAS.
-            if (compiler_path && CompileNvidia(compiler_path, dso, src)) {
-                return LinkCudaDso(dso, library_path);
+            if (compiler_path && compile_nvidia(compiler_path, dso, src)) {
+                return link_cuda_dso(dso, library_path);
             }
 
             // Try extracting prebuilt tinyBLAS DSO from PKZIP.
-            if (ExtractCudaDso(dso, "ggml-cuda")) {
-                return LinkCudaDso(dso, library_path);
+            if (extract_cuda_dso(dso, "ggml-cuda")) {
+                return link_cuda_dso(dso, library_path);
             }
 
             break;
@@ -854,12 +886,12 @@ TryNvidia:
     return false;
 }
 
-static void ImportCuda(void) {
+static void import_cuda(void) {
     if (ggml_metal_supported()) {
         return;
     }
-    if (ImportCudaImpl()) {
-        tinylog("GPU support successfully linked and loaded\n", NULL);
+    if (import_cuda_impl()) {
+        tinylog(__func__, ": GPU support successfully linked and loaded\n", NULL);
         ggml_cuda.supported = true;
     } else if (FLAG_gpu == LLAMAFILE_GPU_AMD ||
                FLAG_gpu == LLAMAFILE_GPU_NVIDIA) {
@@ -871,7 +903,7 @@ static void ImportCuda(void) {
 }
 
 bool ggml_cuda_supported(void) {
-    cosmo_once(&ggml_cuda.once, ImportCuda);
+    cosmo_once(&ggml_cuda.once, import_cuda);
     return ggml_cuda.supported;
 }
 
