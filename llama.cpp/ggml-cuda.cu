@@ -104,6 +104,7 @@
 #define CUBLAS_STATUS_NOT_SUPPORTED TINYBLAS_STATUS_NOT_SUPPORTED
 #include "tinyblas.cu"
 #define cublasGetStatusString tinyblasGetStatusString
+#define CUDART_VERSION 12000
 
 #elif defined(GGML_USE_TINYBLAS)
 #include "tinyblas.cu"
@@ -163,6 +164,7 @@
 #define cublasSetStream hipblasSetStream
 #define cublasSgemm hipblasSgemm
 #define cublasStatus_t hipblasStatus_t
+#define cublasGetStatusString hipblasStatusToString
 #define cudaDataType_t hipblasDatatype_t //deprecated, new hipblasDatatype not in 5.6
 #define cudaDeviceCanAccessPeer hipDeviceCanAccessPeer
 #define cudaDeviceDisablePeerAccess hipDeviceDisablePeerAccess
@@ -218,6 +220,7 @@
 #define CUBLAS_STATUS_EXECUTION_FAILED HIPBLAS_STATUS_EXECUTION_FAILED
 #define CUBLAS_STATUS_INTERNAL_ERROR HIPBLAS_STATUS_INTERNAL_ERROR
 #define CUBLAS_STATUS_NOT_SUPPORTED HIPBLAS_STATUS_NOT_SUPPORTED
+#define CUDART_VERSION 12000
 
 #else
 #include <cuda_runtime.h>
