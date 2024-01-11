@@ -265,8 +265,8 @@ when running the above command.
 
 ## Gotchas
 
-On macOS with Apple Silicon you need to have Xcode installed for
-llamafile to be able to bootstrap itself.
+On macOS with Apple Silicon you need to have Xcode Command Line Tools
+installed for llamafile to be able to bootstrap itself.
 
 If you use zsh and have trouble running llamafile, try saying `sh -c
 ./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
@@ -337,19 +337,31 @@ llamafile supports the following CPUs:
 
 ## GPU support
 
-On Apple Silicon, everything should just work if Xcode is installed.
+On Apple Silicon running MacOS, your Metal GPU should just work if the
+Xcode Command Line Tools are installed.
 
 On Windows, GPU should just work so long as (1) you're using our release
-binaries, and (2) you pass the `-ngl 35` flag. You also need an NVIDIA
-graphics card that supports CUDA. There's no support yet for AMD GPUs. 
-You can also use CUDA via WSL by enabling [Nvidia CUDA on WSL](https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl)
-and running your llamafiles inside of WSL. This will also allow you to use
-llamafiles greater than 4GB on Windows. NOTE: If you have two different GPUs(integrated AMD, and dedicated NVIDIA like a laptop) then you need to add -ngl 35 --gpu NVIDIA
+binaries, and (2) you pass the `-ngl 35` flag. If you only have the
+graphics card drivers installed, then llamafile will use tinyBLAS as its
+math kernel library, which goes slower for batch processing tasks, e.g.
+summarization. In order to get full performance, NVIDIA GPU owners need
+to install both the CUDA SDK and MSVC; whereas, AMD GPU owners need to
+install the ROCm SDK. If llamafile detects the presence of an SDK, then
+it'll compile a native module just for your system that uses either the
+cuBLAS or hipBLAS library. You can also use CUDA via WSL by enabling
+[Nvidia CUDA on
+WSL](https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl)
+and running your llamafiles inside of WSL. Using WSL has the added
+benefit of letting you run llamafiles greater than 4GB on Windows.
 
 On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
 you have the `cc` compiler installed, (2) you pass the `-ngl 35` flag to
 enable GPU, and (3) the CUDA developer toolkit is installed on your
 machine and the `nvcc` compiler is on your path.
+
+If you have both an AMD GPU *and* an NVIDIA GPU in your machine, then
+you may need to qualify which one you want used, by passing either
+`--gpu amd` or `--gpu nvidia`.
 
 In the event that GPU support couldn't be compiled and dynamically
 linked on the fly for any reason, llamafile will fall back to CPU

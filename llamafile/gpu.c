@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include "llama.cpp/ggml-cuda.h"
+#include "llamafile/log.h"
 #include "llama.cpp/ggml-metal.h"
 
 bool FLAG_nogpu;
@@ -61,17 +62,27 @@ bool llamafile_gpu_supported(void) {
  * Figures out the GPU story after config is loaded.
  */
 int llamafile_gpu_layers(int n_gpu_layers) {
-    if (n_gpu_layers > 0) {
-        if (!llamafile_gpu_supported()) {
-            fprintf(stderr, "fatal error: --n-gpu-layers %d was passed but no gpus were found\n",
-                    n_gpu_layers);
-            exit(1);
-        }
-    } else if (n_gpu_layers == -1 && ggml_metal_supported()) {
-        n_gpu_layers = 1;
-    } else {
-        FLAG_gpu = LLAMAFILE_GPU_DISABLE;
+
+    // if user explicitly passed `--gpu KIND` but didn't specify `-ngl
+    // LAYERS` then assume the user wants their model fully offloaded.
+    if (n_gpu_layers == -1 && FLAG_gpu > 0) {
+        n_gpu_layers = INT_MAX;
     }
+
+    // Apple Metal is safe enough to enable by default.
+    if (n_gpu_layers == -1 && ggml_metal_supported()) {
+        n_gpu_layers = 1;
+    }
+
+    // make the -ngl flag not break example code when it's impossible
+    // if you want it to be an error just pass --gpu apple/amd/nvidia
+    if (n_gpu_layers > 0 && !llamafile_gpu_supported()) {
+        tinylogf("warning: --n-gpu-layers %d was passed but no GPUs were found;"
+                 " falling back to CPU inference\n", n_gpu_layers);
+        FLAG_gpu = LLAMAFILE_GPU_DISABLE;
+        n_gpu_layers = 0;
+    }
+
     return n_gpu_layers;
 }
 
