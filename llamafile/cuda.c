@@ -928,8 +928,8 @@ GGML_CALL void ggml_cuda_host_free(void *data) {
 }
 
 GGML_CALL bool ggml_cuda_can_mul_mat(const struct ggml_tensor *src0,
-                                    const struct ggml_tensor *src1,
-                                    struct ggml_tensor *dst) {
+                                     const struct ggml_tensor *src1,
+                                     struct ggml_tensor *dst) {
     if (!ggml_cuda_supported()) return false;
     return ggml_cuda.ggml_cuda_can_mul_mat(src0, src1, dst);
 }
@@ -995,7 +995,7 @@ GGML_CALL void ggml_cuda_free_scratch(void) {
 }
 
 GGML_CALL bool ggml_cuda_compute_forward(struct ggml_compute_params *params,
-                                        struct ggml_tensor *tensor) {
+                                         struct ggml_tensor *tensor) {
     if (!ggml_cuda_supported()) return false;
     return ggml_cuda.compute_forward(params, tensor);
 }
@@ -1006,8 +1006,8 @@ GGML_CALL int ggml_cuda_get_device_count(void) {
 }
 
 GGML_CALL void ggml_cuda_get_device_description(int device,
-                                               char *description,
-                                               size_t description_size) {
+                                                char *description,
+                                                size_t description_size) {
     if (!ggml_cuda_supported()) return;
     return ggml_cuda.get_device_description(device, description,
                                             description_size);
