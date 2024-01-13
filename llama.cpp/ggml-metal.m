@@ -237,7 +237,7 @@ static void ggml_metal_log(enum ggml_log_level level, const char * format, ...){
             vsnprintf(buffer2, len+1, format, args);
             buffer2[len] = 0;
             ggml_metal_log_callback(level, buffer2, ggml_metal_log_user_data);
-            free(buffer2);
+            g_backend->free(buffer2);
         }
         va_end(args);
     }
