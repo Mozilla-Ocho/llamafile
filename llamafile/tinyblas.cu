@@ -78,22 +78,14 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
         }
         __syncthreads();
     }
-
-    // We write Cs out into C
-    // first, write back into sharedmem
-    for (j = 0; j < TM; ++j) {
-        for (l = 0; l < TN; ++l) {
-            As[(ii0 * TM + j) * BN + ii1 * TN + l] =
-                Cs[(j * TN) + l];
-        }
-    }
     __syncthreads();
 
-    i = threadIdx.x;
-    // then write from sharedmem into global
-    if (y + i < n && i < BN) {
-        for (j = 0; j < BM && x + j < m; ++j) {
-            *((float *)C + (x + j) + (y + i) * ldc) = As[j * BN + i];
+    // We write Cs out into C
+    x += ii0 * TM;
+    y += ii1 * TN;
+    for (j = 0; j < TM && x + j < m; ++j) {
+        for (l = 0; l < TN && y + l < n; ++l) {
+            *((float *)C + (x + j) + (y + l) * ldc) = Cs[j * TN + l];
         }
     }
     __syncthreads();
@@ -177,7 +169,7 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t stream,
         return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    tinyblasS_wrapper<48, 12, 32, 6, 3>(stream, m, n, k, A, lda, B, ldb, C, ldc);
+    tinyblasS_wrapper<48, 24, 64, 6, 3>(stream, m, n, k, A, lda, B, ldb, C, ldc);
     return TINYBLAS_STATUS_SUCCESS;
 }
 
