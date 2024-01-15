@@ -23,19 +23,22 @@
 
 #define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
 
-template<int BM, int BN, int BK>
+template<int BM, int BN, int BK, int TM, int TN>
 static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
                                         const float *A, int lda, float *As,
                                         const float *B, int ldb, float *Bs,
-                                        void *C, int ldc, float *Cs) {
-    assert(blockDim.x == BK);
-    static_assert(BK == BM, "");
-    static_assert(BN <= BM, "");
+                                        void *C, int ldc) {
     const int i = threadIdx.x;
-    int j, l, blob;
+    const int ii0 = threadIdx.x / (BN / TN); /* {0, ..., (BM/TM) - 1} */
+    const int ii1 = threadIdx.x % (BN / TN); /* {0, ..., (BN/TN) - 1} */
+
+    float Cs[TM * TN];
+    float At[TM];
+    float Bt[TN];
+    int h, j, l, blob;
     // within each block
     // we first zero out Cs
-    for (j = 0; j < BN; ++j) Cs[j] = 0;
+    for (j = 0; j < TM * TN; ++j) Cs[j] = 0;
 
     for (blob = 0; blob < k; blob += BK) {
         if (i < BK) {
@@ -59,34 +62,44 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
         }
         __syncthreads();
 
-
         // We matmul the blobs, basically Cs += matmul(As, Bs)
-        for (j = 0; j < BN; ++j) {
-            for (l = 0; l < BK; ++l) {
-                Cs[j] += As[(i * BK) + l] * Bs[(l * BN) + j];
+        for (l = 0; l < BK; ++l) {
+            for (j = 0; j < TM; ++j) At[j] = As[(ii0 * TM + j) * BK + l];
+            for (h = 0; h < TN; ++h) Bt[h] = Bs[(l * BN + ii1 * TN) + h];
+            for (j = 0; j < TM; ++j) {
+                for (h = 0; h < TN; ++h) {
+                    Cs[j * TN + h] += At[j] * Bt[h];
+                }
             }
         }
         __syncthreads();
     }
 
-    for (j = 0; j < BN;  ++j) {
-        As[(i*BN) + j] = Cs[j];
-    }
-
     // We write Cs out into C
+    // first, write back into shared mem
+    for (j = 0; j < TM; ++j) {
+        for (l = 0; l < TN; ++l) {
+            As[(ii0 * (BM / TM) + j) * BN + ii1 * (BN / TN) + l] =
+                Cs[(j * TN) + l];
+        }
+    }
+    __syncthreads();
+
+    // then write from sharedmem into global
     if (y + i < n && i < BN) {
         for (j = 0; j < BM && x + j < m; ++j) {
-            *((float *)C + (x + j) + (y + i) * ldc) = As[j*BN + i];
+            *((float *)C + (x + j) + (y + i) * ldc) = As[j * BN + i];
         }
     }
     __syncthreads();
 }
 
-template<int BM, int BN, int BK>
+template<int BM, int BN, int BK, int TM, int TN>
 static __global__ void tinyblasS_entry(int m, int n, int k,
                                        const float *A, int lda,
                                        const float *B, int ldb,
                                        float       *C, int ldc) {
+    assert(blockDim.x == BK);
     int x = blockIdx.x * BM;
     const int jump1 = gridDim.x * BM;
     int y = blockIdx.y * BN;
@@ -95,16 +108,15 @@ static __global__ void tinyblasS_entry(int m, int n, int k,
     extern __shared__ float svals[];  // shared across all threads in a block
     float *As = svals;
     float *Bs = svals + BM * BK;
-    float Cs[BN];  // only within a particular thread
 
     // each block handles a sub-matrix of C, of size BM * BN
-    // each thread handles a sub-row of size BN
+    // each thread handles a sub-matrix of size TM * TN
     for (x = blockIdx.x * BM; x < m; x += jump1) {
         for (y = blockIdx.y * BN; y < n; y += jump2) {
-            matmul32_block2d<BM, BN, BK>(m, n, k, x, y,  //
+            matmul32_block2d<BM, BN, BK, TM, TN>(m, n, k, x, y,  //
                              A, lda, As,     //
                              B, ldb, Bs,     //
-                             C, ldc, Cs);
+                             C, ldc);
         }
     }
 }
@@ -127,14 +139,21 @@ static bool check_args(tinyblasOperation_t transa, tinyblasOperation_t transb,
               *(float *)pBeta == 0.0f)));
 }
 
-template <int BM, int BN, int BK>
+template <int BM, int BN, int BK, int TM, int TN>
 static void tinyblasS_wrapper(tinyblasHandle_t stream, int m, int n, int k,
                               const float *A, int lda, const float *B, int ldb,
                               float *C, int ldc) {
+    static_assert(BN <= BM, "threads can't read columns properly");
+    static_assert((BM % TM == 0) && (BN % TN == 0),
+                  "can't divide work for threads");
+    static_assert(BK == ((BM * BN) / (TM * TN)),
+                  "threads can't load memory properly");
+    static_assert((BM * BN) <= (BM * BK) + (BK * BN),
+                  "didn't allocate enough shared mem for threads");
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
-    int maxthreads = BK;
+    int maxthreads = ((BM * BN) / (TM * TN));
 
-    tinyblasS_entry<BM, BN, BK>
+    tinyblasS_entry<BM, BN, BK, TM, TN>
         <<<maxblocks, maxthreads, (sizeof(float) * (BM * BK + BK * BN)),
            stream>>>(m, n, k, A, lda, B, ldb, C, ldc);
 }
@@ -153,7 +172,7 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t stream,
         return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    tinyblasS_wrapper<48, 12, 48>(stream, m, n, k, A, lda, B, ldb, C, ldc);
+    tinyblasS_wrapper<48, 12, 32, 6, 3>(stream, m, n, k, A, lda, B, ldb, C, ldc);
     return TINYBLAS_STATUS_SUCCESS;
 }
 
