@@ -175,15 +175,15 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t stream,
 
 template<int BM, int BN, int BK, int TM, int TN>
 static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
-                                      const half *A, int lda, float *As,
-                                      const half *B, int ldb, float *Bs,
+                                      const half *A, int lda, half *As,
+                                      const half *B, int ldb, half *Bs,
                                       void *C, cudaDataType_t Ctype, int ldc) {
     const int ii0 = threadIdx.x / (BN / TN); /* {0, ..., (BM/TM) - 1} */
     const int ii1 = threadIdx.x % (BN / TN); /* {0, ..., (BN/TN) - 1} */
 
-    float Cs[TM * TN];
-    float At[TM];
-    float Bt[TN];
+    half Cs[TM * TN];
+    half At[TM];
+    half Bt[TN];
     int i, h, j, l, blob;
     // within each block
     // we first zero out Cs
@@ -197,7 +197,7 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
                     As[(j * BK) + i] =
-                        READ16(A, TINYBLAS_OP_T, lda, x + j, blob + i);
+                        READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
             }
         }
@@ -209,7 +209,7 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
                 // we copy into Bs from B
                 for (j = 0; j < BN && y + j < n; ++j) {
                     Bs[(i * BN) + j] =
-                        READ16(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
+                        READ(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
                 }
             }
         }
@@ -236,13 +236,13 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
     if (Ctype == CUDA_R_16F) {
         for (j = 0; j < TM && x + j < m; ++j) {
             for (l = 0; l < TN && y + l < n; ++l) {
-                *((half *)C + (x + j) + (y + l) * ldc) = __float2half(Cs[j * TN + l]);
+                *((half *)C + (x + j) + (y + l) * ldc) = Cs[j * TN + l];
             }
         }
     } else {
         for (j = 0; j < TM && x + j < m; ++j) {
             for (l = 0; l < TN && y + l < n; ++l) {
-                *((float *)C + (x + j) + (y + l) * ldc) = Cs[j * TN + l];
+                *((float *)C + (x + j) + (y + l) * ldc) = __half2float(Cs[j * TN + l]);
             }
         }
     }
@@ -261,8 +261,8 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
     const int jump2 = gridDim.y * BN;
 
     extern __shared__ float svals[];  // shared across all threads in a block
-    float *As = svals;
-    float *Bs = svals + BM * BK;
+    half *As = (half *) svals;
+    half *Bs = (half *) svals + BM * BK;
 
     // each block handles a sub-matrix of C, of size BM * BN
     // each thread handles a sub-row of size BN
@@ -291,7 +291,7 @@ static void tinyblasGE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     int maxthreads = ((BM * BN) / (TM * TN));
 
     tinyblasGE_entry<BM, BN, BK, TM, TN>
-        <<<maxblocks, maxthreads, (sizeof(float) * (BM * BK + BK * BN)),
+        <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
            stream>>>(m, n, k, A, lda, B, ldb, C, Ctype, ldc);
 }
 
@@ -341,8 +341,8 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
     const int jump3 = gridDim.z;
 
     extern __shared__ float svals[];  // shared across all threads in a block
-    float *As = svals;
-    float *Bs = svals + BM * BK;
+    half *As = (half *) svals;
+    half *Bs = (half *) svals + BM * BK;
 
     // each block handles a sub-matrix of C, of size BM * BN
     // each thread handles a sub-row of size BN
@@ -375,7 +375,7 @@ static void tinyblasGBE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     int maxthreads = ((BM * BN) / (TM * TN));
 
     tinyblasGBE_entry<BM, BN, BK, TM, TN>
-        <<<maxblocks, maxthreads, (sizeof(float) * (BM * BK + BK * BN)),
+        <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
            stream>>>(m, n, k, Aarray, lda, Barray,
                      ldb, Carray, Ctype, ldc, batchCount);
 }
@@ -433,8 +433,8 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
     const int jump3 = gridDim.z;
 
     extern __shared__ float svals[];  // shared across all threads in a block
-    float *As = svals;
-    float *Bs = svals + BM * BK;
+    half *As = (half *) svals;
+    half *Bs = (half *) svals + BM * BK;
 
     // each block handles a sub-matrix of C, of size BM * BN
     // each thread handles a sub-row of size BN
@@ -470,7 +470,7 @@ static void tinyblasGSBE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     int maxthreads = ((BM * BN) / (TM * TN));
 
     tinyblasGSBE_entry<BM, BN, BK, TM, TN>
-        <<<maxblocks, maxthreads, (sizeof(float) * (BM * BK + BK * BN)),
+        <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
            stream>>>(m, n, k,                 //
                      A, lda, strideA,         //
                      B, ldb, strideB,         //
@@ -504,7 +504,7 @@ tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t stream,
         return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    tinyblasGSBE_wrapper<32, 4, 32, 2, 2>(stream, m, n, k, (const half *)A, lda, strideA,
+    tinyblasGSBE_wrapper<16, 8, 32, 1, 4>(stream, m, n, k, (const half *)A, lda, strideA,
                                      (const half *)B, ldb, strideB, C, Ctype,
                                      ldc, strideC, batchCount);
 
