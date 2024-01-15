@@ -29,6 +29,8 @@ void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 void llamafile_launch_browser(const char *);
 
+int llamafile_LoadZipArgs(int *, char ***);
+
 #define LLAMAFILE_GPU_ERROR -2
 #define LLAMAFILE_GPU_DISABLE -1
 #define LLAMAFILE_GPU_AUTO 0

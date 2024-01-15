@@ -116,7 +116,7 @@ int main(int argc, char ** argv) {
     llamafile_init();
     llamafile_check_cpu();
     ShowCrashReports();
-    LoadZipArgs(&argc, &argv);
+    llamafile_LoadZipArgs(&argc, &argv);
 
     if (!llamafile_has(argv, "--cli") &&
         (llamafile_has(argv, "--server") ||

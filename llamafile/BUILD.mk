@@ -16,6 +16,7 @@ o/$(MODE)/llamafile/zipalign:				\
 		o/$(MODE)/llamafile/zipalign.o		\
 		o/$(MODE)/llamafile/help.o		\
 		o/$(MODE)/llamafile/has.o		\
+		o/$(MODE)/llamafile/args.o		\
 		o/$(MODE)/llamafile/zipalign.1.asc.zip.o
 
 o/$(MODE)/llamafile/zipcheck:				\
