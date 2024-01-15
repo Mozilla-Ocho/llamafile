@@ -28,20 +28,20 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
                                         const float *A, int lda, float *As,
                                         const float *B, int ldb, float *Bs,
                                         void *C, int ldc) {
-    const int i = threadIdx.x;
     const int ii0 = threadIdx.x / (BN / TN); /* {0, ..., (BM/TM) - 1} */
     const int ii1 = threadIdx.x % (BN / TN); /* {0, ..., (BN/TN) - 1} */
 
     float Cs[TM * TN];
     float At[TM];
     float Bt[TN];
-    int h, j, l, blob;
+    int i, h, j, l, blob;
     // within each block
     // we first zero out Cs
     for (j = 0; j < TM * TN; ++j) Cs[j] = 0;
 
+    i = threadIdx.x;
     for (blob = 0; blob < k; blob += BK) {
-        if (i < BK) {
+        for (i = threadIdx.x; i < BK; i += blockDim.x) {
             if ((blob + i) < k) {
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
@@ -59,6 +59,7 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
                 for (j = 0; j < BM; ++j) As[(j * BK) + i] = 0;
                 for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
             }
+            __syncthreads();
         }
         __syncthreads();
 
@@ -74,9 +75,10 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
         }
         __syncthreads();
     }
+    i = threadIdx.x;
 
     // We write Cs out into C
-    // first, write back into shared mem
+    // first, write back into sharedmem
     for (j = 0; j < TM; ++j) {
         for (l = 0; l < TN; ++l) {
             As[(ii0 * (BM / TM) + j) * BN + ii1 * (BN / TN) + l] =
@@ -146,8 +148,8 @@ static void tinyblasS_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     static_assert(BN <= BM, "threads can't read columns properly");
     static_assert((BM % TM == 0) && (BN % TN == 0),
                   "can't divide work for threads");
-    static_assert(BK == ((BM * BN) / (TM * TN)),
-                  "threads can't load memory properly");
+    /* static_assert(BK == ((BM * BN) / (TM * TN)),
+                  "threads can't load memory properly"); */
     static_assert((BM * BN) <= (BM * BK) + (BK * BN),
                   "didn't allocate enough shared mem for threads");
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
