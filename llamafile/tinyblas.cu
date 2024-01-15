@@ -43,22 +43,28 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
     for (blob = 0; blob < k; blob += BK) {
         for (i = threadIdx.x; i < BK; i += blockDim.x) {
             for (j = 0; j < BM; ++j) As[(j * BK) + i] = 0;
-            for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
             if ((blob + i) < k) {
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
                     As[(j * BK) + i] =
                         READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
+            }
+        }
+        __syncthreads();
+        
+        for (i = threadIdx.x; i < BK; i += blockDim.x) {
+            for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
+            if ((blob + i) < k) {
                 // we copy into Bs from B
                 for (j = 0; j < BN && y + j < n; ++j) {
                     Bs[(i * BN) + j] =
                         READ(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
                 }
             }
-            __syncthreads();
         }
         __syncthreads();
+
 
         // We matmul the blobs, basically Cs += matmul(As, Bs)
         for (l = 0; l < BK; ++l) {
