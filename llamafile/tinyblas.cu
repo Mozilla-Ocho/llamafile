@@ -42,22 +42,19 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
     i = threadIdx.x;
     for (blob = 0; blob < k; blob += BK) {
         for (i = threadIdx.x; i < BK; i += blockDim.x) {
+            for (j = 0; j < BM; ++j) As[(j * BK) + i] = 0;
+            for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
             if ((blob + i) < k) {
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
                     As[(j * BK) + i] =
                         READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
-                for (; j < BM; ++j) As[(j * BK) + i] = 0;
                 // we copy into Bs from B
                 for (j = 0; j < BN && y + j < n; ++j) {
                     Bs[(i * BN) + j] =
                         READ(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
                 }
-                for (; j < BN; ++j) Bs[(i * BN) + j] = 0;
-            } else {  // UNLIKELY
-                for (j = 0; j < BM; ++j) As[(j * BK) + i] = 0;
-                for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
             }
             __syncthreads();
         }
@@ -66,7 +63,7 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
         // We matmul the blobs, basically Cs += matmul(As, Bs)
         for (l = 0; l < BK; ++l) {
             for (j = 0; j < TM; ++j) At[j] = As[(ii0 * TM + j) * BK + l];
-            for (h = 0; h < TN; ++h) Bt[h] = Bs[(l * BN + ii1 * TN) + h];
+            for (h = 0; h < TN; ++h) Bt[h] = Bs[(l * BN) + ii1 * TN + h];
             for (j = 0; j < TM; ++j) {
                 for (h = 0; h < TN; ++h) {
                     Cs[j * TN + h] += At[j] * Bt[h];
@@ -75,18 +72,18 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
         }
         __syncthreads();
     }
-    i = threadIdx.x;
 
     // We write Cs out into C
     // first, write back into sharedmem
     for (j = 0; j < TM; ++j) {
         for (l = 0; l < TN; ++l) {
-            As[(ii0 * (BM / TM) + j) * BN + ii1 * (BN / TN) + l] =
+            As[(ii0 * TM + j) * BN + ii1 * TN + l] =
                 Cs[(j * TN) + l];
         }
     }
     __syncthreads();
 
+    i = threadIdx.x;
     // then write from sharedmem into global
     if (y + i < n && i < BN) {
         for (j = 0; j < BM && x + j < m; ++j) {
@@ -148,8 +145,8 @@ static void tinyblasS_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     static_assert(BN <= BM, "threads can't read columns properly");
     static_assert((BM % TM == 0) && (BN % TN == 0),
                   "can't divide work for threads");
-    /* static_assert(BK == ((BM * BN) / (TM * TN)),
-                  "threads can't load memory properly"); */
+    static_assert(BK == ((BM * BN) / (TM * TN)),
+                  "threads can't load memory properly");
     static_assert((BM * BN) <= (BM * BK) + (BK * BN),
                   "didn't allocate enough shared mem for threads");
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
