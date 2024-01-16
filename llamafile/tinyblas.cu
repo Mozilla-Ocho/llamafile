@@ -42,11 +42,11 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
     i = threadIdx.x;
     for (blob = 0; blob < k; blob += BK) {
         for (i = threadIdx.x; i < BK; i += blockDim.x) {
-            for (j = 0; j < BM; ++j) As[(j * BK) + i] = 0;
+            for (j = 0; j < BM; ++j) As[(i * BM) + j] = 0;
             if ((blob + i) < k) {
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
-                    As[(j * BK) + i] =
+                    As[(i * BM) + j] =
                         READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
             }
@@ -68,7 +68,7 @@ static __device__ void matmul32_block2d(int m, int n, int k, int x, int y,
 
         // We matmul the blobs, basically Cs += matmul(As, Bs)
         for (l = 0; l < BK; ++l) {
-            for (j = 0; j < TM; ++j) At[j] = As[(ii0 * TM + j) * BK + l];
+            for (j = 0; j < TM; ++j) At[j] = As[(l * BM) + ii0 * TM + j];
             for (h = 0; h < TN; ++h) Bt[h] = Bs[(l * BN) + ii1 * TN + h];
             for (j = 0; j < TM; ++j) {
                 for (h = 0; h < TN; ++h) {
@@ -192,11 +192,11 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
     i = threadIdx.x;
     for (blob = 0; blob < k; blob += BK) {
         for (i = threadIdx.x; i < BK; i += blockDim.x) {
-            for (j = 0; j < BM; ++j) As[(j * BK) + i] = 0;
+            for (j = 0; j < BM; ++j) As[(i * BM) + j] = 0;
             if ((blob + i) < k) {
                 // we copy into As from A
                 for (j = 0; j < BM && x + j < m; ++j) {
-                    As[(j * BK) + i] =
+                    As[(i * BM) + j] =
                         READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
                 }
             }
@@ -218,7 +218,7 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
 
         // We matmul the blobs, basically Cs += matmul(As, Bs)
         for (l = 0; l < BK; ++l) {
-            for (j = 0; j < TM; ++j) At[j] = As[(ii0 * TM + j) * BK + l];
+            for (j = 0; j < TM; ++j) At[j] = As[(l * BM) + ii0 * TM + j];
             for (h = 0; h < TN; ++h) Bt[h] = Bs[(l * BN) + ii1 * TN + h];
             for (j = 0; j < TM; ++j) {
                 for (h = 0; h < TN; ++h) {
@@ -265,7 +265,6 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
     half *Bs = (half *) svals + BM * BK;
 
     // each block handles a sub-matrix of C, of size BM * BN
-    // each thread handles a sub-row of size BN
     for (x = blockIdx.x * BM; x < m; x += jump1) {
         for (y = blockIdx.y * BN; y < n; y += jump2) {
             matmul_block2d<BM, BN, BK, TM, TN>(m, n, k, x, y,  //
@@ -283,8 +282,6 @@ static void tinyblasGE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     static_assert(BN <= BM, "threads can't read columns properly");
     static_assert((BM % TM == 0) && (BN % TN == 0),
                   "can't divide work for threads");
-    /* static_assert(BK == ((BM * BN) / (TM * TN)),
-                  "threads can't load memory properly"); */
     static_assert((BM * BN) <= (BM * BK) + (BK * BN),
                   "didn't allocate enough shared mem for threads");
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
@@ -345,7 +342,6 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
     half *Bs = (half *) svals + BM * BK;
 
     // each block handles a sub-matrix of C, of size BM * BN
-    // each thread handles a sub-row of size BN
     for (z = blockIdx.z; z < batchCount; z += jump3) {
         for (x = blockIdx.x * BM; x < m; x += jump1) {
             for (y = blockIdx.y * BN; y < n; y += jump2) {
@@ -367,8 +363,6 @@ static void tinyblasGBE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     static_assert(BN <= BM, "threads can't read columns properly");
     static_assert((BM % TM == 0) && (BN % TN == 0),
                   "can't divide work for threads");
-    /* static_assert(BK == ((BM * BN) / (TM * TN)),
-                  "threads can't load memory properly"); */
     static_assert((BM * BN) <= (BM * BK) + (BK * BN),
                   "didn't allocate enough shared mem for threads");
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
@@ -437,7 +431,6 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
     half *Bs = (half *) svals + BM * BK;
 
     // each block handles a sub-matrix of C, of size BM * BN
-    // each thread handles a sub-row of size BN
     for (z = blockIdx.z; z < batchCount; z += jump3) {
         for (x = blockIdx.x * BM; x < m; x += jump1) {
             for (y = blockIdx.y * BN; y < n; y += jump2) {
@@ -462,8 +455,6 @@ static void tinyblasGSBE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     static_assert(BN <= BM, "threads can't read columns properly");
     static_assert((BM % TM == 0) && (BN % TN == 0),
                   "can't divide work for threads");
-    /* static_assert(BK == ((BM * BN) / (TM * TN)),
-                  "threads can't load memory properly"); */
     static_assert((BM * BN) <= (BM * BK) + (BK * BN),
                   "didn't allocate enough shared mem for threads");
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
