@@ -212,29 +212,25 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
     i = threadIdx.x;
     for (blob = 0; blob < k; blob += BK) {
         for (i = threadIdx.x; i < BK; i += blockDim.x) {
-            for (j = 0; j < BM; ++j) As[(i * BM) + j] = 0;
-            if ((blob + i) < k) {
-                // we copy into As from A
-                for (j = 0; j < BM && x + j < m; ++j) {
-                    As[(i * BM) + j] =
-                        READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
-                }
-            }
-        }
-        __syncthreads();
-        
-        for (i = threadIdx.x; i < BK; i += blockDim.x) {
-            for (j = 0; j < BN; ++j) Bs[(i * BN) + j] = 0;
-            if ((blob + i) < k) {
-                // we copy into Bs from B
-                for (j = 0; j < BN && y + j < n; ++j) {
-                    Bs[(i * BN) + j] =
-                        READ(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
-                }
+            for (j = 0; j < BM + BN; ++j) {
+                As[(j * BK) + i] = 0;
             }
         }
         __syncthreads();
 
+        for (i = threadIdx.x; i < BK && blob + i < k; i += blockDim.x) {
+            // we copy into As from A
+            for (j = 0; j < BM && x + j < m; ++j) {
+                As[(i * BM) + j] = READ(A, TINYBLAS_OP_T, lda, x + j, blob + i);
+            }
+        }
+        for (i = threadIdx.x; i < BK && blob + i < k; i += blockDim.x) {
+            // we copy into Bs from B
+            for (j = 0; j < BN && y + j < n; ++j) {
+                Bs[(i * BN) + j] = READ(B, TINYBLAS_OP_N, ldb, blob + i, y + j);
+            }
+        }
+        __syncthreads();
 
         // We matmul the blobs, basically Cs += matmul(As, Bs)
         for (l = 0; l < BK; ++l) {
