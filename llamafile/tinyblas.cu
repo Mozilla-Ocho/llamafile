@@ -195,11 +195,14 @@ __device__ __forceinline__ half typechange(float x) {
 
 template<int BM, int BN, int BK, int TM, int TN, typename DST>
 static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
-                                      const half *A, int lda, half *As,
-                                      const half *B, int ldb, half *Bs,
+                                      const half *A, int lda,
+                                      const half *B, int ldb,
                                       void *C, int ldc) {
     const int ii0 = threadIdx.x / (BN / TN); /* {0, ..., (BM/TM) - 1} */
     const int ii1 = threadIdx.x % (BN / TN); /* {0, ..., (BN/TN) - 1} */
+    extern __shared__ float svals[];  // shared across all threads in a block
+    half *As = (half *) svals;
+    half *Bs = (half *) svals + BM * BK;
 
     half Cs[TM * TN];
     half At[TM];
@@ -267,16 +270,12 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
     int y = blockIdx.y * BN;
     const int jump2 = gridDim.y * BN;
 
-    extern __shared__ float svals[];  // shared across all threads in a block
-    half *As = (half *) svals;
-    half *Bs = (half *) svals + BM * BK;
-
     // each block handles a sub-matrix of C, of size BM * BN
     for (x = blockIdx.x * BM; x < m; x += jump1) {
         for (y = blockIdx.y * BN; y < n; y += jump2) {
             matmul_block2d<BM, BN, BK, TM, TN, DST>(m, n, k, x, y,  //
-                                       A, lda, As,     //
-                                       B, ldb, Bs,     //
+                                       A, lda, //
+                                       B, ldb, //
                                        C, ldc);
         }
     }
@@ -349,17 +348,13 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
     int z = blockIdx.z;
     const int jump3 = gridDim.z;
 
-    extern __shared__ float svals[];  // shared across all threads in a block
-    half *As = (half *) svals;
-    half *Bs = (half *) svals + BM * BK;
-
     // each block handles a sub-matrix of C, of size BM * BN
     for (z = blockIdx.z; z < batchCount; z += jump3) {
         for (x = blockIdx.x * BM; x < m; x += jump1) {
             for (y = blockIdx.y * BN; y < n; y += jump2) {
                 matmul_block2d<BM, BN, BK, TM, TN, DST>(m, n, k, x, y,       //
-                                           Aarray[z], lda, As,  //
-                                           Barray[z], ldb, Bs,  //
+                                           Aarray[z], lda, //
+                                           Barray[z], ldb, //
                                            Carray[z], ldc);
             }
         }
@@ -444,18 +439,14 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
     int z = blockIdx.z;
     const int jump3 = gridDim.z;
 
-    extern __shared__ float svals[];  // shared across all threads in a block
-    half *As = (half *) svals;
-    half *Bs = (half *) svals + BM * BK;
-
     // each block handles a sub-matrix of C, of size BM * BN
     for (z = blockIdx.z; z < batchCount; z += jump3) {
         for (x = blockIdx.x * BM; x < m; x += jump1) {
             for (y = blockIdx.y * BN; y < n; y += jump2) {
                 matmul_block2d<BM, BN, BK, TM, TN, DST>(
-                    m, n, k, x, y,             //
-                    A + z * strideA, lda, As,  //
-                    B + z * strideB, ldb, Bs,  //
+                    m, n, k, x, y,        //
+                    A + z * strideA, lda, //
+                    B + z * strideB, ldb, //
                     (void *)((DST *)C + z * strideC), ldc);
             }
         }
