@@ -173,11 +173,31 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t stream,
     return TINYBLAS_STATUS_SUCCESS;
 }
 
-template<int BM, int BN, int BK, int TM, int TN>
+template<typename SRC, typename DST>
+__device__ __forceinline__ DST typechange(SRC x) {
+    static_assert(std::is_same<DST, SRC>::value, "write a specialization");
+    if (std::is_same<DST, SRC>::value) {
+        return x;
+    } else {
+        return (DST)(0);
+    }
+}
+
+template<>
+__device__ __forceinline__ float typechange(half x) {
+    return __half2float(x);
+}
+
+template<>
+__device__ __forceinline__ half typechange(float x) {
+    return __float2half(x);
+}
+
+template<int BM, int BN, int BK, int TM, int TN, typename DST>
 static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
                                       const half *A, int lda, half *As,
                                       const half *B, int ldb, half *Bs,
-                                      void *C, cudaDataType_t Ctype, int ldc) {
+                                      void *C, int ldc) {
     const int ii0 = threadIdx.x / (BN / TN); /* {0, ..., (BM/TM) - 1} */
     const int ii1 = threadIdx.x % (BN / TN); /* {0, ..., (BN/TN) - 1} */
 
@@ -233,28 +253,19 @@ static __device__ void matmul_block2d(int m, int n, int k, int x, int y,
     // We write Cs out into C
     x += ii0 * TM;
     y += ii1 * TN;
-    if (Ctype == CUDA_R_16F) {
-        for (j = 0; j < TM && x + j < m; ++j) {
-            for (l = 0; l < TN && y + l < n; ++l) {
-                *((half *)C + (x + j) + (y + l) * ldc) = Cs[j * TN + l];
-            }
-        }
-    } else {
-        for (j = 0; j < TM && x + j < m; ++j) {
-            for (l = 0; l < TN && y + l < n; ++l) {
-                *((float *)C + (x + j) + (y + l) * ldc) = __half2float(Cs[j * TN + l]);
-            }
+    for (j = 0; j < TM && x + j < m; ++j) {
+        for (l = 0; l < TN && y + l < n; ++l) {
+            *((DST *)C + (x + j) + (y + l) * ldc) = typechange<half, DST>(Cs[j * TN + l]);
         }
     }
     __syncthreads();
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
-template<int BM, int BN, int BK, int TM, int TN>
+template<int BM, int BN, int BK, int TM, int TN, typename DST>
 static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
                                         int lda, const half *B, int ldb,
-                                        void *C, cudaDataType_t Ctype,
-                                        int ldc) {
+                                        void *C, int ldc) {
     int x = blockIdx.x * BM;
     const int jump1 = gridDim.x * BM;
     int y = blockIdx.y * BN;
@@ -267,10 +278,10 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
     // each block handles a sub-matrix of C, of size BM * BN
     for (x = blockIdx.x * BM; x < m; x += jump1) {
         for (y = blockIdx.y * BN; y < n; y += jump2) {
-            matmul_block2d<BM, BN, BK, TM, TN>(m, n, k, x, y,  //
+            matmul_block2d<BM, BN, BK, TM, TN, DST>(m, n, k, x, y,  //
                                        A, lda, As,     //
                                        B, ldb, Bs,     //
-                                       C, Ctype, ldc);
+                                       C, ldc);
         }
     }
 }
@@ -287,9 +298,15 @@ static void tinyblasGE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
     int maxthreads = ((BM * BN) / (TM * TN));
 
-    tinyblasGE_entry<BM, BN, BK, TM, TN>
-        <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
-           stream>>>(m, n, k, A, lda, B, ldb, C, Ctype, ldc);
+    if (Ctype == CUDA_R_16F) {
+        tinyblasGE_entry<BM, BN, BK, TM, TN, half>
+            <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
+               stream>>>(m, n, k, A, lda, B, ldb, C, ldc);
+    } else {
+        tinyblasGE_entry<BM, BN, BK, TM, TN, float>
+            <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
+               stream>>>(m, n, k, A, lda, B, ldb, C, ldc);
+    }
 }
 
 tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t stream,
@@ -316,19 +333,18 @@ tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t stream,
         return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    tinyblasGE_wrapper<48, 32, 24, 6, 8>(stream, m, n, k, (const half *)A, lda,
-                                   (const half *)B, ldb, C, Ctype, ldc);
+    tinyblasGE_wrapper<48, 32, 32, 6, 8>(stream, m, n, k, (const half *)A, lda,
+                               (const half *)B, ldb, C, Ctype, ldc);
     return TINYBLAS_STATUS_SUCCESS;
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmbatchedex
 
-template<int BM, int BN, int BK, int TM, int TN>
+template<int BM, int BN, int BK, int TM, int TN, typename DST>
 static __global__ void tinyblasGBE_entry(int m, int n, int k,
                                          const half *const Aarray[], int lda,
                                          const half *const Barray[], int ldb,
-                                         void *const Carray[],
-                                         cudaDataType_t Ctype, int ldc,
+                                         void *const Carray[], int ldc,
                                          int batchCount) {
     int x = blockIdx.x * BM;
     const int jump1 = gridDim.x * BM;
@@ -345,10 +361,10 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
     for (z = blockIdx.z; z < batchCount; z += jump3) {
         for (x = blockIdx.x * BM; x < m; x += jump1) {
             for (y = blockIdx.y * BN; y < n; y += jump2) {
-                matmul_block2d<BM, BN, BK, TM, TN>(m, n, k, x, y,       //
+                matmul_block2d<BM, BN, BK, TM, TN, DST>(m, n, k, x, y,       //
                                            Aarray[z], lda, As,  //
                                            Barray[z], ldb, Bs,  //
-                                           Carray[z], Ctype, ldc);
+                                           Carray[z], ldc);
             }
         }
     }
@@ -368,10 +384,17 @@ static void tinyblasGBE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
     int maxthreads = ((BM * BN) / (TM * TN));
 
-    tinyblasGBE_entry<BM, BN, BK, TM, TN>
-        <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
-           stream>>>(m, n, k, Aarray, lda, Barray,
-                     ldb, Carray, Ctype, ldc, batchCount);
+    if (Ctype == CUDA_R_16F) {
+        tinyblasGBE_entry<BM, BN, BK, TM, TN, half>
+            <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
+               stream>>>(m, n, k, Aarray, lda, Barray, ldb, Carray, ldc,
+                         batchCount);
+    } else {
+        tinyblasGBE_entry<BM, BN, BK, TM, TN, float>
+            <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
+               stream>>>(m, n, k, Aarray, lda, Barray, ldb, Carray, ldc,
+                         batchCount);
+    }
 }
 
 tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t stream,
@@ -399,14 +422,14 @@ tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t stream,
         return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    tinyblasGBE_wrapper<48, 32, 24, 6, 8>(stream, m, n, k, (const half **)Aarray, lda,
+    tinyblasGBE_wrapper<48, 32, 32, 6, 8>(stream, m, n, k, (const half **)Aarray, lda,
                                     (const half **)Barray, ldb, Carray, Ctype,
                                     ldc, batchCount);
     return TINYBLAS_STATUS_SUCCESS;
 }
 
 // https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmstridedbatchedex
-template<int BM, int BN, int BK, int TM, int TN>
+template<int BM, int BN, int BK, int TM, int TN, typename DST>
 static __global__ void tinyblasGSBE_entry(int m, int n, int k,
                                           const half      *A,
                                           int             lda,
@@ -415,7 +438,6 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
                                           int             ldb,
                                           long long int   strideB,
                                           void            *C,
-                                          cudaDataType_t  Ctype,
                                           int             ldc,
                                           long long int   strideC,
                                           int batchCount) {
@@ -434,13 +456,11 @@ static __global__ void tinyblasGSBE_entry(int m, int n, int k,
     for (z = blockIdx.z; z < batchCount; z += jump3) {
         for (x = blockIdx.x * BM; x < m; x += jump1) {
             for (y = blockIdx.y * BN; y < n; y += jump2) {
-                matmul_block2d<BM, BN, BK, TM, TN>(
+                matmul_block2d<BM, BN, BK, TM, TN, DST>(
                     m, n, k, x, y,             //
                     A + z * strideA, lda, As,  //
                     B + z * strideB, ldb, Bs,  //
-                    (Ctype == CUDA_R_16F ? (void *)((half *)C + z * strideC)
-                                         : (void *)((float *)C + z * strideC)),
-                    Ctype, ldc);
+                    (void *)((DST *)C + z * strideC), ldc);
             }
         }
     }
@@ -460,13 +480,23 @@ static void tinyblasGSBE_wrapper(tinyblasHandle_t stream, int m, int n, int k,
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
     int maxthreads = ((BM * BN) / (TM * TN));
 
-    tinyblasGSBE_entry<BM, BN, BK, TM, TN>
-        <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
-           stream>>>(m, n, k,                 //
-                     A, lda, strideA,         //
-                     B, ldb, strideB,         //
-                     C, Ctype, ldc, strideC,  //
-                     batchCount);
+    if (Ctype == CUDA_R_16F) {
+        tinyblasGSBE_entry<BM, BN, BK, TM, TN, half>
+            <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
+               stream>>>(m, n, k,          //
+                         A, lda, strideA,  //
+                         B, ldb, strideB,  //
+                         C, ldc, strideC,  //
+                         batchCount);
+    } else {
+        tinyblasGSBE_entry<BM, BN, BK, TM, TN, float>
+            <<<maxblocks, maxthreads, (sizeof(half) * (BM * BK + BK * BN)),
+               stream>>>(m, n, k,          //
+                         A, lda, strideA,  //
+                         B, ldb, strideB,  //
+                         C, ldc, strideC,  //
+                         batchCount);
+    }
 }
 
 tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t stream,
@@ -495,7 +525,7 @@ tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t stream,
         return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    tinyblasGSBE_wrapper<16, 8, 32, 1, 4>(stream, m, n, k, (const half *)A, lda, strideA,
+    tinyblasGSBE_wrapper<32, 4, 64, 1, 2>(stream, m, n, k, (const half *)A, lda, strideA,
                                      (const half *)B, ldb, strideB, C, Ctype,
                                      ldc, strideC, batchCount);
 
