@@ -70,7 +70,7 @@ int llamafile_gpu_layers(int n_gpu_layers) {
     }
 
     // Apple Metal is safe enough to enable by default.
-    if (n_gpu_layers == -1 && ggml_metal_supported()) {
+    if ((n_gpu_layers < 0 || n_gpu_layers > 1) && ggml_metal_supported()) {
         n_gpu_layers = 1;
     }
 
