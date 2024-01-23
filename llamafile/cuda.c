@@ -891,8 +891,14 @@ static void import_cuda(void) {
         return;
     }
     if (import_cuda_impl()) {
-        tinylog(__func__, ": GPU support successfully linked and loaded\n", NULL);
-        ggml_cuda.supported = true;
+        tinylog(__func__, ": GPU support linked\n", NULL);
+        ggml_cuda.ggml_init_cublas(FLAG_log_disable);
+        if (ggml_cuda.ggml_cublas_loaded()) {
+            tinylog(__func__, ": GPU support loaded\n", NULL);
+            ggml_cuda.supported = true;
+        } else {
+            tinylog(__func__, ": GPU support not possible\n", NULL);
+        }
     } else if (FLAG_gpu == LLAMAFILE_GPU_AMD ||
                FLAG_gpu == LLAMAFILE_GPU_NVIDIA) {
         tinyprint(2, "fatal error: support for --gpu ",
@@ -907,9 +913,9 @@ bool ggml_cuda_supported(void) {
     return ggml_cuda.supported;
 }
 
-GGML_CALL void ggml_init_cublas(void) {
+GGML_CALL void ggml_init_cublas(bool log_disable) {
     if (!ggml_cuda_supported()) return;
-    return ggml_cuda.ggml_init_cublas();
+    return ggml_cuda.ggml_init_cublas(log_disable);
 }
 
 GGML_CALL bool ggml_cublas_loaded(void) {
@@ -1020,12 +1026,12 @@ GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
 
 GGML_CALL ggml_backend_t ggml_backend_reg_cuda_init(const char * params, void * user_data) {
     if (!ggml_cuda_supported()) return 0;
-    ggml_cuda.backend_reg_init(params, user_data);
+    return ggml_cuda.backend_reg_init(params, user_data);
 }
 
 GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_host_buffer_type() {
     if (!ggml_cuda_supported()) return 0;
-    ggml_cuda.ggml_backend_cuda_host_buffer_type();
+    return ggml_cuda.ggml_backend_cuda_host_buffer_type();
 }
 
 int ggml_backend_cuda_reg_devices(void) {

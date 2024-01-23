@@ -51,11 +51,7 @@ const char *llamafile_describe_gpu(void) {
  * Returns true if GPU support is available.
  */
 bool llamafile_gpu_supported(void) {
-    if (ggml_metal_supported()) {
-        return true;
-    }
-    ggml_init_cublas();
-    return ggml_cublas_loaded();
+    return ggml_metal_supported() || ggml_cublas_loaded();
 }
 
 /**

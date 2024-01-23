@@ -5,6 +5,7 @@
 #include "ggml-alloc.h"
 #include "llama.cpp/ggml-metal.h"
 #include "ggml-impl.h"
+#include "llama.cpp/ggml-cuda.h"
 #include "libc/thread/tls.h"
 
 #include <assert.h>
@@ -296,11 +297,16 @@ GGML_CALL static void ggml_backend_registry_init(void) {
     initialized = true;
 
     ggml_backend_register("CPU", ggml_backend_reg_cpu_init, ggml_backend_cpu_buffer_type(), NULL);
-    ggml_backend_register("Metal", ggml_backend_reg_metal_init, ggml_backend_metal_buffer_type(), NULL);
+
+    if (ggml_metal_supported()) {
+        ggml_backend_register("Metal", ggml_backend_reg_metal_init, ggml_backend_metal_buffer_type(), NULL);
+    }
 
     // add forward decls here to avoid including the backend headers
     extern int ggml_backend_cuda_reg_devices(void);
-    ggml_backend_cuda_reg_devices();
+    if (!ggml_metal_supported() && ggml_cublas_loaded()) {
+        ggml_backend_cuda_reg_devices();
+    }
 }
 
 void ggml_backend_register(const char * name, ggml_backend_init_fn init_fn, ggml_backend_buffer_type_t default_buffer_type, void * user_data) {

@@ -32,6 +32,7 @@ SOFTWARE.\"");
 #include "ggml-quants.h"
 #include "ggml-metal.h"
 #include "ggml-cuda.h"
+#include "llamafile/log.h"
 #include "libc/log/backtrace.internal.h"
 
 #include <alloca.h>
@@ -2307,7 +2308,7 @@ struct ggml_context * ggml_init(struct ggml_init_params params) {
             GGML_PRINT_DEBUG("%s: g_state initialized in %f ms\n", __func__, (t_end - t_start)/1000.0f);
         }
 
-        ggml_init_cublas();
+        ggml_init_cublas(FLAG_log_disable);
 #if defined(GGML_USE_CLBLAST)
         ggml_cl_init();
 #endif

@@ -13,7 +13,7 @@ extern "C" {
 #define GGML_CUDA_MAX_DEVICES       16
 
 // Always success. To check if CUDA is actually loaded, use `ggml_cublas_loaded`.
-GGML_API void   ggml_init_cublas(void) GGML_CALL;
+GGML_API void   ggml_init_cublas(bool log_disable) GGML_CALL;
 GGML_API bool   ggml_cuda_supported(void);
 GGML_API void   ggml_cuda_link(const struct ggml_backend_api *) GGML_CALL;
 

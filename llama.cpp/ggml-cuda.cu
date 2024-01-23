@@ -1,5 +1,5 @@
-// -*- mode:cuda;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
-// vi: set et ft=cuda ts=4 sts=4 sw=4 fenc=utf-8 :vi
+// -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
 #include <algorithm>
 #include <assert.h>
@@ -252,6 +252,7 @@
 #define CUBLAS_HANDLE(id) g_cublas_handles[id]
 #endif
 
+static bool FLAG_log_disable;
 static const struct ggml_backend_api *g_backend;
 #define exit g_backend->exit
 #define ggml_is_quantized g_backend->ggml_is_quantized
@@ -7441,10 +7442,18 @@ GGML_CALL bool ggml_cublas_loaded() {
     return g_cublas_loaded;
 }
 
-GGML_CALL void ggml_init_cublas() {
+GGML_CALL void ggml_init_cublas(bool log_disable) {
     static bool initialized = false;
+    FLAG_log_disable = log_disable;
 
     if (!initialized) {
+
+        // rocblas_initialize() will abort() if no devices exist
+        if (cudaGetDeviceCount(&g_device_count) != cudaSuccess || g_device_count == 0) {
+            initialized = true;
+            g_cublas_loaded = false;
+            return;
+        }
 
 #ifdef __HIP_PLATFORM_AMD__
 #ifndef GGML_USE_TINYBLAS
@@ -7463,6 +7472,7 @@ GGML_CALL void ggml_init_cublas() {
 
         GGML_ASSERT(g_device_count <= GGML_CUDA_MAX_DEVICES);
         int64_t total_vram = 0;
+        if (!FLAG_log_disable) {
 #if defined(GGML_CUDA_FORCE_MMQ)
         fprintf(stderr, "%s: GGML_CUDA_FORCE_MMQ:   yes\n", __func__);
 #else
@@ -7474,6 +7484,7 @@ GGML_CALL void ggml_init_cublas() {
         fprintf(stderr, "%s: CUDA_USE_TENSOR_CORES: no\n", __func__);
 #endif
         fprintf(stderr, "%s: found %d " GGML_CUDA_NAME " devices:\n", __func__, g_device_count);
+        }
         for (int id = 0; id < g_device_count; ++id) {
             int device_vmm = 0;
 
@@ -7494,7 +7505,9 @@ GGML_CALL void ggml_init_cublas() {
 
             cudaDeviceProp prop;
             CUDA_CHECK(cudaGetDeviceProperties(&prop, id));
+            if (!FLAG_log_disable) {
             fprintf(stderr, "  Device %d: %s, compute capability %d.%d, VMM: %s\n", id, prop.name, prop.major, prop.minor, device_vmm ? "yes" : "no");
+            }
 
             g_tensor_split[id] = total_vram;
             total_vram += prop.totalGlobalMem;
@@ -10075,7 +10088,9 @@ GGML_CALL void ggml_cuda_set_main_device(const int main_device) {
         g_main_device = main_device;
         cudaDeviceProp prop;
         CUDA_CHECK(cudaGetDeviceProperties(&prop, g_main_device));
+        if (!FLAG_log_disable) {
         fprintf(stderr, "%s: using device %d (%s) as main device\n", __func__, g_main_device, prop.name);
+        }
     }
 }
 
@@ -10112,7 +10127,9 @@ GGML_CALL bool ggml_cuda_compute_forward(struct ggml_compute_params * params, st
     if (tensor->op == GGML_OP_MUL_MAT) {
         if (tensor->src[0]->ne[3] != tensor->src[1]->ne[3]) {
 #ifndef NDEBUG
+        if (!FLAG_log_disable) {
             fprintf(stderr, "%s: cannot compute %s: src0->ne[3] = %" PRId64 ", src1->ne[3] = %" PRId64 " - fallback to CPU\n", __func__, tensor->name, tensor->src[0]->ne[3], tensor->src[1]->ne[3]);
+        }
 #endif
             return false;
         }
@@ -10765,7 +10782,7 @@ static ggml_backend_i cuda_backend_i = {
 };
 
 GGML_CALL ggml_backend_t ggml_backend_cuda_init(int device) {
-    ggml_init_cublas(); // TODO: remove from ggml.c
+    ggml_init_cublas(FLAG_log_disable); // TODO: remove from ggml.c
 
     if (device < 0 || device >= ggml_cuda_get_device_count()) {
         fprintf(stderr, "%s: error: invalid device %d\n", __func__, device);
