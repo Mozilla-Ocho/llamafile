@@ -18,9 +18,10 @@ extern "C" {
     typedef void * ggml_backend_buffer_type_context_t;
 
     struct ggml_backend_buffer_type_i {
+        const char *          (*GGML_CALL get_name)        (ggml_backend_buffer_type_t buft);
         ggml_backend_buffer_t (*GGML_CALL alloc_buffer)    (ggml_backend_buffer_type_t buft, size_t size);
         size_t                (*GGML_CALL get_alignment)   (ggml_backend_buffer_type_t buft); // tensor alignment
-        size_t                (*GGML_CALL get_alloc_size)  (ggml_backend_buffer_type_t buft, struct ggml_tensor * tensor); // data size needed to allocate the tensor, including padding
+        size_t                (*GGML_CALL get_alloc_size)  (ggml_backend_buffer_type_t buft, const struct ggml_tensor * tensor); // data size needed to allocate the tensor, including padding
         bool                  (*GGML_CALL supports_backend)(ggml_backend_buffer_type_t buft, ggml_backend_t backend); // check if the buffer type is usable by the backend
         // check if tensor data is in host memory
         // should be equivalent to supports_backend(buft, ggml_backend_cpu_init())
@@ -36,16 +37,15 @@ extern "C" {
     typedef void * ggml_backend_buffer_context_t;
 
     struct ggml_backend_buffer_i {
-        void   (*GGML_CALL free_buffer)    (ggml_backend_buffer_t buffer);
-        //void     (*GGML_CALL reset)      (ggml_backend_buffer_t buffer); // reset any internal state due to tensor initialization, such as tensor extras
-        void * (*GGML_CALL get_base)       (ggml_backend_buffer_t buffer);
-        void   (*GGML_CALL init_tensor)    (ggml_backend_buffer_t buffer, struct ggml_tensor * tensor);
-        void   (*GGML_CALL set_tensor)     (ggml_backend_buffer_t buffer,       struct ggml_tensor * tensor, const void * data, size_t offset, size_t size);
-        void   (*GGML_CALL get_tensor)     (ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor,       void * data, size_t offset, size_t size);
-        // (optional) copy tensor between different buffer-type, allow for single-copy tranfers
-        void   (*GGML_CALL cpy_tensor_from)(ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
-        void   (*GGML_CALL cpy_tensor_to)  (ggml_backend_buffer_t buffer, struct ggml_tensor * src, struct ggml_tensor * dst);
-        void   (*GGML_CALL clear)          (ggml_backend_buffer_t buffer, uint8_t value);
+        const char * (*GGML_CALL get_name)   (ggml_backend_buffer_t buffer);
+        void         (*GGML_CALL free_buffer)(ggml_backend_buffer_t buffer);
+        void *       (*GGML_CALL get_base)   (ggml_backend_buffer_t buffer);
+        void         (*GGML_CALL init_tensor)(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor);
+        void         (*GGML_CALL set_tensor) (ggml_backend_buffer_t buffer,       struct ggml_tensor * tensor, const void * data, size_t offset, size_t size);
+        void         (*GGML_CALL get_tensor) (ggml_backend_buffer_t buffer, const struct ggml_tensor * tensor,       void * data, size_t offset, size_t size);
+        bool         (*GGML_CALL cpy_tensor) (ggml_backend_buffer_t buffer, const struct ggml_tensor * src, struct ggml_tensor * dst); // dst is in the buffer, src may be in any buffer
+        void         (*GGML_CALL clear)      (ggml_backend_buffer_t buffer, uint8_t value);
+        void         (*GGML_CALL reset)      (ggml_backend_buffer_t buffer); // reset any internal state due to tensor initialization, such as tensor extras
     };
 
     struct ggml_backend_buffer {
@@ -53,14 +53,17 @@ extern "C" {
         ggml_backend_buffer_type_t    buft;
         ggml_backend_buffer_context_t context;
         size_t size;
+        enum ggml_backend_buffer_usage usage;
     };
 
-    ggml_backend_buffer_t ggml_backend_buffer_init(
+    GGML_CALL ggml_backend_buffer_t ggml_backend_buffer_init(
                    ggml_backend_buffer_type_t      buft,
             struct ggml_backend_buffer_i           iface,
                    ggml_backend_buffer_context_t   context,
-                   size_t                          size) GGML_CALL;
+                   size_t                          size);
 
+    // do not use directly, use ggml_backend_tensor_copy instead
+    bool ggml_backend_buffer_copy_tensor(const struct ggml_tensor * src, struct ggml_tensor * dst);
 
     //
     // Backend
@@ -76,22 +79,20 @@ extern "C" {
         // buffer allocation
         ggml_backend_buffer_type_t (*GGML_CALL get_default_buffer_type)(ggml_backend_t backend);
 
-        // (optional) asynchroneous tensor data access
+        // (optional) asynchronous tensor data access
         void (*GGML_CALL set_tensor_async)(ggml_backend_t backend,       struct ggml_tensor * tensor, const void * data, size_t offset, size_t size);
         void (*GGML_CALL get_tensor_async)(ggml_backend_t backend, const struct ggml_tensor * tensor,       void * data, size_t offset, size_t size);
+        bool (*GGML_CALL cpy_tensor_async)(ggml_backend_t backend, const struct ggml_tensor * src, struct ggml_tensor * dst);
 
-        // (optional) asynchroneous tensor copy
-        void (*GGML_CALL cpy_tensor_from_async)(ggml_backend_t backend, struct ggml_tensor * src, struct ggml_tensor * dst);
-        void (*GGML_CALL cpy_tensor_to_async)  (ggml_backend_t backend, struct ggml_tensor * src, struct ggml_tensor * dst);
-
+        // (optional) complete all pending operations
         void (*GGML_CALL synchronize)(ggml_backend_t backend);
 
         // compute graph with a plan
-        ggml_backend_graph_plan_t (*GGML_CALL graph_plan_create) (ggml_backend_t backend, struct ggml_cgraph * cgraph);
+        ggml_backend_graph_plan_t (*GGML_CALL graph_plan_create) (ggml_backend_t backend, const struct ggml_cgraph * cgraph);
         void                      (*GGML_CALL graph_plan_free)   (ggml_backend_t backend, ggml_backend_graph_plan_t plan);
         void                      (*GGML_CALL graph_plan_compute)(ggml_backend_t backend, ggml_backend_graph_plan_t plan);
 
-        // compute graph without a plan
+        // compute graph without a plan (async)
         bool (*GGML_CALL graph_compute)(ggml_backend_t backend, struct ggml_cgraph * cgraph);
 
         // check if the backend supports an operation
@@ -104,14 +105,13 @@ extern "C" {
         ggml_backend_context_t context;
     };
 
-
     //
     // Backend registry
     //
 
     typedef ggml_backend_t (*GGML_CALL ggml_backend_init_fn)(const char * params, void * user_data);
 
-    void ggml_backend_register(const char * name, ggml_backend_init_fn init_fn, ggml_backend_buffer_type_t default_buffer_type, void * user_data);
+    GGML_CALL void ggml_backend_register(const char * name, ggml_backend_init_fn init_fn, ggml_backend_buffer_type_t default_buffer_type, void * user_data);
 
     //
     // GGML Backend API
@@ -121,10 +121,13 @@ extern "C" {
     //
 
     struct ggml_backend_api {
+        bool *FLAG_log_disable;
         void (*GGML_CALL exit)(int);
         void (*GGML_CALL free)(void *);
         void *(*GGML_CALL malloc)(size_t);
+        void (*GGML_CALL ggml_backend_register)(const char *, ggml_backend_init_fn, ggml_backend_buffer_type_t, void *);
         ggml_backend_buffer_t (*GGML_CALL ggml_backend_buffer_init)(ggml_backend_buffer_type_t, struct ggml_backend_buffer_i, ggml_backend_buffer_context_t, size_t);
+        bool (*GGML_CALL ggml_backend_buffer_is_host)(ggml_backend_buffer_t);
         ggml_backend_buffer_t (*GGML_CALL ggml_backend_cpu_buffer_from_ptr)(void *, size_t);
         ggml_backend_buffer_type_t (*GGML_CALL ggml_backend_cpu_buffer_type)(void);
         size_t (*GGML_CALL ggml_backend_buft_get_alloc_size)(ggml_backend_buffer_type_t, struct ggml_tensor *);

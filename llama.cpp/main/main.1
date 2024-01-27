@@ -84,10 +84,24 @@ Number of threads to use during generation.
 .Pp
 Default: $(nproc)/2
 .It Fl tb Ar N , Fl Fl threads-batch Ar N
-Number of threads to use during batch and prompt processing.
+Set the number of threads to use during batch and prompt processing. In
+some systems, it is beneficial to use a higher number of threads during
+batch processing than during generation. If not specified, the number of
+threads used for batch processing will be the same as the number of
+threads used for generation.
 .Pp
 Default: Same as
 .Fl Fl threads
+.It Fl td Ar N , Fl Fl threads-draft Ar N
+Number of threads to use during generation.
+.Pp
+Default: Same as
+.Fl Fl threads
+.It Fl tbd Ar N , Fl Fl threads-batch-draft Ar N
+Number of threads to use during batch and prompt processing.
+.Pp
+Default: Same as
+.Fl Fl threads-draft
 .It Fl Fl in-prefix-bos
 Prefix BOS to user inputs, preceding the
 .Fl Fl in-prefix
@@ -452,8 +466,30 @@ Never use GPU and instead use CPU inference. This setting is implied by
 Number of layers to store in VRAM.
 .It Fl ngld Ar N , Fl Fl n-gpu-layers-draft Ar N
 Number of layers to store in VRAM for the draft model.
+.It Fl sm Ar SPLIT_MODE , Fl Fl split-mode Ar SPLIT_MODE
+How to split the model across multiple GPUs, one of:
+.Bl -dash -compact
+.It
+none: use one GPU only
+.It
+layer (default): split layers and KV across GPUs
+.It
+row: split rows across GPUs
+.El
 .It Fl ts Ar SPLIT , Fl Fl tensor-split Ar SPLIT
-How to split tensors across multiple GPUs, comma-separated list of proportions, e.g. 3,1
+
+When using multiple GPUs this option controls how large tensors should
+be split across all GPUs.
+.Ar SPLIT
+is a comma-separated list of non-negative values that assigns the
+proportion of data that each GPU should get in order. For example,
+\[dq]3,2\[dq] will assign 60% of the data to GPU 0 and 40% to GPU 1. By
+default the data is split in proportion to VRAM but this may not be
+optimal for performance. Requires cuBLAS.
+
+How to split tensors across multiple GPUs, comma-separated list of
+proportions, e.g. 3,1
+
 .It Fl mg Ar i , Fl Fl main-gpu Ar i
 The GPU to use for scratch and small tensors.
 .It Fl nommq , Fl Fl no-mul-mat-q
@@ -495,6 +531,37 @@ Default: 1
 Group-attention width.
 .Pp
 Default: 512
+.It Fl bf Ar FNAME , Fl Fl binary-file Ar FNAME
+Binary file containing multiple choice tasks.
+.It Fl Fl winogrande
+Compute Winogrande score over random tasks from datafile supplied by the
+.Fl f
+flag.
+.It Fl Fl winogrande-tasks Ar N
+Number of tasks to use when computing the Winogrande score.
+.Pp
+Default: 0
+.It Fl Fl multiple-choice
+Compute multiple choice score over random tasks from datafile supplied
+by the
+.Fl f
+flag.
+.It Fl Fl multiple-choice-tasks Ar N
+Number of tasks to use when computing the multiple choice score.
+.Pp
+Default: 0
+.It Fl Fl kl-divergence
+Computes KL-divergence to logits provided via the
+.Fl Fl kl-divergence-base
+flag.
+.It Fl Fl save-all-logits Ar FNAME , Fl Fl kl-divergence-base Ar FNAME
+Save logits to filename.
+.It Fl ptc Ar N , Fl Fl print-token-count Ar N
+Print token count every
+.Ar N
+tokens.
+.Pp
+Default: -1
 .El
 .Sh CLI OPTIONS
 The following options may be specified when
@@ -532,7 +599,7 @@ generating text. For example, the grammar:
 .Pp
 will force the LLM to only output yes or no before exiting. This is
 useful for shell scripts when the
-.Fl Fl silent-prompt
+.Fl Fl no-display-prompt
 flag is also supplied.
 .It Fl Fl grammar-file Ar FNAME
 File to read grammar from.
@@ -587,7 +654,7 @@ flag to add a space or any other characters after the reverse prompt.
 .It Fl Fl color
 Enable colorized output to differentiate visually distinguishing between
 prompts, user input, and generated text.
-.It Fl Fl silent-prompt
+.It Fl Fl no-display-prompt , Fl Fl silent-prompt
 Don't echo the prompt itself to standard output.
 .It Fl Fl multiline-input
 Allows you to write or paste multiple lines without ending each in '\[rs]'.
@@ -715,7 +782,7 @@ Here's an example of how you can use llamafile to summarize HTML URLs:
       -c 0 \[rs]
       --temp 0 \[rs]
       -n 500 \[rs]
-      --silent-prompt 2>/dev/null
+      --no-display-prompt 2>/dev/null
 .Ed
 .Pp
 Here's how you can use llamafile to describe a jpg/png/gif/bmp image:
@@ -725,7 +792,7 @@ llamafile --temp 0 \[rs]
   -m llava-v1.5-7b-Q4_K.gguf \[rs]
   --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \[rs]
   -e -p '### User: What do you see?\[rs]n### Assistant: ' \[rs]
-  --silent-prompt 2>/dev/null
+  --no-display-prompt 2>/dev/null
 .Ed
 .Pp
 If you wanted to write a script to rename all your image files, you
@@ -737,7 +804,7 @@ llamafile --temp 0 \[rs]
     --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \[rs]
     --grammar 'root ::= [a-z]+ (" " [a-z]+)+' \[rs]
     -e -p '### User: The image has...\[rs]n### Assistant: ' \[rs]
-    --silent-prompt 2>/dev/null |
+    --no-display-prompt 2>/dev/null |
   sed -e's/ /_/g' -e's/$/.jpg/'
 three_baby_lemurs_on_the_back_of_an_adult_lemur.jpg
 .Ed

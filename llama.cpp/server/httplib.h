@@ -2227,18 +2227,12 @@ inline std::string decode_url(const std::string &s,
 }
 
 inline void read_file(const std::string &path, std::string &out) {
-  out.resize(0);
-  int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
-  if (fd != -1) {
-    ssize_t size = lseek(fd, 0, SEEK_END);
-    if (size != -1) {
-      out.resize(static_cast<size_t>(size));
-      ssize_t got = pread(fd, &out[0], size, 0);
-      if (got == -1) got = 0;
-      out.resize(static_cast<size_t>(got));
-    }
-    close(fd);
-  }
+  std::ifstream fs(path, std::ios_base::binary);
+  fs.seekg(0, std::ios_base::end);
+  auto size = fs.tellg();
+  fs.seekg(0);
+  out.resize(static_cast<size_t>(size));
+  fs.read(&out[0], static_cast<std::streamsize>(size));
 }
 
 inline std::string file_extension(const std::string &path) {

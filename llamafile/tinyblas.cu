@@ -1,7 +1,7 @@
-// -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
-// vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
-// Copyright 2023 Mozilla Foundation
+// Copyright 2024 Mozilla Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -130,11 +130,10 @@ static __global__ void tinyblasS_entry(int m, int n, int k,
     // each thread handles a sub-matrix of size TM * TN
     for (x = blockIdx.x * BM; x < m; x += jump1) {
         for (y = blockIdx.y * BN; y < n; y += jump2) {
-            matmul_block2d<BM, BN, BK, TM, TN, float, float>(
-                            m, n, k, x, y,  //
-                             A, lda, //
-                             B, ldb, //
-                             C, ldc);
+            matmul_block2d<BM, BN, BK, TM, TN, float, float>(m, n, k, x, y,
+                                                             A, lda,
+                                                             B, ldb,
+                                                             C, ldc);
         }
     }
 }
@@ -183,7 +182,7 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t stream,
         return TINYBLAS_STATUS_NOT_SUPPORTED;
     }
 
-    tinyblasS_wrapper<48, 24, 64, 6, 3>(stream, m, n, k, A, lda, B, ldb, C, ldc);
+    tinyblasS_wrapper<32, 8, 128, 1, 2>(stream, m, n, k, A, lda, B, ldb, C, ldc);
     return TINYBLAS_STATUS_SUCCESS;
 }
 
@@ -201,10 +200,10 @@ static __global__ void tinyblasGE_entry(int m, int n, int k, const half *A,
     // each block handles a sub-matrix of C, of size BM * BN
     for (x = blockIdx.x * BM; x < m; x += jump1) {
         for (y = blockIdx.y * BN; y < n; y += jump2) {
-            matmul_block2d<BM, BN, BK, TM, TN, half, DST>(m, n, k, x, y,  //
-                                       A, lda, //
-                                       B, ldb, //
-                                       (DST *)C, ldc);
+            matmul_block2d<BM, BN, BK, TM, TN, half, DST>(m, n, k, x, y,
+                                                          A, lda,
+                                                          B, ldb,
+                                                          (DST *)C, ldc);
         }
     }
 }
@@ -252,7 +251,7 @@ tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t stream,
     }
 
     tinyblasGE_wrapper<48, 32, 64, 3, 8>(stream, m, n, k, (const half *)A, lda,
-                               (const half *)B, ldb, C, Ctype, ldc);
+                                         (const half *)B, ldb, C, Ctype, ldc);
     return TINYBLAS_STATUS_SUCCESS;
 }
 
@@ -275,10 +274,10 @@ static __global__ void tinyblasGBE_entry(int m, int n, int k,
     for (z = blockIdx.z; z < batchCount; z += jump3) {
         for (x = blockIdx.x * BM; x < m; x += jump1) {
             for (y = blockIdx.y * BN; y < n; y += jump2) {
-                matmul_block2d<BM, BN, BK, TM, TN, half, DST>(m, n, k, x, y,       //
-                                           Aarray[z], lda, //
-                                           Barray[z], ldb, //
-                                           (DST *)(Carray[z]), ldc);
+                matmul_block2d<BM, BN, BK, TM, TN, half, DST>(m, n, k, x, y,
+                                                              Aarray[z], lda,
+                                                              Barray[z], ldb,
+                                                              (DST *)(Carray[z]), ldc);
             }
         }
     }
@@ -332,8 +331,8 @@ tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t stream,
     }
 
     tinyblasGBE_wrapper<48, 32, 64, 3, 8>(stream, m, n, k, (const half **)Aarray, lda,
-                                    (const half **)Barray, ldb, Carray, Ctype,
-                                    ldc, batchCount);
+                                          (const half **)Barray, ldb, Carray, Ctype,
+                                          ldc, batchCount);
     return TINYBLAS_STATUS_SUCCESS;
 }
 
@@ -426,8 +425,8 @@ tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t stream,
     }
 
     tinyblasGSBE_wrapper<32, 4, 64, 1, 2>(stream, m, n, k, (const half *)A, lda, strideA,
-                                     (const half *)B, ldb, strideB, C, Ctype,
-                                     ldc, strideC, batchCount);
+                                          (const half *)B, ldb, strideB, C, Ctype,
+                                          ldc, strideC, batchCount);
 
     return TINYBLAS_STATUS_SUCCESS;
 }
@@ -436,23 +435,9 @@ const char *tinyblasGetStatusString(tinyblasStatus_t err) {
     switch (err) {
         case TINYBLAS_STATUS_SUCCESS:
             return "TINYBLAS_STATUS_SUCCESS";
-        case TINYBLAS_STATUS_NOT_INITIALIZED:
-            return "TINYBLAS_STATUS_NOT_INITIALIZED";
-        case TINYBLAS_STATUS_ALLOC_FAILED:
-            return "TINYBLAS_STATUS_ALLOC_FAILED";
-        case TINYBLAS_STATUS_INVALID_VALUE:
-            return "TINYBLAS_STATUS_INVALID_VALUE";
-        case TINYBLAS_STATUS_ARCH_MISMATCH:
-            return "TINYBLAS_STATUS_ARCH_MISMATCH";
-        case TINYBLAS_STATUS_MAPPING_ERROR:
-            return "TINYBLAS_STATUS_MAPPING_ERROR";
-        case TINYBLAS_STATUS_EXECUTION_FAILED:
-            return "TINYBLAS_STATUS_EXECUTION_FAILED";
-        case TINYBLAS_STATUS_INTERNAL_ERROR:
-            return "TINYBLAS_STATUS_INTERNAL_ERROR";
         case TINYBLAS_STATUS_NOT_SUPPORTED:
             return "TINYBLAS_STATUS_NOT_SUPPORTED";
         default:
-            return "unknown error";
+            return "unknown tinyblas error";
     }
 }

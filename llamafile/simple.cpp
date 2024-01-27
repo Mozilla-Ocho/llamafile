@@ -55,11 +55,10 @@ static bool eval_string(struct llama_context *ctx_llama, const char *str,
 
 int main(int argc, char **argv) {
     gpt_params params;
-    if (!gpt_params_parse(argc, argv, params)) return 1;
-    if (params.prompt.empty()) params.prompt = "The";
     params.n_ctx = 0;
     FLAG_log_disable = true;
-    FLAG_gpu = LLAMAFILE_GPU_AUTO;
+    if (!gpt_params_parse(argc, argv, params)) return 1;
+    if (params.prompt.empty()) params.prompt = "The";
     llama_backend_init(params.numa);
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = llamafile_gpu_layers(35);

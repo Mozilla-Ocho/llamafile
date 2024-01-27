@@ -14,6 +14,7 @@
 #include <map>
 #include <regex>
 #include <stdexcept>
+#include <sstream>
 #include <vector>
 
 #include "clip.h"
@@ -66,6 +67,7 @@ static std::string format(const char * fmt, ...) {
 #define KEY_PATCH_SIZE "clip.vision.patch_size"
 #define KEY_IMAGE_MEAN "clip.vision.image_mean"
 #define KEY_IMAGE_STD "clip.vision.image_std"
+#define KEY_PROJ_TYPE "clip.projector_type"
 
 //
 // tensor name constants
@@ -88,6 +90,21 @@ static std::string format(const char * fmt, ...) {
 #define TN_TEXT_PROJ "text_projection.weight"
 #define TN_VIS_PROJ "visual_projection.weight"
 #define TN_LLAVA_PROJ "mm.%d.%s"
+#define TN_MVLM_PROJ_MLP "mm.model.mlp.%d.%s"
+#define TN_MVLM_PROJ_BLOCK "mm.model.mb_block.%d.block.%d.%s"
+
+
+enum projector_type {
+    PROJECTOR_TYPE_MLP,
+    PROJECTOR_TYPE_LDP,
+    PROJECTOR_TYPE_UNKNOWN,
+};
+
+static std::map<projector_type, std::string> PROJECTOR_TYPE_NAMES = {
+    { PROJECTOR_TYPE_MLP,           "mlp"     },
+    { PROJECTOR_TYPE_LDP,          "ldp"    },
+};
+
 
 //
 // utilities to get data from a gguf file
@@ -125,24 +142,92 @@ static struct ggml_tensor * get_tensor(struct ggml_context * ctx, const std::str
 }
 
 static std::string get_ftype(int ftype) {
-    switch (ftype) {
-    case 0:
-        return "f32";
-    case 1:
-        return "f16";
-    case 2:
-        return "q4_0";
-    case 3:
-        return "q4_1";
-    case 6:
-        return "q5_0";
-    case 7:
-        return "q5_1";
-    case 8:
-        return "q8_0";
-    default:
-        throw std::runtime_error(format("%s: Unrecognized file type: %d\n", __func__, ftype));
+    return ggml_type_name(static_cast<ggml_type>(ftype));
+}
+
+static std::string gguf_data_to_str(enum gguf_type type, const void * data, int i) {
+    switch (type) {
+        case GGUF_TYPE_UINT8:   return std::to_string(((const uint8_t  *)data)[i]);
+        case GGUF_TYPE_INT8:    return std::to_string(((const int8_t   *)data)[i]);
+        case GGUF_TYPE_UINT16:  return std::to_string(((const uint16_t *)data)[i]);
+        case GGUF_TYPE_INT16:   return std::to_string(((const int16_t  *)data)[i]);
+        case GGUF_TYPE_UINT32:  return std::to_string(((const uint32_t *)data)[i]);
+        case GGUF_TYPE_INT32:   return std::to_string(((const int32_t  *)data)[i]);
+        case GGUF_TYPE_UINT64:  return std::to_string(((const uint64_t *)data)[i]);
+        case GGUF_TYPE_INT64:   return std::to_string(((const int64_t  *)data)[i]);
+        case GGUF_TYPE_FLOAT32: return std::to_string(((const float    *)data)[i]);
+        case GGUF_TYPE_FLOAT64: return std::to_string(((const double   *)data)[i]);
+        case GGUF_TYPE_BOOL:    return ((const bool *)data)[i] ? "true" : "false";
+        default:                return format("unknown type %d", type);
     }
+}
+
+
+static void replace_all(std::string & s, const std::string & search, const std::string & replace) {
+    std::string result;
+    for (size_t pos = 0; ; pos += search.length()) {
+        auto new_pos = s.find(search, pos);
+        if (new_pos == std::string::npos) {
+            result += s.substr(pos, s.size() - pos);
+            break;
+        }
+        result += s.substr(pos, new_pos - pos) + replace;
+        pos = new_pos;
+    }
+    s = std::move(result);
+}
+
+static std::string gguf_kv_to_str(const struct gguf_context * ctx_gguf, int i) {
+    const enum gguf_type type = gguf_get_kv_type(ctx_gguf, i);
+
+    switch (type) {
+        case GGUF_TYPE_STRING:
+            return gguf_get_val_str(ctx_gguf, i);
+        case GGUF_TYPE_ARRAY:
+            {
+                const enum gguf_type arr_type = gguf_get_arr_type(ctx_gguf, i);
+                int arr_n = gguf_get_arr_n(ctx_gguf, i);
+                const void * data = gguf_get_arr_data(ctx_gguf, i);
+                std::stringstream ss;
+                ss << "[";
+                for (int j = 0; j < arr_n; j++) {
+                    if (arr_type == GGUF_TYPE_STRING) {
+                        std::string val = gguf_get_arr_str(ctx_gguf, i, j);
+                        // escape quotes
+                        replace_all(val, "\\", "\\\\");
+                        replace_all(val, "\"", "\\\"");
+                        ss << '"' << val << '"';
+                    } else if (arr_type == GGUF_TYPE_ARRAY) {
+                        ss << "???";
+                    } else {
+                        ss << gguf_data_to_str(arr_type, data, j);
+                    }
+                    if (j < arr_n - 1) {
+                        ss << ", ";
+                    }
+                }
+                ss << "]";
+                return ss.str();
+            }
+        default:
+            return gguf_data_to_str(type, gguf_get_val_data(ctx_gguf, i), 0);
+    }
+}
+
+static void print_tensor_info(const ggml_tensor* tensor, const char* prefix = "") {
+    size_t tensor_size = ggml_nbytes(tensor);
+    tinylogf("%s: n_dims = %d, name = %s, tensor_size=%zu, shape:[%" PRId64 ", %" PRId64 ", %" PRId64 ", %" PRId64 "], type = %s\n",
+             prefix, ggml_n_dims(tensor), tensor->name, tensor_size,
+             tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3], ggml_type_name(tensor->type));
+}
+
+static projector_type clip_projector_type_from_string(const std::string & name) {
+    for (const auto & kv : PROJECTOR_TYPE_NAMES) { // NOLINT
+        if (kv.second == name) {
+            return kv.first;
+        }
+    }
+    return PROJECTOR_TYPE_UNKNOWN;
 }
 
 //
@@ -221,6 +306,32 @@ struct clip_vision_model {
     struct ggml_tensor * mm_0_b;
     struct ggml_tensor * mm_2_w;
     struct ggml_tensor * mm_2_b;
+
+    // MobileVLM projection
+    struct ggml_tensor * mm_model_mlp_1_w;
+    struct ggml_tensor * mm_model_mlp_1_b;
+    struct ggml_tensor * mm_model_mlp_3_w;
+    struct ggml_tensor * mm_model_mlp_3_b;
+    struct ggml_tensor * mm_model_block_1_block_0_0_w;
+    struct ggml_tensor * mm_model_block_1_block_0_1_w;
+    struct ggml_tensor * mm_model_block_1_block_0_1_b;
+    struct ggml_tensor * mm_model_block_1_block_1_fc1_w;
+    struct ggml_tensor * mm_model_block_1_block_1_fc1_b;
+    struct ggml_tensor * mm_model_block_1_block_1_fc2_w;
+    struct ggml_tensor * mm_model_block_1_block_1_fc2_b;
+    struct ggml_tensor * mm_model_block_1_block_2_0_w;
+    struct ggml_tensor * mm_model_block_1_block_2_1_w;
+    struct ggml_tensor * mm_model_block_1_block_2_1_b;
+    struct ggml_tensor * mm_model_block_2_block_0_0_w;
+    struct ggml_tensor * mm_model_block_2_block_0_1_w;
+    struct ggml_tensor * mm_model_block_2_block_0_1_b;
+    struct ggml_tensor * mm_model_block_2_block_1_fc1_w;
+    struct ggml_tensor * mm_model_block_2_block_1_fc1_b;
+    struct ggml_tensor * mm_model_block_2_block_1_fc2_w;
+    struct ggml_tensor * mm_model_block_2_block_1_fc2_b;
+    struct ggml_tensor * mm_model_block_2_block_2_0_w;
+    struct ggml_tensor * mm_model_block_2_block_2_1_w;
+    struct ggml_tensor * mm_model_block_2_block_2_1_b;
 };
 
 struct clip_ctx {
@@ -229,6 +340,7 @@ struct clip_ctx {
     bool has_llava_projector = false;
 
     struct clip_vision_model vision_model;
+    projector_type proj_type = PROJECTOR_TYPE_MLP;
 
     float image_mean[3];
     float image_std[3];
@@ -446,16 +558,135 @@ static ggml_cgraph * clip_image_build_graph(clip_ctx * ctx, const clip_image_f32
             free(patches_data);
         }
 
+        // shape [1, 576, 1024]
+        // ne is whcn, ne = [1024, 576, 1, 1]
         embeddings = ggml_get_rows(ctx0, embeddings, patches);
 
-        // mm projection 0
-        embeddings = ggml_mul_mat(ctx0, model.mm_0_w, embeddings);
-        embeddings = ggml_add(ctx0, embeddings, model.mm_0_b);
+        // print_tensor_info(embeddings, "embeddings");
 
-        embeddings = ggml_gelu(ctx0, embeddings);
+        // llava projector
+        if (ctx->proj_type == PROJECTOR_TYPE_MLP) {
+            embeddings = ggml_mul_mat(ctx0, model.mm_0_w, embeddings);
+            embeddings = ggml_add(ctx0, embeddings, model.mm_0_b);
 
-        embeddings = ggml_mul_mat(ctx0, model.mm_2_w, embeddings);
-        embeddings = ggml_add(ctx0, embeddings, model.mm_2_b);
+            embeddings = ggml_gelu(ctx0, embeddings);
+
+            embeddings = ggml_mul_mat(ctx0, model.mm_2_w, embeddings);
+            embeddings = ggml_add(ctx0, embeddings, model.mm_2_b);
+        }
+        else if (ctx->proj_type == PROJECTOR_TYPE_LDP) {
+            // MobileVLM projector
+            int n_patch = 24;
+            struct ggml_tensor * mlp_1 = ggml_mul_mat(ctx0, model.mm_model_mlp_1_w, embeddings);
+            mlp_1 = ggml_add(ctx0, mlp_1, model.mm_model_mlp_1_b);
+            mlp_1 = ggml_gelu(ctx0, mlp_1);
+            struct ggml_tensor * mlp_3 = ggml_mul_mat(ctx0, model.mm_model_mlp_3_w, mlp_1);
+            mlp_3 = ggml_add(ctx0, mlp_3, model.mm_model_mlp_3_b);
+            // mlp_3 shape = [1, 576, 2048], ne = [2048, 576, 1, 1]
+
+            // block 1
+            struct ggml_tensor * block_1 = nullptr;
+            {
+                // transpose from [1, 576, 2048] --> [1, 2048, 576] --> [1, 2048, 24, 24]
+                mlp_3 = ggml_cont(ctx0, ggml_permute(ctx0, mlp_3, 1, 0, 2, 3));
+                mlp_3 = ggml_reshape_4d(ctx0, mlp_3, n_patch, n_patch, mlp_3->ne[1], mlp_3->ne[2]);
+                // stride = 1, padding = 1, bias is nullptr
+                block_1 = ggml_conv_depthwise_2d(ctx0, model.mm_model_block_1_block_0_0_w, mlp_3, 1, 1, 1, 1, 1, 1);
+
+                // layer norm
+                // // block_1 shape = [1, 2048, 24, 24], ne = [24, 24, 2048, 1]
+                block_1 = ggml_cont(ctx0, ggml_permute(ctx0, block_1, 1, 2, 0, 3));
+                // block_1 shape = [1, 24, 24, 2048], ne = [2048, 24, 24, 1]
+                block_1 = ggml_norm(ctx0, block_1, eps);
+                block_1 = ggml_add(ctx0, ggml_mul(ctx0, block_1, model.mm_model_block_1_block_0_1_w), model.mm_model_block_1_block_0_1_b);
+                block_1 = ggml_cont(ctx0, ggml_permute(ctx0, block_1, 2, 0, 1, 3));
+
+                // block_1 shape = [1, 2048, 24, 24], ne = [24, 24, 2048, 1]
+                // hardswish
+                struct ggml_tensor * block_1_hw = ggml_hardswish(ctx0, block_1);
+
+                block_1 = ggml_pool_2d(ctx0, block_1_hw, GGML_OP_POOL_AVG, block_1_hw->ne[0], block_1_hw->ne[1], block_1_hw->ne[0], block_1_hw->ne[1], 0, 0);
+                // block_1 shape = [1, 2048, 1, 1], ne = [1, 1, 2048, 1]
+                // pointwise conv
+                block_1 = ggml_reshape_2d(ctx0, block_1, block_1->ne[0]*block_1->ne[1]*block_1->ne[2], block_1->ne[3]);
+                block_1 = ggml_mul_mat(ctx0, model.mm_model_block_1_block_1_fc1_w, block_1);
+                block_1 = ggml_add(ctx0, block_1, model.mm_model_block_1_block_1_fc1_b);
+                block_1 = ggml_relu(ctx0, block_1);
+                block_1 = ggml_mul_mat(ctx0, model.mm_model_block_1_block_1_fc2_w, block_1);
+                block_1 = ggml_add(ctx0, block_1, model.mm_model_block_1_block_1_fc2_b);
+                block_1 = ggml_hardsigmoid(ctx0, block_1);
+                // block_1_hw shape = [1, 2048, 24, 24], ne = [24, 24, 2048, 1], block_1 shape = [1, 2048], ne = [2048, 1, 1, 1]
+                block_1 = ggml_reshape_4d(ctx0, block_1, 1, 1, block_1->ne[0], block_1->ne[1]);
+                block_1 = ggml_mul(ctx0, block_1_hw, block_1);
+
+                int w = block_1->ne[0], h = block_1->ne[1];
+                block_1 = ggml_reshape_3d(ctx0, block_1, w*h, block_1->ne[2], block_1->ne[3]);
+                block_1 = ggml_cont(ctx0, ggml_permute(ctx0, block_1, 1, 0, 2, 3));
+
+                // block_1 shape = [1, 24*24, 2048], ne = [24*24, 2048, 1]
+                block_1 = ggml_mul_mat(ctx0, model.mm_model_block_1_block_2_0_w, block_1);
+                block_1 = ggml_reshape_4d(ctx0, block_1, block_1->ne[0], w, h, block_1->ne[3]);
+
+                // block_1 shape = [1, 24, 24, 2048], ne = [2048, 24, 24, 1]
+                block_1 = ggml_norm(ctx0, block_1, eps);
+                block_1 = ggml_add(ctx0, ggml_mul(ctx0, block_1, model.mm_model_block_1_block_2_1_w), model.mm_model_block_1_block_2_1_b);
+                block_1 = ggml_cont(ctx0, ggml_permute(ctx0, block_1, 2, 0, 1, 3));
+                // block1 shape = [1, 2048, 24, 24], ne = [24, 24, 2048, 1]
+                // residual
+                block_1 = ggml_add(ctx0, mlp_3, block_1);
+            }
+
+            // block_2
+            {
+                // stride = 2
+                block_1 = ggml_conv_depthwise_2d(ctx0, model.mm_model_block_2_block_0_0_w, block_1, 2, 2, 1, 1, 1, 1);
+
+                // block_1 shape = [1, 2048, 12, 12], ne = [12, 12, 2048, 1]
+                // layer norm
+                block_1 = ggml_cont(ctx0, ggml_permute(ctx0, block_1, 1, 2, 0, 3));
+                // block_1 shape = [1, 12, 12, 2048], ne = [2048, 12, 12, 1]
+                block_1 = ggml_norm(ctx0, block_1, eps);
+                block_1 = ggml_add(ctx0, ggml_mul(ctx0, block_1, model.mm_model_block_2_block_0_1_w), model.mm_model_block_2_block_0_1_b);
+                block_1 = ggml_cont(ctx0, ggml_permute(ctx0, block_1, 2, 0, 1, 3));
+                // block_1 shape = [1, 2048, 12, 12], ne = [12, 12, 2048, 1]
+                // hardswish
+                struct ggml_tensor * block_1_hw = ggml_hardswish(ctx0, block_1);
+
+                // not sure the parameters is right for globalAvgPooling
+                block_1 = ggml_pool_2d(ctx0, block_1_hw, GGML_OP_POOL_AVG, block_1_hw->ne[0], block_1_hw->ne[1], block_1_hw->ne[0], block_1_hw->ne[1], 0, 0);
+                // block_1 shape = [1, 2048, 1, 1], ne = [1, 1, 2048, 1]
+                // pointwise conv
+                block_1 = ggml_reshape_2d(ctx0, block_1, block_1->ne[0]*block_1->ne[1]*block_1->ne[2], block_1->ne[3]);
+                block_1 = ggml_mul_mat(ctx0, model.mm_model_block_2_block_1_fc1_w, block_1);
+                block_1 = ggml_add(ctx0, block_1, model.mm_model_block_2_block_1_fc1_b);
+                block_1 = ggml_relu(ctx0, block_1);
+                block_1 = ggml_mul_mat(ctx0, model.mm_model_block_2_block_1_fc2_w, block_1);
+                block_1 = ggml_add(ctx0, block_1, model.mm_model_block_2_block_1_fc2_b);
+                block_1 = ggml_hardsigmoid(ctx0, block_1);
+
+                // block_1_hw shape = [1, 2048, 12, 12], ne = [12, 12, 2048, 1], block_1 shape = [1, 2048, 1, 1], ne = [1, 1, 2048, 1]
+                block_1 = ggml_reshape_4d(ctx0, block_1, 1, 1, block_1->ne[0], block_1->ne[1]);
+                block_1 = ggml_mul(ctx0, block_1_hw, block_1);
+
+                int w = block_1->ne[0], h = block_1->ne[1];
+                block_1 = ggml_reshape_3d(ctx0, block_1, w*h, block_1->ne[2], block_1->ne[3]);
+                block_1 = ggml_cont(ctx0, ggml_permute(ctx0, block_1, 1, 0, 2, 3));
+                // block_1 shape = [1, 24*24, 2048], ne = [24*24, 2048, 1]
+                block_1 = ggml_mul_mat(ctx0, model.mm_model_block_2_block_2_0_w, block_1);
+                block_1 = ggml_reshape_4d(ctx0, block_1, block_1->ne[0], w, h, block_1->ne[3]);
+
+
+                // block_1 shape = [1, 12, 12, 2048], ne = [2048, 12, 12, 1]
+                block_1 = ggml_norm(ctx0, block_1, eps);
+                block_1 = ggml_add(ctx0, ggml_mul(ctx0, block_1, model.mm_model_block_2_block_2_1_w), model.mm_model_block_2_block_2_1_b);
+                block_1 = ggml_reshape_3d(ctx0, block_1, block_1->ne[0], block_1->ne[1] * block_1->ne[2], block_1->ne[3]);
+                // block_1 shape = [1, 144, 2048], ne = [2048, 144, 1]
+            }
+            embeddings = block_1;
+        }
+        else {
+            GGML_ASSERT(false);
+        }
     }
 
     // build the graph
@@ -506,16 +737,47 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         tinylogf("\n");
     }
     const int n_tensors = gguf_get_n_tensors(ctx);
+
     // kv
-    if (verbosity >= 3) {
-        const int n_kv = gguf_get_n_kv(ctx);
+    const int n_kv = gguf_get_n_kv(ctx);
+    tinylogf("%s: loaded meta data with %d key-value pairs and %d tensors from %s\n",
+        __func__, n_kv, n_tensors, fname);
+    {
+        std::map<enum ggml_type, uint32_t> n_type;
 
-        for (int i = 0; i < n_kv; ++i) {
-            const char * key = gguf_get_key(ctx, i);
+        for (int i = 0; i < n_tensors; i++) {
+            enum ggml_type type = gguf_get_tensor_type(ctx, i);
 
-            tinylogf("%s: kv[%d]: key = %s\n", __func__, i, key);
+            n_type[type]++;
         }
-        tinylogf("\n");
+
+        tinylogf("%s: Dumping metadata keys/values. Note: KV overrides do not apply in this output.\n", __func__);
+        for (int i = 0; i < n_kv; i++) {
+            const char * name           = gguf_get_key(ctx, i);
+            const enum gguf_type type   = gguf_get_kv_type(ctx, i);
+            const std::string type_name =
+                type == GGUF_TYPE_ARRAY
+                ? format("%s[%s,%d]", gguf_type_name(type), gguf_type_name(gguf_get_arr_type(ctx, i)), gguf_get_arr_n(ctx, i))
+                : gguf_type_name(type);
+
+            std::string value          = gguf_kv_to_str(ctx, i);
+            const size_t MAX_VALUE_LEN = 40;
+            if (value.size() > MAX_VALUE_LEN) {
+                value = format("%s...", value.substr(0, MAX_VALUE_LEN - 3).c_str());
+            }
+            replace_all(value, "\n", "\\n");
+
+            tinylogf("%s: - kv %3d: %42s %-16s = %s\n", __func__, i, name, type_name.c_str(), value.c_str());
+        }
+
+        // print type counts
+        for (auto & kv : n_type) {
+            if (kv.second == 0) {
+                continue;
+            }
+
+            tinylogf("%s: - type %4s: %4d tensors\n", __func__, ggml_type_name(kv.first), kv.second);
+        }
     }
 
     // data
@@ -524,12 +786,13 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         for (int i = 0; i < n_tensors; ++i) {
             const char * name = gguf_get_tensor_name(ctx, i);
             const size_t offset = gguf_get_tensor_offset(ctx, i);
+            enum ggml_type type = gguf_get_tensor_type(ctx, i);
             struct ggml_tensor * cur = ggml_get_tensor(meta, name);
             size_t tensor_size = ggml_nbytes(cur);
             buffer_size += tensor_size;
             if (verbosity >= 3) {
-                tinylogf("%s: tensor[%d]: n_dims = %d, name = %s, tensor_size=%zu, offset=%zu\n", __func__, i,
-                       ggml_n_dims(cur), cur->name, tensor_size, offset);
+                tinylogf("%s: tensor[%d]: n_dims = %d, name = %s, tensor_size=%zu, offset=%zu, shape:[%" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "], type = %s\n",
+                       __func__, i, ggml_n_dims(cur), cur->name, tensor_size, offset, cur->ne[0], cur->ne[1], cur->ne[2], cur->ne[3], ggml_type_name(type));
             }
         }
     }
@@ -538,16 +801,23 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
     clip_ctx * new_clip = new clip_ctx;
 
-    if ((new_clip->backend = ggml_backend_cuda_init(0))) {
-        tinylogf("%s: CLIP using CUDA backend\n", __func__);
+    // update projector type
+    {
+        int idx = gguf_find_key(ctx, KEY_PROJ_TYPE);
+        if (idx != -1) {
+            const std::string proj_type = gguf_get_val_str(ctx, idx);
+            new_clip->proj_type = clip_projector_type_from_string(proj_type);
+        }
+        else {
+            new_clip->proj_type = PROJECTOR_TYPE_MLP;
+        }
     }
 
-    if (!new_clip->backend &&
-        (new_clip->backend = ggml_backend_metal_init())) {
+    if ((new_clip->backend = ggml_backend_metal_init())) {
         tinylogf("%s: CLIP using Metal backend\n", __func__);
-    }
-
-    if (!new_clip->backend) {
+    } else if ((new_clip->backend = ggml_backend_cuda_init(0))) {
+        tinylogf("%s: CLIP using CUDA backend\n", __func__);
+    } else {
         new_clip->backend = ggml_backend_cpu_init();
         tinylogf("%s: CLIP using CPU backend\n", __func__);
     }
@@ -594,7 +864,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
 
         new_clip->ctx_data = ggml_init(params);
         if (!new_clip->ctx_data) {
-            tinylogf("%s: ggml_init() failed\n", __func__);
+            fprintf(stderr, "%s: ggml_init() failed\n", __func__);
             clip_free(new_clip);
             return nullptr;
         }
@@ -680,10 +950,45 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         vision_model.position_embeddings = get_tensor(new_clip->ctx_data, format(TN_POS_EMBD, "v"));
         vision_model.pre_ln_w            = get_tensor(new_clip->ctx_data, format(TN_LN_PRE, "v", "weight"));
         vision_model.pre_ln_b            = get_tensor(new_clip->ctx_data, format(TN_LN_PRE, "v", "bias"));
-        vision_model.mm_0_w              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 0, "weight"));
-        vision_model.mm_0_b              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 0, "bias"));
-        vision_model.mm_2_w              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 2, "weight"));
-        vision_model.mm_2_b              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 2, "bias"));
+
+        // LLaVA projection
+        if (new_clip->proj_type == PROJECTOR_TYPE_MLP) {
+            vision_model.mm_0_w              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 0, "weight"));
+            vision_model.mm_0_b              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 0, "bias"));
+            vision_model.mm_2_w              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 2, "weight"));
+            vision_model.mm_2_b              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 2, "bias"));
+        }
+        else if (new_clip->proj_type == PROJECTOR_TYPE_LDP) {
+            // MobileVLM projection
+            vision_model.mm_model_mlp_1_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_MLP, 1, "weight"));
+            vision_model.mm_model_mlp_1_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_MLP, 1, "bias"));
+            vision_model.mm_model_mlp_3_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_MLP, 3, "weight"));
+            vision_model.mm_model_mlp_3_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_MLP, 3, "bias"));
+            vision_model.mm_model_block_1_block_0_0_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 0, "0.weight"));
+            vision_model.mm_model_block_1_block_0_1_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 0, "1.weight"));
+            vision_model.mm_model_block_1_block_0_1_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 0, "1.bias"));
+            vision_model.mm_model_block_1_block_1_fc1_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 1, "fc1.weight"));
+            vision_model.mm_model_block_1_block_1_fc1_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 1, "fc1.bias"));
+            vision_model.mm_model_block_1_block_1_fc2_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 1, "fc2.weight"));
+            vision_model.mm_model_block_1_block_1_fc2_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 1, "fc2.bias"));
+            vision_model.mm_model_block_1_block_2_0_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 2, "0.weight"));
+            vision_model.mm_model_block_1_block_2_1_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 2, "1.weight"));
+            vision_model.mm_model_block_1_block_2_1_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 1, 2, "1.bias"));
+            vision_model.mm_model_block_2_block_0_0_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 0, "0.weight"));
+            vision_model.mm_model_block_2_block_0_1_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 0, "1.weight"));
+            vision_model.mm_model_block_2_block_0_1_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 0, "1.bias"));
+            vision_model.mm_model_block_2_block_1_fc1_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 1, "fc1.weight"));
+            vision_model.mm_model_block_2_block_1_fc1_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 1, "fc1.bias"));
+            vision_model.mm_model_block_2_block_1_fc2_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 1, "fc2.weight"));
+            vision_model.mm_model_block_2_block_1_fc2_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 1, "fc2.bias"));
+            vision_model.mm_model_block_2_block_2_0_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 2, "0.weight"));
+            vision_model.mm_model_block_2_block_2_1_w = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 2, "1.weight"));
+            vision_model.mm_model_block_2_block_2_1_b = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_BLOCK, 2, 2, "1.bias"));
+        }
+        else {
+            std::string proj_type = PROJECTOR_TYPE_NAMES[new_clip->proj_type];
+            throw std::runtime_error(format("%s: don't support projector with: %s currently\n", __func__, proj_type.c_str()));
+        }
 
         vision_model.layers.resize(hparams.n_layer);
         for (int il = 0; il < hparams.n_layer; ++il) {
@@ -933,26 +1238,8 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
 
     ggml_type type = GGML_TYPE_Q4_1;
 
-    switch (itype) {
-        case 2:
-            type = GGML_TYPE_Q4_0;
-            break;
-        case 3:
-            type = GGML_TYPE_Q4_1;
-            break;
-        case 6:
-            type = GGML_TYPE_Q5_0;
-            break;
-        case 7:
-            type = GGML_TYPE_Q5_1;
-            break;
-        case 8:
-            type = GGML_TYPE_Q8_0;
-            break;
-        default:
-            fprintf(stderr, "%s: invalid quantization type %d\n", __func__, itype);
-            return false;
-    };
+    assert(itype < GGML_TYPE_COUNT);
+    type = static_cast<ggml_type>(itype);
 
     auto * ctx_clip = clip_model_load(fname_inp, 2);
 
@@ -1012,6 +1299,10 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
 
         if (quantize) {
             new_type = type;
+            if (new_type >= GGML_TYPE_Q2_K && name.find("embd") != std::string::npos) {
+                new_type = GGML_TYPE_Q8_0; // ggml_get_rows needs non K type
+                // fprintf(stderr, "%s: quantizing %s to %s\n", __func__, name.c_str(), ggml_type_name(new_type));
+            }
             const size_t n_elms = ggml_nelements(cur);
             float * f32_data;
 
@@ -1056,6 +1347,21 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
                 case GGML_TYPE_Q8_0: {
                     new_size = ggml_quantize_q8_0(f32_data, new_data, n_elms, cur->ne[0], hist_cur.data());
                 } break;
+                case GGML_TYPE_Q2_K: {
+                    new_size = ggml_quantize_q2_K(f32_data, new_data, n_elms, cur->ne[0], hist_cur.data());
+                } break;
+                case GGML_TYPE_Q3_K: {
+                    new_size = ggml_quantize_q3_K(f32_data, new_data, n_elms, cur->ne[0], hist_cur.data());
+                } break;
+                case GGML_TYPE_Q4_K: {
+                    new_size = ggml_quantize_q4_K(f32_data, new_data, n_elms, cur->ne[0], hist_cur.data());
+                } break;
+                case GGML_TYPE_Q5_K: {
+                    new_size = ggml_quantize_q5_K(f32_data, new_data, n_elms, cur->ne[0], hist_cur.data());
+                } break;
+                case GGML_TYPE_Q6_K: {
+                    new_size = ggml_quantize_q6_K(f32_data, new_data, n_elms, cur->ne[0], hist_cur.data());
+                } break;
                 default: {
                     fprintf(stderr, "%s: unsupported quantization type %d\n", __func__, new_type);
                     return false;
@@ -1082,7 +1388,7 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
         }
 
         tinylogf("%s: n_dims = %d | quantize=%d | size = %f MB -> %f MB\n", name.c_str(), ggml_n_dims(cur), quantize,
-                orig_size / 1024.0 / 1024.0, new_size / 1024.0 / 1024.0);
+               orig_size / 1024.0 / 1024.0, new_size / 1024.0 / 1024.0);
     }
 
     // go back to beginning of file and write the updated metadata
@@ -1116,13 +1422,25 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
 }
 
 int clip_n_mmproj_embd(const struct clip_ctx * ctx) {
-    return ctx->vision_model.mm_2_b->ne[0];
+    if (ctx->proj_type == PROJECTOR_TYPE_LDP) {
+        return ctx->vision_model.mm_model_block_1_block_2_1_b->ne[0];
+    }
+    else if (ctx->proj_type == PROJECTOR_TYPE_MLP) {
+        return ctx->vision_model.mm_2_b->ne[0];
+    }
+    else {
+        std::string proj_type = PROJECTOR_TYPE_NAMES[ctx->proj_type];
+        throw std::runtime_error(format("%s: don't support projector with: %s currently\n", __func__, proj_type.c_str()));
+    }
 }
 
 int clip_n_patches(const struct clip_ctx * ctx) {
     auto & params = ctx->vision_model.hparams;
-
-    return (params.image_size / params.patch_size) * (params.image_size / params.patch_size);
+    int n_patches = (params.image_size / params.patch_size) * (params.image_size / params.patch_size);
+    if (ctx->proj_type == PROJECTOR_TYPE_LDP) {
+        n_patches /= 4;
+    }
+    return n_patches;
 }
 
 size_t clip_embd_nbytes(const struct clip_ctx * ctx) {

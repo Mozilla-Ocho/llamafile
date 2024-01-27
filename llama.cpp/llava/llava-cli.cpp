@@ -236,20 +236,14 @@ static void llava_free(struct llava_context * ctx_llava) {
     llama_backend_free();
 }
 
-int llava_cli(int argc, char ** argv) {
-    gpt_params params;
+int llava_cli(int argc, char ** argv, gpt_params * params) {
 
-    if (!gpt_params_parse(argc, argv, params)) {
-        show_additional_info(argc, argv);
-        return 1;
-    }
-
-    if (params.mmproj.empty()) {
+    if (params->mmproj.empty()) {
         fprintf(stderr, "%s: fatal error: --mmproj must also be passed when an --image is specified in cli mode\n", argv[0]);
         return 1;
     }
 
-    auto ctx_llava = llava_init(&params);
+    auto ctx_llava = llava_init(params);
     if (ctx_llava == NULL) {
         fprintf(stderr, "%s: error: failed to init llava\n", __func__);
         return 1;
@@ -262,13 +256,13 @@ int llava_cli(int argc, char ** argv) {
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
 
-    auto image_embed = load_image(ctx_llava, &params);
+    auto image_embed = load_image(ctx_llava, params);
     if (!image_embed) {
         return 1;
     }
 
     // process the prompt
-    process_prompt(ctx_llava, image_embed, &params, params.prompt);
+    process_prompt(ctx_llava, image_embed, params, params->prompt);
 
     llama_print_timings(ctx_llava->ctx_llama);
 

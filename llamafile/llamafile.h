@@ -39,8 +39,10 @@ extern int FLAG_gpu;
 extern bool FLAG_tinyblas;
 extern bool FLAG_nocompile;
 extern bool FLAG_recompile;
+bool llamafile_has_gpu(void);
 int llamafile_gpu_layers(int);
-bool llamafile_gpu_supported(void);
+bool llamafile_has_cuda(void);
+bool llamafile_has_metal(void);
 int llamafile_gpu_parse(const char *);
 const char *llamafile_describe_gpu(void);
 

@@ -38,7 +38,7 @@ chmod +x llava-v1.5-7b-q4.llamafile
 5. Run the llamafile. e.g.:
 
 ```sh
-./llava-v1.5-7b-q4.llamafile
+./llava-v1.5-7b-q4.llamafile -ngl 9999
 ```
 
 6. Your browser should open automatically and display a chat interface. 
@@ -174,19 +174,19 @@ try out llamafile with different kinds of LLMs.
 Here is an example for the Mistral command-line llamafile:
 
 ```sh
-./mistral-7b-instruct-v0.2.Q5_K_M.llamafile --temp 0.7 -p '[INST]Write a story about llamas[/INST]'
+./mistral-7b-instruct-v0.2.Q5_K_M.llamafile -ngl 9999 --temp 0.7 -p '[INST]Write a story about llamas[/INST]'
 ```
 
 And here is an example for WizardCoder-Python command-line llamafile:
 
 ```sh
-./wizardcoder-python-13b.llamafile --temp 0 -e -r '```\n' -p '```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
+./wizardcoder-python-13b.llamafile -ngl 9999 --temp 0 -e -r '```\n' -p '```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
 And here's an example for the LLaVA command-line llamafile:
 
 ```sh
-./llava-v1.5-7b-q4.llamafile --temp 0.2 --image lemurs.jpg -e -p '### User: What do you see?\n### Assistant:'
+./llava-v1.5-7b-q4.llamafile -ngl 9999 --temp 0.2 --image lemurs.jpg -e -p '### User: What do you see?\n### Assistant:'
 ```
 
 As before, macOS, Linux, and BSD users will need to use the "chmod"
@@ -341,7 +341,7 @@ On Apple Silicon running MacOS, your Metal GPU should just work if the
 Xcode Command Line Tools are installed.
 
 On Windows, GPU should just work so long as (1) you're using our release
-binaries, and (2) you pass the `-ngl 35` flag. If you only have the
+binaries, and (2) you pass the `-ngl 9999` flag. If you only have the
 graphics card drivers installed, then llamafile will use tinyBLAS as its
 math kernel library, which goes slower for batch processing tasks, e.g.
 summarization. In order to get full performance, NVIDIA GPU owners need
@@ -355,8 +355,8 @@ and running your llamafiles inside of WSL. Using WSL has the added
 benefit of letting you run llamafiles greater than 4GB on Windows.
 
 On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
-you have the `cc` compiler installed, (2) you pass the `-ngl 35` flag to
-enable GPU, and (3) the CUDA developer toolkit is installed on your
+you have the `cc` compiler installed, (2) you pass the `-ngl 9999` flag
+to enable GPU, and (3) the CUDA developer toolkit is installed on your
 machine and the `nvcc` compiler is on your path.
 
 If you have both an AMD GPU *and* an NVIDIA GPU in your machine, then
@@ -385,7 +385,7 @@ llama.cpp command line interface, utilizing WizardCoder-Python-13B
 weights:
 
 ```sh
-llamafile \
+llamafile -ngl 9999 \
   -m wizardcoder-python-13b-v1.0.Q8_0.gguf \
   --temp 0 -r '}\n' -r '```\n' \
   -e -p '```c\nvoid *memcpy(void *dst, const void *src, size_t size) {\n'
@@ -395,7 +395,7 @@ Here's a similar example that instead utilizes Mistral-7B-Instruct
 weights for prose composition:
 
 ```sh
-llamafile \
+llamafile -ngl 9999 \
   -m mistral-7b-instruct-v0.1.Q4_K_M.gguf \
   -p '[INST]Write a story about llamas[/INST]'
 ```
@@ -424,24 +424,24 @@ Here's an example of how you can use llamafile to summarize HTML URLs:
         -dump https://www.poetryfoundation.org/poems/48860/the-raven |
     sed 's/   */ /g'
   echo '[/INST]'
-) | llamafile \
+) | llamafile -ngl 9999 \
       -m mistral-7b-instruct-v0.2.Q5_K_M.gguf \
       -f /dev/stdin \
       -c 0 \
       --temp 0 \
       -n 500 \
-      --silent-prompt 2>/dev/null
+      --no-display-prompt 2>/dev/null
 ```
 
 Here's how you can use llamafile to describe a jpg/png/gif/bmp image:
 
 ```sh
-llamafile --temp 0 \
+llamafile -ngl 9999 --temp 0 \
   --image ~/Pictures/lemurs.jpg \
   -m llava-v1.5-7b-Q4_K.gguf \
   --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \
   -e -p '### User: What do you see?\n### Assistant: ' \
-  --silent-prompt 2>/dev/null
+  --no-display-prompt 2>/dev/null
 ```
 
 It's possible to use BNF grammar to enforce the output is predictable
@@ -451,13 +451,13 @@ standard output either `"yes\n"` or `"no\n"`. Another example is if you
 wanted to write a script to rename all your image files, you could say:
 
 ```sh
-llamafile --temp 0 \
+llamafile -ngl 9999 --temp 0 \
     --image lemurs.jpg \
     -m llava-v1.5-7b-Q4_K.gguf \
     --mmproj llava-v1.5-7b-mmproj-Q4_0.gguf \
     --grammar 'root ::= [a-z]+ (" " [a-z]+)+' \
     -e -p '### User: What do you see?\n### Assistant: ' \
-    --silent-prompt 2>/dev/null |
+    --no-display-prompt 2>/dev/null |
   sed -e's/ /_/g' -e's/$/.jpg/'
 a_baby_monkey_on_the_back_of_a_mother.jpg
 ```
@@ -467,7 +467,7 @@ example uses LLaVA v1.5-7B, a multimodal LLM that works with llama.cpp's
 recently-added support for image inputs.
 
 ```sh
-llamafile \
+llamafile -ngl 9999 \
   -m llava-v1.5-7b-Q8_0.gguf \
   --mmproj llava-v1.5-7b-mmproj-Q8_0.gguf \
   --host 0.0.0.0
@@ -497,6 +497,8 @@ llava-v1.5-7b-Q8_0.gguf
 llava-v1.5-7b-mmproj-Q8_0.gguf
 --host
 0.0.0.0
+-ngl
+9999
 ...
 ```
 

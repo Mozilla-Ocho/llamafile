@@ -24,11 +24,11 @@
 #include "llamafile/log.h"
 #include "llama.cpp/ggml-metal.h"
 
+int FLAG_gpu;
 bool FLAG_nogpu;
 bool FLAG_tinyblas;
 bool FLAG_nocompile;
 bool FLAG_recompile;
-int FLAG_gpu = LLAMAFILE_GPU_ERROR;
 
 const char *llamafile_describe_gpu(void) {
     switch (FLAG_gpu) {
@@ -50,8 +50,8 @@ const char *llamafile_describe_gpu(void) {
 /**
  * Returns true if GPU support is available.
  */
-bool llamafile_gpu_supported(void) {
-    return ggml_metal_supported() || ggml_cublas_loaded();
+bool llamafile_has_gpu(void) {
+    return llamafile_has_metal() || llamafile_has_cuda();
 }
 
 /**
@@ -61,22 +61,30 @@ int llamafile_gpu_layers(int n_gpu_layers) {
 
     // if user explicitly passed `--gpu KIND` but didn't specify `-ngl
     // LAYERS` then assume the user wants their model fully offloaded.
-    if (n_gpu_layers == -1 && FLAG_gpu > 0) {
+    if (n_gpu_layers < 0 && FLAG_gpu > 0) {
         n_gpu_layers = INT_MAX;
     }
 
     // Apple Metal is safe enough to enable by default.
-    if ((n_gpu_layers < 0 || n_gpu_layers > 1) && ggml_metal_supported()) {
-        n_gpu_layers = 1;
+    if (n_gpu_layers <= 0 && llamafile_has_metal()) {
+        n_gpu_layers = INT_MAX;
     }
 
     // make the -ngl flag not break example code when it's impossible
     // if you want it to be an error just pass --gpu apple/amd/nvidia
-    if (n_gpu_layers > 0 && !llamafile_gpu_supported()) {
+    if (n_gpu_layers > 0 && !llamafile_has_gpu()) {
         tinylogf("warning: --n-gpu-layers %d was passed but no GPUs were found;"
                  " falling back to CPU inference\n", n_gpu_layers);
         FLAG_gpu = LLAMAFILE_GPU_DISABLE;
         n_gpu_layers = 0;
+    }
+
+    // don't bother linking gpu modules if zero layers are offloaded
+    if (n_gpu_layers <= 0) {
+        if (n_gpu_layers == -1) {
+            tinylogf("note: if you have an AMD or NVIDIA GPU then you need to pass -ngl 9999 to enable GPU offloading\n");
+        }
+        FLAG_gpu = LLAMAFILE_GPU_DISABLE;
     }
 
     return n_gpu_layers;
@@ -103,5 +111,5 @@ int llamafile_gpu_parse(const char *s) {
     if (!strcasecmp(s, "rocm")) return LLAMAFILE_GPU_AMD;
     if (!strcasecmp(s, "hip")) return LLAMAFILE_GPU_AMD;
 
-    return INT_MIN;
+    return LLAMAFILE_GPU_ERROR;
 }

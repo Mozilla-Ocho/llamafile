@@ -174,6 +174,14 @@ typedef struct {
 } block_iq2_xxs;
 static_assert(sizeof(block_iq2_xxs) == sizeof(ggml_fp16_t) + QK_K/8*sizeof(uint16_t), "wrong iq2_xxs block size/padding");
 
+// 2.3125 bpw quants
+typedef struct {
+    ggml_fp16_t d;
+    uint16_t qs[QK_K/8];
+    uint8_t  scales[QK_K/32];
+} block_iq2_xs;
+static_assert(sizeof(block_iq2_xs) == sizeof(ggml_fp16_t) + QK_K/8*sizeof(uint16_t) + QK_K/32, "wrong iq2_xs block size/padding");
+
 // Quantization
 void quantize_row_q4_0_reference(const float * restrict x, block_q4_0 * restrict y, int k);
 void quantize_row_q4_1_reference(const float * restrict x, block_q4_1 * restrict y, int k);
@@ -188,7 +196,6 @@ void quantize_row_q4_K_reference(const float * restrict x, block_q4_K * restrict
 void quantize_row_q5_K_reference(const float * restrict x, block_q5_K * restrict y, int k);
 void quantize_row_q6_K_reference(const float * restrict x, block_q6_K * restrict y, int k);
 void quantize_row_q8_K_reference(const float * restrict x, block_q8_K * restrict y, int k);
-void quantize_row_iq2_xxs_reference(const float * restrict x, block_iq2_xxs * restrict y, int k);
 
 void quantize_row_q4_0(const float * restrict x, void * restrict y, int k);
 void quantize_row_q4_1(const float * restrict x, void * restrict y, int k);
@@ -203,7 +210,6 @@ void quantize_row_q4_K(const float * restrict x, void * restrict y, int k);
 void quantize_row_q5_K(const float * restrict x, void * restrict y, int k);
 void quantize_row_q6_K(const float * restrict x, void * restrict y, int k);
 void quantize_row_q8_K(const float * restrict x, void * restrict y, int k);
-void quantize_row_iq2_xxs(const float * restrict x, void * restrict y, int k);
 
 // Dequantization
 void dequantize_row_q4_0(const block_q4_0 * restrict x, float * restrict y, int k);
@@ -220,6 +226,7 @@ void dequantize_row_q5_K(const block_q5_K * restrict x, float * restrict y, int 
 void dequantize_row_q6_K(const block_q6_K * restrict x, float * restrict y, int k);
 void dequantize_row_q8_K(const block_q8_K * restrict x, float * restrict y, int k);
 void dequantize_row_iq2_xxs(const block_iq2_xxs * restrict x, float * restrict y, int k);
+void dequantize_row_iq2_xs (const block_iq2_xs  * restrict x, float * restrict y, int k);
 
 // Dot product
 void ggml_vec_dot_q4_0_q8_0(int n, float * restrict s, const void * restrict vx, const void * restrict vy);
@@ -234,3 +241,22 @@ void ggml_vec_dot_q4_K_q8_K(int n, float * restrict s, const void * restrict vx,
 void ggml_vec_dot_q5_K_q8_K(int n, float * restrict s, const void * restrict vx, const void * restrict vy);
 void ggml_vec_dot_q6_K_q8_K(int n, float * restrict s, const void * restrict vx, const void * restrict vy);
 void ggml_vec_dot_iq2_xxs_q8_K(int n, float * restrict s, const void * restrict vx, const void * restrict vy);
+void ggml_vec_dot_iq2_xs_q8_K (int n, float * restrict s, const void * restrict vx, const void * restrict vy);
+
+//
+// Quantization utilizing an importance matrix (a.k.a. "Activation aWare Quantization")
+//
+size_t quantize_iq2_xxs(const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_iq2_xs (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q2_K   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q3_K   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q4_K   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q5_K   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q6_K   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q4_0   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q4_1   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q5_0   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+size_t quantize_q5_1   (const float * src, void * dst, int nrows, int n_per_row, int64_t * hist, const float * imatrix);
+
+void iq2xs_init_impl(int grid_size);
+void iq2xs_free_impl(int grid_size);
