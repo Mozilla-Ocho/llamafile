@@ -7692,7 +7692,7 @@ struct llama_grammar * llama_grammar_copy(const struct llama_grammar * grammar) 
 
 void llama_set_rng_seed(struct llama_context * ctx, uint32_t seed) {
     if (seed == LLAMA_DEFAULT_SEED) {
-        seed = time(NULL);
+        seed = _rand64();
     }
     ctx->rng.seed(seed);
 }
@@ -9726,7 +9726,7 @@ struct llama_context * llama_new_context_with_model(
     }
 
     if (params.seed == LLAMA_DEFAULT_SEED) {
-        params.seed = time(NULL);
+        params.seed = _rand64();
     }
 
     LLAMA_LOG_INFO("%s: n_ctx      = %u\n",     __func__, cparams.n_ctx);

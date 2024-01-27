@@ -9,26 +9,22 @@ LICENSE
 ORIGIN
 
   https://github.com/ggerganov/llama.cpp/pull/4406/
-  a1d6df129bcd3d42cda38c09217d8d4ec4ea3bdd
-  2024-01-26
+  6db2b41a76ee78d5efdd5c3cddd5d7ad3f646855
+  2024-01-27
 
 LOCAL MODIFICATIONS
 
   - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
   - Unify main, server, and llava-cli into single llamafile program
   - Make cuBLAS / hipBLAS optional by introducing tinyBLAS library
-  - Use Microsoft ABI on CUDA module and ggml-backend interfaces
   - Add support to main() programs for Cosmo /zip/.args files
   - Introduce pledge() SECCOMP sandboxing to improve security
   - Call exit() rather than abort() when GGML_ASSERT() fails
-  - Fix OpenAI server sampling w.r.t. temperature and seed
-  - Remove log callback pointer API from Metal GPU module
+  - Make GPU logger callback API safer and less generic
   - Write log to /dev/null when main.log fails to open
   - Use _rand64() rather than time() as default seed
   - Make main and llava-cli print timings on ctrl-c
   - Avoid bind() conflicts on port 8080 w/ server
-  - Allow --grammar to be used on --image prompts
   - Use runtime dispatching for matmul quants
   - Remove operating system #ifdef statements
-  - Introduce --silent-prompt flag to main
   - Remove stdout logging from LLaVA

@@ -477,7 +477,6 @@ layer (default): split layers and KV across GPUs
 row: split rows across GPUs
 .El
 .It Fl ts Ar SPLIT , Fl Fl tensor-split Ar SPLIT
-
 When using multiple GPUs this option controls how large tensors should
 be split across all GPUs.
 .Ar SPLIT
@@ -486,10 +485,8 @@ proportion of data that each GPU should get in order. For example,
 \[dq]3,2\[dq] will assign 60% of the data to GPU 0 and 40% to GPU 1. By
 default the data is split in proportion to VRAM but this may not be
 optimal for performance. Requires cuBLAS.
-
 How to split tensors across multiple GPUs, comma-separated list of
 proportions, e.g. 3,1
-
 .It Fl mg Ar i , Fl Fl main-gpu Ar i
 The GPU to use for scratch and small tensors.
 .It Fl nommq , Fl Fl no-mul-mat-q
@@ -704,6 +701,18 @@ Enable embedding vector output.
 Default: disabled
 .It Fl Fl nobrowser
 Do not attempt to open a web browser tab at startup.
+.It Fl gan Ar N , Fl Fl grp-attn-n Ar N
+Set the group attention factor to extend context size through
+self-extend. The default value is
+.Ar 1
+which means disabled. This flag is used together with
+.Fl Fl grp-attn-w .
+.It Fl gaw Ar N , Fl Fl grp-attn-w Ar N
+Set the group attention width to extend context size through
+self-extend. The default value is
+.Ar 512 .
+This flag is used together with
+.Fl Fl grp-attn-n .
 .El
 .Sh LOG OPTIONS
 The following log options are available:
