@@ -32,5 +32,6 @@ o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/main		\
 		o/$(MODE)/llama.cpp/llava		\
 		o/$(MODE)/llama.cpp/server		\
+		o/$(MODE)/llama.cpp/imatrix		\
 		o/$(MODE)/llama.cpp/quantize		\
 		o/$(MODE)/llama.cpp/perplexity
