@@ -1,64 +1,92 @@
 #!/bin/sh
-FILE=$1
-SCRIPTNAME=${0##*/}
+BIN=${0%/*}
+PROG=${0##*/}
 
-if [ -z "$FILE" ]; then
-  echo "Usage: $SCRIPTNAME <gguf file or url> [cli|server|both]"
+if [ x"$1" = x"--help" ]; then
+  echo "Usage: $PROG <gguf file or url>"
+  echo
+  echo "This program converts GGUF weights into a llamafile."
+  echo "Your .llamafile is outputted to the current directory."
+  echo
+  echo "You can supply either a .gguf filename, or the URL to"
+  echo "to download one from an online service Hugging Face."
+  echo
+  echo "When you run this program, it's recommended that you've"
+  echo "downloaded or installed an official llamafile-VERSION.zip"
+  echo "from https://github.com/Mozilla-Ocho/llamafile/releases"
+  echo "because they include prebuilt DLLs for CUDA and ROCm."
+  echo "You can verify your llamafile has them w/ unzip -vl"
+  exit 0
+fi
+
+abort() {
+  echo "conversion terminated." >&2
   exit 1
+}
+
+# find paths of golden llamafile binaries
+#
+# 1. if user downloaded `llamafile-VERSION.zip`, extracted it, and ran
+#    `./llamafile-VERSION/bin/llamafile-convert` directly, then we can
+#    support that by looking for a `llamafile` in the same bin folder.
+#
+# 2. otherwise, perform a $PATH lookup for llamafile
+#
+LLAMAFILE="$BIN/llamafile"
+if [ ! -x "$LLAMAFILE" ]; then
+  LLAMAFILE=$(command -v llamafile) || abort
+fi
+ZIPALIGN="$BIN/zipalign"
+if [ ! -x "$ZIPALIGN" ]; then
+  ZIPALIGN=$(command -v zipalign) || abort
+fi
+
+# get path of downloader program
+if WGET=$(command -v wget 2>/dev/null); then
+  DOWNLOAD=$WGET
+  DOWNLOAD_ARGS=-O
+elif CURL=$(command -v curl 2>/dev/null); then
+  DOWNLOAD=$CURL
+  DOWNLOAD_ARGS=-fLo
+else
+  echo "$PROG: fatal error: you need to install either wget or curl" >&2
+  echo "please download https://cosmo.zip/pub/cosmos/bin/wget and put it on the system path" >&2
+  abort
+fi
+
+# get first program argument
+FILE=$1
+if [ -z "$FILE" ]; then
+  echo "$PROG: missing operand (pass --help for help)" >&2
+  abort
 fi
 
 # if the file starts with http
+SHOULD_DELETE=0
 if [ x"$FILE" != x"${FILE#http*}" ]; then
-  # download the file
-  # if the filename contains ?download=true, remove it
-  FILE=$(echo $FILE | sed 's/?download=true//g')
-  # get the filename
-  FILENAME=$(echo $FILE | sed 's/.*\///g')
-  echo "Downloading $FILENAME" >&2
-  if WGET=$(command -v wget 2>/dev/null); then
-    DOWNLOAD=$WGET
-    DOWNLOAD_ARGS=-O
-  elif CURL=$(command -v curl 2>/dev/null); then
-    DOWNLOAD=$CURL
-    DOWNLOAD_ARGS=-fLo
-  else
-    printf '%s\n' "$0: fatal error: you need to install either wget or curl" >&2
-    printf '%s\n' "please download https://cosmo.zip/pub/cosmos/bin/wget and put it on the system path" >&2
-    abort
-  fi
-  "${DOWNLOAD}" ${DOWNLOAD_ARGS} $FILENAME $FILE
-  # get the filename
-  FILE=$FILENAME
+  URL=$FILE
+  URL=${URL%?download=true} # strip "?download=true" suffix
+  FILE=${URL##*/}           # local file is basename of url
+  echo "Downloading $FILE" >&2
+  "${DOWNLOAD}" ${DOWNLOAD_ARGS} "$FILE" "$URL" || abort
+  SHOULD_DELETE=1
 fi
 
-# replace .gguf with .llamafile
-LLAMAFILE_NAME=$(echo $FILE | sed 's/.gguf/.llamafile/g')
-LLAMAFILE_PATH=$(command -v llamafile)
-CLI_ARGS="-m
+# create output in current directory
+echo "Using $LLAMAFILE as golden llamafile binary" >&2
+OUTPUT=${FILE##*/}  # basename
+OUTPUT="${OUTPUT%.gguf}.llamafile"
+echo "Converting $FILE to $OUTPUT" >&2
+cp -f "$LLAMAFILE" "$OUTPUT" || abort
+printf %s "-m
 $FILE
 ...
-"
+" > .args
+"$ZIPALIGN" -j0 "$OUTPUT" "$FILE" .args || abort
 
-convert() {
-  echo "Converting $FILE to $LLAMAFILE_NAME"
-  # print CLI args to .args
-  printf %s "$CLI_ARGS" > .args
-  cp $LLAMAFILE_PATH $LLAMAFILE_NAME
-  zipalign -j0 $LLAMAFILE_NAME $FILE .args
-}
-
-cleanup() {
-  echo "Cleaning up"
-  rm -f .args
-  # remove the downloaded file
-  rm -f $FILE
-  echo "Done"
-}
-
-abort() { 
-  printf '%s\n' "conversion terminated." >&2 
-  exit 1 
-} 
-
-convert || abort
-cleanup
+# cleanup
+rm -f .args
+if [ $SHOULD_DELETE -eq 1 ]; then
+  rm -f "$FILE"
+fi
+echo "Success. You may now run ./$OUTPUT" >&2

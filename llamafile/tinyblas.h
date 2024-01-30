@@ -11,7 +11,6 @@
 enum tinyblasOperation_t {
   TINYBLAS_OP_N,
   TINYBLAS_OP_T,
-  TINYBLAS_OP_C,
 };
 
 enum tinyblasStatus_t {
