@@ -79,7 +79,7 @@ OUTPUT="${OUTPUT%.gguf}.llamafile"
 echo "Converting $FILE to $OUTPUT" >&2
 cp -f "$LLAMAFILE" "$OUTPUT" || abort
 printf %s "-m
-$FILE
+${FILE##*/}
 ...
 " > .args
 "$ZIPALIGN" -j0 "$OUTPUT" "$FILE" .args || abort
