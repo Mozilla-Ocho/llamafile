@@ -14,7 +14,7 @@ INSTALL = install
 
 ARFLAGS = rcsD
 CCFLAGS = -g -O3 -fexceptions
-TARGET_ARCH = -Xx86_64-mssse3
+TARGET_ARCH = -Xx86_64-mavx
 CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM
 
 TMPDIR = o//tmp

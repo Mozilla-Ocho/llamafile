@@ -145,17 +145,20 @@ static inline __m256 sum_i16_pairs_float_avx2(const __m256i x) {
     return _mm256_cvtepi32_ps(summed_pairs);
 }
 
-__attribute__((__target__("avx2,fma")))
+__attribute__((__target__("avx2,fma,f16c")))
 static inline __m256 mul_sum_us8_pairs_float_avx2(const __m256i ax, const __m256i sy) {
-#if __AVXVNNI__
-    const __m256i zero = _mm256_setzero_si256();
-    const __m256i summed_pairs = _mm256_dpbusd_epi32(zero, ax, sy);
-    return _mm256_cvtepi32_ps(summed_pairs);
-#else
-    // Perform multiplication and create 16-bit values
-    const __m256i dot = _mm256_maddubs_epi16(ax, sy);
-    return sum_i16_pairs_float_avx2(dot);
-#endif
+    if (X86_HAVE(AVXVNNI)) {
+        // {vex} vpdpbusd %ymm1,%ymm2,%ymm0
+        register __m256i ymm2 asm("ymm2") = ax;
+        register __m256i ymm1 asm("ymm1") = sy;
+        register __m256i ymm0 asm("ymm0") = _mm256_setzero_si256();
+        asm(".byte\t0xc4,0xe2,0x6d,0x50,0xc1" : "+x"(ymm0) : "x"(ymm1), "x"(ymm2));
+        return _mm256_cvtepi32_ps(ymm0);
+    } else {
+        // Perform multiplication and create 16-bit values
+        const __m256i dot = _mm256_maddubs_epi16(ax, sy);
+        return sum_i16_pairs_float_avx2(dot);
+    }
 }
 
 __attribute__((__target__("avx")))
@@ -221,15 +224,6 @@ static inline __m128i mul_sum_i8_pairs(const __m128i x, const __m128i y) {
 }
 
 #if __AVX__ || __AVX2__ || __AVX512F__
-// horizontally add 8 floats
-static inline float hsum_float_8(const __m256 x) {
-    __m128 res = _mm256_extractf128_ps(x, 1);
-    res = _mm_add_ps(res, _mm256_castps256_ps128(x));
-    res = _mm_add_ps(res, _mm_movehl_ps(res, res));
-    res = _mm_add_ss(res, _mm_movehdup_ps(res));
-    return _mm_cvtss_f32(res);
-}
-
 // horizontally add 8 int32_t
 static inline int hsum_i32_8(const __m256i a) {
     const __m128i sum128 = _mm_add_epi32(_mm256_castsi256_si128(a), _mm256_extractf128_si256(a, 1));

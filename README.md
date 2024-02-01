@@ -311,57 +311,80 @@ or (2) get your SDcard OS image directly from Ubuntu (don't use RPI OS).
 On any platform, if your llamafile process is immediately killed, check
 if you have CrowdStrike and then ask to be whitelisted.
 
-## Supported OSes and CPUs
+## Supported OSes
 
 llamafile supports the following operating systems, which require a minimum 
 stock install:
 
-- Linux 2.6.18+ (ARM64 or AMD64) i.e. any distro RHEL5 or newer
-- Darwin (macOS) 23.1.0+ [1] (ARM64 or AMD64, with GPU only supported on ARM64)
-- Windows 8+ (AMD64)
-- FreeBSD 13+ (AMD64 or ARM64, GPU should work in theory)
-- NetBSD 9.2+ (AMD64, GPU should work in theory)
-- OpenBSD 7+ (AMD64, no GPU support)
+- Linux 2.6.18+ (i.e. every distro since RHEL5 c. 2007)
+- Darwin (macOS) 23.1.0+ [1] (GPU is only supported on ARM64)
+- Windows 8+ (AMD64 only)
+- FreeBSD 13+
+- NetBSD 9.2+ (AMD64 only)
+- OpenBSD 7+ (AMD64 only)
 
-llamafile supports the following CPUs:
-
-- AMD64 microprocessors must have SSSE3. Otherwise llamafile will print
-  an error and refuse to run. This means that if you have an Intel CPU,
-  it needs to be Intel Core or newer (circa 2006+), and if you have an
-  AMD CPU, then it needs to be Bulldozer or newer (circa 2011+). If you
-  have a newer CPU with AVX, or better yet AVX2, then llamafile will
-  utilize your chipset features to go faster. There is no support for
-  AVX512+ runtime dispatching yet.
-- ARM64 microprocessors must have ARMv8a+. This means everything from
-  Apple Silicon to 64-bit Raspberry Pis will work, provided your weights
-  fit into memory.
+On Windows, llamafile runs as a native portable executable. On UNIX
+systems, llamafile extracts a small loader program named `ape` to
+`$TMPDIR/.llamafile` or `~/.ape-1.9` which is used to map your model
+into memory.
 
 [1] Darwin kernel versions 15.6+ *should* be supported, but we currently
     have no way of testing that.
 
+## Supported CPUs
+
+llamafile supports the following CPUs:
+
+- **AMD64** microprocessors must have AVX. Otherwise llamafile will
+  print an error and refuse to run. This means that if you have an Intel
+  CPU, it needs to be Intel Sandybridge or newer (circa 2011+), and if
+  you have an AMD CPU, then it needs to be Bulldozer or newer (circa
+  2011+). Support for AVX2, FMA, F16C, and VNNI are conditionally
+  enabled at runtime if you have a newer CPU. There's no support for
+  AVX512 runtime dispatching yet.
+
+- **ARM64** microprocessors must have ARMv8a+. This means everything
+  from Apple Silicon to 64-bit Raspberry Pis will work, provided your
+  weights fit into memory.
+
 ## GPU support
 
-On Apple Silicon running MacOS, your Metal GPU should just work if the
-Xcode Command Line Tools are installed.
+llamafile supports the following kinds of GPUs:
 
-On Windows, GPU should just work so long as (1) you're using our release
-binaries, and (2) you pass the `-ngl 9999` flag. If you only have the
-graphics card drivers installed, then llamafile will use tinyBLAS as its
-math kernel library, which goes slower for batch processing tasks, e.g.
-summarization. In order to get full performance, NVIDIA GPU owners need
-to install both the CUDA SDK and MSVC; whereas, AMD GPU owners need to
-install the ROCm SDK. If llamafile detects the presence of an SDK, then
-it'll compile a native module just for your system that uses either the
-cuBLAS or hipBLAS library. You can also use CUDA via WSL by enabling
+- Apple Metal
+- NVIDIA
+- AMD
+
+GPU on MacOS ARM64 is supported by compiling a small module using the
+Xcode Command Line Tools, which need to be installed. This is a one time
+cost that happens the first time you run your llamafile. The DSO built
+by llamafile is stored in `$TMPDIR/.llamafile` or `$HOME/.llamafile`.
+Offloading to GPU is enabled by default when a Metal GPU is present.
+This can be disabled by passing `-ngl 0` or `--gpu disable` to force
+llamafile to perform CPU inference.
+
+Owners of NVIDIA and AMD graphics cards need to pass the `-ngl 999` flag
+to enable maximum offloading. If multiple GPUs are present then the work
+will be divided evenly among them by default, so you can load larger
+models. Multiple GPU support may be broken on AMD Radeon systems. If
+that happens to you, then use `export HIP_VISIBLE_DEVICES=0` which
+forces llamafile to only use the first GPU.
+
+Windows users are encouraged to use our release binaries, because they
+contain prebuilt DLLs for both NVIDIA and AMD graphics cards, which only
+depend on the graphics driver being installed. If llamafile detects that
+NVIDIA's CUDA SDK or AMD's ROCm HIP SDK are installed, then llamafile
+will try to build a faster DLL that uses cuBLAS or rocBLAS. In order for
+llamafile to successfully build a cuBLAS module, it needs to be run on
+the x64 MSVC command prompt. You can use CUDA via WSL by enabling
 [Nvidia CUDA on
 WSL](https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl)
 and running your llamafiles inside of WSL. Using WSL has the added
 benefit of letting you run llamafiles greater than 4GB on Windows.
 
-On Linux, Nvidia cuBLAS GPU support will be compiled on the fly if (1)
-you have the `cc` compiler installed, (2) you pass the `-ngl 9999` flag
-to enable GPU, and (3) the CUDA developer toolkit is installed on your
-machine and the `nvcc` compiler is on your path.
+On Linux, NVIDIA users will need to install the CUDA SDK (ideally using
+the shell script installer) and ROCm users need to install the HIP SDK.
+They're detected by looking to see if `nvcc` or `hipcc` are on the PATH.
 
 If you have both an AMD GPU *and* an NVIDIA GPU in your machine, then
 you may need to qualify which one you want used, by passing either
