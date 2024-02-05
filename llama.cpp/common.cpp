@@ -884,7 +884,6 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
     }
 
     params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
-    // tinylog(__func__, ": parsed configuration flags\n", NULL);
 
     return true;
 }

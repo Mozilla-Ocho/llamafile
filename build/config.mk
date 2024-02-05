@@ -13,9 +13,9 @@ MKDEPS = $(COSMOCC)/bin/mkdeps
 INSTALL = install
 
 ARFLAGS = rcsD
-CCFLAGS = -g -O3 -fexceptions
-TARGET_ARCH = -Xx86_64-mavx
+CCFLAGS = -g -O3 -fopenmp -fexceptions
 CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM
+TARGET_ARCH = -Xx86_64-mavx -Xx86_64-mtune=alderlake
 
 TMPDIR = o//tmp
 IGNORE := $(shell mkdir -p $(TMPDIR))

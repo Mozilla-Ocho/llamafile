@@ -9,7 +9,7 @@ if [ x"$1" = x"--help" ]; then
   echo "Your .llamafile is outputted to the current directory."
   echo
   echo "You can supply either a .gguf filename, or the URL to"
-  echo "to download one from an online service Hugging Face."
+  echo "download one from an online service like Hugging Face."
   echo
   echo "When you run this program, it's recommended that you've"
   echo "downloaded or installed an official llamafile-VERSION.zip"

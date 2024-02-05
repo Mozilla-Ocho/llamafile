@@ -2535,6 +2535,17 @@ int server_cli(int argc, char **argv)
                 }
             });
 
+    // load the model
+    if (!llama.load_model(params))
+    {
+        state.store(SERVER_STATE_ERROR);
+        return 1;
+    } else {
+        llama.initialize();
+        state.store(SERVER_STATE_READY);
+        LOG_INFO("model loaded", {});
+    }
+
     // set timeouts and change hostname and port
     svr.set_read_timeout (sparams.read_timeout);
     svr.set_write_timeout(sparams.write_timeout);
@@ -2603,17 +2614,6 @@ int server_cli(int argc, char **argv)
 
                 return 0;
             });
-
-    // load the model
-    if (!llama.load_model(params))
-    {
-        state.store(SERVER_STATE_ERROR);
-        return 1;
-    } else {
-        llama.initialize();
-        state.store(SERVER_STATE_READY);
-        LOG_INFO("model loaded", {});
-    }
 
     // launch browser tab
     if (!sparams.nobrowser) {
