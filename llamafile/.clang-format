@@ -1,0 +1,8 @@
+---
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 80
+---
+Language: Cpp
+AllowShortFunctionsOnASingleLine: false
+---

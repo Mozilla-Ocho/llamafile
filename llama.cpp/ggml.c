@@ -10100,6 +10100,29 @@ static void ggml_compute_forward_mul_mat(
     const void * wdata    = (src1->type == vec_dot_type) ? src1->data : params->wdata;
     const size_t row_size = ggml_row_size(vec_dot_type, ne10);
 
+#ifdef __x86_64__
+    if (X86_HAVE(FMA) &&
+        X86_HAVE(AVX2) &&
+        (dst->type == GGML_TYPE_F32 &&
+         src1->type == GGML_TYPE_F32 &&
+         (src0->type == GGML_TYPE_F32 ||
+          (src0->type == GGML_TYPE_F16 && X86_HAVE(F16C)) ||
+          (src0->type == GGML_TYPE_Q8_0 && X86_HAVE(AVXVNNI)))) &&
+        ne00 % 8 == 0 &&
+        ggml_is_contiguous(src0) &&
+        ggml_is_contiguous(src1) &&
+        ((ne2 == 1 && ne3 == 1) &&
+         (ne02 == 1 && ne03 == 1) &&
+         (ne12 == 1 && ne13 == 1))) {
+        llamafile_sgemm(ne01, ne11, ne00,
+                        src0->type, src0->data, nb01/ggml_type_size(src0->type),
+                        wdata, row_size/ggml_type_size(vec_dot_type),
+                        dst->data, nb1/4,
+                        ith, nth);
+        return;
+    }
+#endif
+
     const int64_t nr0 = ne01;          // src0 rows
     const int64_t nr1 = ne1*ne12*ne13; // src1 rows
 
