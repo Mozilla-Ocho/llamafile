@@ -13,7 +13,7 @@ MKDEPS = $(COSMOCC)/bin/mkdeps
 INSTALL = install
 
 ARFLAGS = rcsD
-CCFLAGS = -g -O3 -fopenmp -fexceptions
+CCFLAGS = -g -O3 -fexceptions
 CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM
 TARGET_ARCH = -Xx86_64-mavx -Xx86_64-mtune=alderlake
 
