@@ -2333,6 +2333,8 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         }
     }
 
+    params.embedding = true;  // [jart] #243 always enable embedding mode
+
     params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
 
     if (!params.kv_overrides.empty()) {
