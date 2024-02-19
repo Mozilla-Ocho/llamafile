@@ -23,6 +23,7 @@
 #include "tool/args/args.h"
 #include "libc/dce.h"
 #include "oai.h"
+#include "macsandbox.h"
 
 // increase max payload length to allow use of larger context size
 #define CPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH 1048576
@@ -2624,31 +2625,60 @@ int server_cli(int argc, char **argv)
         llamafile_launch_browser(url);
     }
 
-    if (!params.unsecure && !llamafile_has_gpu()) {
-        // Enables pledge() security on Linux and OpenBSD.
-        // - We do this *after* binding the server socket.
-        // - We do this *after* opening the log file for writing.
-        // - We do this *after* opening a tab in the user browser.
-        // - We do this *before* loading any weights or graphdefs.
-        // In effect, what this does is:
-        // - Filesystem access is disabled entirely (except ZipOS).
-        // - On Linux, network access is restricted to accept() only.
-        // Cosmopolitan Libc implements pledge() on Linux using SECCOMP.
-        char promises[32];
-        if (IsOpenbsd()) {
-            strlcpy(promises, "stdio inet", sizeof(promises));
-        } else {
-            strlcpy(promises, "stdio anet", sizeof(promises));
-        }
-        if (!startswith(sparams.public_path.c_str(), "/zip/")) {
-            strlcat(promises, " rpath", sizeof(promises));
-        }
-        __pledge_mode = PLEDGE_PENALTY_RETURN_EPERM;
-        if (pledge(0, 0)) {
-            LOG_TEE("warning: this OS doesn't support pledge() security\n");
-        } else if (pledge(promises, 0)) {
-            perror("pledge");
-            exit(1);
+    if (!sparams.unsecure) {
+        if (IsXnu()) {
+            // Cosmopolitan libc explicitly does not support cosmo_dlopen on x64
+            // macOS and mac_sandbox_init depends on cosmo_dlopen. We'll attempt
+            // to enable sandboxing and ignore the failure on x64 macOS.
+            // (Alternatively, the sandbox-exec(1) command could be used to
+            // launch llamafile with a sandbox profile.) A goal of llamafile is
+            // to work easily out-of-the-box and it already operates without a
+            // sandbox on macOS so don't require --unsecure on x64 macOS to
+            // workaround the failure. If support is added later, it will be
+            // used without further changes. On Apple Silicon, if sandbox
+            // initialization fails, exit and recommend using --unsecure to
+            // disable sandboxing.
+            std::string error_msg;
+            int rv = mac_sandbox_init(error_msg);
+            if (rv != 0) {
+                fprintf(stderr, "Sandbox initialization failed:\n"
+                    "rv: %d, error: %s.\n"
+                    "Disable sandboxing with the --unsecure option.\n",
+                    rv, error_msg.c_str());
+                if (IsXnuSilicon()) {
+                    exit(1); 
+                } else {
+                    LOG_WARNING("Sandbox initialization failed. Not supported "
+                        "on x64 macOS. Continuing.", {});
+                }
+            }
+        } else if (!llamafile_has_gpu()) {
+            printf("In the sandboxing block!\n");
+            // Enables pledge() security on Linux and OpenBSD.
+            // - We do this *after* binding the server socket.
+            // - We do this *after* opening the log file for writing.
+            // - We do this *after* opening a tab in the user browser.
+            // - We do this *before* loading any weights or graphdefs.
+            // In effect, what this does is:
+            // - Filesystem access is disabled entirely (except ZipOS).
+            // - On Linux, network access is restricted to accept() only.
+            // Cosmopolitan Libc implements pledge() on Linux using SECCOMP.
+            char promises[32];
+            if (IsOpenbsd()) {
+                strlcpy(promises, "stdio inet", sizeof(promises));
+            } else {
+                strlcpy(promises, "stdio anet", sizeof(promises));
+            }
+            if (!startswith(sparams.public_path.c_str(), "/zip/")) {
+                strlcat(promises, " rpath", sizeof(promises));
+            }
+            __pledge_mode = PLEDGE_PENALTY_RETURN_EPERM;
+            if (pledge(0, 0)) {
+                LOG_TEE("warning: this OS doesn't support pledge() security\n");
+            } else if (pledge(promises, 0)) {
+                perror("pledge");
+                exit(1);
+            }
         }
     }
 
