@@ -8,6 +8,9 @@
 #include <condition_variable>
 #include <cstddef>
 #include <thread>
+#include <libc/calls/pledge.h>
+#include <tool/args/args.h>
+#include <libc/dce.h>
 
 #include "llama.cpp/common.h"
 #include "llama.cpp/ggml-cuda.h"
@@ -19,9 +22,6 @@
 #include "llamafile/llamafile.h"
 #include "llamafile/log.h"
 #include "llamafile/version.h"
-#include "libc/calls/pledge.h"
-#include "tool/args/args.h"
-#include "libc/dce.h"
 #include "oai.h"
 #include "macsandbox.h"
 

@@ -15,20 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <errno.h>
 #include <cosmo.h>
+#include <errno.h>
 #include <stdlib.h>
-
-static int on_missing_feature(const char *name) {
-    tinyprint(2, program_invocation_name, ": fatal error: the cpu feature ", name,
-              " was required at build time but isn't available on this system\n", NULL);
-#if defined(__AVX2__) && !defined(__AVX512F__)
-    tinyprint(2, "note: amd microprocessors made after 2017 usually work\n"
-                 "note: intel microprocessors made after 2013 usually work\n", NULL);
-#endif
-    tinyprint(2, "exiting process.\n", NULL);
-    exit(1);
-}
 
 /**
  * Dies if CPU doesn't have mandatory features.
@@ -39,6 +28,29 @@ static int on_missing_feature(const char *name) {
  * microarchitecture flags only get passed to that specific object
  */
 void llamafile_check_cpu(void) {
+    // side effect: the constructor below has now been linked
+}
+
+static int on_missing_feature(const char *name) {
+    tinyprint(
+        2, program_invocation_name, ": fatal error: the cpu feature ", name,
+        " was required at build time but isn't available on this system\n",
+        NULL);
+#if defined(__AVX2__) && !defined(__AVX512F__)
+    tinyprint(2,
+              "note: amd microprocessors made after 2017 usually work\n"
+              "note: intel microprocessors made after 2013 usually work\n",
+              NULL);
+#endif
+    tinyprint(2, "exiting process.\n", NULL);
+    _Exit(1);
+}
+
+// We need to perform this early in the initialization process, before
+// C++ codes built with -mavx has a chance to start allocating dynamic
+// memory that would otherwise crash the cpu before this could be done
+__attribute__((__constructor__(101))) static void
+llamafile_actually_check_cpu(void) {
     if (X86_NEED(SSE3) && !X86_CHECK(SSE3)) {
         on_missing_feature("SSE3");
     }

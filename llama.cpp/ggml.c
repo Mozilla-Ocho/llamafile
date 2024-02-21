@@ -33,7 +33,6 @@ SOFTWARE.\"");
 #include "ggml-metal.h"
 #include "ggml-cuda.h"
 #include "llamafile/log.h"
-#include "libc/log/backtrace.internal.h"
 
 #include <alloca.h>
 #include <assert.h>
@@ -51,6 +50,7 @@ SOFTWARE.\"");
 #include <signal.h>
 #include <unistd.h>
 #include <cosmo.h>
+#include <libc/log/backtrace.internal.h>
 
 #include <pthread.h>
 #include <stdatomic.h>
@@ -10106,8 +10106,9 @@ static void ggml_compute_forward_mul_mat(
         (dst->type == GGML_TYPE_F32 &&
          src1->type == GGML_TYPE_F32 &&
          (src0->type == GGML_TYPE_F32 ||
-          (src0->type == GGML_TYPE_F16 && X86_HAVE(F16C)) ||
-          (src0->type == GGML_TYPE_Q8_0 && X86_HAVE(AVXVNNI)))) &&
+          src0->type == GGML_TYPE_Q4_0 ||
+          src0->type == GGML_TYPE_Q8_0 ||
+          (src0->type == GGML_TYPE_F16 && X86_HAVE(F16C)))) &&
         ne00 % 8 == 0 &&
         ggml_is_contiguous(src0) &&
         ggml_is_contiguous(src1) &&
