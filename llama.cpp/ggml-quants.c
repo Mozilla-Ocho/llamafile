@@ -44,11 +44,15 @@
 #include <riscv_vector.h>
 #endif
 
+#define UNUSED GGML_UNUSED
+
 #undef MIN
 #undef MAX
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+#define ggml_vld1q_u32(w,x,y,z) { (w), (x), (y), (z) }
 
 #define MM256_SET_M128I(a, b) _mm256_insertf128_si256(_mm256_castsi128_si256(b), (a), 1)
 
@@ -3466,6 +3470,174 @@ static const uint64_t iq2xs_grid[512] = {
     0x2b2b2b2b082b2b08, 0x2b2b2b2b082b2b2b, 0x2b2b2b2b2b190819, 0x2b2b2b2b2b2b2b2b,
 };
 
+static const uint32_t iq3xxs_grid[256] = {
+    0x04040404, 0x04040414, 0x04040424, 0x04040c0c, 0x04040c1c, 0x04040c3e, 0x04041404, 0x04041414,
+    0x04041c0c, 0x04042414, 0x04043e1c, 0x04043e2c, 0x040c040c, 0x040c041c, 0x040c0c04, 0x040c0c14,
+    0x040c140c, 0x040c142c, 0x040c1c04, 0x040c1c14, 0x040c240c, 0x040c2c24, 0x040c3e04, 0x04140404,
+    0x04140414, 0x04140424, 0x04140c0c, 0x04141404, 0x04141414, 0x04141c0c, 0x04141c1c, 0x04141c3e,
+    0x04142c0c, 0x04142c3e, 0x04143e2c, 0x041c040c, 0x041c043e, 0x041c0c04, 0x041c0c14, 0x041c142c,
+    0x041c3e04, 0x04240c1c, 0x04241c3e, 0x04242424, 0x04242c3e, 0x04243e1c, 0x04243e2c, 0x042c040c,
+    0x042c043e, 0x042c1c14, 0x042c2c14, 0x04341c2c, 0x04343424, 0x043e0c04, 0x043e0c24, 0x043e0c34,
+    0x043e241c, 0x043e340c, 0x0c04040c, 0x0c04041c, 0x0c040c04, 0x0c040c14, 0x0c04140c, 0x0c04141c,
+    0x0c041c04, 0x0c041c14, 0x0c041c24, 0x0c04243e, 0x0c042c04, 0x0c0c0404, 0x0c0c0414, 0x0c0c0c0c,
+    0x0c0c1404, 0x0c0c1414, 0x0c14040c, 0x0c14041c, 0x0c140c04, 0x0c140c14, 0x0c14140c, 0x0c141c04,
+    0x0c143e14, 0x0c1c0404, 0x0c1c0414, 0x0c1c1404, 0x0c1c1c0c, 0x0c1c2434, 0x0c1c3434, 0x0c24040c,
+    0x0c24042c, 0x0c242c04, 0x0c2c1404, 0x0c2c1424, 0x0c2c2434, 0x0c2c3e0c, 0x0c34042c, 0x0c3e1414,
+    0x0c3e2404, 0x14040404, 0x14040414, 0x14040c0c, 0x14040c1c, 0x14041404, 0x14041414, 0x14041434,
+    0x14041c0c, 0x14042414, 0x140c040c, 0x140c041c, 0x140c042c, 0x140c0c04, 0x140c0c14, 0x140c140c,
+    0x140c1c04, 0x140c341c, 0x140c343e, 0x140c3e04, 0x14140404, 0x14140414, 0x14140c0c, 0x14140c3e,
+    0x14141404, 0x14141414, 0x14141c3e, 0x14142404, 0x14142c2c, 0x141c040c, 0x141c0c04, 0x141c0c24,
+    0x141c3e04, 0x141c3e24, 0x14241c2c, 0x14242c1c, 0x142c041c, 0x142c143e, 0x142c240c, 0x142c3e24,
+    0x143e040c, 0x143e041c, 0x143e0c34, 0x143e242c, 0x1c04040c, 0x1c040c04, 0x1c040c14, 0x1c04140c,
+    0x1c04141c, 0x1c042c04, 0x1c04342c, 0x1c043e14, 0x1c0c0404, 0x1c0c0414, 0x1c0c1404, 0x1c0c1c0c,
+    0x1c0c2424, 0x1c0c2434, 0x1c14040c, 0x1c14041c, 0x1c140c04, 0x1c14142c, 0x1c142c14, 0x1c143e14,
+    0x1c1c0c0c, 0x1c1c1c1c, 0x1c241c04, 0x1c24243e, 0x1c243e14, 0x1c2c0404, 0x1c2c0434, 0x1c2c1414,
+    0x1c2c2c2c, 0x1c340c24, 0x1c341c34, 0x1c34341c, 0x1c3e1c1c, 0x1c3e3404, 0x24040424, 0x24040c3e,
+    0x24041c2c, 0x24041c3e, 0x24042c1c, 0x24042c3e, 0x240c3e24, 0x24141404, 0x24141c3e, 0x24142404,
+    0x24143404, 0x24143434, 0x241c043e, 0x241c242c, 0x24240424, 0x24242c0c, 0x24243424, 0x242c142c,
+    0x242c241c, 0x242c3e04, 0x243e042c, 0x243e0c04, 0x243e0c14, 0x243e1c04, 0x2c040c14, 0x2c04240c,
+    0x2c043e04, 0x2c0c0404, 0x2c0c0434, 0x2c0c1434, 0x2c0c2c2c, 0x2c140c24, 0x2c141c14, 0x2c143e14,
+    0x2c1c0414, 0x2c1c2c1c, 0x2c240c04, 0x2c24141c, 0x2c24143e, 0x2c243e14, 0x2c2c0414, 0x2c2c1c0c,
+    0x2c342c04, 0x2c3e1424, 0x2c3e2414, 0x34041424, 0x34042424, 0x34042434, 0x34043424, 0x340c140c,
+    0x340c340c, 0x34140c3e, 0x34143424, 0x341c1c04, 0x341c1c34, 0x34242424, 0x342c042c, 0x342c2c14,
+    0x34341c1c, 0x343e041c, 0x343e140c, 0x3e04041c, 0x3e04042c, 0x3e04043e, 0x3e040c04, 0x3e041c14,
+    0x3e042c14, 0x3e0c1434, 0x3e0c2404, 0x3e140c14, 0x3e14242c, 0x3e142c14, 0x3e1c0404, 0x3e1c0c2c,
+    0x3e1c1c1c, 0x3e1c3404, 0x3e24140c, 0x3e24240c, 0x3e2c0404, 0x3e2c0414, 0x3e2c1424, 0x3e341c04,
+};
+
+#define NGRID_IQ2XXS 512
+static const  uint64_t iq1s_grid[NGRID_IQ2XXS] = {
+    0xffffffffffff0101, 0xffffffffff01ff00, 0xffffffffff010100, 0xffffffff00000000,
+    0xffffffff01ff00ff, 0xffffffff01ff0001, 0xffffffff0101ffff, 0xffffffff0101ff01,
+    0xffffff00ff000000, 0xffffff000000ff00, 0xffffff00000000ff, 0xffffff0000000100,
+    0xffffff0000010000, 0xffffff0001000000, 0xffffff01ffff00ff, 0xffffff01ff01ff00,
+    0xffffff01ff010100, 0xffffff0100000001, 0xffffff0101ffff00, 0xffffff0101ff0101,
+    0xffffff0101010100, 0xffff00ffff00ff01, 0xffff00ffff0000ff, 0xffff00ff00ff0100,
+    0xffff00ff0100ff00, 0xffff00ff010001ff, 0xffff0000ff0101ff, 0xffff000000ffff00,
+    0xffff000000000000, 0xffff00000001ff01, 0xffff000001000101, 0xffff0000010100ff,
+    0xffff0001ffff0100, 0xffff00010000ff00, 0xffff000100010101, 0xffff000101000000,
+    0xffff01ffffff0000, 0xffff01ffff01ffff, 0xffff01ffff010100, 0xffff01ff00000000,
+    0xffff01ff01ffffff, 0xffff01ff01ff0001, 0xffff01ff0101ffff, 0xffff01ff01010001,
+    0xffff0100ffffff01, 0xffff01000000ffff, 0xffff010000000100, 0xffff010001ff01ff,
+    0xffff010001000000, 0xffff0101ff000000, 0xffff0101000101ff, 0xffff010101ffff01,
+    0xffff01010101ff00, 0xff00ffffff000000, 0xff00ffff00ffff00, 0xff00ffff00000001,
+    0xff00ffff000001ff, 0xff00ffff01010000, 0xff00ff00ffff0000, 0xff00ff00ff00ff00,
+    0xff00ff00ff0000ff, 0xff00ff00ff000100, 0xff00ff00ff010001, 0xff00ff0000ff0001,
+    0xff00ff000000ffff, 0xff00ff0000000000, 0xff00ff000001ff00, 0xff00ff0000010100,
+    0xff00ff0001ff0000, 0xff00ff000100ff00, 0xff00ff0001000100, 0xff00ff01ff000000,
+    0xff00ff0100ff0000, 0xff00ff01000001ff, 0xff00ff0101010001, 0xff0000ff00000000,
+    0xff0000ff0001ff00, 0xff0000ff00010100, 0xff000000ffff0101, 0xff000000ff000000,
+    0xff000000ff01ff00, 0xff00000000ff0000, 0xff0000000000ff00, 0xff000000000000ff,
+    0xff00000000000000, 0xff00000000000001, 0xff00000000000100, 0xff0000000001ffff,
+    0xff00000000010000, 0xff00000001000000, 0xff00000001010100, 0xff000001ff00ff01,
+    0xff000001ff0100ff, 0xff00000100000000, 0xff0000010001ff00, 0xff00000101ff0100,
+    0xff0000010100ff00, 0xff0001ff00ff00ff, 0xff0001ff00000101, 0xff0001ff000100ff,
+    0xff0001ff01000000, 0xff000100ff0001ff, 0xff0001000000ff01, 0xff00010000000000,
+    0xff00010000010001, 0xff00010000010100, 0xff00010001ffff00, 0xff00010001ff0101,
+    0xff00010001010000, 0xff000101ffffffff, 0xff000101ff000101, 0xff00010101ff00ff,
+    0xff00010101000001, 0xff000101010100ff, 0xff01ffffff000101, 0xff01ffffff01ffff,
+    0xff01ffffff01ff01, 0xff01ffffff0101ff, 0xff01ffff00000000, 0xff01ffff01ff0001,
+    0xff01ffff0101ff01, 0xff01ff00ff000000, 0xff01ff0000ff0100, 0xff01ff000000ff01,
+    0xff01ff0000010000, 0xff01ff00010000ff, 0xff01ff01ff01ff00, 0xff01ff0100000101,
+    0xff0100ffffff0000, 0xff0100ffff010000, 0xff0100ff01ff00ff, 0xff0100ff01000100,
+    0xff0100ff010100ff, 0xff010000ffffff01, 0xff01000000000000, 0xff0100000101ff00,
+    0xff010001ffff00ff, 0xff010001ff000100, 0xff01000100ffff00, 0xff01000100010001,
+    0xff01000101ff0001, 0xff010001010001ff, 0xff0101ffffffffff, 0xff0101ffff01ffff,
+    0xff0101ffff010101, 0xff0101ff0000ff00, 0xff0101ff01010001, 0xff010100ff000000,
+    0xff010100ff01ff01, 0xff01010000ff0001, 0xff01010000000100, 0xff01010001000000,
+    0xff0101010100ffff, 0x00ffffff0000ff01, 0x00ffffff000000ff, 0x00ffffff00000100,
+    0x00ffffff00010000, 0x00ffff00ffff0001, 0x00ffff00ff0000ff, 0x00ffff00ff000100,
+    0x00ffff0000000000, 0x00ffff0001000100, 0x00ffff0001010001, 0x00ffff01ff00ff01,
+    0x00ffff0100ff0100, 0x00ffff010000ff00, 0x00ffff01000100ff, 0x00ffff0101ff00ff,
+    0x00ffff010101ff00, 0x00ff00ffffffffff, 0x00ff00ffffff01ff, 0x00ff00ffff000101,
+    0x00ff00ff00000000, 0x00ff00ff000101ff, 0x00ff00ff01010101, 0x00ff0000ff000000,
+    0x00ff0000ff01ffff, 0x00ff000000ff0000, 0x00ff00000000ff00, 0x00ff0000000000ff,
+    0x00ff000000000000, 0x00ff000000000001, 0x00ff000000000100, 0x00ff000000010000,
+    0x00ff000001ffff01, 0x00ff000001000000, 0x00ff0001ff000101, 0x00ff000100ffffff,
+    0x00ff000100000000, 0x00ff0001010001ff, 0x00ff01ffff000000, 0x00ff01ff0001ff00,
+    0x00ff01ff01ff0100, 0x00ff0100ff01ff01, 0x00ff010000ff00ff, 0x00ff010000ff0101,
+    0x00ff010000000000, 0x00ff010000010101, 0x00ff01000100ff00, 0x00ff010001010000,
+    0x00ff0101ffffff00, 0x00ff01010000ff01, 0x00ff010100000100, 0x00ff010101ff0000,
+    0x0000ffffffff0100, 0x0000ffffff00ff00, 0x0000ffffff0000ff, 0x0000ffffff010000,
+    0x0000ffff00000000, 0x0000ffff00010101, 0x0000ffff01ffff01, 0x0000ffff01000100,
+    0x0000ff00ff000000, 0x0000ff00ff01ff00, 0x0000ff00ff0101ff, 0x0000ff0000ff0000,
+    0x0000ff000000ff00, 0x0000ff00000000ff, 0x0000ff0000000000, 0x0000ff0000000001,
+    0x0000ff0000000100, 0x0000ff0000010000, 0x0000ff0001ffffff, 0x0000ff0001ff01ff,
+    0x0000ff0001000000, 0x0000ff000101ffff, 0x0000ff01ffff0101, 0x0000ff01ff010000,
+    0x0000ff0100000000, 0x0000ff0101000101, 0x000000ffffff0001, 0x000000ffff000000,
+    0x000000ff00ff0000, 0x000000ff0000ff00, 0x000000ff000000ff, 0x000000ff00000000,
+    0x000000ff00000001, 0x000000ff00000100, 0x000000ff00010000, 0x000000ff01000000,
+    0x000000ff0101ff00, 0x00000000ffff0000, 0x00000000ff00ff00, 0x00000000ff0000ff,
+    0x00000000ff000000, 0x00000000ff000001, 0x00000000ff000100, 0x00000000ff010000,
+    0x0000000000ffff00, 0x0000000000ff00ff, 0x0000000000ff0000, 0x0000000000ff0001,
+    0x0000000000ff0100, 0x000000000000ffff, 0x000000000000ff00, 0x000000000000ff01,
+    0x00000000000000ff, 0x0000000000000001, 0x00000000000001ff, 0x0000000000000100,
+    0x0000000000000101, 0x000000000001ff00, 0x00000000000100ff, 0x0000000000010000,
+    0x0000000000010001, 0x0000000000010100, 0x0000000001ff0000, 0x000000000100ff00,
+    0x00000000010000ff, 0x0000000001000000, 0x0000000001000001, 0x0000000001000100,
+    0x0000000001010000, 0x00000001ffff01ff, 0x00000001ff000000, 0x0000000100ff0000,
+    0x000000010000ff00, 0x00000001000000ff, 0x0000000100000000, 0x0000000100000001,
+    0x0000000100000100, 0x0000000100010000, 0x0000000101000000, 0x000001ffff00ff00,
+    0x000001ffff010001, 0x000001ffff0101ff, 0x000001ff00ffff01, 0x000001ff0000ffff,
+    0x000001ff00000000, 0x000001ff010000ff, 0x000001ff01010100, 0x00000100ffff0100,
+    0x00000100ff000000, 0x0000010000ff0000, 0x000001000000ff00, 0x00000100000000ff,
+    0x0000010000000000, 0x0000010000000001, 0x0000010000000100, 0x0000010000010000,
+    0x0000010001000000, 0x000001000101ff01, 0x00000101ffff0001, 0x00000101ff01ffff,
+    0x0000010100000000, 0x0000010101010100, 0x0001ffffff000000, 0x0001ffff00ffffff,
+    0x0001ffff00000100, 0x0001ffff0001ff00, 0x0001ffff01000000, 0x0001ff00ffffff00,
+    0x0001ff00ffff01ff, 0x0001ff00ff010000, 0x0001ff0000000000, 0x0001ff0000010001,
+    0x0001ff0001ff0000, 0x0001ff0001010100, 0x0001ff01ff0000ff, 0x0001ff01ff000001,
+    0x0001ff0100ffffff, 0x0001ff010001ffff, 0x0001ff01000101ff, 0x0001ff010100ff01,
+    0x000100ffff00ffff, 0x000100ffff00ff01, 0x000100ffff000100, 0x000100ff00000000,
+    0x000100ff000101ff, 0x000100ff01ff0101, 0x000100ff0100ffff, 0x000100ff01010101,
+    0x00010000ff000000, 0x00010000ff010100, 0x0001000000ff0000, 0x000100000000ff00,
+    0x00010000000000ff, 0x0001000000000000, 0x0001000000000001, 0x0001000000000100,
+    0x0001000000010000, 0x0001000001ffff01, 0x0001000001000000, 0x0001000100ff0101,
+    0x0001000100000000, 0x00010001010100ff, 0x000101ffffff01ff, 0x000101ffffff0101,
+    0x000101ff00010000, 0x000101ff01ff0000, 0x000101ff0100ff01, 0x00010100ffff0000,
+    0x0001010000000000, 0x000101000001ffff, 0x0001010000010101, 0x00010100010001ff,
+    0x00010101ff00ff00, 0x00010101ff010001, 0x0001010100ffffff, 0x0001010100ff01ff,
+    0x00010101000101ff, 0x0001010101ff0000, 0x000101010100ff01, 0x0001010101000101,
+    0x01ffffffffff0101, 0x01ffffffff01ffff, 0x01ffffffff01ff01, 0x01ffffffff0101ff,
+    0x01ffffffff010101, 0x01ffffff00000000, 0x01ffffff01ff01ff, 0x01ffffff01000101,
+    0x01ffffff0101ff01, 0x01ffffff010100ff, 0x01ffff000000ff00, 0x01ffff0000000001,
+    0x01ffff00000001ff, 0x01ffff0000010000, 0x01ffff0001ff0000, 0x01ffff01ffffffff,
+    0x01ffff01ffff01ff, 0x01ffff01ff000000, 0x01ffff01ff01ffff, 0x01ffff01ff0101ff,
+    0x01ffff010100ffff, 0x01ff00ffffff0000, 0x01ff00ffff010000, 0x01ff00ff00ffff01,
+    0x01ff0000ff0000ff, 0x01ff000000000000, 0x01ff00000001ff01, 0x01ff000001ffffff,
+    0x01ff000001010100, 0x01ff0001ffffff01, 0x01ff0001ff010001, 0x01ff000101ff0100,
+    0x01ff000101000001, 0x01ff0001010100ff, 0x01ff01ffff00ffff, 0x01ff01ff00010001,
+    0x01ff01ff01000000, 0x01ff01ff010101ff, 0x01ff0100ff000001, 0x01ff010000ffff00,
+    0x01ff010000000100, 0x01ff010001ff01ff, 0x01ff01000101ffff, 0x01ff0101ffff00ff,
+    0x01ff0101ffff0101, 0x01ff0101ff0101ff, 0x01ff010100010000, 0x0100ffff00ff00ff,
+    0x0100ffff00ff0001, 0x0100ffff00000100, 0x0100ffff0100ff00, 0x0100ff00ffff0000,
+    0x0100ff00ff00ffff, 0x0100ff00ff00ff01, 0x0100ff00ff000100, 0x0100ff00ff010000,
+    0x0100ff0000000000, 0x0100ff00000100ff, 0x0100ff0001ff0101, 0x0100ff0001010101,
+    0x0100ff0100ff00ff, 0x0100ff0100ff0001, 0x0100ff0100000100, 0x0100ff0100010001,
+    0x0100ff0101000000, 0x010000ffff00ff00, 0x010000ff0000ffff, 0x010000ff00000000,
+    0x010000ff010001ff, 0x010000ff01010001, 0x01000000ffffff00, 0x01000000ffff0101,
+    0x01000000ff000000, 0x01000000ff0100ff, 0x01000000ff010101, 0x0100000000ff0000,
+    0x010000000000ff00, 0x01000000000000ff, 0x0100000000000000, 0x0100000000000001,
+    0x0100000000000100, 0x0100000000010000, 0x0100000001000000, 0x0100000100000000,
+    0x01000001000101ff, 0x0100000101ffff01, 0x010001ffff000101, 0x010001ff00ff0100,
+    0x010001ff0000ff00, 0x010001ff000100ff, 0x010001ff01ffffff, 0x01000100ffff0000,
+    0x01000100ff0001ff, 0x0100010000000000, 0x010001000001ff00, 0x0100010001ff0000,
+    0x01000100010000ff, 0x0100010001000101, 0x01000101ff00ff01, 0x0100010100ff0100,
+    0x010001010000ffff, 0x0100010101010001, 0x0101ffffffff0101, 0x0101ffffff0001ff,
+    0x0101ffffff01ffff, 0x0101ffffff010101, 0x0101ffff00000000, 0x0101ffff0101ffff,
+    0x0101ffff010101ff, 0x0101ff00ff000000, 0x0101ff0000ff0100, 0x0101ff000000ff00,
+    0x0101ff0000010000, 0x0101ff00010000ff, 0x0101ff0001000001, 0x0101ff01ff010101,
+    0x0101ff0100000000, 0x0101ff010101ff00, 0x010100ffffff0000, 0x010100ffff010000,
+    0x010100ff00ff01ff, 0x010100ff000000ff, 0x010100ff00000101, 0x010100ff01ffff00,
+    0x01010000ffffff01, 0x01010000ff000100, 0x01010000ff01ff01, 0x0101000000000000,
+    0x01010000000100ff, 0x010100000101ff01, 0x01010001ffff0000, 0x01010001ff00ffff,
+    0x01010001ff010000, 0x0101000101ffffff, 0x0101000101ff01ff, 0x0101000101010101,
+    0x010101ffff01ffff, 0x010101ff00000000, 0x010101ff0001ff01, 0x010101ff0101ffff,
+    0x010101ff010101ff, 0x01010100ffffffff, 0x01010100ff000001, 0x010101000000ff00,
+    0x0101010001010000, 0x0101010100ff0001, 0x010101010001ff01, 0x010101010101ffff,
+
+};
+
 static const uint8_t ksigns_iq2xs[128] = {
       0, 129, 130,   3, 132,   5,   6, 135, 136,   9,  10, 139,  12, 141, 142,  15,
     144,  17,  18, 147,  20, 149, 150,  23,  24, 153, 154,  27, 156,  29,  30, 159,
@@ -3529,6 +3701,101 @@ void dequantize_row_iq2_xs(const block_iq2_xs * restrict x, float * restrict y, 
                 y += 8;
             }
         }
+    }
+}
+
+// ====================== 3.0625 bpw (de)-quantization
+
+void dequantize_row_iq3_xxs(const block_iq3_xxs * restrict x, float * restrict y, int k) {
+    assert(k % QK_K == 0);
+    const int nb = k / QK_K;
+
+    uint32_t aux32;
+
+    for (int i = 0; i < nb; i++) {
+
+        const float d = GGML_FP16_TO_FP32(x[i].d);
+        const uint8_t * qs = x[i].qs;
+        const uint8_t * scales_and_signs = qs + QK_K/4;
+
+        for (int ib32 = 0; ib32 < QK_K/32; ++ib32) {
+            memcpy(&aux32, scales_and_signs + 4*ib32, sizeof(uint32_t));
+            const float db = d * (0.5f + (aux32 >> 28)) * 0.5f;
+            for (int l = 0; l < 4; ++l) {
+                const uint8_t  signs = ksigns_iq2xs[(aux32 >> 7*l) & 127];
+                const uint8_t * grid1 = (const uint8_t *)(iq3xxs_grid + qs[2*l+0]);
+                const uint8_t * grid2 = (const uint8_t *)(iq3xxs_grid + qs[2*l+1]);
+                for (int j = 0; j < 4; ++j) {
+                    y[j+0] = db * grid1[j] * (signs & kmask_iq2xs[j+0] ? -1.f : 1.f);
+                    y[j+4] = db * grid2[j] * (signs & kmask_iq2xs[j+4] ? -1.f : 1.f);
+                }
+                y += 8;
+            }
+            qs += 8;
+        }
+    }
+}
+
+// ====================== 1.5625 bpw (de)-quantization
+
+void dequantize_row_iq1_s(const block_iq1_s * restrict x, float * restrict y, int k) {
+    assert(k % QK_K == 0);
+    const int nb = k / QK_K;
+
+    float db[4];
+    uint16_t idx[4];
+    //const int8_t * grid[4];
+
+    for (int i = 0; i < nb; i++) {
+
+        const float d = GGML_FP16_TO_FP32(x[i].d);
+        const uint8_t * sc = x[i].scales;
+        const uint8_t * qs = x[i].qs;
+
+        for (int i8 = 0; i8 < QK_K/8; i8 += 4) {
+            idx[0] = qs[0] | ((sc[0] & 0x08) << 5);
+            idx[1] = qs[1] | ((sc[0] & 0x80) << 1);
+            idx[2] = qs[2] | ((sc[1] & 0x08) << 5);
+            idx[3] = qs[3] | ((sc[1] & 0x80) << 1);
+            //grid[0] = (const int8_t *)(iq1s_grid + (qs[0] | ((sc[0] & 0x08) << 5)));
+            //grid[1] = (const int8_t *)(iq1s_grid + (qs[1] | ((sc[0] & 0x80) << 1)));
+            //grid[2] = (const int8_t *)(iq1s_grid + (qs[2] | ((sc[1] & 0x08) << 5)));
+            //grid[3] = (const int8_t *)(iq1s_grid + (qs[3] | ((sc[1] & 0x80) << 1)));
+            db[0] = d * (2*(sc[0] & 7) + 1);
+            db[1] = d * (2*((sc[0] >> 4) & 7) + 1);
+            db[2] = d * (2*(sc[1] & 7) + 1);
+            db[3] = d * (2*((sc[1] >> 4) & 7) + 1);
+            for (int l = 0; l < 4; ++l) {
+                const int8_t * grid = (const int8_t *)(iq1s_grid + idx[l]);
+                for (int j = 0; j < 8; ++j) {
+                    //y[j] = db[l] * grid[l][j];
+                    y[j] = db[l] * grid[j];
+                }
+                y += 8;
+            }
+            qs += 4;
+            sc += 2;
+        }
+    }
+}
+
+static const int8_t kvalues_iq4nl[16] = {-127, -104, -83, -65, -49, -35, -22, -10, 1, 13, 25, 38, 53, 69, 89, 113};
+
+void dequantize_row_iq4_nl(const block_iq4_nl * restrict x, float * restrict y, int k) {
+    assert(k % QK4_NL == 0);
+    const int nb = k / QK4_NL;
+
+    for (int i = 0; i < nb; i++) {
+
+        const uint8_t * qs = x[i].qs;
+
+        const float d = GGML_FP16_TO_FP32(x[i].d);
+        for (int j = 0; j < QK4_NL/2; ++j) {
+            y[j+       0] = d * kvalues_iq4nl[qs[j] & 0xf];
+            y[j+QK4_NL/2] = d * kvalues_iq4nl[qs[j] >>  4];
+        }
+        y  += QK4_NL;
+        qs += QK4_NL/2;
     }
 }
 
@@ -3661,13 +3928,13 @@ static inline __m128i get_scale_shuffle(int i) {
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q4_0_q8_0
-void ggml_vec_dot_q4_0_q8_0(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q4_0_q8_0(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q4_0_q8_0_avx2(n, s, vx, vy);
+        ggml_vec_dot_q4_0_q8_0_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q4_0_q8_0_avx(n, s, vx, vy);
+        ggml_vec_dot_q4_0_q8_0_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q4_0_q8_0_default(n, s, vx, vy);
+        ggml_vec_dot_q4_0_q8_0_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -3702,13 +3969,13 @@ void ggml_vec_dot_q4_0_q8_0(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q4_1_q8_1
-void ggml_vec_dot_q4_1_q8_1(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q4_1_q8_1(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q4_1_q8_1_avx2(n, s, vx, vy);
+        ggml_vec_dot_q4_1_q8_1_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q4_1_q8_1_avx(n, s, vx, vy);
+        ggml_vec_dot_q4_1_q8_1_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q4_1_q8_1_default(n, s, vx, vy);
+        ggml_vec_dot_q4_1_q8_1_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -3743,13 +4010,13 @@ void ggml_vec_dot_q4_1_q8_1(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q5_0_q8_0
-void ggml_vec_dot_q5_0_q8_0(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q5_0_q8_0(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q5_0_q8_0_avx2(n, s, vx, vy);
+        ggml_vec_dot_q5_0_q8_0_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q5_0_q8_0_avx(n, s, vx, vy);
+        ggml_vec_dot_q5_0_q8_0_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q5_0_q8_0_default(n, s, vx, vy);
+        ggml_vec_dot_q5_0_q8_0_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -3784,13 +4051,13 @@ void ggml_vec_dot_q5_0_q8_0(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q5_1_q8_1
-void ggml_vec_dot_q5_1_q8_1(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q5_1_q8_1(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q5_1_q8_1_avx2(n, s, vx, vy);
+        ggml_vec_dot_q5_1_q8_1_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q5_1_q8_1_avx(n, s, vx, vy);
+        ggml_vec_dot_q5_1_q8_1_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q5_1_q8_1_default(n, s, vx, vy);
+        ggml_vec_dot_q5_1_q8_1_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -3825,13 +4092,13 @@ void ggml_vec_dot_q5_1_q8_1(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q8_0_q8_0
-void ggml_vec_dot_q8_0_q8_0(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q8_0_q8_0(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA)) {
-        ggml_vec_dot_q8_0_q8_0_avx2(n, s, vx, vy);
+        ggml_vec_dot_q8_0_q8_0_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q8_0_q8_0_avx(n, s, vx, vy);
+        ggml_vec_dot_q8_0_q8_0_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q8_0_q8_0_default(n, s, vx, vy);
+        ggml_vec_dot_q8_0_q8_0_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -3868,13 +4135,13 @@ void ggml_vec_dot_q8_0_q8_0(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q2_K_q8_K
-void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q2_K_q8_K_avx2(n, s, vx, vy);
+        ggml_vec_dot_q2_K_q8_K_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q2_K_q8_K_avx(n, s, vx, vy);
+        ggml_vec_dot_q2_K_q8_K_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q2_K_q8_K_default(n, s, vx, vy);
+        ggml_vec_dot_q2_K_q8_K_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -3886,7 +4153,7 @@ void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void * restri
 #else
 #error update me
 
-void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
 
     const block_q2_K * restrict x = vx;
     const block_q8_K * restrict y = vy;
@@ -4171,13 +4438,13 @@ void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q3_K_q8_K
-void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q3_K_q8_K_avx2(n, s, vx, vy);
+        ggml_vec_dot_q3_K_q8_K_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q3_K_q8_K_avx(n, s, vx, vy);
+        ggml_vec_dot_q3_K_q8_K_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q3_K_q8_K_default(n, s, vx, vy);
+        ggml_vec_dot_q3_K_q8_K_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -4188,7 +4455,7 @@ void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, const void * restri
 
 #else
 
-void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     assert(n % QK_K == 0);
 
     const block_q3_K * restrict x = vx;
@@ -4558,13 +4825,13 @@ void ggml_vec_dot_q3_K_q8_K(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q4_K_q8_K
-void ggml_vec_dot_q4_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q4_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q4_K_q8_K_avx2(n, s, vx, vy);
+        ggml_vec_dot_q4_K_q8_K_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q4_K_q8_K_avx(n, s, vx, vy);
+        ggml_vec_dot_q4_K_q8_K_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q4_K_q8_K_default(n, s, vx, vy);
+        ggml_vec_dot_q4_K_q8_K_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -4574,7 +4841,7 @@ void ggml_vec_dot_q4_K_q8_K(const int n, float * restrict s, const void * restri
 #endif
 
 #else
-void ggml_vec_dot_q4_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q4_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     assert(n % QK_K == 0);
 
     const block_q4_K * restrict x = vx;
@@ -4844,13 +5111,13 @@ void ggml_vec_dot_q4_K_q8_K(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q5_K_q8_K
-void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q5_K_q8_K_avx2(n, s, vx, vy);
+        ggml_vec_dot_q5_K_q8_K_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q5_K_q8_K_avx(n, s, vx, vy);
+        ggml_vec_dot_q5_K_q8_K_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q5_K_q8_K_default(n, s, vx, vy);
+        ggml_vec_dot_q5_K_q8_K_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -4861,7 +5128,7 @@ void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void * restri
 
 #else
 
-void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     assert(n % QK_K == 0);
 
     const block_q5_K * restrict x = vx;
@@ -5154,13 +5421,13 @@ void ggml_vec_dot_q5_K_q8_K(const int n, float * restrict s, const void * restri
 #undef __AVX2__
 #endif
 #undef ggml_vec_dot_q6_K_q8_K
-void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_q6_K_q8_K_avx2(n, s, vx, vy);
+        ggml_vec_dot_q6_K_q8_K_avx2(n, s, bs, vx, bx, vy, by, nrc);
     } else if (X86_HAVE(AVX)) {
-        ggml_vec_dot_q6_K_q8_K_avx(n, s, vx, vy);
+        ggml_vec_dot_q6_K_q8_K_avx(n, s, bs, vx, bx, vy, by, nrc);
     } else {
-        ggml_vec_dot_q6_K_q8_K_default(n, s, vx, vy);
+        ggml_vec_dot_q6_K_q8_K_default(n, s, bs, vx, bx, vy, by, nrc);
     }
 }
 #else
@@ -5171,7 +5438,7 @@ void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void * restri
 
 #else
 
-void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+void ggml_vec_dot_q6_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     assert(n % QK_K == 0);
 
     const block_q6_K * restrict x = vx;
@@ -5501,61 +5768,756 @@ static const int8_t keven_signs_q2xs[1024] = {
      1,  1, -1, -1, -1, -1, -1, -1, -1,  1, -1, -1, -1, -1, -1,  1,  1, -1, -1, -1, -1, -1, -1,  1, -1, -1, -1, -1, -1, -1, -1, -1,
 };
 
-#ifdef __x86_64__
-#define ggml_vec_dot_iq2_xxs_q8_K ggml_vec_dot_iq2_xxs_q8_K_default
-#include "ggml_vec_dot_iq2_xxs_q8_K.inc"
-#undef ggml_vec_dot_iq2_xxs_q8_K
-#define ggml_vec_dot_iq2_xxs_q8_K __attribute__((__target__("avx2,fma,f16c"))) ggml_vec_dot_iq2_xxs_q8_K_avx2
-#ifndef __AVX2__
-#define __UNDEF_AVX2__
-#define __AVX2__
-#endif
-#include "ggml_vec_dot_iq2_xxs_q8_K.inc"
-#ifdef __UNDEF_AVX2__
-#undef __UNDEF_AVX2__
-#undef __AVX2__
-#endif
-#undef ggml_vec_dot_iq2_xxs_q8_K
-void ggml_vec_dot_iq2_xxs_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
-    if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_iq2_xxs_q8_K_avx2(n, s, vx, vy);
-    } else {
-        ggml_vec_dot_iq2_xxs_q8_K_default(n, s, vx, vy);
+void ggml_vec_dot_iq2_xxs_q8_K(int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
+    assert(n % QK_K == 0);
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+
+    const block_iq2_xxs * restrict x = vx;
+    const block_q8_K    * restrict y = vy;
+
+    const int nb = n / QK_K;
+
+#if defined(__ARM_NEON)
+
+    const uint64_t * signs64 = (const uint64_t *)keven_signs_q2xs;
+
+    uint32_t aux32[4];
+    const uint8_t * aux8 = (const uint8_t *)aux32;
+
+    ggml_int8x16x4_t q2u;
+    ggml_int8x16x4_t q2s;
+    ggml_int8x16x4_t q8b;
+
+    float sumf = 0;
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint16_t * restrict q2 = x[i].qs;
+        const int8_t   * restrict q8 = y[i].qs;
+        float sumf1 = 0, sumf2 = 0;
+        for (int ib32 = 0; ib32 < QK_K/32; ib32 += 2) {
+            q8b = ggml_vld1q_s8_x4(q8); q8 += 64;
+            memcpy(aux32, q2, 4*sizeof(uint32_t)); q2 += 8;
+            q2u.val[0] = vcombine_s8(vld1_s8((const void *)(iq2xxs_grid + aux8[ 0])), vld1_s8((const void *)(iq2xxs_grid + aux8[ 1])));
+            q2u.val[1] = vcombine_s8(vld1_s8((const void *)(iq2xxs_grid + aux8[ 2])), vld1_s8((const void *)(iq2xxs_grid + aux8[ 3])));
+            q2u.val[2] = vcombine_s8(vld1_s8((const void *)(iq2xxs_grid + aux8[ 8])), vld1_s8((const void *)(iq2xxs_grid + aux8[ 9])));
+            q2u.val[3] = vcombine_s8(vld1_s8((const void *)(iq2xxs_grid + aux8[10])), vld1_s8((const void *)(iq2xxs_grid + aux8[11])));
+            q2s.val[0] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[1] >>  0) & 127))), vld1_s8((const void *)(signs64 + ((aux32[1] >>  7) & 127))));
+            q2s.val[1] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[1] >> 14) & 127))), vld1_s8((const void *)(signs64 + ((aux32[1] >> 21) & 127))));
+            q2s.val[2] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[3] >>  0) & 127))), vld1_s8((const void *)(signs64 + ((aux32[3] >>  7) & 127))));
+            q2s.val[3] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[3] >> 14) & 127))), vld1_s8((const void *)(signs64 + ((aux32[3] >> 21) & 127))));
+            q2u.val[0] = vmulq_s8(q2u.val[0], q2s.val[0]);
+            q2u.val[1] = vmulq_s8(q2u.val[1], q2s.val[1]);
+            q2u.val[2] = vmulq_s8(q2u.val[2], q2s.val[2]);
+            q2u.val[3] = vmulq_s8(q2u.val[3], q2s.val[3]);
+            const int32x4_t p1 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), q2u.val[0], q8b.val[0]), q2u.val[1], q8b.val[1]);
+            const int32x4_t p2 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), q2u.val[2], q8b.val[2]), q2u.val[3], q8b.val[3]);
+            sumf1 += vaddvq_s32(p1) * (0.5f + (aux32[1] >> 28));
+            sumf2 += vaddvq_s32(p2) * (0.5f + (aux32[3] >> 28));
+        }
+        sumf += d*(sumf1 + sumf2);
     }
-}
+    *s = 0.25f * sumf;
+
+#elif defined(__AVX2__)
+
+    const uint64_t * signs64 = (const uint64_t *)keven_signs_q2xs;
+
+    uint32_t aux32[4];
+    const uint8_t * aux8 = (const uint8_t *)aux32;
+
+    __m256 accumf = _mm256_setzero_ps();
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint16_t * restrict q2 = x[i].qs;
+        const int8_t   * restrict q8 = y[i].qs;
+        __m256i sumi1 = _mm256_setzero_si256();
+        __m256i sumi2 = _mm256_setzero_si256();
+        for (int ib32 = 0; ib32 < QK_K/32; ib32 += 2) {
+            const __m256i q8_1 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+            const __m256i q8_2 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+            memcpy(aux32, q2, 4*sizeof(uint32_t)); q2 += 8;
+            const __m256i q2_1 = _mm256_set_epi64x(iq2xxs_grid[aux8[ 3]], iq2xxs_grid[aux8[ 2]], iq2xxs_grid[aux8[1]], iq2xxs_grid[aux8[0]]);
+            const __m256i q2_2 = _mm256_set_epi64x(iq2xxs_grid[aux8[11]], iq2xxs_grid[aux8[10]], iq2xxs_grid[aux8[9]], iq2xxs_grid[aux8[8]]);
+            const __m256i s2_1 = _mm256_set_epi64x(signs64[(aux32[1] >> 21) & 127], signs64[(aux32[1] >> 14) & 127],
+                                                   signs64[(aux32[1] >>  7) & 127], signs64[(aux32[1] >>  0) & 127]);
+            const __m256i s2_2 = _mm256_set_epi64x(signs64[(aux32[3] >> 21) & 127], signs64[(aux32[3] >> 14) & 127],
+                                                   signs64[(aux32[3] >>  7) & 127], signs64[(aux32[3] >>  0) & 127]);
+            const __m256i q8s_1 = _mm256_sign_epi8(q8_1, s2_1);
+            const __m256i q8s_2 = _mm256_sign_epi8(q8_2, s2_2);
+            const __m256i dot1  = _mm256_maddubs_epi16(q2_1, q8s_1);
+            const __m256i dot2  = _mm256_maddubs_epi16(q2_2, q8s_2);
+            const uint16_t ls1 = aux32[1] >> 28;
+            const uint16_t ls2 = aux32[3] >> 28;
+            const __m256i p1 = _mm256_madd_epi16(dot1, _mm256_set1_epi16(2*ls1+1));
+            const __m256i p2 = _mm256_madd_epi16(dot2, _mm256_set1_epi16(2*ls2+1));
+            sumi1 = _mm256_add_epi32(sumi1, p1);
+            sumi2 = _mm256_add_epi32(sumi2, p2);
+        }
+
+        accumf = _mm256_fmadd_ps(_mm256_set1_ps(d), _mm256_cvtepi32_ps(_mm256_add_epi32(sumi1, sumi2)), accumf);
+
+    }
+
+    *s = 0.125f * hsum_float_8(accumf);
+
 #else
-#define static
-#include "ggml_vec_dot_iq2_xxs_q8_K.inc"
-#undef static
+
+    uint32_t aux32[2];
+    const uint8_t * aux8 = (const uint8_t *)aux32;
+
+    float sumf = 0.f;
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint16_t * restrict q2 = x[i].qs;
+        const int8_t   * restrict q8 = y[i].qs;
+        int32_t bsum = 0;
+        for (int ib32 = 0; ib32 < QK_K/32; ++ib32) {
+            memcpy(aux32, q2, 2*sizeof(uint32_t));
+            q2 += 4;
+            const uint32_t ls = 2*(aux32[1] >> 28) + 1;
+            int32_t sumi = 0;
+            for (int l = 0; l < 4; ++l) {
+                const uint8_t * grid = (const uint8_t *)(iq2xxs_grid + aux8[l]);
+                const uint8_t  signs = ksigns_iq2xs[(aux32[1] >> 7*l) & 127];
+                for (int j = 0; j < 8; ++j) {
+                    sumi += grid[j] * q8[j] * (signs & kmask_iq2xs[j] ? -1 : 1);
+                }
+                q8 += 8;
+            }
+            bsum += sumi * ls;
+        }
+        sumf += d * bsum;
+    }
+    *s = 0.125f * sumf;
+#endif
+}
+
+void ggml_vec_dot_iq2_xs_q8_K(int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
+    assert(n % QK_K == 0);
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+
+    const block_iq2_xs * restrict x = vx;
+    const block_q8_K   * restrict y = vy;
+
+    const int nb = n / QK_K;
+
+#if defined(__ARM_NEON)
+
+    const uint64_t * signs64 = (const uint64_t *)keven_signs_q2xs;
+
+    ggml_int8x16x4_t q2u;
+    ggml_int8x16x4_t q2s;
+    ggml_int8x16x4_t q8b;
+
+    int32x4x4_t scales32;
+
+    float sumf = 0;
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint16_t * restrict q2 = x[i].qs;
+        const int8_t   * restrict q8 = y[i].qs;
+        const uint8x8_t scales8 = vld1_u8(x[i].scales);
+        const uint8x8_t scales_l = vand_u8(scales8, vdup_n_u8(0xf));
+        const uint8x8_t scales_h = vshr_n_u8(scales8, 4);
+        uint8x16_t scales = vcombine_u8(vzip1_u8(scales_l, scales_h), vzip2_u8(scales_l, scales_h));
+        scales = vaddq_u8(vshlq_n_u8(scales, 1), vdupq_n_u8(1));
+        const uint16x8_t scales1 = vmovl_u8(vget_low_u8(scales));
+        const uint16x8_t scales2 = vmovl_u8(vget_high_u8(scales));
+        scales32.val[0] = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(scales1)));
+        scales32.val[1] = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(scales1)));
+        scales32.val[2] = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(scales2)));
+        scales32.val[3] = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(scales2)));
+        int32x4_t sumi = vdupq_n_s32(0);
+        for (int ib64 = 0; ib64 < QK_K/64; ++ib64) {
+            q8b = ggml_vld1q_s8_x4(q8); q8 += 64;
+            q2u.val[0] = vcombine_s8(vld1_s8((const void *)(iq2xs_grid + (q2[0] & 511))), vld1_s8((const void *)(iq2xs_grid + (q2[1] & 511))));
+            q2u.val[1] = vcombine_s8(vld1_s8((const void *)(iq2xs_grid + (q2[2] & 511))), vld1_s8((const void *)(iq2xs_grid + (q2[3] & 511))));
+            q2u.val[2] = vcombine_s8(vld1_s8((const void *)(iq2xs_grid + (q2[4] & 511))), vld1_s8((const void *)(iq2xs_grid + (q2[5] & 511))));
+            q2u.val[3] = vcombine_s8(vld1_s8((const void *)(iq2xs_grid + (q2[6] & 511))), vld1_s8((const void *)(iq2xs_grid + (q2[7] & 511))));
+            q2s.val[0] = vcombine_s8(vld1_s8((const void *)(signs64 + (q2[0] >> 9))), vld1_s8((const void *)(signs64 + (q2[1] >> 9))));
+            q2s.val[1] = vcombine_s8(vld1_s8((const void *)(signs64 + (q2[2] >> 9))), vld1_s8((const void *)(signs64 + (q2[3] >> 9))));
+            q2s.val[2] = vcombine_s8(vld1_s8((const void *)(signs64 + (q2[4] >> 9))), vld1_s8((const void *)(signs64 + (q2[5] >> 9))));
+            q2s.val[3] = vcombine_s8(vld1_s8((const void *)(signs64 + (q2[6] >> 9))), vld1_s8((const void *)(signs64 + (q2[7] >> 9))));
+            q2u.val[0] = vmulq_s8(q2u.val[0], q2s.val[0]);
+            q2u.val[1] = vmulq_s8(q2u.val[1], q2s.val[1]);
+            q2u.val[2] = vmulq_s8(q2u.val[2], q2s.val[2]);
+            q2u.val[3] = vmulq_s8(q2u.val[3], q2s.val[3]);
+            const int32x4_t p1 = ggml_vdotq_s32(vdupq_n_s32(0), q2u.val[0], q8b.val[0]);
+            const int32x4_t p2 = ggml_vdotq_s32(vdupq_n_s32(0), q2u.val[1], q8b.val[1]);
+            const int32x4_t p3 = ggml_vdotq_s32(vdupq_n_s32(0), q2u.val[2], q8b.val[2]);
+            const int32x4_t p4 = ggml_vdotq_s32(vdupq_n_s32(0), q2u.val[3], q8b.val[3]);
+            const int32x4_t p = vpaddq_s32(vpaddq_s32(p1, p2), vpaddq_s32(p3, p4));
+            sumi = vmlaq_s32(sumi, p, scales32.val[ib64]);
+            q2 += 8;
+        }
+        sumf += d*vaddvq_s32(sumi);
+    }
+    *s = 0.125f * sumf;
+
+#elif defined(__AVX2__)
+
+    const __m128i m4 = _mm_set1_epi8(0xf);
+    const __m128i m1 = _mm_set1_epi8(1);
+    const __m256i m511 = _mm256_set1_epi16(511);
+    const __m256i mone = _mm256_set1_epi8(1);
+
+    static const uint8_t k_bit_helper[32] = {
+        0x00, 0x80, 0x80, 0x00, 0x80, 0x00, 0x00, 0x80, 0x80, 0x00, 0x00, 0x80, 0x00, 0x80, 0x80, 0x00,
+        0x00, 0x80, 0x80, 0x00, 0x80, 0x00, 0x00, 0x80, 0x80, 0x00, 0x00, 0x80, 0x00, 0x80, 0x80, 0x00,
+    };
+    static const char block_sign_shuffle_mask_1[32] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
+        0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06,
+    };
+    static const char block_sign_shuffle_mask_2[32] = {
+        0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x0a, 0x0a, 0x0a, 0x0a, 0x0a, 0x0a, 0x0a, 0x0a,
+        0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0e, 0x0e, 0x0e, 0x0e, 0x0e, 0x0e, 0x0e, 0x0e,
+    };
+    static const uint8_t bit_selector_mask_bytes[32] = {
+        0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
+        0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
+    };
+
+    const __m256i bit_helper = _mm256_loadu_si256((const __m256i*)k_bit_helper);
+    const __m256i bit_selector_mask = _mm256_loadu_si256((const __m256i*)bit_selector_mask_bytes);
+    const __m256i block_sign_shuffle_1 = _mm256_loadu_si256((const __m256i*)block_sign_shuffle_mask_1);
+    const __m256i block_sign_shuffle_2 = _mm256_loadu_si256((const __m256i*)block_sign_shuffle_mask_2);
+
+    uint64_t aux64;
+
+    // somewhat hacky, but gives a significant boost in performance
+    __m256i aux_gindex;
+    const uint16_t * gindex = (const uint16_t *)&aux_gindex;
+
+    __m256 accumf = _mm256_setzero_ps();
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint16_t * restrict q2 = x[i].qs;
+        const int8_t   * restrict q8 = y[i].qs;
+
+        memcpy(&aux64, x[i].scales, 8);
+        __m128i stmp = _mm_set1_epi64x(aux64);
+        stmp = _mm_unpacklo_epi8(_mm_and_si128(stmp, m4), _mm_and_si128(_mm_srli_epi16(stmp, 4), m4));
+        const __m128i scales = _mm_add_epi8(_mm_slli_epi16(stmp, 1), m1);
+
+        __m256i sumi1 = _mm256_setzero_si256();
+        __m256i sumi2 = _mm256_setzero_si256();
+        for (int ib32 = 0; ib32 < QK_K/32; ib32 += 4) {
+
+            const __m256i q2_data = _mm256_loadu_si256((const __m256i*)q2);  q2 += 16;
+            aux_gindex = _mm256_and_si256(q2_data, m511);
+
+            const __m256i partial_sign_bits = _mm256_srli_epi16(q2_data, 9);
+            const __m256i partial_sign_bits_upper = _mm256_srli_epi16(q2_data, 13);
+            const __m256i partial_sign_bits_for_counting = _mm256_xor_si256(partial_sign_bits, partial_sign_bits_upper);
+
+            const __m256i odd_bits = _mm256_shuffle_epi8(bit_helper, partial_sign_bits_for_counting);
+            const __m256i full_sign_bits = _mm256_or_si256(partial_sign_bits, odd_bits);
+
+            const __m256i q8_1 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+            const __m256i q8_2 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+            const __m256i q8_3 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+            const __m256i q8_4 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+
+            const __m256i q2_1 = _mm256_set_epi64x(iq2xs_grid[gindex[ 3]], iq2xs_grid[gindex[ 2]],
+                                                   iq2xs_grid[gindex[ 1]], iq2xs_grid[gindex[ 0]]);
+            const __m256i q2_2 = _mm256_set_epi64x(iq2xs_grid[gindex[ 7]], iq2xs_grid[gindex[ 6]],
+                                                   iq2xs_grid[gindex[ 5]], iq2xs_grid[gindex[ 4]]);
+            const __m256i q2_3 = _mm256_set_epi64x(iq2xs_grid[gindex[11]], iq2xs_grid[gindex[10]],
+                                                   iq2xs_grid[gindex[ 9]], iq2xs_grid[gindex[ 8]]);
+            const __m256i q2_4 = _mm256_set_epi64x(iq2xs_grid[gindex[15]], iq2xs_grid[gindex[14]],
+                                                   iq2xs_grid[gindex[13]], iq2xs_grid[gindex[12]]);
+
+            const __m128i full_signs_l = _mm256_castsi256_si128(full_sign_bits);
+            const __m128i full_signs_h = _mm256_extractf128_si256(full_sign_bits, 1);
+            const __m256i full_signs_1 = _mm256_set_m128i(full_signs_l, full_signs_l);
+            const __m256i full_signs_2 = _mm256_set_m128i(full_signs_h, full_signs_h);
+
+            __m256i signs;
+            signs = _mm256_shuffle_epi8(full_signs_1, block_sign_shuffle_1);
+            signs = _mm256_cmpeq_epi8(_mm256_and_si256(signs, bit_selector_mask), bit_selector_mask);
+            const __m256i q8s_1 = _mm256_sign_epi8(q8_1, _mm256_or_si256(signs, mone));
+
+            signs = _mm256_shuffle_epi8(full_signs_1, block_sign_shuffle_2);
+            signs = _mm256_cmpeq_epi8(_mm256_and_si256(signs, bit_selector_mask), bit_selector_mask);
+            const __m256i q8s_2 = _mm256_sign_epi8(q8_2, _mm256_or_si256(signs, mone));
+
+            signs = _mm256_shuffle_epi8(full_signs_2, block_sign_shuffle_1);
+            signs = _mm256_cmpeq_epi8(_mm256_and_si256(signs, bit_selector_mask), bit_selector_mask);
+            const __m256i q8s_3 = _mm256_sign_epi8(q8_3, _mm256_or_si256(signs, mone));
+
+            signs = _mm256_shuffle_epi8(full_signs_2, block_sign_shuffle_2);
+            signs = _mm256_cmpeq_epi8(_mm256_and_si256(signs, bit_selector_mask), bit_selector_mask);
+            const __m256i q8s_4 = _mm256_sign_epi8(q8_4, _mm256_or_si256(signs, mone));
+
+            const __m256i dot1  = _mm256_maddubs_epi16(q2_1, q8s_1);
+            const __m256i dot2  = _mm256_maddubs_epi16(q2_2, q8s_2);
+            const __m256i dot3  = _mm256_maddubs_epi16(q2_3, q8s_3);
+            const __m256i dot4  = _mm256_maddubs_epi16(q2_4, q8s_4);
+
+            const __m256i sc1 = _mm256_cvtepi8_epi16(_mm_shuffle_epi8(scales, get_scale_shuffle(ib32+0)));
+            const __m256i sc2 = _mm256_cvtepi8_epi16(_mm_shuffle_epi8(scales, get_scale_shuffle(ib32+1)));
+            const __m256i sc3 = _mm256_cvtepi8_epi16(_mm_shuffle_epi8(scales, get_scale_shuffle(ib32+2)));
+            const __m256i sc4 = _mm256_cvtepi8_epi16(_mm_shuffle_epi8(scales, get_scale_shuffle(ib32+3)));
+
+            sumi1 = _mm256_add_epi32(sumi1, _mm256_madd_epi16(dot1, sc1));
+            sumi2 = _mm256_add_epi32(sumi2, _mm256_madd_epi16(dot2, sc2));
+            sumi1 = _mm256_add_epi32(sumi1, _mm256_madd_epi16(dot3, sc3));
+            sumi2 = _mm256_add_epi32(sumi2, _mm256_madd_epi16(dot4, sc4));
+        }
+
+        accumf = _mm256_fmadd_ps(_mm256_set1_ps(d), _mm256_cvtepi32_ps(_mm256_add_epi32(sumi1, sumi2)), accumf);
+
+    }
+
+    *s = 0.125f * hsum_float_8(accumf);
+
+#else
+
+    float sumf = 0.f;
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint16_t * restrict q2 = x[i].qs;
+        const uint8_t  * restrict sc = x[i].scales;
+        const int8_t   * restrict q8 = y[i].qs;
+        int32_t bsum = 0;
+        for (int ib32 = 0; ib32 < QK_K/32; ++ib32) {
+            const uint16_t ls1 = 2*(sc[ib32] & 0xf) + 1;
+            const uint16_t ls2 = 2*(sc[ib32] >>  4) + 1;
+            int32_t sumi = 0;
+            for (int l = 0; l < 2; ++l) {
+                const uint8_t * grid = (const uint8_t *)(iq2xs_grid + (q2[l] & 511));
+                const uint8_t  signs = ksigns_iq2xs[q2[l] >> 9];
+                for (int j = 0; j < 8; ++j) {
+                    sumi += grid[j] * q8[j] * (signs & kmask_iq2xs[j] ? -1 : 1);
+                }
+                q8 += 8;
+            }
+            bsum += sumi * ls1;
+            sumi = 0;
+            for (int l = 2; l < 4; ++l) {
+                const uint8_t * grid = (const uint8_t *)(iq2xs_grid + (q2[l] & 511));
+                const uint8_t  signs = ksigns_iq2xs[q2[l] >> 9];
+                for (int j = 0; j < 8; ++j) {
+                    sumi += grid[j] * q8[j] * (signs & kmask_iq2xs[j] ? -1 : 1);
+                }
+                q8 += 8;
+            }
+            bsum += sumi * ls2;
+            q2 += 4;
+        }
+        sumf += d * bsum;
+    }
+    *s = 0.125f * sumf;
+#endif
+}
+
+void ggml_vec_dot_iq3_xxs_q8_K(int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
+    assert(n % QK_K == 0);
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+
+    const block_iq3_xxs * restrict x = vx;
+    const block_q8_K    * restrict y = vy;
+
+    const int nb = n / QK_K;
+
+#if defined(__ARM_NEON)
+
+    const uint64_t * signs64 = (const uint64_t *)keven_signs_q2xs;
+
+    uint32_t aux32[2];
+
+    ggml_int8x16x4_t q3s;
+    ggml_int8x16x4_t q8b;
+
+    float sumf = 0;
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint8_t * restrict q3 = x[i].qs;
+        const uint8_t * restrict gas = x[i].qs + QK_K/4;
+        const int8_t   * restrict q8 = y[i].qs;
+        float sumf1 = 0, sumf2 = 0;
+        for (int ib32 = 0; ib32 < QK_K/32; ib32 += 2) {
+            q8b = ggml_vld1q_s8_x4(q8); q8 += 64;
+            memcpy(aux32, gas, 2*sizeof(uint32_t)); gas += 2*sizeof(uint32_t);
+            const uint32x4_t aux32x4_0 = ggml_vld1q_u32(iq3xxs_grid[q3[ 0]], iq3xxs_grid[q3[ 1]], iq3xxs_grid[q3[ 2]], iq3xxs_grid[q3[ 3]]);
+            const uint32x4_t aux32x4_1 = ggml_vld1q_u32(iq3xxs_grid[q3[ 4]], iq3xxs_grid[q3[ 5]], iq3xxs_grid[q3[ 6]], iq3xxs_grid[q3[ 7]]);
+            const uint32x4_t aux32x4_2 = ggml_vld1q_u32(iq3xxs_grid[q3[ 8]], iq3xxs_grid[q3[ 9]], iq3xxs_grid[q3[10]], iq3xxs_grid[q3[11]]);
+            const uint32x4_t aux32x4_3 = ggml_vld1q_u32(iq3xxs_grid[q3[12]], iq3xxs_grid[q3[13]], iq3xxs_grid[q3[14]], iq3xxs_grid[q3[15]]);
+            q3 += 16;
+            q3s.val[0] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[0] >>  0) & 127))), vld1_s8((const void *)(signs64 + ((aux32[0] >>  7) & 127))));
+            q3s.val[1] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[0] >> 14) & 127))), vld1_s8((const void *)(signs64 + ((aux32[0] >> 21) & 127))));
+            q3s.val[2] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[1] >>  0) & 127))), vld1_s8((const void *)(signs64 + ((aux32[1] >>  7) & 127))));
+            q3s.val[3] = vcombine_s8(vld1_s8((const void *)(signs64 + ((aux32[1] >> 14) & 127))), vld1_s8((const void *)(signs64 + ((aux32[1] >> 21) & 127))));
+            q3s.val[0] = vmulq_s8(q3s.val[0], vreinterpretq_s8_u32(aux32x4_0));
+            q3s.val[1] = vmulq_s8(q3s.val[1], vreinterpretq_s8_u32(aux32x4_1));
+            q3s.val[2] = vmulq_s8(q3s.val[2], vreinterpretq_s8_u32(aux32x4_2));
+            q3s.val[3] = vmulq_s8(q3s.val[3], vreinterpretq_s8_u32(aux32x4_3));
+            const int32x4_t p1 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), q3s.val[0], q8b.val[0]), q3s.val[1], q8b.val[1]);
+            const int32x4_t p2 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), q3s.val[2], q8b.val[2]), q3s.val[3], q8b.val[3]);
+            sumf1 += vaddvq_s32(p1) * (0.5f + (aux32[0] >> 28));
+            sumf2 += vaddvq_s32(p2) * (0.5f + (aux32[1] >> 28));
+        }
+        sumf += d*(sumf1 + sumf2);
+    }
+    *s = 0.5f * sumf;
+
+#elif defined(__AVX2__)
+
+    const uint64_t * signs64 = (const uint64_t *)keven_signs_q2xs;
+
+    uint32_t aux32[2];
+
+    __m256 accumf = _mm256_setzero_ps();
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint8_t * restrict q3 = x[i].qs;
+        const uint8_t * restrict gas = x[i].qs + QK_K/4;
+        const int8_t  * restrict q8 = y[i].qs;
+        __m256i sumi1 = _mm256_setzero_si256();
+        __m256i sumi2 = _mm256_setzero_si256();
+        for (int ib32 = 0; ib32 < QK_K/32; ib32 += 2) {
+            const __m256i q8_1 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+            const __m256i q8_2 = _mm256_loadu_si256((const __m256i *)q8); q8 += 32;
+            const __m256i q2_1 = _mm256_set_epi32(iq3xxs_grid[q3[7]], iq3xxs_grid[q3[6]], iq3xxs_grid[q3[5]], iq3xxs_grid[q3[4]],
+                                                  iq3xxs_grid[q3[3]], iq3xxs_grid[q3[2]], iq3xxs_grid[q3[1]], iq3xxs_grid[q3[0]]);
+            q3 += 8;
+            const __m256i q2_2 = _mm256_set_epi32(iq3xxs_grid[q3[7]], iq3xxs_grid[q3[6]], iq3xxs_grid[q3[5]], iq3xxs_grid[q3[4]],
+                                                  iq3xxs_grid[q3[3]], iq3xxs_grid[q3[2]], iq3xxs_grid[q3[1]], iq3xxs_grid[q3[0]]);
+            q3 += 8;
+            memcpy(aux32, gas, 8); gas += 8;
+            const __m256i s2_1 = _mm256_set_epi64x(signs64[(aux32[0] >> 21) & 127], signs64[(aux32[0] >> 14) & 127],
+                                                   signs64[(aux32[0] >>  7) & 127], signs64[(aux32[0] >>  0) & 127]);
+            const __m256i s2_2 = _mm256_set_epi64x(signs64[(aux32[1] >> 21) & 127], signs64[(aux32[1] >> 14) & 127],
+                                                   signs64[(aux32[1] >>  7) & 127], signs64[(aux32[1] >>  0) & 127]);
+            const __m256i q8s_1 = _mm256_sign_epi8(q8_1, s2_1);
+            const __m256i q8s_2 = _mm256_sign_epi8(q8_2, s2_2);
+            const __m256i dot1  = _mm256_maddubs_epi16(q2_1, q8s_1);
+            const __m256i dot2  = _mm256_maddubs_epi16(q2_2, q8s_2);
+            const uint16_t ls1 = aux32[0] >> 28;
+            const uint16_t ls2 = aux32[1] >> 28;
+            const __m256i p1 = _mm256_madd_epi16(dot1, _mm256_set1_epi16(2*ls1+1));
+            const __m256i p2 = _mm256_madd_epi16(dot2, _mm256_set1_epi16(2*ls2+1));
+            sumi1 = _mm256_add_epi32(sumi1, p1);
+            sumi2 = _mm256_add_epi32(sumi2, p2);
+        }
+
+        accumf = _mm256_fmadd_ps(_mm256_set1_ps(d), _mm256_cvtepi32_ps(_mm256_add_epi32(sumi1, sumi2)), accumf);
+
+    }
+
+    *s = 0.25f * hsum_float_8(accumf);
+
+#else
+
+    uint32_t aux32;
+
+    float sumf = 0.f;
+    for (int i = 0; i < nb; ++i) {
+        const float d = GGML_FP16_TO_FP32(x[i].d) * y[i].d;
+        const uint8_t * restrict q3 = x[i].qs;
+        const uint8_t * restrict gas = x[i].qs + QK_K/4;
+        const int8_t  * restrict q8 = y[i].qs;
+        int32_t bsum = 0;
+        for (int ib32 = 0; ib32 < QK_K/32; ++ib32) {
+            memcpy(&aux32, gas, sizeof(uint32_t)); gas += sizeof(uint32_t);
+            const uint32_t ls = 2*(aux32 >> 28) + 1;
+            int32_t sumi = 0;
+            for (int l = 0; l < 4; ++l) {
+                const uint8_t * grid1 = (const uint8_t *)(iq3xxs_grid + q3[2*l+0]);
+                const uint8_t * grid2 = (const uint8_t *)(iq3xxs_grid + q3[2*l+1]);
+                const uint8_t  signs = ksigns_iq2xs[(aux32 >> 7*l) & 127];
+                for (int j = 0; j < 4; ++j) {
+                    sumi += grid1[j] * q8[j+0] * (signs & kmask_iq2xs[j+0] ? -1 : 1);
+                    sumi += grid2[j] * q8[j+4] * (signs & kmask_iq2xs[j+4] ? -1 : 1);
+                }
+                q8 += 8;
+            }
+            q3 += 8;
+            bsum += sumi * ls;
+        }
+        sumf += d * bsum;
+    }
+    *s = 0.25f * sumf;
+#endif
+}
+
+#ifdef __AVX2__
+static inline __m256i mul_add_epi8(const __m256i x, const __m256i y) {
+    const __m256i ax = _mm256_sign_epi8(x, x);
+    const __m256i sy = _mm256_sign_epi8(y, x);
+    return _mm256_maddubs_epi16(ax, sy);
+}
 #endif
 
-#ifdef __x86_64__
-#define ggml_vec_dot_iq2_xs_q8_K ggml_vec_dot_iq2_xs_q8_K_default
-#include "ggml_vec_dot_iq2_xs_q8_K.inc"
-#undef ggml_vec_dot_iq2_xs_q8_K
-#define ggml_vec_dot_iq2_xs_q8_K __attribute__((__target__("avx2,fma,f16c"))) ggml_vec_dot_iq2_xs_q8_K_avx2
-#ifndef __AVX2__
-#define __UNDEF_AVX2__
-#define __AVX2__
-#endif
-#include "ggml_vec_dot_iq2_xs_q8_K.inc"
-#ifdef __UNDEF_AVX2__
-#undef __UNDEF_AVX2__
-#undef __AVX2__
-#endif
-#undef ggml_vec_dot_iq2_xs_q8_K
-void ggml_vec_dot_iq2_xs_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
-    if (X86_HAVE(AVX2) && X86_HAVE(FMA) && X86_HAVE(F16C)) {
-        ggml_vec_dot_iq2_xs_q8_K_avx2(n, s, vx, vy);
-    } else {
-        ggml_vec_dot_iq2_xs_q8_K_default(n, s, vx, vy);
+void ggml_vec_dot_iq1_s_q8_K  (int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+    assert(n % QK_K == 0);
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+
+    const block_iq1_s * restrict x = vx;
+    const block_q8_K  * restrict y = vy;
+
+    const int nb = n / QK_K;
+
+#if defined __ARM_NEON
+
+    const uint8x16_t m8 = vdupq_n_u8(0x08);
+    const uint8x16_t m7 = vdupq_n_u8(0x07);
+    const uint8x16_t m1 = vdupq_n_u8(0x01);
+    const int32x4_t vzero = vdupq_n_s32(0);
+
+    uint16_t gindex[8];
+    uint16x8x2_t vindex;
+    int8x16x4_t q1b;
+    int8x16x4_t q8b;
+    uint16x8x4_t scales;
+    int32x4x2_t sumi;
+    int32x4x2_t dotq;
+
+    float sumf = 0;
+    for (int i = 0; i < nb; ++i) {
+
+        const int8_t  * q8 = y[i].qs;
+        const uint8_t * qs = x[i].qs;
+        const uint8_t * sc = x[i].scales;
+
+        sumi.val[0] = sumi.val[1] = vzero;
+
+        for (int i128 = 0; i128 < QK_K/128; ++i128) {
+            const uint8x16_t ql = vld1q_u8(qs); qs += 16;
+            const uint8x8_t tm1 = vld1_u8 (sc); sc +=  8;
+            const uint8x8_t tm2 = vshr_n_u8(tm1, 4);
+            const uint8x16_t qh = vcombine_u8(vzip1_u8(tm1, tm2), vzip2_u8(tm1, tm2));
+            const uint8x16_t hbit = vandq_u8(qh, m8);
+            vindex.val[0] = vorrq_u16(vmovl_u8(vget_low_u8 (ql)), vshlq_n_u16(vmovl_u8(vget_low_u8 (hbit)), 5));
+            vindex.val[1] = vorrq_u16(vmovl_u8(vget_high_u8(ql)), vshlq_n_u16(vmovl_u8(vget_high_u8(hbit)), 5));
+            const uint8x16_t scales8 = vorrq_u8(vshlq_n_u8(vandq_u8(qh, m7), 1), m1);
+            scales.val[0] = vmovl_u8(vget_low_u8 (scales8));
+            scales.val[1] = vmovl_u8(vget_high_u8 (scales8));
+
+            for (int l = 0; l < 2; ++l) {
+                vst1q_u16(gindex+0, vindex.val[l]);
+                q1b.val[0] = vcombine_s8(vld1_s8((const void *)(iq1s_grid+gindex[0])), vld1_s8((const void *)(iq1s_grid+gindex[1])));
+                q1b.val[1] = vcombine_s8(vld1_s8((const void *)(iq1s_grid+gindex[2])), vld1_s8((const void *)(iq1s_grid+gindex[3])));
+                q1b.val[2] = vcombine_s8(vld1_s8((const void *)(iq1s_grid+gindex[4])), vld1_s8((const void *)(iq1s_grid+gindex[5])));
+                q1b.val[3] = vcombine_s8(vld1_s8((const void *)(iq1s_grid+gindex[6])), vld1_s8((const void *)(iq1s_grid+gindex[7])));
+                q8b = ggml_vld1q_s8_x4(q8); q8 += 64;
+
+                dotq.val[0] = vpaddq_s32(ggml_vdotq_s32(vzero, q1b.val[0], q8b.val[0]), ggml_vdotq_s32(vzero, q1b.val[1], q8b.val[1]));
+                dotq.val[1] = vpaddq_s32(ggml_vdotq_s32(vzero, q1b.val[2], q8b.val[2]), ggml_vdotq_s32(vzero, q1b.val[3], q8b.val[3]));
+
+                sumi.val[0] = vmlaq_s32(sumi.val[0], dotq.val[0], vreinterpretq_s32_u32(vmovl_u16(vget_low_u16 (scales.val[l]))));
+                sumi.val[1] = vmlaq_s32(sumi.val[1], dotq.val[1], vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(scales.val[l]))));
+            }
+        }
+
+        sumf += y[i].d * GGML_FP16_TO_FP32(x[i].d) * vaddvq_s32(vaddq_s32(sumi.val[0], sumi.val[1]));
     }
-}
+
+    *s = sumf;
+
+#elif defined __AVX2__
+
+    const __m128i m8 = _mm_set1_epi8(0x08);
+    const __m128i m7 = _mm_set1_epi8(0x07);
+    const __m128i m1 = _mm_set1_epi8(0x01);
+    const __m128i shuffle_h = _mm_set_epi8(15, 7, 14, 6, 13, 5, 12, 4, 11, 3, 10, 2, 9, 1, 8, 0);
+    const __m128i shuffle_s[4] = {
+        _mm_set_epi32(0x03030303, 0x02020202, 0x01010101, 0x00000000),
+        _mm_set_epi32(0x07070707, 0x06060606, 0x05050505, 0x04040404),
+        _mm_set_epi32(0x0b0b0b0b, 0x0a0a0a0a, 0x09090909, 0x08080808),
+        _mm_set_epi32(0x0f0f0f0f, 0x0e0e0e0e, 0x0d0d0d0d, 0x0c0c0c0c)
+    };
+
+    uint64_t aux64;
+
+    __m256i v_gindex;
+    const uint16_t * gindex = (const uint16_t *)&v_gindex;
+
+    __m256 accum = _mm256_setzero_ps();
+    for (int i = 0; i < nb; ++i) {
+
+        const int8_t  * q8 = y[i].qs;
+        const uint8_t * qs = x[i].qs;
+        const uint8_t * sc = x[i].scales;
+
+        __m256i sumi = _mm256_setzero_si256();
+        for (int i128 = 0; i128 < QK_K/128; ++i128) {
+            const __m128i ql = _mm_loadu_si128((const __m128i*)qs); qs += 16;
+            memcpy(&aux64, sc, 8); sc += 8;
+            const __m128i qh = _mm_shuffle_epi8(_mm_set_epi64x(aux64 >> 4, aux64), shuffle_h);
+            const __m256i hbit = _mm256_cvtepu8_epi16(_mm_and_si128(qh, m8));
+            v_gindex = _mm256_or_si256(_mm256_cvtepu8_epi16(ql), _mm256_slli_epi16(hbit, 5));
+            const __m128i scales = _mm_or_si128(_mm_slli_epi16(_mm_and_si128(qh, m7), 1), m1);
+
+            for (int i32 = 0; i32 < 4; ++i32) {
+                const __m256i q8b = _mm256_loadu_si256((const __m256i*)q8); q8 += 32;
+                const __m256i q1b = _mm256_set_epi64x(iq1s_grid[gindex[4*i32+3]], iq1s_grid[gindex[4*i32+2]],
+                                                      iq1s_grid[gindex[4*i32+1]], iq1s_grid[gindex[4*i32+0]]);
+                const __m256i dot = mul_add_epi8(q1b, q8b);
+                const __m256i s16 = _mm256_cvtepi8_epi16(_mm_shuffle_epi8(scales, shuffle_s[i32]));
+                const __m256i p   = _mm256_madd_epi16(s16, dot);
+                sumi = _mm256_add_epi32(sumi, p);
+            }
+
+        }
+
+        accum = _mm256_fmadd_ps(_mm256_set1_ps(y[i].d * GGML_FP16_TO_FP32(x[i].d)), _mm256_cvtepi32_ps(sumi), accum);
+
+    }
+
+    *s = hsum_float_8(accum);
+
 #else
-#define static
-#include "ggml_vec_dot_iq2_xs_q8_K.inc"
-#undef static
+
+    int db[4];
+    uint16_t idx[4];
+
+    float sumf = 0;
+    for (int i = 0; i < nb; ++i) {
+
+        const int8_t  * q8 = y[i].qs;
+        const uint8_t * qs = x[i].qs;
+        const uint8_t * sc = x[i].scales;
+
+        int sumi = 0;
+        for (int i32 = 0; i32 < QK_K/32; ++i32) {
+            idx[0] = qs[0] | ((sc[0] & 0x08) << 5);
+            idx[1] = qs[1] | ((sc[0] & 0x80) << 1);
+            idx[2] = qs[2] | ((sc[1] & 0x08) << 5);
+            idx[3] = qs[3] | ((sc[1] & 0x80) << 1);
+            db[0] = (2*(sc[0] & 7) + 1);
+            db[1] = (2*((sc[0] >> 4) & 7) + 1);
+            db[2] = (2*(sc[1] & 7) + 1);
+            db[3] = (2*((sc[1] >> 4) & 7) + 1);
+            for (int l = 0; l < 4; ++l) {
+                const int8_t * grid = (const int8_t *)(iq1s_grid + idx[l]);
+                int suml = 0;
+                for (int j = 0; j < 8; ++j) suml += q8[j] * grid[j];
+                sumi += db[l] * suml;
+                q8 += 8;
+            }
+            qs += 4;
+            sc += 2;
+        }
+
+        sumf += GGML_FP16_TO_FP32(x[i].d) * y[i].d * sumi;
+    }
+
+    *s = sumf;
+
 #endif
+}
+
+void ggml_vec_dot_iq4_nl_q8_0(int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+    assert(n % QK4_NL == 0);
+    static_assert(QK4_NL == QK8_0, "QK4_NL and QK8_0 must be the same");
+
+    const block_iq4_nl * restrict x = vx;
+    const block_q8_0   * restrict y = vy;
+
+    const int nb = n / QK4_NL;
+
+#if defined __ARM_NEON
+    const int8x16_t values = vld1q_s8(kvalues_iq4nl);
+    const uint8x16_t m4b = vdupq_n_u8(0x0f);
+    uint8x16x2_t q4bits;
+    int8x16x4_t q4b;
+    int8x16x4_t q8b;
+    int32x4_t prod_1, prod_2;
+
+    float sumf = 0;
+
+    for (int ib = 0; ib < nb; ib += 2) {
+
+        q4bits.val[0] = vld1q_u8(x[ib+0].qs);
+        q4bits.val[1] = vld1q_u8(x[ib+1].qs);
+        q8b.val[0]    = vld1q_s8(y[ib+0].qs);
+        q8b.val[1]    = vld1q_s8(y[ib+0].qs + 16);
+        q8b.val[2]    = vld1q_s8(y[ib+1].qs);
+        q8b.val[3]    = vld1q_s8(y[ib+1].qs + 16);
+
+        q4b.val[0] = vqtbl1q_s8(values, vandq_u8(q4bits.val[0], m4b));
+        q4b.val[1] = vqtbl1q_s8(values, vshrq_n_u8(q4bits.val[0], 4));
+        q4b.val[2] = vqtbl1q_s8(values, vandq_u8(q4bits.val[1], m4b));
+        q4b.val[3] = vqtbl1q_s8(values, vshrq_n_u8(q4bits.val[1], 4));
+
+        prod_1 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), q4b.val[0], q8b.val[0]), q4b.val[1], q8b.val[1]);
+        prod_2 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), q4b.val[2], q8b.val[2]), q4b.val[3], q8b.val[3]);
+
+        sumf += (float)x[ib+0].d * (float)y[ib+0].d * vaddvq_s32(prod_1) + (float)x[ib+1].d * (float)y[ib+1].d * vaddvq_s32(prod_2);
+
+    }
+
+    *s = sumf;
+
+#elif defined __AVX2__
+
+    const __m128i values128 = _mm_loadu_si128((const __m128i*)kvalues_iq4nl);
+    const __m128i m4b  = _mm_set1_epi8(0x0f);
+    const __m256i mone = _mm256_set1_epi16(1);
+
+    __m256 accum1 = _mm256_setzero_ps();
+    __m256 accum2 = _mm256_setzero_ps();
+    for (int ib = 0; ib < nb; ib += 2) {
+        const __m128i q4bits_1 = _mm_loadu_si128((const __m128i*)x[0].qs);
+        const __m128i q4bits_2 = _mm_loadu_si128((const __m128i*)x[1].qs);
+        const __m256i q8b_1 = _mm256_loadu_si256((const __m256i *)y[0].qs);
+        const __m256i q8b_2 = _mm256_loadu_si256((const __m256i *)y[1].qs);
+        const __m256i q4b_1 = _mm256_set_m128i(_mm_shuffle_epi8(values128, _mm_and_si128(_mm_srli_epi16(q4bits_1, 4), m4b)),
+                                               _mm_shuffle_epi8(values128, _mm_and_si128(q4bits_1, m4b)));
+        const __m256i q4b_2 = _mm256_set_m128i(_mm_shuffle_epi8(values128, _mm_and_si128(_mm_srli_epi16(q4bits_2, 4), m4b)),
+                                               _mm_shuffle_epi8(values128, _mm_and_si128(q4bits_2, m4b)));
+        const __m256i p16_1 = mul_add_epi8(q4b_1, q8b_1);
+        const __m256i p16_2 = mul_add_epi8(q4b_2, q8b_2);
+        const __m256i p_1 = _mm256_madd_epi16(p16_1, mone);
+        const __m256i p_2 = _mm256_madd_epi16(p16_2, mone);
+        accum1 = _mm256_fmadd_ps(_mm256_set1_ps(GGML_FP16_TO_FP32(y[0].d)*GGML_FP16_TO_FP32(x[0].d)),
+                _mm256_cvtepi32_ps(p_1), accum1);
+        accum2 = _mm256_fmadd_ps(_mm256_set1_ps(GGML_FP16_TO_FP32(y[1].d)*GGML_FP16_TO_FP32(x[1].d)),
+                _mm256_cvtepi32_ps(p_2), accum2);
+
+        y += 2;
+        x += 2;
+    }
+
+    *s = hsum_float_8(_mm256_add_ps(accum1, accum2));
+
+#else
+    float sumf = 0;
+    for (int ib = 0; ib < nb; ++ib) {
+        const float d = GGML_FP16_TO_FP32(y[ib].d)*GGML_FP16_TO_FP32(x[ib].d);
+        int sumi1 = 0, sumi2 = 0;
+        for (int j = 0; j < QK4_NL/2; ++j) {
+            sumi1 += y[ib].qs[j+       0] * kvalues_iq4nl[x[ib].qs[j] & 0xf];
+            sumi2 += y[ib].qs[j+QK4_NL/2] * kvalues_iq4nl[x[ib].qs[j] >>  4];
+        }
+        sumf += d * (sumi1 + sumi2);
+    }
+    *s = sumf;
+#endif
+}
 
 // ================================ IQ2 quantization =============================================
 
@@ -5565,14 +6527,22 @@ typedef struct {
     uint16_t * neighbours;
 } iq2_entry_t;
 
-static iq2_entry_t iq2_data[2] = {
+static iq2_entry_t iq2_data[3] = {
+    {NULL, NULL, NULL},
     {NULL, NULL, NULL},
     {NULL, NULL, NULL},
 };
 
-static inline int iq2_data_index(int grid_size) {
-    GGML_ASSERT(grid_size == 256 || grid_size == 512);
-    return grid_size == 256 ? 0 : 1;
+static inline int iq2_data_index(enum ggml_type type) {
+    GGML_ASSERT(type == GGML_TYPE_IQ2_XXS || type == GGML_TYPE_IQ2_XS || type == GGML_TYPE_IQ1_S);
+    return type == GGML_TYPE_IQ2_XXS ? 0 :
+           type == GGML_TYPE_IQ2_XS  ? 1 : 2;
+}
+
+static inline int iq2_grid_size(enum ggml_type type) {
+    GGML_ASSERT(type == GGML_TYPE_IQ2_XXS || type == GGML_TYPE_IQ2_XS || type == GGML_TYPE_IQ1_S);
+    return type == GGML_TYPE_IQ2_XXS ? 256 :
+           type == GGML_TYPE_IQ2_XS  ? 512 : 512;
 }
 
 static int iq2_compare_func(const void * left, const void * right) {
@@ -5581,12 +6551,13 @@ static int iq2_compare_func(const void * left, const void * right) {
     return l[0] < r[0] ? -1 : l[0] > r[0] ? 1 : l[1] < r[1] ? -1 : l[1] > r[1] ? 1 : 0;
 }
 
-void iq2xs_init_impl(int grid_size) {
-    const int gindex = iq2_data_index(grid_size);
+void iq2xs_init_impl(enum ggml_type type) {
+    const int gindex = iq2_data_index(type);
+    const int grid_size = iq2_grid_size(type);
     if (iq2_data[gindex].grid) {
         return;
     }
-    static const uint16_t kgrid_256[256] = {
+    static const uint16_t kgrid_2bit_256[256] = {
             0,     2,     5,     8,    10,    17,    20,    32,    34,    40,    42,    65,    68,    80,    88,    97,
           100,   128,   130,   138,   162,   257,   260,   272,   277,   320,   388,   408,   512,   514,   546,   642,
          1025,  1028,  1040,  1057,  1060,  1088,  1090,  1096,  1120,  1153,  1156,  1168,  1188,  1280,  1282,  1288,
@@ -5604,7 +6575,7 @@ void iq2xs_init_impl(int grid_size) {
         33888, 34048, 34118, 34196, 34313, 34368, 34400, 34818, 35076, 35345, 36868, 36880, 36900, 36928, 37025, 37142,
         37248, 37445, 37888, 37922, 37956, 38225, 39041, 39200, 40962, 41040, 41093, 41225, 41472, 42008, 43088, 43268,
     };
-    static const uint16_t kgrid_512[512] = {
+    static const uint16_t kgrid_2bit_512[512] = {
             0,     2,     5,     8,    10,    17,    20,    22,    25,    32,    34,    37,    40,    65,    68,    70,
            73,    80,    82,    85,    88,    97,   100,   128,   130,   133,   136,   145,   148,   153,   160,   257,
           260,   262,   265,   272,   274,   277,   280,   282,   289,   292,   320,   322,   325,   328,   337,   340,
@@ -5638,9 +6609,45 @@ void iq2xs_init_impl(int grid_size) {
         40962, 40968, 40970, 40992, 41002, 41120, 41297, 41305, 41382, 41472, 41474, 41480, 41514, 41600, 41632, 42048,
         42133, 42597, 42648, 43018, 43040, 43042, 43048, 43168, 43176, 43268, 43396, 43398, 43560, 43562, 43665, 43690,
     };
+    static const uint16_t kgrid_1bit_512[512] = {
+           10,    33,    41,    85,   132,   134,   160,   162,   277,   337,   340,   345,   357,   405,   516,   545,
+          553,   598,   641,   650,   681,  1042,  1044,  1097,  1169,  1176,  1320,  1345,  1365,  1378,  1434,  1444,
+         1545,  1617,  1642,  1685,  2053,  2080,  2089,  2133,  2176,  2182,  2208,  2214,  2306,  2384,  2393,  2440,
+         2453,  2581,  2664,  2690,  2721,  4117,  4161,  4182,  4184,  4261,  4357,  4369,  4372,  4377,  4390,  4422,
+         4432,  4437,  4449,  4457,  4485,  4497,  4505,  4629,  4677,  4696,  4774,  5205,  5217,  5225,  5386,  5397,
+         5409,  5445,  5457,  5460,  5461,  5462,  5465,  5472,  5477,  5525,  5545,  5650,  5668,  5717,  5729,  5769,
+         5777,  6212,  6234,  6244,  6293,  6424,  6482,  6485,  6502,  6505,  6529,  6538,  6565,  6656,  6682,  6788,
+         6806,  6820,  8218,  8224,  8226,  8232,  8277,  8326,  8354,  8469,  8521,  8530,  8549,  8596,  8737,  8794,
+         9221,  9253,  9348,  9369,  9380,  9474,  9557,  9633,  9732,  9753,  9793,  9830,  9862,  9880, 10240, 10272,
+        10282, 10321, 10406, 10517, 10530, 10566, 10585, 10645, 10896, 16466, 16468, 16473, 16485, 16646, 16660, 16665,
+        16725, 16793, 16806, 16914, 16969, 16977, 16996, 17028, 17057, 17408, 17416, 17434, 17493, 17512, 17578, 17685,
+        17696, 17733, 17745, 17748, 17749, 17750, 17753, 17765, 17794, 17813, 17946, 17984, 18005, 18072, 18453, 18529,
+        18569, 18722, 18756, 18762, 18773, 18794, 18833, 18853, 18945, 19026, 19033, 19077, 20489, 20497, 20500, 20517,
+        20565, 20586, 20610, 20633, 20757, 20769, 20776, 20805, 20817, 20820, 20821, 20822, 20825, 20837, 20864, 20872,
+        20885, 20896, 21002, 21029, 21077, 21146, 21510, 21525, 21573, 21585, 21588, 21589, 21590, 21593, 21605, 21653,
+        21665, 21765, 21777, 21780, 21781, 21782, 21785, 21797, 21825, 21828, 21829, 21830, 21833, 21840, 21841, 21842,
+        21844, 21846, 21848, 21849, 21850, 21857, 21860, 21861, 21862, 21865, 21893, 21905, 21908, 21909, 21910, 21913,
+        21925, 22024, 22037, 22085, 22097, 22100, 22101, 22102, 22105, 22117, 22165, 22545, 22566, 22568, 22594, 22608,
+        22613, 22676, 22697, 22793, 22805, 22853, 22865, 22868, 22869, 22870, 22873, 22885, 22933, 22946, 23046, 23072,
+        23125, 23209, 24597, 24640, 24665, 24673, 24725, 24833, 24840, 24869, 24917, 24934, 24965, 25001, 25108, 25110,
+        25152, 25184, 25192, 25234, 25616, 25618, 25625, 25685, 25704, 25738, 25744, 25770, 25877, 25897, 25925, 25937,
+        25940, 25941, 25942, 25945, 25957, 25986, 26005, 26186, 26197, 26276, 26632, 26634, 26725, 26757, 26770, 26885,
+        26965, 26976, 26986, 27032, 27153, 27174, 27200, 27208, 27240, 27269, 27282, 27290, 32778, 32800, 32802, 32808,
+        32810, 32853, 32904, 32922, 32930, 32932, 33105, 33110, 33112, 33125, 33157, 33280, 33288, 33301, 33312, 33320,
+        33424, 33797, 33829, 33858, 34068, 34133, 34146, 34176, 34217, 34306, 34342, 34441, 34454, 34468, 34832, 34918,
+        34965, 34984, 35094, 35137, 35161, 35208, 35232, 35332, 35338, 35368, 35429, 36932, 36934, 36953, 37009, 37125,
+        37136, 37138, 37145, 37157, 37205, 37220, 37258, 37290, 37444, 37446, 37465, 37478, 37525, 37905, 37968, 37973,
+        38040, 38054, 38145, 38154, 38165, 38180, 38186, 38213, 38225, 38228, 38229, 38230, 38233, 38245, 38293, 38485,
+        38504, 38530, 38938, 38985, 38993, 39012, 39040, 39173, 39192, 39253, 39265, 39301, 39316, 39322, 39442, 39497,
+        39504, 39590, 40970, 40984, 40992, 41002, 41045, 41120, 41128, 41237, 41289, 41297, 41317, 41364, 41366, 41514,
+        41557, 41633, 41989, 42021, 42056, 42068, 42074, 42113, 42242, 42265, 42274, 42325, 42340, 42402, 42501, 42512,
+        42533, 42624, 42632, 42666, 43040, 43093, 43106, 43168, 43176, 43264, 43286, 43345, 43429, 43590, 43618, 43680,
+    };
+
     const int kmap_size = 43692;
-    const int nwant = 2;
-    const uint16_t * kgrid = grid_size == 256 ? kgrid_256 : kgrid_512;
+    const int nwant = type == GGML_TYPE_IQ1_S ? 3 : 2;
+    const uint16_t * kgrid = type == GGML_TYPE_IQ2_XXS ? kgrid_2bit_256 :
+                             type == GGML_TYPE_IQ2_XS  ? kgrid_2bit_512 : kgrid_1bit_512;
     uint64_t * kgrid_q2xs;
     int      * kmap_q2xs;
     uint16_t * kneighbors_q2xs;
@@ -5736,9 +6743,9 @@ void iq2xs_init_impl(int grid_size) {
     free(dist2);
 }
 
-void iq2xs_free_impl(int grid_size) {
-    GGML_ASSERT(grid_size == 256 || grid_size == 512 || grid_size == 1024);
-    const int gindex = iq2_data_index(grid_size);
+void iq2xs_free_impl(enum ggml_type type) {
+    GGML_ASSERT(type == GGML_TYPE_IQ2_XXS || type == GGML_TYPE_IQ2_XS || type == GGML_TYPE_IQ1_S);
+    const int gindex = iq2_data_index(type);
     if (iq2_data[gindex].grid) {
         free(iq2_data[gindex].grid);       iq2_data[gindex].grid = NULL;
         free(iq2_data[gindex].map);        iq2_data[gindex].map  = NULL;
@@ -5772,7 +6779,7 @@ static int iq2_find_best_neighbour(const uint16_t * restrict neighbours, const u
 
 static void quantize_row_iq2_xxs_impl(const float * restrict x, void * restrict vy, int n, const float * restrict quant_weights) {
 
-    const int gindex = iq2_data_index(256);
+    const int gindex = iq2_data_index(GGML_TYPE_IQ2_XXS);
 
     const uint64_t * kgrid_q2xs      = iq2_data[gindex].grid;
     const int      * kmap_q2xs       = iq2_data[gindex].map;
@@ -5796,8 +6803,6 @@ static void quantize_row_iq2_xxs_impl(const float * restrict x, void * restrict 
     int8_t L[32];
     int8_t Laux[32];
     float  waux[32];
-    bool   is_on_grid[4];
-    bool   is_on_grid_aux[4];
     uint8_t block_signs[4];
     uint32_t q2[2*(QK_K/32)];
 
@@ -5847,10 +6852,11 @@ static void quantize_row_iq2_xxs_impl(const float * restrict x, void * restrict 
                 memset(L, 0, 32);
                 continue;
             }
+            float scale = make_qp_quants(32, kMaxQ+1, xval, (uint8_t*)L, weight);
+            float eff_max = scale*kMaxQ;
             float best = 0;
-            float scale = max/(2*kMaxQ-1);
-            for (int is = -9; is <= 9; ++is) {
-                float id = (2*kMaxQ-1+is*0.1f)/max;
+            for (int is = -6; is <= 6; ++is) {
+                float id = (2*kMaxQ-1+is*0.1f)/eff_max;
                 float this_scale = 1/id;
                 for (int k = 0; k < 4; ++k) {
                     for (int i = 0; i < 8; ++i) {
@@ -5860,9 +6866,7 @@ static void quantize_row_iq2_xxs_impl(const float * restrict x, void * restrict 
                     uint16_t u = 0;
                     for (int i = 0; i < 8; ++i) u |= (Laux[8*k+i] << 2*i);
                     int grid_index = kmap_q2xs[u];
-                    is_on_grid_aux[k] = true;
                     if (grid_index < 0) {
-                        is_on_grid_aux[k] = false;
                         const uint16_t * neighbours = kneighbors_q2xs - kmap_q2xs[u] - 1;
                         grid_index = iq2_find_best_neighbour(neighbours, kgrid_q2xs, xval + 8*k, waux + 8*k, this_scale, Laux + 8*k);
                     }
@@ -5876,16 +6880,12 @@ static void quantize_row_iq2_xxs_impl(const float * restrict x, void * restrict 
                 }
                 if (sumq2 > 0 && sumqx*sumqx > best*sumq2) {
                     scale = sumqx/sumq2; best = scale*sumqx;
-                    for (int i = 0; i < 32; ++i) L[i] = Laux[i];
-                    for (int k = 0; k <  4; ++k) is_on_grid[k] = is_on_grid_aux[k];
+                    memcpy(L, Laux, 32);
                 }
             }
-            int n_not_ongrid = 0;
-            for (int k = 0; k < 4; ++k) if (!is_on_grid[k]) ++n_not_ongrid;
-            if (n_not_ongrid > 0 && scale > 0) {
+            if (scale > 0) {
                 float id = 1/scale;
                 for (int k = 0; k < 4; ++k) {
-                    if (is_on_grid[k]) continue;
                     uint16_t u = 0;
                     for (int i = 0; i < 8; ++i) {
                         int l = nearest_int(0.5f*(id*xval[8*k+i]-1));
@@ -5941,49 +6941,10 @@ static void quantize_row_iq2_xxs_impl(const float * restrict x, void * restrict 
         float d = max_scale/31;
         y[ibl].d = GGML_FP32_TO_FP16(d);
         float id = 1/d;
-        float sumqx = 0, sumq2 = 0;
         for (int ib = 0; ib < QK_K/32; ++ib) {
             int l = nearest_int(0.5f*(id*scales[ib]-1));
             l = MAX(0, MIN(15, l));
             q2[2*ib+1] |= ((uint32_t)l << 28);
-            const float * xb = xbl + 32*ib;
-            const float * qw = quant_weights + QK_K*ibl + 32*ib;
-            for (int i = 0; i < 32; ++i) weight[i] = qw[i] * sqrtf(sigma2 + xb[i]*xb[i]);
-            const uint8_t * aux8 = (const uint8_t *)(q2 + 2*ib);
-            const float db = d * (1 + 2*l);
-            uint32_t u = 0;
-            for (int k = 0; k < 4; ++k) {
-                const int8_t * signs = keven_signs_q2xs + 8*((q2[2*ib+1] >> 7*k) & 127);
-                const float * xk = xb + 8*k;
-                const float * wk = weight + 8*k;
-                const uint8_t * grid = (const uint8_t *)(kgrid_q2xs + aux8[k]);
-                float best_mse = 0; int best_index = aux8[k];
-                for (int j = 0; j < 8; ++j) {
-                    float diff = db * grid[j] * signs[j] - xk[j];
-                    best_mse += wk[j] * diff * diff;
-                }
-                for (int idx = 0; idx < 256; ++idx) {
-                    grid = (const uint8_t *)(kgrid_q2xs + idx);
-                    float mse = 0;
-                    for (int j = 0; j < 8; ++j) {
-                        float diff = db * grid[j] * signs[j] - xk[j];
-                        mse += wk[j] * diff * diff;
-                    }
-                    if (mse < best_mse) {
-                        best_mse = mse; best_index = idx;
-                    }
-                }
-                u |= (best_index << 8*k);
-                grid = (const uint8_t *)(kgrid_q2xs + best_index);
-                //grid = (const uint8_t *)(kgrid_q2xs + aux8[k]);
-                for (int j = 0; j < 8; ++j) {
-                    float q = db * grid[j] * signs[j];
-                    sumqx += wk[j] * q * xk[j];
-                    sumq2 += wk[j] * q * q;
-                }
-            }
-            q2[2*ib] = u;
-            if (sumq2 > 0) y[ibl].d = GGML_FP32_TO_FP16(d*sumqx/sumq2);
         }
         memcpy(y[ibl].qs, q2, QK_K/4);
     }
@@ -5991,7 +6952,7 @@ static void quantize_row_iq2_xxs_impl(const float * restrict x, void * restrict 
 
 static void quantize_row_iq2_xs_impl(const float * restrict x, void * restrict vy, int n, const float * restrict quant_weights) {
 
-    const int gindex = iq2_data_index(512);
+    const int gindex = iq2_data_index(GGML_TYPE_IQ2_XS);
 
     const uint64_t * kgrid_q2xs      = iq2_data[gindex].grid;
     const int      * kmap_q2xs       = iq2_data[gindex].map;
@@ -6195,3 +7156,759 @@ size_t quantize_iq2_xs(const float * src, void * dst, int nrow, int n_per_row, i
     return nrow * nblock * sizeof(block_iq2_xs);
 }
 
+//
+// ============================================= 3-bit using D4 lattice
+//
+
+typedef struct {
+    uint32_t * grid;
+    int      * map;
+    uint16_t * neighbours;
+} iq3_entry_t;
+
+static iq3_entry_t iq3_data[1] = {
+    {NULL, NULL, NULL},
+};
+
+static inline int iq3_data_index(int grid_size) {
+    (void)grid_size;
+    GGML_ASSERT(grid_size == 256);
+    return 0;
+}
+
+static int iq3_compare_func(const void * left, const void * right) {
+    const int * l = (const int *)left;
+    const int * r = (const int *)right;
+    return l[0] < r[0] ? -1 : l[0] > r[0] ? 1 : l[1] < r[1] ? -1 : l[1] > r[1] ? 1 : 0;
+}
+
+void iq3xs_init_impl(int grid_size) {
+    const int gindex = iq3_data_index(grid_size);
+    if (iq3_data[gindex].grid) {
+        return;
+    }
+    static const uint16_t kgrid_256[256] = {
+            0,     2,     4,     9,    11,    15,    16,    18,    25,    34,    59,    61,    65,    67,    72,    74,
+           81,    85,    88,    90,    97,   108,   120,   128,   130,   132,   137,   144,   146,   153,   155,   159,
+          169,   175,   189,   193,   199,   200,   202,   213,   248,   267,   287,   292,   303,   315,   317,   321,
+          327,   346,   362,   413,   436,   456,   460,   462,   483,   497,   513,   515,   520,   522,   529,   531,
+          536,   538,   540,   551,   552,   576,   578,   585,   592,   594,   641,   643,   648,   650,   657,   664,
+          698,   704,   706,   720,   729,   742,   758,   769,   773,   808,   848,   852,   870,   889,   901,   978,
+          992,  1024,  1026,  1033,  1035,  1040,  1042,  1046,  1049,  1058,  1089,  1091,  1093,  1096,  1098,  1105,
+         1112,  1139,  1143,  1144,  1152,  1154,  1161,  1167,  1168,  1170,  1183,  1184,  1197,  1217,  1224,  1228,
+         1272,  1276,  1309,  1323,  1347,  1367,  1377,  1404,  1473,  1475,  1486,  1509,  1537,  1544,  1546,  1553,
+         1555,  1576,  1589,  1594,  1600,  1602,  1616,  1625,  1636,  1638,  1665,  1667,  1672,  1685,  1706,  1722,
+         1737,  1755,  1816,  1831,  1850,  1856,  1862,  1874,  1901,  1932,  1950,  1971,  2011,  2032,  2052,  2063,
+         2077,  2079,  2091,  2095,  2172,  2192,  2207,  2208,  2224,  2230,  2247,  2277,  2308,  2345,  2356,  2389,
+         2403,  2424,  2501,  2504,  2506,  2520,  2570,  2593,  2616,  2624,  2630,  2646,  2669,  2700,  2714,  2746,
+         2754,  2795,  2824,  2835,  2839,  2874,  2882,  2905,  2984,  3028,  3042,  3092,  3108,  3110,  3124,  3153,
+         3185,  3215,  3252,  3288,  3294,  3364,  3397,  3434,  3483,  3523,  3537,  3587,  3589,  3591,  3592,  3610,
+         3626,  3670,  3680,  3722,  3749,  3754,  3776,  3789,  3803,  3824,  3857,  3873,  3904,  3906,  3924,  3992,
+    };
+    const int kmap_size = 4096;
+    const int nwant = 2;
+    const uint16_t * kgrid = kgrid_256;
+    uint32_t * kgrid_q3xs;
+    int      * kmap_q3xs;
+    uint16_t * kneighbors_q3xs;
+
+    printf("================================================================= %s(grid_size = %d)\n", __func__, grid_size);
+    uint32_t * the_grid = (uint32_t *)malloc(grid_size*sizeof(uint32_t));
+    for (int k = 0; k < grid_size; ++k) {
+        int8_t * pos = (int8_t *)(the_grid + k);
+        for (int i = 0; i < 4; ++i) {
+            int l = (kgrid[k] >> 3*i) & 0x7;
+            pos[i] = 2*l + 1;
+        }
+    }
+    kgrid_q3xs = the_grid;
+    iq3_data[gindex].grid = the_grid;
+    kmap_q3xs = (int *)malloc(kmap_size*sizeof(int));
+    iq3_data[gindex].map = kmap_q3xs;
+    for (int i = 0; i < kmap_size; ++i) kmap_q3xs[i] = -1;
+    uint32_t aux32;
+    uint8_t * aux8 = (uint8_t *)&aux32;
+    for (int i = 0; i < grid_size; ++i) {
+        aux32 = kgrid_q3xs[i];
+        uint16_t index = 0;
+        for (int k=0; k<4; ++k) {
+            uint16_t q = (aux8[k] - 1)/2;
+            index |= (q << 3*k);
+        }
+        kmap_q3xs[index] = i;
+    }
+    int8_t pos[4];
+    int * dist2 = (int *)malloc(2*grid_size*sizeof(int));
+    int num_neighbors = 0, num_not_in_map = 0;
+    for (int i = 0; i < kmap_size; ++i) {
+        if (kmap_q3xs[i] >= 0) continue;
+        ++num_not_in_map;
+        for (int k = 0; k < 4; ++k) {
+            int l = (i >> 3*k) & 0x7;
+            pos[k] = 2*l + 1;
+        }
+        for (int j = 0; j < grid_size; ++j) {
+            const int8_t * pg = (const int8_t *)(kgrid_q3xs + j);
+            int d2 = 0;
+            for (int k = 0; k < 4; ++k) d2 += (pg[k] - pos[k])*(pg[k] - pos[k]);
+            dist2[2*j+0] = d2;
+            dist2[2*j+1] = j;
+        }
+        qsort(dist2, grid_size, 2*sizeof(int), iq3_compare_func);
+        int n = 0; int d2 = dist2[0];
+        int nhave = 1;
+        for (int j = 0; j < grid_size; ++j) {
+            if (dist2[2*j] > d2) {
+                if (nhave == nwant) break;
+                d2 = dist2[2*j];
+                ++nhave;
+            }
+            ++n;
+        }
+        num_neighbors += n;
+    }
+    printf("%s: %d neighbours in total\n", __func__, num_neighbors);
+    kneighbors_q3xs = (uint16_t *)malloc((num_neighbors + num_not_in_map)*sizeof(uint16_t));
+    iq3_data[gindex].neighbours = kneighbors_q3xs;
+    int counter = 0;
+    for (int i = 0; i < kmap_size; ++i) {
+        if (kmap_q3xs[i] >= 0) continue;
+        for (int k = 0; k < 4; ++k) {
+            int l = (i >> 3*k) & 0x7;
+            pos[k] = 2*l + 1;
+        }
+        for (int j = 0; j < grid_size; ++j) {
+            const int8_t * pg = (const int8_t *)(kgrid_q3xs + j);
+            int d2 = 0;
+            for (int k = 0; k < 4; ++k) d2 += (pg[k] - pos[k])*(pg[k] - pos[k]);
+            dist2[2*j+0] = d2;
+            dist2[2*j+1] = j;
+        }
+        qsort(dist2, grid_size, 2*sizeof(int), iq3_compare_func);
+        kmap_q3xs[i] = -(counter + 1);
+        int d2 = dist2[0];
+        uint16_t * start = &kneighbors_q3xs[counter++];
+        int n = 0, nhave = 1;
+        for (int j = 0; j < grid_size; ++j) {
+            if (dist2[2*j] > d2) {
+                if (nhave == nwant) break;
+                d2 = dist2[2*j];
+                ++nhave;
+            }
+            kneighbors_q3xs[counter++] = dist2[2*j+1];
+            ++n;
+        }
+        *start = n;
+    }
+    free(dist2);
+}
+
+void iq3xs_free_impl(int grid_size) {
+    GGML_ASSERT(grid_size == 256);
+    const int gindex = iq3_data_index(grid_size);
+    if (iq3_data[gindex].grid) {
+        free(iq3_data[gindex].grid);       iq3_data[gindex].grid = NULL;
+        free(iq3_data[gindex].map);        iq3_data[gindex].map  = NULL;
+        free(iq3_data[gindex].neighbours); iq3_data[gindex].neighbours = NULL;
+    }
+}
+
+static int iq3_find_best_neighbour(const uint16_t * restrict neighbours, const uint32_t * restrict grid,
+        const float * restrict xval, const float * restrict weight, float scale, int8_t * restrict L) {
+    int num_neighbors = neighbours[0];
+    GGML_ASSERT(num_neighbors > 0);
+    float best_d2 = FLT_MAX;
+    int grid_index = -1;
+    for (int j = 1; j <= num_neighbors; ++j) {
+        const int8_t * pg = (const int8_t *)(grid + neighbours[j]);
+        float d2 = 0;
+        for (int i = 0; i < 4; ++i) {
+            float q = pg[i];
+            float diff = scale*q - xval[i];
+            d2 += weight[i]*diff*diff;
+        }
+        if (d2 < best_d2) {
+            best_d2 = d2; grid_index = neighbours[j];
+        }
+    }
+    GGML_ASSERT(grid_index >= 0);
+    const int8_t * pg = (const int8_t *)(grid + grid_index);
+    for (int i = 0; i < 4; ++i) L[i] = (pg[i] - 1)/2;
+    return grid_index;
+}
+
+static void quantize_row_iq3_xxs_impl(const float * restrict x, void * restrict vy, int n, const float * restrict quant_weights) {
+
+    const int gindex = iq3_data_index(256);
+
+    const uint32_t * kgrid_q3xs      = iq3_data[gindex].grid;
+    const int      * kmap_q3xs       = iq3_data[gindex].map;
+    const uint16_t * kneighbors_q3xs = iq3_data[gindex].neighbours;
+
+    //GGML_ASSERT(quant_weights   && "missing quantization weights");
+    GGML_ASSERT(kgrid_q3xs      && "forgot to call ggml_quantize_init()?");
+    GGML_ASSERT(kmap_q3xs       && "forgot to call ggml_quantize_init()?");
+    GGML_ASSERT(kneighbors_q3xs && "forgot to call ggml_quantize_init()?");
+    GGML_ASSERT(n%QK_K == 0);
+
+    const int kMaxQ = 8;
+
+    const int nbl = n/256;
+
+    block_iq3_xxs * y = vy;
+
+    float scales[QK_K/32];
+    float weight[32];
+    float xval[32];
+    int8_t L[32];
+    int8_t Laux[32];
+    float  waux[32];
+    bool   is_on_grid[8];
+    bool   is_on_grid_aux[8];
+    uint8_t block_signs[8];
+    uint8_t q3[3*(QK_K/8)];
+    uint32_t * scales_and_signs = (uint32_t *)(q3 + QK_K/4);
+
+    for (int ibl = 0; ibl < nbl; ++ibl) {
+
+        y[ibl].d = GGML_FP32_TO_FP16(0.f);
+        memset(q3, 0, 3*QK_K/8);
+
+        float max_scale = 0;
+
+        const float * xbl = x + QK_K*ibl;
+        float sumx2 = 0;
+        for (int i = 0; i < QK_K; ++i) sumx2 += xbl[i]*xbl[i];
+        float sigma2 = sumx2/QK_K;
+
+        for (int ib = 0; ib < QK_K/32; ++ib) {
+            const float * xb = xbl + 32*ib;
+            if (quant_weights) {
+                const float * qw = quant_weights + QK_K*ibl + 32*ib;
+                for (int i = 0; i < 32; ++i) weight[i] = qw[i] * sqrtf(sigma2 + xb[i]*xb[i]);
+            } else {
+                for (int i = 0; i < 32; ++i) weight[i] = xb[i]*xb[i];
+            }
+            for (int i = 0; i < 32; ++i) waux[i] = sqrtf(weight[i]);
+            for (int k = 0; k < 4; ++k) {
+                int nflip = 0;
+                uint8_t s = 0;
+                for (int i = 0; i < 8; ++i) {
+                    if (xb[8*k + i] >= 0) xval[8*k + i] = xb[8*k + i];
+                    else {
+                        xval[8*k + i] = -xb[8*k + i]; ++nflip; s |= (1 << i);
+                    }
+                }
+                if (nflip%2) {
+                    int imin = 0; float min = weight[8*k+imin]*xb[8*k+imin]*xb[8*k+imin];
+                    for (int i = 1; i < 8; ++i) {
+                        float ax = weight[8*k+i]*xb[8*k+i]*xb[8*k+i];
+                        if (ax < min) {
+                            min = ax; imin = i;
+                        }
+                    }
+                    xval[8*k+imin] = -xval[8*k+imin];
+                    s ^= (1 << imin);
+                }
+                block_signs[k] = s & 127;
+            }
+            float max = xval[0];
+            for (int i = 1; i < 32; ++i) max = MAX(max, xval[i]);
+            if (!max) {
+                scales[ib] = 0;
+                memset(L, 0, 32);
+                continue;
+            }
+            float best = 0;
+            float scale = max/(2*kMaxQ-1);
+            for (int is = -15; is <= 15; ++is) {
+                float id = (2*kMaxQ-1+is*0.2f)/max;
+                float this_scale = 1/id;
+                for (int k = 0; k < 8; ++k) {
+                    for (int i = 0; i < 4; ++i) {
+                        int l = nearest_int(0.5f*(id*xval[4*k+i]-1));
+                        Laux[4*k+i] = MAX(0, MIN(kMaxQ-1, l));
+                    }
+                    uint16_t u = 0;
+                    for (int i = 0; i < 4; ++i) u |= (Laux[4*k+i] << 3*i);
+                    int grid_index = kmap_q3xs[u];
+                    is_on_grid_aux[k] = true;
+                    if (grid_index < 0) {
+                        is_on_grid_aux[k] = false;
+                        const uint16_t * neighbours = kneighbors_q3xs - kmap_q3xs[u] - 1;
+                        grid_index = iq3_find_best_neighbour(neighbours, kgrid_q3xs, xval + 4*k, waux + 4*k, this_scale, Laux + 4*k);
+                    }
+                }
+                float sumqx = 0, sumq2 = 0;
+                for (int i = 0; i < 32; ++i) {
+                    float w = weight[i];
+                    float q = 2*Laux[i] + 1;
+                    sumqx += w*xval[i]*q;
+                    sumq2 += w*q*q;
+                }
+                if (sumq2 > 0 && sumqx*sumqx > best*sumq2) {
+                    scale = sumqx/sumq2; best = scale*sumqx;
+                    for (int i = 0; i < 32; ++i) L[i] = Laux[i];
+                    for (int k = 0; k <  8; ++k) is_on_grid[k] = is_on_grid_aux[k];
+                }
+            }
+            int n_not_ongrid = 0;
+            for (int k = 0; k < 8; ++k) if (!is_on_grid[k]) ++n_not_ongrid;
+            if (n_not_ongrid > 0 && scale > 0) {
+                float id = 1/scale;
+                for (int k = 0; k < 8; ++k) {
+                    if (is_on_grid[k]) continue;
+                    uint16_t u = 0;
+                    for (int i = 0; i < 4; ++i) {
+                        int l = nearest_int(0.5f*(id*xval[4*k+i]-1));
+                        l = MAX(0, MIN(kMaxQ-1, l));
+                        u |= (l << 3*i);
+                    }
+                    int grid_index = kmap_q3xs[u];
+                    if (grid_index < 0) {
+                        const uint16_t * neighbours = kneighbors_q3xs - kmap_q3xs[u] - 1;
+                        grid_index = iq3_find_best_neighbour(neighbours, kgrid_q3xs, xval + 4*k, waux + 4*k, scale, L + 4*k);
+                    }
+                    const int8_t * pg = (const int8_t *)(kgrid_q3xs + grid_index);
+                    for (int i = 0; i < 4; ++i) L[4*k+i] = (pg[i] - 1)/2;
+                }
+                float sumqx = 0, sumq2 = 0;
+                for (int i = 0; i < 32; ++i) {
+                    float w = weight[i];
+                    float q = 2*L[i] + 1;
+                    sumqx += w*xval[i]*q;
+                    sumq2 += w*q*q;
+                }
+                if (sumq2 > 0) scale = sumqx/sumq2;
+            }
+            if (scale < 0) {
+                // This should never happen, but just in case, flip scale so that it is positive (we use uint's to encode the scale)
+                // and correspondingly flip quant signs.
+                scale = -scale;
+                for (int k = 0; k < 4; ++k) block_signs[k] = (~block_signs[k]) & 127;
+            }
+            for (int k = 0; k < 8; ++k) {
+                uint16_t u = 0;
+                for (int i = 0; i < 4; ++i) u |= (L[4*k+i] << 3*i);
+                int grid_index = kmap_q3xs[u];
+                if (grid_index < 0) {
+                    printf("Oops: found point %u not on grid:", u);
+                    for (int i = 0; i < 4; ++i) printf(" %d", L[4*k+i]);
+                    printf("\n");
+                    GGML_ASSERT(false);
+                }
+                q3[8*ib+k] = grid_index;
+            }
+            scales_and_signs[ib] = block_signs[0] | (block_signs[1] << 7) | (block_signs[2] << 14) | (block_signs[3] << 21);
+            GGML_ASSERT(scale >= 0);
+            scales[ib] = scale;
+            max_scale = MAX(max_scale, scale);
+        }
+
+        if (!max_scale) {
+            memset(y[ibl].qs, 0, 3*QK_K/8);
+            continue;
+        }
+
+        float d = max_scale/31;
+        y[ibl].d = GGML_FP32_TO_FP16(d);
+        float id = 1/d;
+        float sumqx = 0, sumq2 = 0;
+        for (int ib = 0; ib < QK_K/32; ++ib) {
+            int l = nearest_int(0.5f*(id*scales[ib]-1));
+            l = MAX(0, MIN(15, l));
+            scales_and_signs[ib] |= ((uint32_t)l << 28);
+            if (false) {
+                const float * xb = xbl + 32*ib;
+                if (quant_weights) {
+                    const float * qw = quant_weights + QK_K*ibl + 32*ib;
+                    for (int i = 0; i < 32; ++i) weight[i] = qw[i] * sqrtf(sigma2 + xb[i]*xb[i]);
+                } else {
+                    for (int i = 0; i < 32; ++i) weight[i] = xb[i]*xb[i];
+                }
+                const float db = 0.25f * d * (1 + 2*l);
+                for (int k = 0; k < 8; ++k) {
+                    const int8_t * signs = keven_signs_q2xs + 8*((scales_and_signs[ib] >> 7*(k/2)) & 127) + 4*(k%2);
+                    const float * xk = xb + 4*k;
+                    const float * wk = weight + 4*k;
+                    //const uint8_t * grid = (const uint8_t *)(kgrid_q3xs + q3[8*ib+k]);
+                    const uint8_t * grid = (const uint8_t *)(iq3xxs_grid + q3[8*ib+k]);
+                    float best_mse = 0; int best_index = q3[8*ib+k];
+                    for (int j = 0; j < 4; ++j) {
+                        float diff = db * grid[j] * signs[j] - xk[j];
+                        best_mse += wk[j] * diff * diff;
+                    }
+                    for (int idx = 0; idx < 256; ++idx) {
+                        //grid = (const uint8_t *)(kgrid_q3xs + idx);
+                        grid = (const uint8_t *)(iq3xxs_grid + idx);
+                        float mse = 0;
+                        for (int j = 0; j < 4; ++j) {
+                            float diff = db * grid[j] * signs[j] - xk[j];
+                            mse += wk[j] * diff * diff;
+                        }
+                        if (mse < best_mse) {
+                            best_mse = mse; best_index = idx;
+                        }
+                    }
+                    q3[8*ib+k] = best_index;
+                    //grid = (const uint8_t *)(kgrid_q3xs + best_index);
+                    grid = (const uint8_t *)(iq3xxs_grid + best_index);
+                    for (int j = 0; j < 4; ++j) {
+                        float q = db * grid[j] * signs[j];
+                        sumqx += wk[j] * q * xk[j];
+                        sumq2 += wk[j] * q * q;
+                    }
+                }
+                if (sumq2 > 0) y[ibl].d = GGML_FP32_TO_FP16(d*sumqx/sumq2);
+            }
+        }
+        memcpy(y[ibl].qs, q3, 3*QK_K/8);
+    }
+}
+
+size_t quantize_iq3_xxs(const float * src, void * dst, int nrow, int n_per_row, int64_t * hist, const float * quant_weights) {
+    (void)hist;
+    GGML_ASSERT(n_per_row%QK_K == 0);
+    int nblock = n_per_row/QK_K;
+    char * qrow = (char *)dst;
+    for (int row = 0; row < nrow; ++row) {
+        quantize_row_iq3_xxs_impl(src, qrow, n_per_row, quant_weights);
+        src += n_per_row;
+        qrow += nblock*sizeof(block_iq3_xxs);
+    }
+    return nrow * nblock * sizeof(block_iq3_xxs);
+}
+
+void quantize_row_iq3_xxs(const float * restrict x, void * restrict vy, int k) {
+    assert(k % QK_K == 0);
+    block_iq3_xxs * restrict y = vy;
+    quantize_row_iq3_xxs_reference(x, y, k);
+}
+
+void quantize_row_iq3_xxs_reference(const float * restrict x, block_iq3_xxs * restrict y, int k) {
+    assert(k % QK_K == 0);
+    quantize_row_iq3_xxs_impl(x, y, k, NULL);
+}
+
+// =================================== 1.5 bpw ===================================================
+
+static int iq1_find_best_neighbour(const uint16_t * restrict neighbours, const uint64_t * restrict grid,
+        const float * restrict xval, const float * restrict weight, float * scale, int8_t * restrict L, int ngrid) {
+    int num_neighbors = neighbours[0];
+    GGML_ASSERT(num_neighbors > 0);
+    float best_score = 0;
+    int grid_index = -1;
+    for (int j = 1; j <= num_neighbors; ++j) {
+        const int8_t * pg = (const int8_t *)(grid + neighbours[j]);
+        float sumqx = 0, sumq2 = 0;
+        for (int i = 0; i < 8; ++i) {
+            float q = (pg[i] - 3)/2;
+            float w = weight[i];
+            sumqx += w*q*xval[i];
+            sumq2 += w*q*q;
+        }
+        if (sumqx > 0 && sumq2 > 0 && sumqx*sumqx > best_score*sumq2) {
+            *scale = sumqx/sumq2; best_score = *scale * sumqx;
+            grid_index = neighbours[j];
+        }
+    }
+    if (grid_index < 0) {
+        for (int i = 0; i < ngrid; ++i) {
+            const int8_t * grid_i = (const int8_t *)(grid + i);
+            float sumqx = 0, sumq2 = 0;
+            for (int j = 0; j < 8; ++j) {
+                float w = weight[j];
+                float q = (grid_i[j] - 3)/2;
+                sumqx += w*q*xval[j];
+                sumq2 += w*q*q;
+            }
+            if (sumqx > 0 && sumq2 > 0 && sumqx*sumqx > best_score*sumq2) {
+                *scale = sumqx/sumq2; best_score = *scale*sumqx;
+                grid_index = i;
+            }
+        }
+    }
+    if (grid_index < 0) {
+        printf("Oops, did not find grid point\n");
+        printf("Have %d neighbours\n", num_neighbors);
+        for (int j = 1; j <= num_neighbors; ++j) {
+            const int8_t * pg = (const int8_t *)(grid + neighbours[j]);
+            float sumqx = 0, sumq2 = 0;
+            for (int i = 0; i < 8; ++i) {
+                float q = (pg[i] - 3)/2;
+                float w = weight[i];
+                sumqx += w*q*xval[i];
+                sumq2 += w*q*q;
+            }
+            printf("    neighbour %d: sumqx = %g sumq2 = %g\n", j, (double)sumqx, (double)sumq2);
+        }
+    }
+    GGML_ASSERT(grid_index >= 0);
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    *scale *= 1.05f;  // This is a fudge factor. Don't ask me why it improves the result.
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    const int8_t * pg = (const int8_t *)(grid + grid_index);
+    for (int i = 0; i < 8; ++i) L[i] = (pg[i] - 1)/2;
+    return grid_index;
+}
+
+static int iq1_sort_helper(const void * left, const void * right) {
+    const float * l = left;
+    const float * r = right;
+    return *l < *r ? -1 : *l > *r ? 1 : 0;
+}
+
+static void quantize_row_iq1_s_impl(const float * restrict x, void * restrict vy, int n, const float * restrict quant_weights) {
+
+    const int gindex = iq2_data_index(GGML_TYPE_IQ1_S);
+
+    const uint64_t * kgrid_q2xs      = iq2_data[gindex].grid;
+    const int      * kmap_q2xs       = iq2_data[gindex].map;
+    const uint16_t * kneighbors_q2xs = iq2_data[gindex].neighbours;
+
+    GGML_ASSERT(quant_weights   && "missing quantization weights");
+    GGML_ASSERT(kgrid_q2xs      && "forgot to call ggml_quantize_init()?");
+    GGML_ASSERT(kmap_q2xs       && "forgot to call ggml_quantize_init()?");
+    GGML_ASSERT(kneighbors_q2xs && "forgot to call ggml_quantize_init()?");
+    GGML_ASSERT(n%QK_K == 0);
+
+    const int nbl = n/256;
+
+    block_iq1_s * y = vy;
+
+    float  scales[QK_K/8];
+    float  weight[8];
+    int8_t L[8];
+    float  sumx[9];
+    float  sumw[9];
+    float  pairs[16];
+    int * idx = (int *)(pairs + 1);
+    uint8_t hbit[QK_K/8];
+
+    for (int ibl = 0; ibl < nbl; ++ibl) {
+
+        y[ibl].d = GGML_FP32_TO_FP16(0.f);
+        memset(y[ibl].qs, 0, QK_K/8);
+        memset(y[ibl].scales, 0, QK_K/16);
+
+        float max_scale = 0;
+
+        const float * xbl = x + QK_K*ibl;
+        float sumx2 = 0;
+        for (int i = 0; i < QK_K; ++i) sumx2 += xbl[i]*xbl[i];
+        float sigma2 = sumx2/QK_K;
+
+        for (int ib = 0; ib < QK_K/8; ++ib) {
+            const float * xb = xbl + 8*ib;
+            const float * qw = quant_weights + QK_K*ibl + 8*ib;
+            for (int i = 0; i < 8; ++i) weight[i] = qw[i] * sqrtf(sigma2 + xb[i]*xb[i]);
+            float max = fabsf(xb[0]);
+            for (int i = 1; i < 8; ++i) max = MAX(max, fabsf(xb[i]));
+            if (!max) {
+                scales[ib] = 0;
+                memset(L, 1, 8);
+                continue;
+            }
+            // Here we solve exactly the sum of squared difference (SSD) weighted minimization problem.
+            // With just 3 allowed quant values (-1, 0, 1), we can search exhaustively for the two
+            // boundaries that split the weights xb[i] into 3 groups. To do so, we sort the weights
+            // in ascending order, compute Si = sum[weight[j] xb[j], j = 0...i] and
+            // Wi = sum[weight[j], j = 0...i], and use these to quckly get get the optimum scale
+            // for each possible and score for each split.
+            for (int j = 0; j < 8; ++j) {
+                pairs[2*j] = xb[j];
+                idx[2*j] = j;
+            }
+            qsort(pairs, 8, 2*sizeof(float), iq1_sort_helper);
+            {
+                sumx[0] = sumw[0] = 0;
+                for (int j = 0; j < 8; ++j) {
+                    int i = idx[2*j];
+                    sumx[j+1] = sumx[j] + weight[i]*xb[i];
+                    sumw[j+1] = sumw[j] + weight[i];
+                }
+            }
+            float best_score = 0, scale = max;
+            int besti1 = 0, besti2 = 0;
+            for (int i1 = 0; i1 <= 8; ++i1) {
+                for (int i2 = i1; i2 <= 8; ++i2) {
+                    float sumqx = -(sumx[i1] - sumx[0]) + (sumx[8] - sumx[i2]);
+                    float sumq2 =  (sumw[i1] - sumw[0]) + (sumw[8] - sumw[i2]);
+                    if (sumq2 > 0 && sumqx*sumqx > best_score*sumq2) {
+                        scale = sumqx/sumq2; best_score = scale*sumqx;
+                        besti1 = i1; besti2 = i2;
+                    }
+                }
+            }
+            for (int j =      0; j < besti1; ++j) L[idx[2*j]] = 0;
+            for (int j = besti1; j < besti2; ++j) L[idx[2*j]] = 1;
+            for (int j = besti2; j <      8; ++j) L[idx[2*j]] = 2;
+            if (scale < 0) {
+                for (int j = 0; j < 8; ++j) L[j] = 2 - L[j];
+                scale = -scale;
+            }
+            // Now we check if the solution found above corresponds to a grid point and, if not, use a neighbouring
+            // grid point that minimizes SSD.
+            uint16_t u = 0;
+            for (int j = 0; j < 8; ++j) u |= (L[j] << 2*j);
+            int grid_index = kmap_q2xs[u];
+            if (grid_index < 0) {
+                const uint16_t * neighbours = kneighbors_q2xs - kmap_q2xs[u] - 1;
+                grid_index = iq1_find_best_neighbour(neighbours, kgrid_q2xs, xb, weight, &scale, L, NGRID_IQ2XXS);
+                GGML_ASSERT(grid_index >= 0);
+            }
+            y[ibl].qs[ib] = grid_index & 255;
+            hbit[ib] = grid_index >> 8;
+            GGML_ASSERT(scale >= 0);
+            scales[ib] = scale;
+            max_scale = MAX(max_scale, scale);
+        }
+
+        if (!max_scale) {
+            memset(y[ibl].qs, 0, QK_K/8);
+            continue;
+        }
+
+        float d = max_scale/15;
+        y[ibl].d = GGML_FP32_TO_FP16(d*1.085f); // 1.085f is another fudge factor. Don't ask me why it is needed.
+        float id = 1/d;
+        for (int ib = 0; ib < QK_K/8; ++ib) {
+            int l = nearest_int(0.5f*(id*scales[ib]-1));
+            l = MAX(0, MIN(7, l));
+            if (hbit[ib]) l |= 8;
+            y[ibl].scales[ib/2] |= (l << 4*(ib%2));
+        }
+    }
+}
+
+size_t quantize_iq1_s(const float * src, void * dst, int nrow, int n_per_row, int64_t * hist, const float * quant_weights) {
+    (void)hist;
+    GGML_ASSERT(n_per_row%QK_K == 0);
+    int nblock = n_per_row/QK_K;
+    char * qrow = (char *)dst;
+    for (int row = 0; row < nrow; ++row) {
+        quantize_row_iq1_s_impl(src, qrow, n_per_row, quant_weights);
+        src += n_per_row;
+        qrow += nblock*sizeof(block_iq1_s);
+    }
+    return nrow * nblock * sizeof(block_iq1_s);
+}
+
+// ============================ 4-bit non-linear quants
+
+static inline int best_index_int8(int n, const int8_t * val, float x) {
+    if (x <= val[0]) return 0;
+    if (x >= val[n-1]) return n-1;
+    int ml = 0, mu = n-1;
+    while (mu-ml > 1) {
+        int mav = (ml+mu)/2;
+        if (x < val[mav]) mu = mav; else ml = mav;
+    }
+    return x - val[mu-1] < val[mu] - x ? mu-1 : mu;
+}
+
+static void quantize_row_iq4_nl_impl(const int block_size, const float * GGML_RESTRICT x,
+        ggml_fp16_t * dh, uint8_t * q4,
+        float * weight, uint8_t * L,
+        const int8_t * values,
+        const float * quant_weights) {
+
+    const int ntry = 7;
+
+    float sigma2 = 0;
+    for (int j = 0; j < QK4_NL; ++j) sigma2 += x[j]*x[j];
+    sigma2 *= 2.f/QK4_NL;
+
+    const int nb = QK4_NL/block_size;
+
+    memset(q4, 0, QK4_NL/2);
+    for (int ib = 0; ib < nb; ++ib) {
+        dh[ib] = GGML_FP32_TO_FP16(0.f);
+        const float * xb = x + ib*block_size;
+        if (quant_weights) {
+            const float * qw = quant_weights + ib*block_size;
+            for (int j = 0; j < block_size; ++j) weight[j] = qw[j] * sqrtf(sigma2 + xb[j]*xb[j]);
+        } else {
+            for (int j = 0; j < block_size; ++j) weight[j] = xb[j]*xb[j];
+        }
+        float amax = 0, max = 0;
+        for (int j = 0; j < block_size; ++j) {
+            float ax = fabsf(xb[j]);
+            if (ax > amax) {
+                amax = ax; max = xb[j];
+            }
+        }
+        if (!amax) {
+            continue;
+        }
+        float d = -max/values[0];
+        float id = 1/d;
+        float sumqx = 0, sumq2 = 0;
+        for (int j = 0; j < block_size; ++j) {
+            float al = id*xb[j];
+            int l = best_index_int8(16, values, al);
+            float q = values[l];
+            float w = weight[j];
+            sumqx += w*q*xb[j];
+            sumq2 += w*q*q;
+        }
+        float best_id = id;
+        d = sumqx/sumq2;
+        float best = d*sumqx;
+        for (int itry = -ntry; itry <= ntry; ++itry) {
+            id = (itry + values[0])/max;
+            sumqx = sumq2 = 0;
+            for (int j = 0; j < block_size; ++j) {
+                float al = id*xb[j];
+                int l = best_index_int8(16, values, al);
+                float q = values[l];
+                float w = weight[j];
+                sumqx += w*q*xb[j];
+                sumq2 += w*q*q;
+            }
+            if (sumq2 > 0 && sumqx*sumqx > best*sumq2) {
+                d = sumqx/sumq2; best = d * sumqx;
+                best_id = id;
+            }
+        }
+        dh[ib] = GGML_FP32_TO_FP16(d);
+        for (int j = 0; j < block_size; ++j) {
+            L[ib*block_size + j] = best_index_int8(16, values, best_id*xb[j]);
+        }
+    }
+    for (int i = 0; i < QK4_NL/32; ++i) {
+        for (int j = 0; j < 16; ++j) {
+            q4[16*i + j] = L[32*i + j] | (L[32*i + 16 + j] << 4);
+        }
+    }
+}
+
+size_t quantize_iq4_nl(const float * src, void * dst, int nrow, int n_per_row, int64_t * hist, const float * quant_weights) {
+    (void)hist;
+    GGML_ASSERT(n_per_row%QK4_NL == 0);
+    int nblock = n_per_row/QK4_NL;
+    char * qrow = (char *)dst;
+    uint8_t L[QK4_NL];
+    float weight[32];
+    for (int row = 0; row < nrow; ++row) {
+        block_iq4_nl * iq4 = (block_iq4_nl *)qrow;
+        for (int ibl = 0; ibl < nblock; ++ibl) {
+            const float * qw = quant_weights ? quant_weights + QK4_NL*ibl : NULL;
+            quantize_row_iq4_nl_impl(32, src + QK4_NL*ibl, &iq4[ibl].d, iq4[ibl].qs, weight, L, kvalues_iq4nl, qw);
+        }
+        src += n_per_row;
+        qrow += nblock*sizeof(block_iq4_nl);
+    }
+    return nrow * nblock * sizeof(block_iq4_nl);
+}
+
+void quantize_row_iq4_nl(const float * restrict x, void * restrict vy, int k) {
+    assert(k % QK4_NL == 0);
+    block_iq4_nl * restrict y = vy;
+    quantize_row_iq4_nl_reference(x, y, k);
+}
+
+void quantize_row_iq4_nl_reference(const float * restrict x, block_iq4_nl * restrict y, int k) {
+    assert(k % QK4_NL == 0);
+    quantize_iq4_nl(x, y, 1, k, NULL, NULL);
+}

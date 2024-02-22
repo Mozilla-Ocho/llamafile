@@ -235,7 +235,7 @@ public:
                 ++in_begin;
 
                 if (c != '=') {
-                    throw std::runtime_error("invalid base64 character.");
+                    throw base64_error("invalid base64 character.");
                 }
             }
         }
@@ -385,7 +385,7 @@ private:
             }
         }
 
-        throw std::runtime_error("invalid base64 character.");
+        throw base64_error("invalid base64 character.");
     }
 };
 

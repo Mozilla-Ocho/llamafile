@@ -1,4 +1,4 @@
-static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, const void * restrict vx, const void * restrict vy) {
+static void ggml_vec_dot_q2_K_q8_K(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
 
     const block_q2_K * restrict x = vx;
     const block_q8_K * restrict y = vy;

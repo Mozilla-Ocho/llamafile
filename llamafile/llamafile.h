@@ -1,7 +1,7 @@
 #ifndef LLAMAFILE_H_
 #define LLAMAFILE_H_
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +29,8 @@ void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 void llamafile_launch_browser(const char *);
 
+extern bool FLAG_unsecure;
+
 #define LLAMAFILE_GPU_ERROR -2
 #define LLAMAFILE_GPU_DISABLE -1
 #define LLAMAFILE_GPU_AUTO 0
@@ -46,8 +48,8 @@ bool llamafile_has_metal(void);
 int llamafile_gpu_parse(const char *);
 const char *llamafile_describe_gpu(void);
 
-void llamafile_sgemm(long, long, long, int, const void *, long,
-                     const void *, long, float *, long, long, long);
+void llamafile_sgemm(long, long, long, int, const void *, long, const void *,
+                     long, float *, long, long, long);
 
 #ifdef __cplusplus
 }

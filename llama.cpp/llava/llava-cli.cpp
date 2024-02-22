@@ -39,7 +39,7 @@ static bool eval_id(struct llama_context * ctx_llama, int id, int * n_past) {
 
 static bool eval_string(struct llama_context * ctx_llama, const char* str, int n_batch, int * n_past, bool add_bos){
     std::string              str2     = str;
-    std::vector<llama_token> embd_inp = ::llama_tokenize(ctx_llama, str2, add_bos);
+    std::vector<llama_token> embd_inp = ::llama_tokenize(ctx_llama, str2, add_bos, true);
     eval_tokens(ctx_llama, embd_inp, n_batch, n_past);
     return true;
 }
@@ -167,26 +167,32 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     size_t image_pos = prompt.find("<image>");
     if (image_pos != std::string::npos) {
         // new templating mode: Provide the full prompt including system message and use <image> as a placeholder for the image
-
         system_prompt = prompt.substr(0, image_pos);
         user_prompt = prompt.substr(image_pos + std::string("<image>").length());
-        // We replace \n with actual newlines in user_prompt, just in case -e was not used in templating string
-        size_t pos = 0;
-        while ((pos = user_prompt.find("\\n", pos)) != std::string::npos) {
-            user_prompt.replace(pos, 2, "\n");
-            pos += 1; // Advance past the replaced newline
-        }
-        while ((pos = system_prompt.find("\\n", pos)) != std::string::npos) {
-            system_prompt.replace(pos, 2, "\n");
-            pos += 1; // Advance past the replaced newline
-        }
-
         printf("system_prompt: %s\n", system_prompt.c_str());
+        if (params->verbose_prompt) {
+            auto tmp = ::llama_tokenize(ctx_llava->ctx_llama, system_prompt, true, true);
+            for (int i = 0; i < (int) tmp.size(); i++) {
+                printf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
+            }
+        }
         printf("user_prompt: %s\n", user_prompt.c_str());
+        if (params->verbose_prompt) {
+            auto tmp = ::llama_tokenize(ctx_llava->ctx_llama, user_prompt, true, true);
+            for (int i = 0; i < (int) tmp.size(); i++) {
+                printf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
+            }
+        }
     } else {
         // llava-1.5 native mode
         system_prompt = "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.\nUSER:";
         user_prompt = prompt + "\nASSISTANT:";
+        if (params->verbose_prompt) {
+            auto tmp = ::llama_tokenize(ctx_llava->ctx_llama, user_prompt, true, true);
+            for (int i = 0; i < (int) tmp.size(); i++) {
+                printf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
+            }
+        }
     }
 
     eval_string(ctx_llava->ctx_llama, system_prompt.c_str(), params->n_batch, &n_past, add_bos);
@@ -198,13 +204,17 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
     tinylogf("\n");
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(params->sparams);
-
+    std::string response = "";
     for (int i = 0; i < max_tgt_len; i++) {
         const char * tmp = sample(ctx_sampling, ctx_llava->ctx_llama, &n_past);
+        response += tmp;
         if (strcmp(tmp, "</s>") == 0) break;
         if (strstr(tmp, "###")) break; // Yi-VL behavior
-
         printf("%s", tmp);
+        if (strstr(response.c_str(), "<|im_end|>")) break; // Yi-34B llava-1.6 - for some reason those decode not as the correct token (tokenizer works)
+        if (strstr(response.c_str(), "<|im_start|>")) break; // Yi-34B llava-1.6
+        if (strstr(response.c_str(), "USER:")) break; // mistral llava-1.6
+
         fflush(stdout);
     }
 
@@ -223,7 +233,8 @@ static struct llava_context * llava_init(gpt_params * params) {
 
     auto ctx_clip = clip_model_load(clip_path, /*verbosity=*/ 1);
 
-    llama_backend_init(params->numa);
+    llama_backend_init();
+    llama_numa_init(params->numa);
 
     llama_model_params model_params = llama_model_params_from_gpt_params(*params);
 

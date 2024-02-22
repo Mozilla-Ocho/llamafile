@@ -21,6 +21,7 @@ extern "C" {
         const char *          (*GGML_CALL get_name)        (ggml_backend_buffer_type_t buft);
         ggml_backend_buffer_t (*GGML_CALL alloc_buffer)    (ggml_backend_buffer_type_t buft, size_t size);
         size_t                (*GGML_CALL get_alignment)   (ggml_backend_buffer_type_t buft); // tensor alignment
+        size_t                (*GGML_CALL get_max_size)    (ggml_backend_buffer_type_t buft); // allocation max size
         size_t                (*GGML_CALL get_alloc_size)  (ggml_backend_buffer_type_t buft, const struct ggml_tensor * tensor); // data size needed to allocate the tensor, including padding
         bool                  (*GGML_CALL supports_backend)(ggml_backend_buffer_type_t buft, ggml_backend_t backend); // check if the buffer type is usable by the backend
         // check if tensor data is in host memory
@@ -64,6 +65,11 @@ extern "C" {
 
     // do not use directly, use ggml_backend_tensor_copy instead
     bool ggml_backend_buffer_copy_tensor(const struct ggml_tensor * src, struct ggml_tensor * dst);
+
+    // buffer that contains a collection of buffers
+    GGML_CALL ggml_backend_buffer_t ggml_backend_multi_buffer_alloc_buffer(ggml_backend_buffer_t * buffers, size_t n_buffers);
+    GGML_CALL bool                  ggml_backend_buffer_is_multi_buffer(ggml_backend_buffer_t buffer);
+    GGML_CALL void                  ggml_backend_multi_buffer_set_usage(ggml_backend_buffer_t buffer, enum ggml_backend_buffer_usage usage);
 
     //
     // Backend
@@ -127,7 +133,6 @@ extern "C" {
         void *(*GGML_CALL malloc)(size_t);
         void (*GGML_CALL ggml_backend_register)(const char *, ggml_backend_init_fn, ggml_backend_buffer_type_t, void *);
         ggml_backend_buffer_t (*GGML_CALL ggml_backend_buffer_init)(ggml_backend_buffer_type_t, struct ggml_backend_buffer_i, ggml_backend_buffer_context_t, size_t);
-        bool (*GGML_CALL ggml_backend_buffer_is_host)(ggml_backend_buffer_t);
         ggml_backend_buffer_t (*GGML_CALL ggml_backend_cpu_buffer_from_ptr)(void *, size_t);
         ggml_backend_buffer_type_t (*GGML_CALL ggml_backend_cpu_buffer_type)(void);
         size_t (*GGML_CALL ggml_backend_buft_get_alloc_size)(ggml_backend_buffer_type_t, struct ggml_tensor *);
@@ -151,6 +156,7 @@ extern "C" {
         size_t (*GGML_CALL ggml_row_size)(enum ggml_type, int64_t);
         void (*GGML_CALL ggml_rope_yarn_corr_dims)(int, int, float, float, float, float[2]);
         const char *(*GGML_CALL ggml_op_desc)(const struct ggml_tensor *);
+        bool (*GGML_CALL ggml_backend_buffer_is_host)(ggml_backend_buffer_t);
     };
 
 #ifdef  __cplusplus

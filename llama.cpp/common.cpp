@@ -344,13 +344,14 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-            sparams.samplers_sequence = parse_samplers_input(argv[i]);
+            const auto sampler_names = string_split(argv[i], ';');
+            sparams.samplers_sequence = sampler_types_from_names(sampler_names, true);
         } else if (arg == "--sampling-seq") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            sparams.samplers_sequence = argv[i];
+            sparams.samplers_sequence = sampler_types_from_chars(argv[i]);
         } else if (arg == "--top-p") {
             if (++i >= argc) {
                 invalid_param = true;
@@ -407,6 +408,18 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             sparams.penalty_present = std::stof(argv[i]);
+        } else if (arg == "--dynatemp-range") {
+            if (++i >= argc) {
+                invalid_param = true;
+                break;
+            }
+            sparams.dynatemp_range = std::stof(argv[i]);
+        } else if (arg == "--dynatemp-exp") {
+            if (++i >= argc) {
+                invalid_param = true;
+                break;
+            }
+            sparams.dynatemp_exponent = std::stof(argv[i]);
         } else if (arg == "--mirostat") {
             if (++i >= argc) {
                 invalid_param = true;
@@ -523,7 +536,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-            params.lora_adapter.push_back(std::make_tuple(argv[i], 1.0f));
+            params.lora_adapter.emplace_back(argv[i], 1.0f);
             params.use_mmap = false;
         } else if (arg == "--lora-scaled") {
             if (++i >= argc) {
@@ -535,7 +548,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-            params.lora_adapter.push_back(std::make_tuple(lora_adapter, std::stof(argv[i])));
+            params.lora_adapter.emplace_back(lora_adapter, std::stof(argv[i]));
             params.use_mmap = false;
         } else if (arg == "--lora-base") {
             if (++i >= argc) {
@@ -568,7 +581,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
         } else if (arg == "--infill") {
             params.infill = true;
         } else if (arg == "--unsecure") {
-            params.unsecure = true;
+            FLAG_unsecure = true;
         } else if (arg == "--nocompile") {
             FLAG_nocompile = true;
         } else if (arg == "--recompile") {
@@ -627,6 +640,22 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             params.main_gpu = std::stoi(argv[i]);
+        } else if (arg == "--split-mode" || arg == "-sm") {
+            if (++i >= argc) {
+                invalid_param = true;
+                break;
+            }
+            std::string arg_next = argv[i];
+            if (arg_next == "none") {
+                params.split_mode = LLAMA_SPLIT_NONE;
+            } else if (arg_next == "layer") {
+                params.split_mode = LLAMA_SPLIT_LAYER;
+            } else if (arg_next == "row") {
+                params.split_mode = LLAMA_SPLIT_ROW;
+            } else {
+                invalid_param = true;
+                break;
+            }
         } else if (arg == "--tensor-split" || arg == "-ts") {
             passed_gpu_flags = true;
             if (++i >= argc) {
@@ -639,11 +668,11 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             const std::regex regex{R"([,/]+)"};
             std::sregex_token_iterator it{arg_next.begin(), arg_next.end(), regex, -1};
             std::vector<std::string> split_arg{it, {}};
-            if (split_arg.size() >= LLAMA_MAX_DEVICES) {
+            if (split_arg.size() >= llama_max_devices()) {
                 invalid_param = true;
                 break;
             }
-            for (size_t i = 0; i < LLAMA_MAX_DEVICES; ++i) {
+            for (size_t i = 0; i < llama_max_devices(); ++i) {
                 if (i < split_arg.size()) {
                     params.tensor_split[i] = std::stof(split_arg[i]);
                 } else {
@@ -653,7 +682,15 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
         } else if (arg == "--no-mmap") {
             params.use_mmap = false;
         } else if (arg == "--numa") {
-            params.numa = true;
+            if (++i >= argc) {
+                invalid_param = true;
+                break;
+            }
+            std::string value(argv[i]);
+            /**/ if (value == "distribute" || value == "") { params.numa = GGML_NUMA_STRATEGY_DISTRIBUTE; }
+            else if (value == "isolate") { params.numa = GGML_NUMA_STRATEGY_ISOLATE; }
+            else if (value == "numactl") { params.numa = GGML_NUMA_STRATEGY_NUMACTL; }
+            else { invalid_param = true; break; }
         } else if (arg == "--verbose-prompt") {
             params.verbose_prompt = true;
         } else if (arg == "--no-display-prompt" || arg == "--silent-prompt") {
@@ -663,7 +700,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-            params.antiprompt.push_back(argv[i]);
+            params.antiprompt.emplace_back(argv[i]);
         } else if (arg == "-ld" || arg == "--logdir") {
             if (++i >= argc) {
                 invalid_param = true;
@@ -879,7 +916,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
     }
 
     if (!params.kv_overrides.empty()) {
-        params.kv_overrides.emplace_back(llama_model_kv_override());
+        params.kv_overrides.emplace_back();
         params.kv_overrides.back().key[0] = 0;
     }
 
@@ -890,6 +927,14 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
 
 void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     const llama_sampling_params & sparams = params.sparams;
+
+    std::string sampler_type_chars;
+    std::string sampler_type_names;
+    for (const auto sampler_type : sparams.samplers_sequence) {
+        sampler_type_chars += static_cast<char>(sampler_type);
+        sampler_type_names += sampler_type_to_name_string(sampler_type) + ";";
+    }
+    sampler_type_names.pop_back();
 
     printf("\n");
     printf("usage: %s [options]\n", argv[0]);
@@ -911,7 +956,7 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  -tb N, --threads-batch N\n");
     printf("                        number of threads to use during batch and prompt processing (default: same as --threads)\n");
     printf("  -td N, --threads-draft N");
-    printf("                        number of threads to use during generation (default: same as --threads)");
+    printf("                        number of threads to use during generation (default: same as --threads)\n");
     printf("  -tbd N, --threads-batch-draft N\n");
     printf("                        number of threads to use during batch and prompt processing (default: same as --threads-draft)\n");
     printf("  -p PROMPT, --prompt PROMPT\n");
@@ -932,8 +977,9 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  -n N, --n-predict N   number of tokens to predict (default: %d, -1 = infinity, -2 = until context filled)\n", params.n_predict);
     printf("  -c N, --ctx-size N    size of the prompt context (default: %d, 0 = loaded from model)\n", params.n_ctx);
     printf("  -b N, --batch-size N  batch size for prompt processing (default: %d)\n", params.n_batch);
-    printf("  --samplers            samplers that will be used for generation in the order, separated by \';\', for example: \"top_k;tfs;typical;top_p;min_p;temp\"\n");
-    printf("  --sampling-seq        simplified sequence for samplers that will be used (default: %s)\n", sparams.samplers_sequence.c_str());
+    printf("  --samplers            samplers that will be used for generation in the order, separated by \';\'\n");
+    printf("                        (default: %s)\n", sampler_type_names.c_str());
+    printf("  --sampling-seq        simplified sequence for samplers that will be used (default: %s)\n", sampler_type_chars.c_str());
     printf("  --top-k N             top-k sampling (default: %d, 0 = disabled)\n", sparams.top_k);
     printf("  --top-p N             top-p sampling (default: %.1f, 1.0 = disabled)\n", (double)sparams.top_p);
     printf("  --min-p N             min-p sampling (default: %.1f, 0.0 = disabled)\n", (double)sparams.min_p);
@@ -943,6 +989,8 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  --repeat-penalty N    penalize repeat sequence of tokens (default: %.1f, 1.0 = disabled)\n", (double)sparams.penalty_repeat);
     printf("  --presence-penalty N  repeat alpha presence penalty (default: %.1f, 0.0 = disabled)\n", (double)sparams.penalty_present);
     printf("  --frequency-penalty N repeat alpha frequency penalty (default: %.1f, 0.0 = disabled)\n", (double)sparams.penalty_freq);
+    printf("  --dynatemp-range N    dynamic temperature range (default: %.1f, 0.0 = disabled)\n", (double)sparams.dynatemp_range);
+    printf("  --dynatemp-exp N      dynamic temperature exponent (default: %.1f)\n", (double)sparams.dynatemp_exponent);
     printf("  --mirostat N          use Mirostat sampling.\n");
     printf("                        Top K, Nucleus, Tail Free and Locally Typical samplers are ignored if used.\n");
     printf("                        (default: %d, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)\n", sparams.mirostat);
@@ -979,7 +1027,7 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  --winogrande-tasks N  number of tasks to use when computing the Winogrande score (default: %zu)\n", params.winogrande_tasks);
     printf("  --multiple-choice     compute multiple choice score over random tasks from datafile supplied with -f\n");
     printf("  --multiple-choice-tasks N number of tasks to use when computing the multiple choice score (default: %zu)\n", params.winogrande_tasks);
-    printf("  --kl-divergence       computes KL-divergence to logits provided via --kl-divergence-base");
+    printf("  --kl-divergence       computes KL-divergence to logits provided via --kl-divergence-base\n");
     printf("  --keep N              number of tokens to keep from the initial prompt (default: %d, -1 = all)\n", params.n_keep);
     printf("  --draft N             number of tokens to draft for speculative decoding (default: %d)\n", params.n_draft);
     printf("  --chunks N            max number of chunks to process (default: %d, -1 = all)\n", params.n_chunks);
@@ -990,30 +1038,33 @@ void gpt_print_usage(int /*argc*/, char ** argv, const gpt_params & params) {
     printf("  -cb, --cont-batching  enable continuous batching (a.k.a dynamic batching) (default: disabled)\n");
     printf("  --mmproj MMPROJ_FILE  path to a multimodal projector file for LLaVA. see examples/llava/README.md\n");
     printf("  --image IMAGE_FILE    path to an image file. use with multimodal models\n");
-    if (llama_mlock_supported()) {
+    if (llama_supports_mlock()) {
         printf("  --mlock               force system to keep model in RAM rather than swapping or compressing\n");
     }
-    if (llama_mmap_supported()) {
+    if (llama_supports_mmap()) {
         printf("  --no-mmap             do not memory-map model (slower load but may reduce pageouts if not using mlock)\n");
     }
-    printf("  --numa                attempt optimizations that help on some NUMA systems\n");
+    printf("  --numa TYPE           attempt optimizations that help on some NUMA systems\n");
+    printf("                          - distribute: spread execution evenly over all nodes\n");
+    printf("                          - isolate: only spawn threads on CPUs on the node that execution started on\n");
+    printf("                          - numactl: use the CPU map provided by numactl\n");
     printf("                        if run without this previously, it is recommended to drop the system page cache before using this\n");
     printf("                        see https://github.com/ggerganov/llama.cpp/issues/1437\n");
-#ifdef LLAMA_SUPPORTS_GPU_OFFLOAD
-    printf("  -ngl N, --n-gpu-layers N\n");
-    printf("                        number of layers to store in VRAM\n");
-    printf("  -ngld N, --n-gpu-layers-draft N\n");
-    printf("                        number of layers to store in VRAM for the draft model\n");
-    printf("  -sm SPLIT_MODE, --split-mode SPLIT_MODE\n");
-    printf("                        how to split the model across multiple GPUs, one of:\n");
-    printf("                          - none: use one GPU only\n");
-    printf("                          - layer (default): split layers and KV across GPUs\n");
-    printf("                          - row: split rows across GPUs\n");
-    printf("  -ts SPLIT, --tensor-split SPLIT\n");
-    printf("                        fraction of the model to offload to each GPU, comma-separated list of proportions, e.g. 3,1\n");
-    printf("  -mg i, --main-gpu i   the GPU to use for the model (with split-mode = none),\n");
-    printf("                        or for intermediate results and KV (with split-mode = row) (default: %d)\n", params.main_gpu);
-#endif
+    if (llama_supports_gpu_offload()) {
+        printf("  -ngl N, --n-gpu-layers N\n");
+        printf("                        number of layers to store in VRAM\n");
+        printf("  -ngld N, --n-gpu-layers-draft N\n");
+        printf("                        number of layers to store in VRAM for the draft model\n");
+        printf("  -sm SPLIT_MODE, --split-mode SPLIT_MODE\n");
+        printf("                        how to split the model across multiple GPUs, one of:\n");
+        printf("                          - none: use one GPU only\n");
+        printf("                          - layer (default): split layers and KV across GPUs\n");
+        printf("                          - row: split rows across GPUs\n");
+        printf("  -ts SPLIT, --tensor-split SPLIT\n");
+        printf("                        fraction of the model to offload to each GPU, comma-separated list of proportions, e.g. 3,1\n");
+        printf("  -mg i, --main-gpu i   the GPU to use for the model (with split-mode = none),\n");
+        printf("                        or for intermediate results and KV (with split-mode = row) (default: %d)\n", params.main_gpu);
+    }
     printf("  --verbose-prompt      print a verbose prompt before generation (default: %s)\n", params.verbose_prompt ? "true" : "false");
     printf("  --no-display-prompt   don't print prompt at generation (default: %s)\n", !params.display_prompt ? "true" : "false");
     printf("  -gan N, --grp-attn-n N\n");
@@ -1080,45 +1131,101 @@ std::string gpt_random_prompt(std::mt19937 & rng) {
 }
 
 //
-// String parsing
+// String utils
 //
 
-std::string parse_samplers_input(std::string input) {
-    std::string output = "";
+std::vector<std::string> string_split(std::string input, char separator) {
+    std::vector<std::string> parts;
+    size_t separator_pos = input.find(separator);
+    while (separator_pos != std::string::npos) {
+        std::string part = input.substr(0, separator_pos);
+        parts.emplace_back(part);
+        input = input.substr(separator_pos + 1);
+        separator_pos = input.find(separator);
+    }
+    parts.emplace_back(input);
+    return parts;
+}
+
+std::vector<llama_sampler_type> sampler_types_from_names(const std::vector<std::string> & names, bool allow_alt_names) {
+    std::unordered_map<std::string, llama_sampler_type> sampler_canonical_name_map {
+        {"top_k",       llama_sampler_type::TOP_K},
+        {"top_p",       llama_sampler_type::TOP_P},
+        {"typical_p",   llama_sampler_type::TYPICAL_P},
+        {"min_p",       llama_sampler_type::MIN_P},
+        {"tfs_z",       llama_sampler_type::TFS_Z},
+        {"temperature", llama_sampler_type::TEMPERATURE}
+    };
+
     // since samplers names are written multiple ways
     // make it ready for both system names and input names
-    std::unordered_map<std::string, char> samplers_symbols {
-        {"top_k",      'k'},
-        {"top-k",      'k'},
-        {"top_p",      'p'},
-        {"top-p",      'p'},
-        {"nucleus",    'p'},
-        {"typical_p",  'y'},
-        {"typical-p",  'y'},
-        {"typical",    'y'},
-        {"min_p",      'm'},
-        {"min-p",      'm'},
-        {"tfs_z",      'f'},
-        {"tfs-z",      'f'},
-        {"tfs",        'f'},
-        {"temp",       't'},
-        {"temperature",'t'}
+    std::unordered_map<std::string, llama_sampler_type> sampler_alt_name_map {
+        {"top-k",       llama_sampler_type::TOP_K},
+        {"top-p",       llama_sampler_type::TOP_P},
+        {"nucleus",     llama_sampler_type::TOP_P},
+        {"typical-p",   llama_sampler_type::TYPICAL_P},
+        {"typical",     llama_sampler_type::TYPICAL_P},
+        {"min-p",       llama_sampler_type::MIN_P},
+        {"tfs-z",       llama_sampler_type::TFS_Z},
+        {"tfs",         llama_sampler_type::TFS_Z},
+        {"temp",        llama_sampler_type::TEMPERATURE}
     };
-    // expected format example: "temp;top_k;tfs_z;typical_p;top_p;min_p"
-    size_t separator = input.find(';');
-    while (separator != input.npos) {
-        std::string name = input.substr(0,separator);
-        input = input.substr(separator+1);
-        separator = input.find(';');
 
-        if (samplers_symbols.find(name) != samplers_symbols.end()) {
-            output += samplers_symbols[name];
+    std::vector<llama_sampler_type> sampler_types;
+    sampler_types.reserve(names.size());
+    for (const auto & name : names)
+    {
+        auto sampler_item = sampler_canonical_name_map.find(name);
+        if (sampler_item != sampler_canonical_name_map.end())
+        {
+            sampler_types.push_back(sampler_item->second);
+        }
+        else
+        {
+            if (allow_alt_names)
+            {
+                sampler_item = sampler_alt_name_map.find(name);
+                if (sampler_item != sampler_alt_name_map.end())
+                {
+                    sampler_types.push_back(sampler_item->second);
+                }
+            }
         }
     }
-    if (samplers_symbols.find(input) != samplers_symbols.end()) {
-        output += samplers_symbols[input];
+    return sampler_types;
+}
+
+std::vector<llama_sampler_type> sampler_types_from_chars(const std::string & names_string) {
+    std::unordered_map<char, llama_sampler_type> sampler_name_map {
+        {'k', llama_sampler_type::TOP_K},
+        {'p', llama_sampler_type::TOP_P},
+        {'y', llama_sampler_type::TYPICAL_P},
+        {'m', llama_sampler_type::MIN_P},
+        {'f', llama_sampler_type::TFS_Z},
+        {'t', llama_sampler_type::TEMPERATURE}
+    };
+
+    std::vector<llama_sampler_type> sampler_types;
+    sampler_types.reserve(names_string.size());
+    for (const auto & c : names_string) {
+        const auto sampler_item = sampler_name_map.find(c);
+        if (sampler_item != sampler_name_map.end()) {
+            sampler_types.push_back(sampler_item->second);
+        }
     }
-    return output;
+    return sampler_types;
+}
+
+std::string sampler_type_to_name_string(llama_sampler_type sampler_type) {
+    switch (sampler_type) {
+        case llama_sampler_type::TOP_K:       return "top_k";
+        case llama_sampler_type::TFS_Z:       return "tfs_z";
+        case llama_sampler_type::TYPICAL_P:   return "typical_p";
+        case llama_sampler_type::TOP_P:       return "top_p";
+        case llama_sampler_type::MIN_P:       return "min_p";
+        case llama_sampler_type::TEMPERATURE: return "temperature";
+        default : return "";
+    }
 }
 
 //
@@ -1520,9 +1627,10 @@ void dump_non_result_info_yaml(FILE * stream, const gpt_params & params, const l
     fprintf(stream, "cpu_has_avx512: %s\n",      ggml_cpu_has_avx512()      ? "true" : "false");
     fprintf(stream, "cpu_has_avx512_vbmi: %s\n", ggml_cpu_has_avx512_vbmi() ? "true" : "false");
     fprintf(stream, "cpu_has_avx512_vnni: %s\n", ggml_cpu_has_avx512_vnni() ? "true" : "false");
-    fprintf(stream, "cpu_has_blas: %s\n",        ggml_cpu_has_blas()        ? "true" : "false");
     fprintf(stream, "cpu_has_cublas: %s\n",      ggml_cpu_has_cublas()      ? "true" : "false");
+    fprintf(stream, "cpu_has_vulkan: %s\n",      ggml_cpu_has_vulkan()      ? "true" : "false");
     fprintf(stream, "cpu_has_clblast: %s\n",     ggml_cpu_has_clblast()     ? "true" : "false");
+    fprintf(stream, "cpu_has_kompute: %s\n",     ggml_cpu_has_kompute()     ? "true" : "false");
     fprintf(stream, "cpu_has_fma: %s\n",         ggml_cpu_has_fma()         ? "true" : "false");
     fprintf(stream, "cpu_has_gpublas: %s\n",     ggml_cpu_has_gpublas()     ? "true" : "false");
     fprintf(stream, "cpu_has_neon: %s\n",        ggml_cpu_has_neon()        ? "true" : "false");
@@ -1532,6 +1640,7 @@ void dump_non_result_info_yaml(FILE * stream, const gpt_params & params, const l
     fprintf(stream, "cpu_has_blas: %s\n",        ggml_cpu_has_blas()        ? "true" : "false");
     fprintf(stream, "cpu_has_sse3: %s\n",        ggml_cpu_has_sse3()        ? "true" : "false");
     fprintf(stream, "cpu_has_vsx: %s\n",         ggml_cpu_has_vsx()         ? "true" : "false");
+    fprintf(stream, "cpu_has_matmul_int8: %s\n", ggml_cpu_has_matmul_int8() ? "true" : "false");
 
 #ifdef NDEBUG
     fprintf(stream, "debug: false\n");
@@ -1608,6 +1717,7 @@ void dump_non_result_info_yaml(FILE * stream, const gpt_params & params, const l
     }
     fprintf(stream, "lora_base: %s\n", params.lora_base.c_str());
     fprintf(stream, "main_gpu: %d # default: 0\n", params.main_gpu);
+    fprintf(stream, "min_keep: %d # default: 0 (disabled)\n", sparams.min_keep);
     fprintf(stream, "mirostat: %d # default: 0 (disabled)\n", sparams.mirostat);
     fprintf(stream, "mirostat_ent: %f # default: 5.0\n", sparams.mirostat_tau);
     fprintf(stream, "mirostat_lr: %f # default: 0.1\n", sparams.mirostat_eta);
@@ -1621,7 +1731,6 @@ void dump_non_result_info_yaml(FILE * stream, const gpt_params & params, const l
     fprintf(stream, "no_mmap: %s # default: false\n", !params.use_mmap ? "true" : "false");
     fprintf(stream, "no_mul_mat_q: %s # default: false\n", !params.mul_mat_q ? "true" : "false");
     fprintf(stream, "no_penalize_nl: %s # default: false\n", !sparams.penalize_nl ? "true" : "false");
-    fprintf(stream, "numa: %s # default: false\n", params.numa ? "true" : "false");
     fprintf(stream, "ppl_output_type: %d # default: 0\n", params.ppl_output_type);
     fprintf(stream, "ppl_stride: %d # default: 0\n", params.ppl_stride);
     fprintf(stream, "presence_penalty: %f # default: 0.0\n", sparams.penalty_present);
@@ -1646,16 +1755,16 @@ void dump_non_result_info_yaml(FILE * stream, const gpt_params & params, const l
 
     fprintf(stream, "rope_freq_base: %f # default: 10000.0\n", params.rope_freq_base);
     fprintf(stream, "rope_freq_scale: %f # default: 1.0\n", params.rope_freq_scale);
-    fprintf(stream, "seed: %d # default: -1 (random seed)\n", params.seed);
+    fprintf(stream, "seed: %u # default: -1 (random seed)\n", params.seed);
     fprintf(stream, "simple_io: %s # default: false\n", params.simple_io ? "true" : "false");
     fprintf(stream, "cont_batching: %s # default: false\n", params.cont_batching ? "true" : "false");
     fprintf(stream, "temp: %f # default: 0.8\n", sparams.temp);
 
-    const std::vector<float> tensor_split_vector(params.tensor_split, params.tensor_split + LLAMA_MAX_DEVICES);
+    const std::vector<float> tensor_split_vector(params.tensor_split, params.tensor_split + llama_max_devices());
     dump_vector_float_yaml(stream, "tensor_split", tensor_split_vector);
 
     fprintf(stream, "tfs: %f # default: 1.0\n", sparams.tfs_z);
-    fprintf(stream, "threads: %d # default: %d\n", params.n_threads, std::thread::hardware_concurrency());
+    fprintf(stream, "threads: %d # default: %u\n", params.n_threads, std::thread::hardware_concurrency());
     fprintf(stream, "top_k: %d # default: 40\n", sparams.top_k);
     fprintf(stream, "top_p: %f # default: 0.95\n", sparams.top_p);
     fprintf(stream, "min_p: %f # default: 0.0\n", sparams.min_p);
@@ -1706,7 +1815,8 @@ void dump_kv_cache_view_seqs(const llama_kv_cache_view & view, int row_size) {
             if (cs_curr[j] < 0) { continue; }
             if (seqs.find(cs_curr[j]) == seqs.end()) {
                 if (seqs.size() + 1 >= sizeof(slot_chars)) { break; }
-                seqs[cs_curr[j]] = seqs.size();
+                const size_t sz = seqs.size();
+                seqs[cs_curr[j]] = sz;
             }
         }
         if (seqs.size() + 1 >= sizeof(slot_chars)) { break; }

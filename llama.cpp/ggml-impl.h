@@ -19,11 +19,13 @@ extern "C" {
 // fall back to the _Static_assert C11 keyword.
 // if C99 - static_assert is noop
 // ref: https://stackoverflow.com/a/53923785/4039976
+#ifndef __cplusplus
 #ifndef static_assert
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201100L)
 #define static_assert(cond, msg) _Static_assert(cond, msg)
 #else
 #define static_assert(cond, msg) struct global_scope_noop_trick
+#endif
 #endif
 #endif
 
@@ -49,9 +51,7 @@ extern "C" {
 //
 //   $ ln -sfn /Library/Developer/CommandLineTools/usr/lib/clang/13.1.6/include/arm_neon.h ./src/
 //
-#ifndef __CUDACC__
 #include <arm_neon.h>
-#endif
 
 #define GGML_COMPUTE_FP16_TO_FP32(x) ((float) (x))
 #define GGML_COMPUTE_FP32_TO_FP16(x) (x)

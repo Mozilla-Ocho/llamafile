@@ -34,6 +34,17 @@ static std::ostringstream       * g_output_ss;
 static std::vector<llama_token> * g_output_tokens;
 static bool is_interacting = false;
 
+static bool file_exists(const std::string &path) {
+    std::ifstream f(path.c_str());
+    return f.good();
+}
+
+static bool file_is_empty(const std::string &path) {
+    std::ifstream f;
+    f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    f.open(path.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+    return f.tellg() == 0;
+}
 
 static void write_logfile(
     const llama_context * ctx, const gpt_params & params, const llama_model * model,
@@ -154,7 +165,7 @@ int main(int argc, char ** argv) {
     console::init(params.simple_io, params.use_color);
     atexit([]() { console::cleanup(); });
 
-    if (!params.unsecure && !llamafile_has_gpu()) {
+    if (!FLAG_unsecure && !llamafile_has_gpu()) {
         // Enable pledge() security on Linux and OpenBSD.
         // - We do this *after* opening the log file for writing.
         // - We do this *before* loading any weights or graphdefs.
@@ -220,7 +231,8 @@ int main(int argc, char ** argv) {
     }
 
     LOG("%s: llama backend init\n", __func__);
-    llama_backend_init(params.numa);
+    llama_backend_init();
+    llama_numa_init(params.numa);
 
     llama_model * model;
     llama_context * ctx;
@@ -261,12 +273,12 @@ int main(int argc, char ** argv) {
 
     if (!path_session.empty()) {
         LOG_TEE("%s: attempting to load saved session from '%s'\n", __func__, path_session.c_str());
-
-        // fopen to check for existing session
-        FILE * fp = std::fopen(path_session.c_str(), "rbe");
-        if (fp != NULL) {
-            std::fclose(fp);
-
+        if (!file_exists(path_session)) {
+            LOG_TEE("%s: session file does not exist, will create.\n", __func__);
+        } else if (file_is_empty(path_session)) {
+            LOG_TEE("%s: The session file is empty. A new session will be initialized.\n", __func__);
+        } else {
+            // The file exists and is not empty
             session_tokens.resize(n_ctx);
             size_t n_token_count_out = 0;
             if (!llama_load_session_file(ctx, path_session.c_str(), session_tokens.data(), session_tokens.capacity(), &n_token_count_out)) {
@@ -275,10 +287,7 @@ int main(int argc, char ** argv) {
             }
             session_tokens.resize(n_token_count_out);
             llama_set_rng_seed(ctx, params.seed);
-
-            LOG_TEE("%s: loaded a session with prompt size of %d tokens\n", __func__, (int) session_tokens.size());
-        } else {
-            LOG_TEE("%s: session file does not exist, will create\n", __func__);
+            LOG_TEE("%s: loaded a session with prompt size of %d tokens\n", __func__, (int)session_tokens.size());
         }
     }
 
@@ -371,6 +380,8 @@ int main(int argc, char ** argv) {
     // number of tokens to keep when resetting context
     if (params.n_keep < 0 || params.n_keep > (int) embd_inp.size() || params.instruct || params.chatml) {
         params.n_keep = (int)embd_inp.size();
+    } else {
+        params.n_keep += add_bos; // always keep the BOS token
     }
 
     // prefix & suffix for instruct mode
@@ -390,12 +401,12 @@ int main(int argc, char ** argv) {
     // in instruct mode, we inject a prefix and a suffix to each input by the user
     if (params.instruct) {
         params.interactive_first = true;
-        params.antiprompt.push_back("### Instruction:\n\n");
+        params.antiprompt.emplace_back("### Instruction:\n\n");
     }
     // similar for chatml mode
     else if (params.chatml) {
         params.interactive_first = true;
-        params.antiprompt.push_back("<|im_start|>user\n");
+        params.antiprompt.emplace_back("<|im_start|>user\n");
     }
 
     // enable interactive mode if interactive start is specified
@@ -420,8 +431,8 @@ int main(int argc, char ** argv) {
             }
         }
 
-        if (params.n_keep > 0) {
-        LOG_TEE("%s: static prompt based on n_keep: '", __func__);
+        if (params.n_keep > add_bos) {
+            LOG_TEE("%s: static prompt based on n_keep: '", __func__);
             for (int i = 0; i < params.n_keep; i++) {
                 LOG_TEE("%s", llama_token_to_piece(ctx, embd_inp[i]).c_str());
             }
@@ -567,14 +578,14 @@ int main(int argc, char ** argv) {
                         break;
                     }
 
-                    const int n_left    = n_past - params.n_keep - 1;
+                    const int n_left    = n_past - params.n_keep;
                     const int n_discard = n_left/2;
 
                     LOG("context full, swapping: n_past = %d, n_left = %d, n_ctx = %d, n_keep = %d, n_discard = %d\n",
                             n_past, n_left, n_ctx, params.n_keep, n_discard);
 
-                    llama_kv_cache_seq_rm   (ctx, 0, params.n_keep + 1            , params.n_keep + n_discard + 1);
-                    llama_kv_cache_seq_shift(ctx, 0, params.n_keep + 1 + n_discard, n_past, -n_discard);
+                    llama_kv_cache_seq_rm   (ctx, 0, params.n_keep            , params.n_keep + n_discard);
+                    llama_kv_cache_seq_shift(ctx, 0, params.n_keep + n_discard, n_past, -n_discard);
 
                     n_past -= n_discard;
 
