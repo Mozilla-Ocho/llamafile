@@ -16,13 +16,13 @@
 // limitations under the License.
 
 #include "log.h"
-#include <unistd.h>
-#include <string.h>
 #include <pthread.h>
+#include <string.h>
+#include <unistd.h>
 
 bool FLAG_log_disable;
 
-void (tinylog)(const char *s, ...) {
+void(tinylog)(const char *s, ...) {
     size_t n;
     int c, cs;
     va_list va;
@@ -46,19 +46,16 @@ void (tinylog)(const char *s, ...) {
 void llamafile_log_command(char *args[]) {
     tinylog(__func__, ": ", NULL);
     for (int i = 0; args[i]; ++i) {
-        if (i) {
+        if (i)
             tinylog(" ", NULL);
-        }
         // this quoting should be close enough to correct to be
         // copy/pastable on both unix and windows command terms
         bool need_quotes = !!strchr(args[i], ' ');
-        if (need_quotes) {
+        if (need_quotes)
             tinylog("\"", NULL);
-        }
         tinylog(args[i], NULL);
-        if (need_quotes) {
+        if (need_quotes)
             tinylog("\"", NULL);
-        }
     }
     tinylog("\n", NULL);
 }

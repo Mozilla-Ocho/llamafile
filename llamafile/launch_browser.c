@@ -16,34 +16,30 @@
 // limitations under the License.
 
 #include "llamafile.h"
+#include "llamafile/log.h"
 #include <cosmo.h>
-#include <spawn.h>
 #include <errno.h>
+#include <signal.h>
+#include <spawn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <signal.h>
 #include <sys/wait.h>
-#include "llamafile/log.h"
+#include <unistd.h>
 
 static volatile bool g_timed_out;
 
 static void finish(void) {
-    if (!IsWindows()) {
+    if (!IsWindows())
         _exit(0);
-    }
 }
 
 static void handle_timeout(int sig) {
     g_timed_out = true;
 }
 
-static void report_failure(const char *url,
-                           const char *cmd,
-                           const char *reason) {
-    tinylog("failed to open ", url, " in a browser tab using ", cmd,
-            ": ", reason, "\n", NULL);
+static void report_failure(const char *url, const char *cmd, const char *reason) {
+    tinylog("failed to open ", url, " in a browser tab using ", cmd, ": ", reason, "\n", NULL);
 }
 
 /**
@@ -55,13 +51,13 @@ void llamafile_launch_browser(const char *url) {
     tinylog("opening browser tab... (pass --nobrowser to disable)\n", NULL);
     if (!IsWindows()) {
         switch (fork()) {
-            case 0:
-                break;
-            default:
-                return;
-            case -1:
-                perror("fork");
-                return;
+        case 0:
+            break;
+        default:
+            return;
+        case -1:
+            perror("fork");
+            return;
         }
     }
 
@@ -113,9 +109,8 @@ void llamafile_launch_browser(const char *url) {
             return finish();
         }
     }
-    if (ws) {
+    if (ws)
         report_failure(url, cmd, "process exited with non-zero status");
-    }
 
     // we're done
     return finish();

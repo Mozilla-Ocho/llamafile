@@ -28,7 +28,8 @@ static wontreturn void oom(void) {
 
 char *xvasprintf(const char *fmt, va_list va) {
     char *buf;
-    if (vasprintf(&buf, fmt, va) == -1) oom();
+    if (vasprintf(&buf, fmt, va) == -1)
+        oom();
     return buf;
 }
 

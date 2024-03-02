@@ -32,10 +32,8 @@ void llamafile_check_cpu(void) {
 }
 
 static int on_missing_feature(const char *name) {
-    tinyprint(
-        2, program_invocation_name, ": fatal error: the cpu feature ", name,
-        " was required at build time but isn't available on this system\n",
-        NULL);
+    tinyprint(2, program_invocation_name, ": fatal error: the cpu feature ", name,
+              " was required at build time but isn't available on this system\n", NULL);
 #if defined(__AVX2__) && !defined(__AVX512F__)
     tinyprint(2,
               "note: amd microprocessors made after 2017 usually work\n"
@@ -49,8 +47,7 @@ static int on_missing_feature(const char *name) {
 // We need to perform this early in the initialization process, before
 // C++ codes built with -mavx has a chance to start allocating dynamic
 // memory that would otherwise crash the cpu before this could be done
-__attribute__((__constructor__(101))) static void
-llamafile_actually_check_cpu(void) {
+__attribute__((__constructor__(101))) static void llamafile_actually_check_cpu(void) {
     if (X86_NEED(SSE3) && !X86_CHECK(SSE3)) {
         on_missing_feature("SSE3");
     }

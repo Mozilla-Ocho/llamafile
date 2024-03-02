@@ -15,15 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <time.h>
+#include "llamafile.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
-#include "llamafile.h"
+#include <time.h>
+#include <unistd.h>
 
 static int is_file_newer_than_time(const char *path, const char *other) {
     struct stat st1, st2;
@@ -80,17 +80,15 @@ static int is_file_newer_than_bytes(const char *path, const char *other) {
             break;
         }
         if (!path_rc || !other_rc) {
-            if (!path_rc && !other_rc) {
+            if (!path_rc && !other_rc)
                 res = false;
-            } else {
+            else
                 res = true;
-            }
             break;
         }
         size_t size = path_rc;
-        if (other_rc < path_rc) {
+        if (other_rc < path_rc)
             size = other_rc;
-        }
         if (memcmp(path_buf, other_buf, size)) {
             res = true;
             break;
@@ -117,11 +115,10 @@ static int is_file_newer_than_bytes(const char *path, const char *other) {
  * would be the generated artifact that's dependent on `path`.
  */
 int llamafile_is_file_newer_than(const char *path, const char *other) {
-    if (startswith(path, "/zip/")) {
+    if (startswith(path, "/zip/"))
         // to keep builds deterministic, embedded zip files always have
         // the same timestamp from back in 2022 when it was implemented
         return is_file_newer_than_bytes(path, other);
-    } else {
+    else
         return is_file_newer_than_time(path, other);
-    }
 }

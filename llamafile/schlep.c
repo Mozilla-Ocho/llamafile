@@ -73,19 +73,16 @@ static void FormatPercent(char sbuf[static 8], double x) {
 void llamafile_schlep(const void *data, size_t size) {
 
     // don't bother if logging is disabled
-    if (FLAG_log_disable) {
+    if (FLAG_log_disable)
         return;
-    }
 
     // don't bother if memory is small
-    if (size < 128 * 1024 * 1024) {
+    if (size < 128 * 1024 * 1024)
         return;
-    }
 
     // don't bother if stderr isn't a terminal
-    if (!isatty(2)) {
+    if (!isatty(2))
         return;
-    }
 
     // launch threads
     errno_t err;
@@ -126,7 +123,6 @@ void llamafile_schlep(const void *data, size_t size) {
     tinyprint(2, "\r\033[K", NULL);
 
     // wait for workers
-    for (int i = 0; i < THREADS; ++i) {
+    for (int i = 0; i < THREADS; ++i)
         pthread_join(pf[i].th, 0);
-    }
 }

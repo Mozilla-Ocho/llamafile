@@ -48,8 +48,8 @@ bool llamafile_has_metal(void);
 int llamafile_gpu_parse(const char *);
 const char *llamafile_describe_gpu(void);
 
-void llamafile_sgemm(long, long, long, int, const void *, long, const void *,
-                     long, float *, long, long, long);
+void llamafile_sgemm(long, long, long, int, const void *, long, const void *, long, float *, long,
+                     long, long);
 
 #ifdef __cplusplus
 }

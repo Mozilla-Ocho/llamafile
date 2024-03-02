@@ -22,45 +22,43 @@
 #include <stdio.h>
 
 //
-//                     _   _          ___ _      _   ___
-//                    | |_(_)_ _ _  _| _ ) |    /_\ / __|
-//                    |  _| | ' \ || | _ \ |__ / _ \\__ \.
-//                     \__|_|_||_\_, |___/____/_/ \_\___/
-//                               |__/
+//                 _   _          ___ _      _   ___
+//                | |_(_)_ _ _  _| _ ) |    /_\ / __|
+//                |  _| | ' \ || | _ \ |__ / _ \\__ \.
+//                 \__|_|_||_\_, |___/____/_/ \_\___/
+//                           |__/
 //
-//                      BASIC LINEAR ALGEBRA SUBPROGRAMS
+//                  BASIC LINEAR ALGEBRA SUBPROGRAMS
 //
 
-#define ASSERT(x)                                                              \
-    if (!(x)) {                                                                \
-        fprintf(stderr, "%s:%d: assertion failed: %s\n", __FILE__, __LINE__,   \
-                #x);                                                           \
-        __builtin_trap();                                                      \
+#define ASSERT(x) \
+    if (!(x)) { \
+        fprintf(stderr, "%s:%d: assertion failed: %s\n", __FILE__, __LINE__, #x); \
+        __builtin_trap(); \
     }
 
 #define END_KERNEL() }
-#define BEGIN_KERNEL(RM, RN)                                                   \
-    long ytiles = (m - m0) / RM;                                               \
-    long xtiles = (n - n0) / RN;                                               \
-    long tiles = ytiles * xtiles;                                              \
-    double duty = (double)tiles / nth;                                         \
-    if (duty < 1)                                                              \
-        duty = 1;                                                              \
-    double spot = duty * ith + .5;                                             \
-    long end = spot + duty;                                                    \
-    long start = spot;                                                         \
-    if (end > tiles)                                                           \
-        end = tiles;                                                           \
-    for (long job = start; job < end; ++job) {                                 \
-        long i = m0 + job / xtiles * RM;                                       \
+#define BEGIN_KERNEL(RM, RN) \
+    long ytiles = (m - m0) / RM; \
+    long xtiles = (n - n0) / RN; \
+    long tiles = ytiles * xtiles; \
+    double duty = (double)tiles / nth; \
+    if (duty < 1) \
+        duty = 1; \
+    double spot = duty * ith + .5; \
+    long end = spot + duty; \
+    long start = spot; \
+    if (end > tiles) \
+        end = tiles; \
+    for (long job = start; job < end; ++job) { \
+        long i = m0 + job / xtiles * RM; \
         long j = n0 + job % xtiles * RN;
 
 #ifdef __x86_64__
 #pragma GCC push_options
 #pragma GCC target("avx2,fma,f16c,avxvnni")
 
-#define MM256_SET_M128I(a, b)                                                  \
-    _mm256_insertf128_si256(_mm256_castsi128_si256(b), (a), 1)
+#define MM256_SET_M128I(a, b) _mm256_insertf128_si256(_mm256_castsi128_si256(b), (a), 1)
 
 static inline float unhalf(ggml_fp16_t d) {
     return GGML_FP16_TO_FP32(d);
@@ -99,10 +97,9 @@ template <> inline __m256i load32i(const block_q4_0 *b) {
 
 template <typename T> class tinyBLAS {
   public:
-    tinyBLAS(long k, const T *A, long lda, const T *B, long ldb, float *C,
-             long ldc, long ith, long nth)
-        : k(k), A(A), lda(lda), B(B), ldb(ldb), C(C), ldc(ldc), ith(ith),
-          nth(nth) {
+    tinyBLAS(long k, const T *A, long lda, const T *B, long ldb, float *C, long ldc, long ith,
+             long nth)
+        : k(k), A(A), lda(lda), B(B), ldb(ldb), C(C), ldc(ldc), ith(ith), nth(nth) {
         ASSERT(A != nullptr);
         ASSERT(B != nullptr);
         ASSERT(C != nullptr);
@@ -248,8 +245,7 @@ template <typename T> class tinyBLAS {
         BEGIN_KERNEL(1, 1)
         __m256 c = _mm256_setzero_ps();
         for (long l = 0; l < k; l += 8) {
-            c = _mm256_fmadd_ps(load8f(A + lda * i + l),
-                                load8f(B + ldb * j + l), c);
+            c = _mm256_fmadd_ps(load8f(A + lda * i + l), load8f(B + ldb * j + l), c);
         }
         C[ldc * j + i] = hsum8f(c);
         END_KERNEL()
@@ -268,10 +264,9 @@ template <typename T> class tinyBLAS {
 
 template <typename T, typename U, int avxvnni> class tinyBLASq {
   public:
-    tinyBLASq(long k, const T *A, long lda, const U *B, long ldb, float *C,
-              long ldc, long ith, long nth)
-        : k(k), A(A), lda(lda), B(B), ldb(ldb), C(C), ldc(ldc), ith(ith),
-          nth(nth) {
+    tinyBLASq(long k, const T *A, long lda, const U *B, long ldb, float *C, long ldc, long ith,
+              long nth)
+        : k(k), A(A), lda(lda), B(B), ldb(ldb), C(C), ldc(ldc), ith(ith), nth(nth) {
         ASSERT(A != nullptr);
         ASSERT(B != nullptr);
         ASSERT(C != nullptr);
@@ -413,8 +408,7 @@ template <typename T, typename U, int avxvnni> class tinyBLASq {
         if (avxvnni)
             res = _mm256_dpbusd_epi32(_mm256_setzero_si256(), u, s);
         else
-            res = _mm256_madd_epi16(_mm256_set1_epi16(1),
-                                    _mm256_maddubs_epi16(u, s));
+            res = _mm256_madd_epi16(_mm256_set1_epi16(1), _mm256_maddubs_epi16(u, s));
         return _mm256_cvtepi32_ps(res);
     }
 
@@ -432,18 +426,15 @@ template <typename T, typename U, int avxvnni> class tinyBLASq {
 #endif // __x86_64__
 
 // computes m×k * n×k → n×m
-void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda,
-                     const void *B, long ldb, float *C, long ldc, long ith,
-                     long nth) {
+void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda, const void *B,
+                     long ldb, float *C, long ldc, long ith, long nth) {
     ASSERT(X86_HAVE(FMA));
     ASSERT(X86_HAVE(AVX2));
     switch (dtype) {
 #ifdef __x86_64__
 
     case GGML_TYPE_F32: {
-        tinyBLAS<float> tb{
-            k, (const float *)A, lda, (const float *)B, ldb, C, ldc, ith, nth,
-        };
+        tinyBLAS<float> tb{k, (const float *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
         tb.gemm(m, n);
         break;
     }
@@ -451,11 +442,7 @@ void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda,
     case GGML_TYPE_F16: {
         ASSERT(X86_HAVE(F16C));
         tinyBLAS<ggml_fp16_t> tb{
-            k,   (const ggml_fp16_t *)A,
-            lda, (const ggml_fp16_t *)B,
-            ldb, C,
-            ldc, ith,
-            nth,
+            k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, C, ldc, ith, nth,
         };
         tb.gemm(m, n);
         break;
@@ -464,20 +451,12 @@ void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda,
     case GGML_TYPE_Q8_0:
         if (X86_HAVE(AVXVNNI)) {
             tinyBLASq<block_q8_0, block_q8_0, true> tb{
-                k,   (const block_q8_0 *)A,
-                lda, (const block_q8_0 *)B,
-                ldb, C,
-                ldc, ith,
-                nth,
+                k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth,
             };
             tb.gemm(m, n);
         } else {
             tinyBLASq<block_q8_0, block_q8_0, false> tb{
-                k,   (const block_q8_0 *)A,
-                lda, (const block_q8_0 *)B,
-                ldb, C,
-                ldc, ith,
-                nth,
+                k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth,
             };
             tb.gemm(m, n);
         }
@@ -486,20 +465,12 @@ void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda,
     case GGML_TYPE_Q4_0:
         if (X86_HAVE(AVXVNNI)) {
             tinyBLASq<block_q4_0, block_q8_0, true> tb{
-                k,   (const block_q4_0 *)A,
-                lda, (const block_q8_0 *)B,
-                ldb, C,
-                ldc, ith,
-                nth,
+                k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth,
             };
             tb.gemm(m, n);
         } else {
             tinyBLASq<block_q4_0, block_q8_0, false> tb{
-                k,   (const block_q4_0 *)A,
-                lda, (const block_q8_0 *)B,
-                ldb, C,
-                ldc, ith,
-                nth,
+                k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth,
             };
             tb.gemm(m, n);
         }

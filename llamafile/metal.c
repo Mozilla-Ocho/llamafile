@@ -15,22 +15,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <time.h>
+#include "llama.cpp/ggml-metal.h"
+#include "llamafile.h"
+#include "log.h"
+#include <assert.h>
 #include <cosmo.h>
 #include <dlfcn.h>
 #include <errno.h>
-#include <spawn.h>
-#include <assert.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <limits.h>
 #include <pthread.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
+#include <spawn.h>
 #include <stdatomic.h>
-#include "llamafile/log.h"
-#include "llamafile/llamafile.h"
-#include "llama.cpp/ggml-metal.h"
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
 __static_yoink("llama.cpp/ggml.h");
 __static_yoink("llamafile/llamafile.h");
@@ -77,7 +77,8 @@ static struct Metal {
 static const char *Dlerror(void) {
     const char *msg;
     msg = cosmo_dlerror();
-    if (!msg) msg = "null dlopen error";
+    if (!msg)
+        msg = "null dlopen error";
     return msg;
 }
 
@@ -99,33 +100,33 @@ static bool BuildMetal(const char *dso) {
         }
         strlcat(src, srcs[i].name, sizeof(src));
         switch (llamafile_is_file_newer_than(srcs[i].zip, src)) {
-            case -1:
+        case -1:
+            return false;
+        case 0:
+            break;
+        case 1:
+            needs_rebuild = true;
+            if (!llamafile_extract(srcs[i].zip, src)) {
                 return false;
-            case 0:
-                break;
-            case 1:
-                needs_rebuild = true;
-                if (!llamafile_extract(srcs[i].zip, src)) {
-                    return false;
-                }
-                break;
-            default:
-                __builtin_unreachable();
+            }
+            break;
+        default:
+            __builtin_unreachable();
         }
     }
 
     // determine if we need to build
     if (!needs_rebuild) {
         switch (llamafile_is_file_newer_than(src, dso)) {
-            case -1:
-                return false;
-            case 0:
-                break;
-            case 1:
-                needs_rebuild = true;
-                break;
-            default:
-                __builtin_unreachable();
+        case -1:
+            return false;
+        case 0:
+            break;
+        case 1:
+            needs_rebuild = true;
+            break;
+        default:
+            __builtin_unreachable();
         }
     }
 
@@ -154,10 +155,14 @@ static bool BuildMetal(const char *dso) {
             "-DTARGET_OS_OSX",
             "-DGGML_MULTIPLATFORM",
             src,
-            "-o", tmpdso,
-            "-framework", "Foundation",
-            "-framework", "Metal",
-            "-framework", "MetalKit",
+            "-o",
+            tmpdso,
+            "-framework",
+            "Foundation",
+            "-framework",
+            "Metal",
+            "-framework",
+            "MetalKit",
             NULL,
         };
         int pid, ws;
@@ -204,7 +209,8 @@ static bool LinkMetal(const char *dso) {
     ok &= !!(ggml_metal.ggml_metal_link = cosmo_dlsym(lib, "ggml_metal_link"));
     ok &= !!(ggml_metal.backend_init = cosmo_dlsym(lib, "ggml_backend_metal_init"));
     ok &= !!(ggml_metal.backend_buffer_type = cosmo_dlsym(lib, "ggml_backend_metal_buffer_type"));
-    ok &= !!(ggml_metal.backend_buffer_from_ptr = cosmo_dlsym(lib, "ggml_backend_metal_buffer_from_ptr"));
+    ok &= !!(ggml_metal.backend_buffer_from_ptr =
+                 cosmo_dlsym(lib, "ggml_backend_metal_buffer_from_ptr"));
     ok &= !!(ggml_metal.backend_is_metal = cosmo_dlsym(lib, "ggml_backend_is_metal"));
     ok &= !!(ggml_metal.backend_set_n_cb = cosmo_dlsym(lib, "ggml_backend_metal_set_n_cb"));
     ok &= !!(ggml_metal.log_set_callback = cosmo_dlsym(lib, "ggml_backend_metal_log_set_callback"));
@@ -228,11 +234,11 @@ static bool ImportMetalImpl(void) {
 
     // Check if we're allowed to even try.
     switch (FLAG_gpu) {
-        case LLAMAFILE_GPU_AUTO:
-        case LLAMAFILE_GPU_APPLE:
-            break;
-        default:
-            return false;
+    case LLAMAFILE_GPU_AUTO:
+    case LLAMAFILE_GPU_APPLE:
+        break;
+    default:
+        return false;
     }
 
     // Get path of DSO.
@@ -256,8 +262,8 @@ static void ImportMetal(void) {
         ggml_metal.supported = true;
         tinylog("Apple Metal GPU support successfully loaded\n", NULL);
     } else if (FLAG_gpu == LLAMAFILE_GPU_APPLE) {
-        tinyprint(2, "fatal error: support for --gpu ",
-                  llamafile_describe_gpu(), FLAG_tinyblas ? " --tinyblas" : "",
+        tinyprint(2, "fatal error: support for --gpu ", llamafile_describe_gpu(),
+                  FLAG_tinyblas ? " --tinyblas" : "",
                   " was explicitly requested, but it wasn't available\n", NULL);
         exit(1);
     }
@@ -269,36 +275,44 @@ bool llamafile_has_metal(void) {
 }
 
 ggml_backend_t ggml_backend_metal_init(void) {
-    if (!llamafile_has_metal()) return 0;
+    if (!llamafile_has_metal())
+        return 0;
     return ggml_metal.backend_init();
 }
 
 GGML_CALL ggml_backend_buffer_type_t ggml_backend_metal_buffer_type(void) {
-    if (!llamafile_has_metal()) return 0;
+    if (!llamafile_has_metal())
+        return 0;
     return ggml_metal.backend_buffer_type();
 }
 
-GGML_CALL ggml_backend_buffer_t ggml_backend_metal_buffer_from_ptr(void * data, size_t size, size_t max_size) {
-    if (!llamafile_has_metal()) return 0;
+GGML_CALL ggml_backend_buffer_t ggml_backend_metal_buffer_from_ptr(void *data, size_t size,
+                                                                   size_t max_size) {
+    if (!llamafile_has_metal())
+        return 0;
     return ggml_metal.backend_buffer_from_ptr(data, size, max_size);
 }
 
 bool ggml_backend_is_metal(ggml_backend_t backend) {
-    if (!llamafile_has_metal()) return 0;
+    if (!llamafile_has_metal())
+        return 0;
     return ggml_metal.backend_is_metal(backend);
 }
 
 void ggml_backend_metal_set_n_cb(ggml_backend_t backend, int n_cb) {
-    if (!llamafile_has_metal()) return;
+    if (!llamafile_has_metal())
+        return;
     return ggml_metal.backend_set_n_cb(backend, n_cb);
 }
 
-void ggml_backend_metal_log_set_callback(ggml_log_callback log_callback, void * user_data) {
-    if (!llamafile_has_metal()) return;
+void ggml_backend_metal_log_set_callback(ggml_log_callback log_callback, void *user_data) {
+    if (!llamafile_has_metal())
+        return;
     return ggml_metal.log_set_callback(log_callback, user_data);
 }
 
-ggml_backend_t ggml_backend_reg_metal_init(const char * params, void * user_data) {
-    if (!llamafile_has_metal()) return 0;
+ggml_backend_t ggml_backend_reg_metal_init(const char *params, void *user_data) {
+    if (!llamafile_has_metal())
+        return 0;
     return ggml_metal.reg_init(params, user_data);
 }

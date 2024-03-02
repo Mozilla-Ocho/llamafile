@@ -1,8 +1,8 @@
 #ifndef LLAMAFILE_LOG_H_
 #define LLAMAFILE_LOG_H_
-#include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdio.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

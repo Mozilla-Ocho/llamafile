@@ -20,10 +20,8 @@
 
 const char *llamafile_get_tmp_dir(void) {
     const char *tmpdir;
-    if (!(tmpdir = getenv("TMPDIR")) || !*tmpdir) {
-        if (!(tmpdir = getenv("HOME")) || !*tmpdir) {
+    if (!(tmpdir = getenv("TMPDIR")) || !*tmpdir)
+        if (!(tmpdir = getenv("HOME")) || !*tmpdir)
             tmpdir = ".";
-        }
-    }
     return tmpdir;
 }

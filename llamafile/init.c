@@ -15,24 +15,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cosmo.h>
-#include <stdlib.h>
-#include <string.h>
-
 void llamafile_init(void) {
-
-    // todo(jart): cosmo runtime should do this
-    if (IsWindows()) {
-        static char home[256];
-        if (!getenv("HOME")) {
-            const char *homepath = getenv("HOMEPATH");
-            const char *homedrive = getenv("HOMEDRIVE");
-            if (homedrive && homepath) {
-                strlcpy(home, "HOME=", sizeof(home));
-                strlcat(home, homedrive, sizeof(home));
-                strlcat(home, homepath, sizeof(home));
-                putenv(home);
-            }
-        }
-    }
 }

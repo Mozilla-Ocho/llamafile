@@ -19,10 +19,8 @@
 #include <string.h>
 
 bool llamafile_has(char **a, const char *x) {
-    for (int i = 0; a[i]; ++i) {
-        if (!strcmp(a[i], x)) {
+    for (int i = 0; a[i]; ++i)
+        if (!strcmp(a[i], x))
             return true;
-        }
-    }
     return false;
 }

@@ -15,9 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 // example usage
@@ -40,7 +40,8 @@ int main(int argc, char *argv[]) {
     struct timespec t = timespec_real();
     for (;;) {
         ssize_t rc = read(0, buf, sizeof(buf));
-        if (!rc) break;
+        if (!rc)
+            break;
         struct timespec u = timespec_real();
         struct timespec d = timespec_sub(u, t);
         t = u;
