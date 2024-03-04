@@ -49,5 +49,8 @@ install:	llamafile/zipalign.1					\
 	$(INSTALL) -m 0644 llama.cpp/perplexity/perplexity.1 $(PREFIX)/share/man/man1/llamafile-perplexity.1
 	$(INSTALL) -m 0644 llama.cpp/llava/llava-quantize.1 $(PREFIX)/share/man/man1/llava-quantize.1
 
+.PHONY: check
+check: o/$(MODE)/llamafile/check
+
 include build/deps.mk
 include build/tags.mk

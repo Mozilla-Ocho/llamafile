@@ -26,7 +26,6 @@
 
 #if defined(GGML_USE_TINYBLAS) && defined(GGML_USE_HIPBLAS)
 #include <hip/hip_runtime.h>
-#include <hipblas/hipblas.h>
 #include <hip/hip_fp16.h>
 #ifdef __HIP_PLATFORM_AMD__
 // for rocblas_initialize()
@@ -34,27 +33,27 @@
 #endif // __HIP_PLATFORM_AMD__
 #define CUBLAS_COMPUTE_16F TINYBLAS_COMPUTE_16F
 #define CUBLAS_COMPUTE_32F TINYBLAS_COMPUTE_32F
-#define CUBLAS_GEMM_DEFAULT TINYBLAS_GEMM_DEFAULT_TENSOR_OP
-#define CUBLAS_GEMM_DEFAULT_TENSOR_OP TINYBLAS_GEMM_DEFAULT_TENSOR_OP
+#define CUBLAS_GEMM_DEFAULT TINYBLAS_GEMM_DEFAULT
+#define CUBLAS_GEMM_DEFAULT_TENSOR_OP TINYBLAS_GEMM_DEFAULT
 #define CUBLAS_OP_N TINYBLAS_OP_N
 #define CUBLAS_OP_T TINYBLAS_OP_T
 #define CUBLAS_TF32_TENSOR_OP_MATH 0
-#define CUDA_R_16F  HIPBLAS_R_16F
-#define CUDA_R_32F  HIPBLAS_R_32F
+#define CUDA_R_16F TINYBLAS_R_16F
+#define CUDA_R_32F TINYBLAS_R_32F
 #define __shfl_xor_sync(mask, var, laneMask, width) __shfl_xor(var, laneMask, width)
 #define cublasGemmAlgo_t tinyblasGemmAlgo_t
 #define cublasOperation_t tinyblasOperation_t
 #define cublasComputeType_t tinyblasComputeType_t
-#define cublasCreate hipblasCreate
+#define cublasCreate tinyblasCreate
 #define cublasGemmEx tinyblasGemmEx
 #define cublasGemmBatchedEx tinyblasGemmBatchedEx
 #define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
 #define cublasHandle_t tinyblasHandle_t
 #define cublasSetMathMode(handle, mode) CUBLAS_STATUS_SUCCESS
-#define cublasSetStream hipblasSetStream
+#define cublasSetStream tinyblasSetStream
 #define cublasSgemm tinyblasSgemm
 #define cublasStatus_t tinyblasStatus_t
-#define cudaDataType_t hipblasDatatype_t //deprecated, new hipblasDatatype not in 5.6
+#define cudaDataType_t tinyblasDatatype_t
 #define cudaDeviceCanAccessPeer hipDeviceCanAccessPeer
 #define cudaDeviceDisablePeerAccess hipDeviceDisablePeerAccess
 #define cudaDeviceEnablePeerAccess hipDeviceEnablePeerAccess
@@ -104,7 +103,6 @@
 #define cudaSuccess hipSuccess
 #define __trap abort
 #define CUBLAS_STATUS_SUCCESS TINYBLAS_STATUS_SUCCESS
-#define CUBLAS_STATUS_NOT_SUPPORTED TINYBLAS_STATUS_NOT_SUPPORTED
 #include "tinyblas.cu"
 #define cublasGetStatusString tinyblasGetStatusString
 #define CUDART_VERSION 12000
@@ -116,17 +114,11 @@
 #define CUBLAS_COMPUTE_32F TINYBLAS_COMPUTE_32F
 #define CUBLAS_OP_N TINYBLAS_OP_N
 #define CUBLAS_OP_T TINYBLAS_OP_T
-#define CUBLAS_GEMM_DEFAULT TINYBLAS_GEMM_DEFAULT_TENSOR_OP
-#define CUBLAS_GEMM_DEFAULT_TENSOR_OP TINYBLAS_GEMM_DEFAULT_TENSOR_OP
+#define CUDA_R_16F TINYBLAS_R_16F
+#define CUDA_R_32F TINYBLAS_R_32F
+#define CUBLAS_GEMM_DEFAULT TINYBLAS_GEMM_DEFAULT
+#define CUBLAS_GEMM_DEFAULT_TENSOR_OP TINYBLAS_GEMM_DEFAULT
 #define CUBLAS_STATUS_SUCCESS TINYBLAS_STATUS_SUCCESS
-#define CUBLAS_STATUS_NOT_INITIALIZED TINYBLAS_STATUS_NOT_INITIALIZED
-#define CUBLAS_STATUS_ALLOC_FAILED TINYBLAS_STATUS_ALLOC_FAILED
-#define CUBLAS_STATUS_INVALID_VALUE TINYBLAS_STATUS_INVALID_VALUE
-#define CUBLAS_STATUS_ARCH_MISMATCH TINYBLAS_STATUS_ARCH_MISMATCH
-#define CUBLAS_STATUS_MAPPING_ERROR TINYBLAS_STATUS_MAPPING_ERROR
-#define CUBLAS_STATUS_EXECUTION_FAILED TINYBLAS_STATUS_EXECUTION_FAILED
-#define CUBLAS_STATUS_INTERNAL_ERROR TINYBLAS_STATUS_INTERNAL_ERROR
-#define CUBLAS_STATUS_NOT_SUPPORTED TINYBLAS_STATUS_NOT_SUPPORTED
 #define cublasGemmAlgo_t tinyblasGemmAlgo_t
 #define cublasOperation_t tinyblasOperation_t
 #define cublasComputeType_t tinyblasComputeType_t
@@ -134,11 +126,16 @@
 #define cublasStatus_t tinyblasStatus_t
 #define cublasSgemm tinyblasSgemm
 #define cublasGemmEx tinyblasGemmEx
+#define cublasCreate tinyblasCreate
+#define cublasSetStream tinyblasSetStream
 #define cublasGemmBatchedEx tinyblasGemmBatchedEx
 #define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
 #define cublasGetStatusString tinyblasGetStatusString
+#define cudaDataType_t tinyblasDatatype_t
+#define cublasSetMathMode(handle, mode) CUBLAS_STATUS_SUCCESS
 
 #elif defined(GGML_USE_HIPBLAS)
+#define HIPBLAS_V2
 #include <hip/hip_runtime.h>
 #include <hipblas/hipblas.h>
 #include <hip/hip_fp16.h>
@@ -146,19 +143,19 @@
 // for rocblas_initialize()
 #include "rocblas/rocblas.h"
 #endif // __HIP_PLATFORM_AMD__
-#define CUBLAS_COMPUTE_16F HIPBLAS_R_16F
-#define CUBLAS_COMPUTE_32F HIPBLAS_R_32F
-#define CUBLAS_COMPUTE_32F_FAST_16F HIPBLAS_R_32F
+#define CUBLAS_COMPUTE_16F HIPBLAS_COMPUTE_16F
+#define CUBLAS_COMPUTE_32F HIPBLAS_COMPUTE_32F
+#define CUBLAS_COMPUTE_32F_FAST_16F HIPBLAS_COMPUTE_32F_FAST_16F
 #define CUBLAS_GEMM_DEFAULT HIPBLAS_GEMM_DEFAULT
 #define CUBLAS_GEMM_DEFAULT_TENSOR_OP HIPBLAS_GEMM_DEFAULT
 #define CUBLAS_OP_N HIPBLAS_OP_N
 #define CUBLAS_OP_T HIPBLAS_OP_T
 #define CUBLAS_STATUS_SUCCESS HIPBLAS_STATUS_SUCCESS
 #define CUBLAS_TF32_TENSOR_OP_MATH 0
-#define CUDA_R_16F  HIPBLAS_R_16F
-#define CUDA_R_32F  HIPBLAS_R_32F
+#define CUDA_R_16F HIP_R_16F
+#define CUDA_R_32F HIP_R_32F
 #define __shfl_xor_sync(mask, var, laneMask, width) __shfl_xor(var, laneMask, width)
-#define cublasComputeType_t hipblasDatatype_t //deprecated, new hipblasComputeType_t not in 5.6
+#define cublasComputeType_t hipblasComputeType_t
 #define cublasCreate hipblasCreate
 #define cublasGemmEx hipblasGemmEx
 #define cublasGemmBatchedEx hipblasGemmBatchedEx
@@ -169,7 +166,7 @@
 #define cublasSgemm hipblasSgemm
 #define cublasStatus_t hipblasStatus_t
 #define cublasGetStatusString hipblasStatusToString
-#define cudaDataType_t hipblasDatatype_t //deprecated, new hipblasDatatype not in 5.6
+#define cudaDataType_t hipDataType
 #define cudaDeviceCanAccessPeer hipDeviceCanAccessPeer
 #define cudaDeviceDisablePeerAccess hipDeviceDisablePeerAccess
 #define cudaDeviceEnablePeerAccess hipDeviceEnablePeerAccess
@@ -227,6 +224,8 @@
 #define CUBLAS_STATUS_EXECUTION_FAILED HIPBLAS_STATUS_EXECUTION_FAILED
 #define CUBLAS_STATUS_INTERNAL_ERROR HIPBLAS_STATUS_INTERNAL_ERROR
 #define CUBLAS_STATUS_NOT_SUPPORTED HIPBLAS_STATUS_NOT_SUPPORTED
+#define CUDART_VERSION 12000
+
 #else
 #include <cuda_runtime.h>
 #include <cuda.h>
@@ -247,16 +246,6 @@
 #include "ggml-cuda.h"
 #include "ggml.h"
 #include "ggml-backend-impl.h"
-
-#ifdef GGML_USE_TINYBLAS
-#define CUBLAS_ENTRY() cudaStream_t _ggml_stream = nullptr
-#define CUBLAS_SET_STREAM(_, stream) do _ggml_stream = (stream); while (0)
-#define CUBLAS_HANDLE(_) _ggml_stream
-#else
-#define CUBLAS_ENTRY()
-#define CUBLAS_SET_STREAM(id, stream) CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream))
-#define CUBLAS_HANDLE(id) g_cublas_handles[id]
-#endif
 
 static const struct ggml_backend_api *g_backend;
 #define exit g_backend->exit
@@ -839,9 +828,7 @@ struct cuda_device_capabilities {
 
 static cuda_device_capabilities g_device_caps[GGML_CUDA_MAX_DEVICES] = { {0, 0, false, 0} };
 
-#ifndef GGML_USE_TINYBLAS
 static cublasHandle_t g_cublas_handles[GGML_CUDA_MAX_DEVICES] = {nullptr};
-#endif
 
 [[noreturn]]
 static __device__ void no_device_code(
@@ -8945,11 +8932,9 @@ GGML_CALL void ggml_init_cublas() {
                 CUDA_CHECK(cudaStreamCreateWithFlags(&g_cudaStreams[id][is], cudaStreamNonBlocking));
             }
 
-#ifndef GGML_USE_TINYBLAS
             // create cublas handle
             CUBLAS_CHECK(cublasCreate(&g_cublas_handles[id]));
             CUBLAS_CHECK(cublasSetMathMode(g_cublas_handles[id], CUBLAS_TF32_TENSOR_OP_MATH));
-#endif
         }
 
         // configure logging to stdout
@@ -9764,9 +9749,9 @@ static void ggml_cuda_op_mul_mat_cublas(
         const half alpha_f16 = 1.0f;
         const half beta_f16 = 0.0f;
 
-        CUBLAS_SET_STREAM(id, stream);
+        CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream));
         CUBLAS_CHECK(
-            cublasGemmEx(CUBLAS_HANDLE(id), CUBLAS_OP_T, CUBLAS_OP_N,
+            cublasGemmEx(g_cublas_handles[id], CUBLAS_OP_T, CUBLAS_OP_N,
                     row_diff, src1_ncols, ne10,
                     &alpha_f16, src0_ptr,       CUDA_R_16F, ne00,
                                 src1_ptr,       CUDA_R_16F, ne10,
@@ -9799,9 +9784,9 @@ static void ggml_cuda_op_mul_mat_cublas(
         const float alpha = 1.0f;
         const float beta = 0.0f;
 
-        CUBLAS_SET_STREAM(id, stream);
+        CUBLAS_CHECK(cublasSetStream(g_cublas_handles[id], stream));
         CUBLAS_CHECK(
-            cublasSgemm(CUBLAS_HANDLE(id), CUBLAS_OP_T, CUBLAS_OP_N,
+            cublasSgemm(g_cublas_handles[id], CUBLAS_OP_T, CUBLAS_OP_N,
                     row_diff, src1_ncols, ne10,
                     &alpha, src0_ddf_i,  ne00,
                             src1_ddf1_i, ne10,
@@ -10743,7 +10728,6 @@ static __global__ void k_compute_batched_ptrs(
 }
 
 static void ggml_cuda_mul_mat_batched_cublas(const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
-    CUBLAS_ENTRY();
     GGML_ASSERT(!ggml_is_transposed(src0));
     GGML_ASSERT(!ggml_is_transposed(src1));
 
@@ -10757,7 +10741,7 @@ static void ggml_cuda_mul_mat_batched_cublas(const ggml_tensor * src0, const ggm
     ggml_cuda_set_device(g_main_device);
     cudaStream_t main_stream = g_cudaStreams[g_main_device][0];
 
-    CUBLAS_SET_STREAM(g_main_device, main_stream);
+    CUBLAS_CHECK(cublasSetStream(g_cublas_handles[g_main_device], main_stream));
 
     ggml_tensor_extra_gpu * src0_extra = (ggml_tensor_extra_gpu *) src0->extra;
     void * src0_ddq = src0_extra->data_device[g_main_device];
@@ -10830,7 +10814,7 @@ static void ggml_cuda_mul_mat_batched_cublas(const ggml_tensor * src0, const ggm
                 int i02 = i12 / r2;
 
                 CUBLAS_CHECK(
-                        cublasGemmEx(CUBLAS_HANDLE(g_main_device), CUBLAS_OP_T, CUBLAS_OP_N,
+                        cublasGemmEx(g_cublas_handles[g_main_device], CUBLAS_OP_T, CUBLAS_OP_N,
                             ne01, ne11, ne10,
                             alpha, (const char *) src0_as_f16 + i02*src0->nb[2]   + i03*src0->nb[3]  , CUDA_R_16F,   nb01/sizeof(half),
                                    (const char *) src1_as_f16 + i12*src1->nb[2]/2 + i13*src1->nb[3]/2, CUDA_R_16F,   nb11/sizeof(float),
@@ -10845,7 +10829,7 @@ static void ggml_cuda_mul_mat_batched_cublas(const ggml_tensor * src0, const ggm
         // there is no broadcast and src0, src1 are contiguous across dims 2, 3
         // use cublasGemmStridedBatchedEx
         CUBLAS_CHECK(
-        cublasGemmStridedBatchedEx(CUBLAS_HANDLE(g_main_device), CUBLAS_OP_T, CUBLAS_OP_N,
+        cublasGemmStridedBatchedEx(g_cublas_handles[g_main_device], CUBLAS_OP_T, CUBLAS_OP_N,
                 ne01, ne11, ne10,
                 alpha, (const char *) src0_f16, CUDA_R_16F,   nb01/nb00, nb02/nb00,  // strideA
                        (const char *) src1_f16, CUDA_R_16F,   nb11/nb10, nb12/nb10,  // strideB
@@ -10874,7 +10858,7 @@ static void ggml_cuda_mul_mat_batched_cublas(const ggml_tensor * src0, const ggm
         CUDA_CHECK(cudaGetLastError());
 
         CUBLAS_CHECK(
-        cublasGemmBatchedEx(CUBLAS_HANDLE(g_main_device), CUBLAS_OP_T, CUBLAS_OP_N,
+        cublasGemmBatchedEx(g_cublas_handles[g_main_device], CUBLAS_OP_T, CUBLAS_OP_N,
                 ne01, ne11, ne10,
                 alpha, (const void **) (ptrs_src.get() + 0*ne23), CUDA_R_16F,   nb01/nb00,
                        (const void **) (ptrs_src.get() + 1*ne23), CUDA_R_16F,   nb11/nb10,
@@ -11074,7 +11058,7 @@ static void ggml_cuda_mul_mat_id_cublas(ggml_tensor * dst) {
     ggml_cuda_set_device(g_main_device);
     cudaStream_t main_stream = g_cudaStreams[g_main_device][0];
 
-    CUBLAS_SET_STREAM(id, main_stream);
+    CUBLAS_CHECK(cublasSetStream(g_cublas_handles[g_main_device], main_stream));
 
     //ggml_tensor_extra_gpu * src0_extra = (ggml_tensor_extra_gpu *) src0->extra;
     //void * src0_ddq = src0_extra->data_device[g_main_device];
@@ -11147,7 +11131,7 @@ static void ggml_cuda_mul_mat_id_cublas(ggml_tensor * dst) {
     CUDA_CHECK(cudaGetLastError());
 
     CUBLAS_CHECK(
-    cublasGemmBatchedEx(CUBLAS_HANDLE(g_main_device), CUBLAS_OP_T, CUBLAS_OP_N,
+    cublasGemmBatchedEx(g_cublas_handles[g_main_device], CUBLAS_OP_T, CUBLAS_OP_N,
             ne01, ne11, ne10,
             &alpha_f16, (const void **) (ptrs_src + 0*ne23), CUDA_R_16F, ne00,
                         (const void **) (ptrs_src + 1*ne23), CUDA_R_16F, ne10,

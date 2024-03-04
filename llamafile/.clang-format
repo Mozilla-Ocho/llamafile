@@ -7,5 +7,4 @@ Language: Cpp
 AllowShortFunctionsOnASingleLine: false
 AlignTrailingComments: false
 AlignEscapedNewlines: DontAlign
-BreakAfterAttributes: Always
 ---

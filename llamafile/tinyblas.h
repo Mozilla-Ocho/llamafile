@@ -2,55 +2,62 @@
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #pragma once
 
-#ifdef GGML_USE_HIPBLAS
-#include <hip/hip_fp16.h>
-#include <hipblas/hipblas.h>
-#else
-#include <cuda_fp16.h>
-#include <cuda_runtime.h>
-#endif
-
 enum tinyblasOperation_t {
     TINYBLAS_OP_N,
     TINYBLAS_OP_T,
 };
 
-enum tinyblasStatus_t {
-    TINYBLAS_STATUS_SUCCESS,
-    TINYBLAS_STATUS_NOT_SUPPORTED,
+enum tinyblasDatatype_t {
+    TINYBLAS_R_32F,
+    TINYBLAS_R_16F,
 };
 
 enum tinyblasComputeType_t {
-    TINYBLAS_COMPUTE_16F,
     TINYBLAS_COMPUTE_32F,
+    TINYBLAS_COMPUTE_16F,
 };
 
 enum tinyblasGemmAlgo_t {
-    TINYBLAS_GEMM_DEFAULT_TENSOR_OP,
+    TINYBLAS_GEMM_DEFAULT,
 };
 
-typedef cudaStream_t tinyblasHandle_t;
+enum tinyblasStatus_t {
+    TINYBLAS_STATUS_SUCCESS,
+    TINYBLAS_STATUS_ALLOC_FAILED,
+    TINYBLAS_STATUS_INVALID_VALUE,
+    TINYBLAS_STATUS_NOT_SUPPORTED,
+};
+
+struct tinyblasContext;
+typedef struct tinyblasContext *tinyblasHandle_t;
 
 const char *tinyblasGetStatusString(tinyblasStatus_t);
+
+tinyblasStatus_t tinyblasCreate(tinyblasHandle_t *);
+tinyblasStatus_t tinyblasDestroy(tinyblasHandle_t);
+tinyblasStatus_t tinyblasSetStream(tinyblasHandle_t, void *);
+tinyblasStatus_t tinyblasGetStream(tinyblasHandle_t, void **);
 
 tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t, tinyblasOperation_t, tinyblasOperation_t, int, int,
                                int, const float *, const float *, int, const float *, int,
                                const float *, float *, int);
 
 tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t, tinyblasOperation_t, tinyblasOperation_t, int,
-                                int, int, const void *, const void *, cudaDataType_t, int,
-                                const void *, cudaDataType_t, int, const void *, void *,
-                                cudaDataType_t, int, tinyblasComputeType_t, tinyblasGemmAlgo_t);
+                                int, int, const void *, const void *, tinyblasDatatype_t, int,
+                                const void *, tinyblasDatatype_t, int, const void *, void *,
+                                tinyblasDatatype_t, int, tinyblasComputeType_t, tinyblasGemmAlgo_t);
 
 tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t, tinyblasOperation_t, tinyblasOperation_t,
                                        int, int, int, const void *, const void *const[],
-                                       cudaDataType_t, int, const void *const[], cudaDataType_t,
-                                       int, const void *, void *const[], cudaDataType_t, int, int,
-                                       tinyblasComputeType_t, tinyblasGemmAlgo_t);
+                                       tinyblasDatatype_t, int, const void *const[],
+                                       tinyblasDatatype_t, int, const void *, void *const[],
+                                       tinyblasDatatype_t, int, int, tinyblasComputeType_t,
+                                       tinyblasGemmAlgo_t);
 
 tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t, tinyblasOperation_t,
                                               tinyblasOperation_t, int, int, int, const void *,
-                                              const void *, cudaDataType_t, int, long long,
-                                              const void *, cudaDataType_t, int, long long,
-                                              const void *, void *, cudaDataType_t, int, long long,
-                                              int, tinyblasComputeType_t, tinyblasGemmAlgo_t);
+                                              const void *, tinyblasDatatype_t, int, long long,
+                                              const void *, tinyblasDatatype_t, int, long long,
+                                              const void *, void *, tinyblasDatatype_t, int,
+                                              long long, int, tinyblasComputeType_t,
+                                              tinyblasGemmAlgo_t);

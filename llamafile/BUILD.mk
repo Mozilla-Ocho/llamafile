@@ -6,8 +6,9 @@ PKGS += LLAMAFILE
 LLAMAFILE_FILES := $(wildcard llamafile/*.*)
 LLAMAFILE_HDRS = $(filter %.h,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_C = $(filter %.c,$(LLAMAFILE_FILES))
+LLAMAFILE_SRCS_CU = $(filter %.cu,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_CPP = $(filter %.cpp,$(LLAMAFILE_FILES))
-LLAMAFILE_SRCS = $(LLAMAFILE_SRCS_C) $(LLAMAFILE_SRCS_CPP)
+LLAMAFILE_SRCS = $(LLAMAFILE_SRCS_C) $(LLAMAFILE_SRCS_CPP) $(LLAMAFILE_SRCS_CU)
 LLAMAFILE_DOCS = $(filter %.1,$(LLAMAFILE_FILES))
 
 LLAMAFILE_OBJS =					\
@@ -37,3 +38,24 @@ o/$(MODE)/llamafile:					\
 		o/$(MODE)/llamafile/zipalign		\
 		o/$(MODE)/llamafile/zipcheck		\
 		o/$(MODE)/llamafile/addnl
+
+################################################################################
+# testing
+
+o/$(MODE)/llamafile/%.o: llamafile/%.cu llamafile/BUILD.mk
+	@mkdir -p $(@D)
+	hipcc -O3 -march=native -ffast-math -c -o $@ $<
+
+o/$(MODE)/llamafile/tester.o: llamafile/tester.cu llamafile/BUILD.mk
+	@mkdir -p $(@D)
+	hipcc -O3 -march=native -fopenmp -c -o $@ $<
+
+o/$(MODE)/llamafile/tinyblas_test:			\
+		o/$(MODE)/llamafile/tinyblas_test.o	\
+		o/$(MODE)/llamafile/tinyblas.o		\
+		o/$(MODE)/llamafile/tester.o
+	hipcc -fopenmp $(HIP_ARCH) -o $@ $^ -lhipblas -lrocblas
+
+.PHONY: o/$(MODE)/llamafile/check
+o/$(MODE)/llamafile/check:				\
+		o/$(MODE)/llamafile/tinyblas_test.runs
