@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
+#include <mutex>
 
 //
 //                 _   _          ___ _      _   ___
@@ -46,20 +47,19 @@
 #define ITERATIONS 30
 #define TOMBSTONE 1.666f
 
-extern const size_t kPageSize;
+extern const int kPageSize;
+extern std::recursive_mutex g_log_lock;
 extern thread_local const char *is_self_testing;
 
 float float01(unsigned);
 float numba(void);
+int hamming(int, int);
+int popcount(unsigned);
 int rand32(void);
 long long micros(void);
-void test_matmul(std::function<void(int, int, int, int, float, float)>);
 void *cudaMallocManagedOrDie(size_t);
 void cudaFreeOrDie(void *);
-
-inline int hamming(int x, int y) {
-    return __builtin_popcount(x ^ y);
-}
+void test_matmul(std::function<void(int, int, int, int, float, float)>);
 
 template <typename T> void randomize(T *A, int n) {
     for (int i = 0; i < n; ++i)
@@ -141,7 +141,7 @@ void verify(double tol, int m, int n, const T *A, int lda, const T *B, int ldb) 
         }
     double avg = static_cast<double>(diffsum) / (m * n);
     if (avg > tol || nans) {
-        flockfile(stderr);
+        std::unique_lock<std::recursive_mutex> lock(g_log_lock);
         fprintf(stderr, "error: %d×%d matrix difference exceeds tolerance\n", m, n);
         fprintf(stderr, "       worst element at index (%d, %d)\n", worst_i, worst_j);
         fprintf(stderr, "       difference %14e (%lld ulp)\n",
@@ -224,7 +224,7 @@ void diff(int m, int n, int k, const T *Wan, int lda, const T *Got, int ldb, dou
 
 template <typename T>
 void show(FILE *f, int max, int m, int n, const T *A, int lda, const T *B, int ldb) {
-    flockfile(f);
+    std::unique_lock<std::recursive_mutex> lock(g_log_lock);
     fprintf(f, "      ");
     for (int i = 0; i < n && i < max; ++i)
         fprintf(f, "%13d", i);
@@ -245,15 +245,14 @@ void show(FILE *f, int max, int m, int n, const T *A, int lda, const T *B, int l
             snprintf(bb, 32, "%13.7f", static_cast<double>(B[ldb * j + i]));
             for (int k = 0; ba[k] && bb[k]; ++k) {
                 if (ba[k] != bb[k])
-                    fputs_unlocked("\33[31m", f);
-                fputc_unlocked(ba[k], f);
+                    fputs("\33[31m", f);
+                fputc(ba[k], f);
                 if (ba[k] != bb[k])
-                    fputs_unlocked("\33[0m", f);
+                    fputs("\33[0m", f);
             }
         }
         fprintf(f, "\n");
     }
-    funlockfile(f);
 }
 
 template <typename T>
@@ -289,7 +288,7 @@ void check(double tol, //
                    "denormals=%d)\n",
                    avg, worst, sad, nans, infs, flips, zeroes, denormals);
     } else {
-        flockfile(stderr);
+        std::unique_lock<std::recursive_mutex> lock(g_log_lock);
         misfit(stderr, 16, m, n, A, lda, B, ldb, file, line, avg, sad, worst, infs, flips, zeroes,
                denormals, nans);
         const char *path = "/tmp/wompwomp.log";
@@ -318,7 +317,7 @@ void check(double tol, //
             x; \
             __asm__ volatile("" ::: "memory"); \
         } \
-        printf("%8lld µs %s\n", (micros() - start + ITERATIONS - 1) / ITERATIONS, #x); \
+        printf("%8lld us %s\n", (micros() - start + ITERATIONS - 1) / ITERATIONS, #x); \
     } while (0)
 
 #define CUDA_OR_DIE(x) \
@@ -344,9 +343,8 @@ void check(double tol, //
 
 #define BENCH_CUDA(x) \
     do { \
-        if (is_self_testing) { \
-            x; \
-        } else { \
+        x; \
+        if (!is_self_testing) { \
             cudaEvent_t start_, stop_; \
             CUDA_OR_DIE(cudaEventCreate(&stop_)); \
             CUDA_OR_DIE(cudaEventCreate(&start_)); \
@@ -357,7 +355,7 @@ void check(double tol, //
             CUDA_OR_DIE(cudaEventRecord(stop_, stream)); \
             CUDA_OR_DIE(cudaEventSynchronize(stop_)); \
             CUDA_OR_DIE(cudaEventElapsedTime(&msecTotal_, start_, stop_)); \
-            printf("%8d µs %s(%d, %d, %d)\n", \
+            printf("%8d us %s(%d, %d, %d)\n", \
                    static_cast<int>(std::ceil(msecTotal_ / ITERATIONS * 1000)), __FUNCTION__, m, \
                    n, k); \
             CUDA_OR_DIE(cudaEventDestroy(start_)); \
@@ -404,16 +402,16 @@ template <> struct tinyblas_compute_type<float> {
 };
 
 template <typename T, typename TA, typename TB, typename TC>
-void cublas(bool aᵀ, bool bᵀ, //
-            int m, int n, int k, T α, //
+void cublas(bool aT, bool bT, //
+            int m, int n, int k, T alpha, //
             const TA *A, int lda, //
-            const TB *B, int ldb, T β, //
+            const TB *B, int ldb, T beta, //
             TC *C, int ldc) {
     cudaStream_t stream;
     cublasHandle_t blas;
     assert(m >= 0 && n >= 0 && k >= 0);
-    assert(lda >= std::max(1, aᵀ ? k : m));
-    assert(ldb >= std::max(1, bᵀ ? n : k));
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
     assert(ldc >= std::max(1, m));
     CUDA_OR_DIE(cudaSetDevice(0));
     CUBLAS_OR_DIE(cublasCreate(&blas));
@@ -421,42 +419,42 @@ void cublas(bool aᵀ, bool bᵀ, //
     CUBLAS_OR_DIE(cublasSetMathMode(blas, CUBLAS_DEFAULT_MATH));
     CUBLAS_OR_DIE(cublasSetStream(blas, stream));
     BENCH_CUDA(CUBLAS_OR_DIE(cublasGemmEx(
-        blas, aᵀ ? CUBLAS_OP_T : CUBLAS_OP_N, bᵀ ? CUBLAS_OP_T : CUBLAS_OP_N, m, n, k, &α, A,
-        cuda_data_type<TA>::id, lda, B, cuda_data_type<TB>::id, ldb, &β, C, cuda_data_type<TC>::id,
-        ldc, cublas_compute_type<T>::id, CUBLAS_GEMM_DEFAULT)));
+        blas, aT ? CUBLAS_OP_T : CUBLAS_OP_N, bT ? CUBLAS_OP_T : CUBLAS_OP_N, m, n, k, &alpha, A,
+        cuda_data_type<TA>::id, lda, B, cuda_data_type<TB>::id, ldb, &beta, C,
+        cuda_data_type<TC>::id, ldc, cublas_compute_type<T>::id, CUBLAS_GEMM_DEFAULT)));
     CUDA_OR_DIE(cudaStreamSynchronize(stream));
     CUDA_OR_DIE(cudaStreamDestroy(stream));
     CUBLAS_OR_DIE(cublasDestroy(blas));
 }
 
 template <typename T, typename TA, typename TB, typename TC>
-void cublasrm(bool aᵀ, bool bᵀ, //
-              int m, int n, int k, T α, //
+void cublasrm(bool aT, bool bT, //
+              int m, int n, int k, T alpha, //
               const TA *A, int lda, //
-              const TB *B, int ldb, T β, //
+              const TB *B, int ldb, T beta, //
               TC *C, int ldc) {
-    cublas(bᵀ, aᵀ, n, m, k, α, B, ldb, A, lda, β, C, ldc);
+    cublas(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
 }
 
 template <typename T, typename TA, typename TB, typename TC>
-void tinyblas(bool aᵀ, bool bᵀ, //
-              int m, int n, int k, T α, //
+void tinyblas(bool aT, bool bT, //
+              int m, int n, int k, T alpha, //
               const TA *A, int lda, //
-              const TB *B, int ldb, T β, //
+              const TB *B, int ldb, T beta, //
               TC *C, int ldc) {
     cudaStream_t stream;
     tinyblasHandle_t blas;
     assert(m >= 0 && n >= 0 && k >= 0);
-    assert(lda >= std::max(1, aᵀ ? k : m));
-    assert(ldb >= std::max(1, bᵀ ? n : k));
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
     assert(ldc >= std::max(1, m));
     CUDA_OR_DIE(cudaSetDevice(0));
     TINYBLAS_OR_DIE(tinyblasCreate(&blas));
     CUDA_OR_DIE(cudaStreamCreate(&stream));
     TINYBLAS_OR_DIE(tinyblasSetStream(blas, stream));
     BENCH_CUDA(TINYBLAS_OR_DIE(tinyblasGemmEx(
-        blas, aᵀ ? TINYBLAS_OP_T : TINYBLAS_OP_N, bᵀ ? TINYBLAS_OP_T : TINYBLAS_OP_N, m, n, k, &α,
-        A, tinyblas_data_type<TA>::id, lda, B, tinyblas_data_type<TB>::id, ldb, &β, C,
+        blas, aT ? TINYBLAS_OP_T : TINYBLAS_OP_N, bT ? TINYBLAS_OP_T : TINYBLAS_OP_N, m, n, k,
+        &alpha, A, tinyblas_data_type<TA>::id, lda, B, tinyblas_data_type<TB>::id, ldb, &beta, C,
         tinyblas_data_type<TC>::id, ldc, tinyblas_compute_type<T>::id, TINYBLAS_GEMM_DEFAULT)));
     CUDA_OR_DIE(cudaStreamSynchronize(stream));
     CUDA_OR_DIE(cudaStreamDestroy(stream));
@@ -464,12 +462,12 @@ void tinyblas(bool aᵀ, bool bᵀ, //
 }
 
 template <typename T, typename TA, typename TB, typename TC>
-void tinyblasrm(bool aᵀ, bool bᵀ, //
-                int m, int n, int k, T α, //
+void tinyblasrm(bool aT, bool bT, //
+                int m, int n, int k, T alpha, //
                 const TA *A, int lda, //
-                const TB *B, int ldb, T β, //
+                const TB *B, int ldb, T beta, //
                 TC *C, int ldc) {
-    tinyblas(bᵀ, aᵀ, n, m, k, α, B, ldb, A, lda, β, C, ldc);
+    tinyblas(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
 }
 
 // multiplies matrix on gpu with column major ordering
@@ -480,19 +478,20 @@ void tinyblasrm(bool aᵀ, bool bᵀ, //
 //     k×m * n×k → m×n if aᵀ and bᵀ
 //
 template <typename T, typename TA, typename TB, typename TC>
-void gemmref(bool aᵀ, bool bᵀ, //
-             int m, int n, int k, T α, //
+void gemmref(bool aT, bool bT, //
+             int m, int n, int k, T alpha, //
              const TA *A, int lda, //
-             const TB *B, int ldb, T β, //
+             const TB *B, int ldb, T beta, //
              TC *C, int ldc) {
     cudaStream_t stream;
     assert(m >= 0 && n >= 0 && k >= 0);
-    assert(lda >= std::max(1, aᵀ ? k : m));
-    assert(ldb >= std::max(1, bᵀ ? n : k));
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
     assert(ldc >= std::max(1, m));
     CUDA_OR_DIE(cudaSetDevice(0));
     CUDA_OR_DIE(cudaStreamCreate(&stream));
-    BENCH_CUDA(CUDA_OR_DIE(naive::gemm(stream, aᵀ, bᵀ, m, n, k, α, A, lda, B, ldb, β, C, ldc)));
+    BENCH_CUDA(
+        CUDA_OR_DIE(naive::gemm(stream, aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)));
     CUDA_OR_DIE(cudaStreamSynchronize(stream));
     CUDA_OR_DIE(cudaStreamDestroy(stream));
 }
@@ -505,10 +504,10 @@ void gemmref(bool aᵀ, bool bᵀ, //
 //     m×k * k×n → n×m if aᵀ and bᵀ
 //
 template <typename T, typename TA, typename TB, typename TC>
-void gemmrefrm(bool aᵀ, bool bᵀ, //
-               int m, int n, int k, T α, //
+void gemmrefrm(bool aT, bool bT, //
+               int m, int n, int k, T alpha, //
                const TA *A, int lda, //
-               const TB *B, int ldb, T β, //
+               const TB *B, int ldb, T beta, //
                TC *C, int ldc) {
-    gemmref(bᵀ, aᵀ, n, m, k, α, B, ldb, A, lda, β, C, ldc);
+    gemmref(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
 }

@@ -29,27 +29,27 @@
 //     k×m * n×k → m×n if aᵀ and bᵀ
 //
 template <typename T, typename TA, typename TB, typename TC>
-void gemm(bool aᵀ, bool bᵀ, //
-          int m, int n, int k, T α, //
+void gemm(bool aT, bool bT, //
+          int m, int n, int k, T alpha, //
           const TA *A, int lda, //
-          const TB *B, int ldb, T β, //
+          const TB *B, int ldb, T beta, //
           TC *C, int ldc) {
     assert(m >= 0 && n >= 0 && k >= 0);
-    assert(lda >= std::max(1, aᵀ ? k : m));
-    assert(ldb >= std::max(1, bᵀ ? n : k));
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
     assert(ldc >= std::max(1, m));
-    assert(1ll * lda * (aᵀ ? m : k) <= INT_MAX);
-    assert(1ll * ldb * (bᵀ ? k : n) <= INT_MAX);
+    assert(1ll * lda * (aT ? m : k) <= INT_MAX);
+    assert(1ll * ldb * (bT ? k : n) <= INT_MAX);
     for (int i = 0; i < m; ++i)
         for (int j = 0; j < n; ++j) {
             T d = 0;
             for (int l = 0; l < k; ++l) {
-                T a = aᵀ ? A[lda * i + l] : A[lda * l + i];
-                T b = bᵀ ? B[ldb * l + j] : B[ldb * j + l];
+                T a = aT ? A[lda * i + l] : A[lda * l + i];
+                T b = bT ? B[ldb * l + j] : B[ldb * j + l];
                 d = std::fma(a, b, d);
             }
             T c = C[ldc * j + i];
-            C[ldc * j + i] = std::fma(α, d, β * c);
+            C[ldc * j + i] = std::fma(alpha, d, beta * c);
         }
 }
 
@@ -61,10 +61,10 @@ void gemm(bool aᵀ, bool bᵀ, //
 //     m×k * k×n → n×m if aᵀ and bᵀ
 //
 template <typename T, typename TA, typename TB, typename TC>
-void gemmrm(bool aᵀ, bool bᵀ, //
-            int m, int n, int k, T α, //
+void gemmrm(bool aT, bool bT, //
+            int m, int n, int k, T alpha, //
             const TA *A, int lda, //
-            const TB *B, int ldb, T β, //
+            const TB *B, int ldb, T beta, //
             TC *C, int ldc) {
-    gemm(bᵀ, aᵀ, n, m, k, α, B, ldb, A, lda, β, C, ldc);
+    gemm(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
 }

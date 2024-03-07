@@ -21,15 +21,14 @@
 #include <cstdlib>
 #include <type_traits>
 
-#if defined(__NVCC__) || defined(__CUDA_ARCH__)
+#ifndef __HIP__
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
-#define tinyblasStream_t cudaStream_t
 #else
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 #define cudaSuccess hipSuccess
-#define tinyblasStream_t hipStream_t
+#define cudaStream_t hipStream_t
 #define cudaGetLastError hipGetLastError
 #endif
 
@@ -48,7 +47,7 @@
 #define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
 struct tinyblasContext {
-    tinyblasStream_t stream;
+    cudaStream_t stream;
 };
 
 tinyblasStatus_t tinyblasCreate(tinyblasHandle_t *out_handle) {
@@ -67,7 +66,7 @@ tinyblasStatus_t tinyblasDestroy(tinyblasHandle_t handle) {
 }
 
 tinyblasStatus_t tinyblasSetStream(tinyblasHandle_t handle, void *stream) {
-    handle->stream = (tinyblasStream_t)stream;
+    handle->stream = (cudaStream_t)stream;
     return TINYBLAS_STATUS_SUCCESS;
 }
 
@@ -107,10 +106,6 @@ const char *tinyblasGetStatusString(tinyblasStatus_t err) {
     default:
         return "Unknown error";
     }
-}
-
-__device__ __forceinline__ float madd(float x, float y, float z) {
-    return __fmaf_rn(x, y, z);
 }
 
 template <int BM, int BN, int TM, int TN, typename WORD, typename SRC, typename DST>
@@ -162,7 +157,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
                 WORD a = At[j];
                 for (int h = 0; h < TN; ++h) {
                     WORD b = Bt[h];
-                    Cs[TN * j + h] = madd(a, b, Cs[TN * j + h]);
+                    Cs[TN * j + h] += a * b;
                 }
             }
         }
@@ -178,7 +173,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
         for (int i = 0; i < TM && ii + ti + i < m; ++i)
             if (beta) {
                 WORD c = C[ldc * (jj + tj + j) + (ii + ti + i)];
-                C[ldc * (jj + tj + j) + (ii + ti + i)] = madd(c, beta, Cs[TN * i + j]);
+                C[ldc * (jj + tj + j) + (ii + ti + i)] = c * beta + Cs[TN * i + j];
             } else {
                 C[ldc * (jj + tj + j) + (ii + ti + i)] = Cs[TN * i + j];
             }
@@ -417,9 +412,9 @@ static __global__ void KERNEL tinyblasGSBE_entry(tinyblasOperation_t transa,
                                                  long long strideA, const SRC *B, int ldb,
                                                  long long strideB, WORD beta, DST *C, int ldc,
                                                  long long strideC, int batchCount) {
-    for (int z = blockIdx.z; z < batchCount; z += gridDim.z)
-        matmul_block2d<BM, BN, TM, TN>(transa, transb, m, n, k, alpha, A + z * strideA, lda,
-                                       B + z * strideB, ldb, beta, C + z * strideC, ldc);
+    matmul_block2d<BM, BN, TM, TN>(transa, transb, m, n, k, alpha, A + blockIdx.z * strideA, lda,
+                                   B + blockIdx.z * strideB, ldb, beta, C + blockIdx.z * strideC,
+                                   ldc);
 }
 
 template <typename WORD, typename SRC, typename DST>

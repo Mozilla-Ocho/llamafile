@@ -16,6 +16,7 @@
 // limitations under the License.
 #pragma once
 
+#include "cuda.h"
 #include "macros.h"
 
 //
@@ -34,36 +35,29 @@
 // can be used for finding bugs in more advanced matmul implementations.
 
 namespace naive {
-
-__device__ __forceinline__ half madd(half x, half y, half z) {
-    return (float)x * (float)y + (float)z;
-}
-__device__ __forceinline__ float madd(float x, float y, float z) {
-    return __fmaf_rn(x, y, z);
-}
-__device__ __forceinline__ double madd(double x, double y, double z) {
-    return __fma_rn(x, y, z);
-}
+namespace {
 
 template <typename T, typename TA, typename TB, typename TC>
-__global__ void kernel(bool aᵀ, bool bᵀ, //
-                       int m, int n, int k, T α, //
+__global__ void kernel(bool aT, bool bT, //
+                       int m, int n, int k, T alpha, //
                        const TA *A, int lda, //
-                       const TB *B, int ldb, T β, //
+                       const TB *B, int ldb, T beta, //
                        TC *C, int ldc) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < m && j < n) {
         T d = 0;
         for (int l = 0; l < k; ++l) {
-            T a = aᵀ ? A[lda * i + l] : A[lda * l + i];
-            T b = bᵀ ? B[ldb * l + j] : B[ldb * j + l];
-            d = madd(a, b, d);
+            T a = aT ? A[lda * i + l] : A[lda * l + i];
+            T b = bT ? B[ldb * l + j] : B[ldb * j + l];
+            d += a * b;
         }
         T c = C[ldc * j + i];
-        C[ldc * j + i] = madd(α, d, β * c);
+        C[ldc * j + i] = alpha * d + beta * c;
     }
 }
+
+} // namespace
 
 // multiplies matrix on gpu with column major ordering
 //
@@ -74,14 +68,14 @@ __global__ void kernel(bool aᵀ, bool bᵀ, //
 //
 template <typename T, typename TA, typename TB, typename TC>
 cudaError_t gemm(cudaStream_t stream, //
-                 bool aᵀ, bool bᵀ, //
-                 int m, int n, int k, T α, //
+                 bool aT, bool bT, //
+                 int m, int n, int k, T alpha, //
                  const TA *A, int lda, //
-                 const TB *B, int ldb, T β, //
+                 const TB *B, int ldb, T beta, //
                  TC *C, int ldc) {
     dim3 blockDim(32, 32);
     dim3 gridDim(CEIL_DIV(m, 32), CEIL_DIV(n, 32));
-    kernel<<<gridDim, blockDim, 0, stream>>>(aᵀ, bᵀ, m, n, k, α, A, lda, B, ldb, β, C, ldc);
+    kernel<<<gridDim, blockDim, 0, stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
     return cudaGetLastError();
 }
 

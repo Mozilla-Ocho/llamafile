@@ -2,7 +2,7 @@
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #pragma once
 
-#if defined(__NVCC__) || defined(__CUDA_ARCH__)
+#ifndef __HIP__
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>

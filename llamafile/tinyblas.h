@@ -2,33 +2,33 @@
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #pragma once
 
-enum tinyblasOperation_t {
+typedef enum tinyblasOperation {
     TINYBLAS_OP_N,
     TINYBLAS_OP_T,
-};
+} tinyblasOperation_t;
 
-enum tinyblasDataType_t {
+typedef enum tinyblasDataType {
     TINYBLAS_R_32F,
     TINYBLAS_R_16F,
-};
+} tinyblasDataType_t;
 
-enum tinyblasComputeType_t {
+typedef enum tinyblasComputeType {
     TINYBLAS_COMPUTE_32F,
     TINYBLAS_COMPUTE_16F,
-};
+} tinyblasComputeType_t;
 
-enum tinyblasGemmAlgo_t {
+typedef enum tinyblasGemmAlgo {
     TINYBLAS_GEMM_DEFAULT,
-};
+} tinyblasGemmAlgo_t;
 
-enum tinyblasStatus_t {
+typedef enum tinyblasStatus {
     TINYBLAS_STATUS_SUCCESS,
     TINYBLAS_STATUS_ALLOC_FAILED,
     TINYBLAS_STATUS_INVALID_VALUE,
     TINYBLAS_STATUS_NOT_SUPPORTED,
     TINYBLAS_STATUS_EXECUTION_FAILED,
     TINYBLAS_STATUS_DIMENSION_OVERFLOW,
-};
+} tinyblasStatus_t;
 
 struct tinyblasContext;
 typedef struct tinyblasContext *tinyblasHandle_t;

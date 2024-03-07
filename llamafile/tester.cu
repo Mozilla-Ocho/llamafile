@@ -17,18 +17,25 @@
 
 #include "tester.h"
 
+#include <algorithm>
 #include <atomic>
 #include <ctime>
+
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#include "windows.h"
+#endif
 
+std::recursive_mutex g_log_lock;
 thread_local const char *is_self_testing;
-const size_t kPageSize = std::max(sysconf(_SC_PAGESIZE), 4096l);
 
-long long micros(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return ts.tv_sec * 1000000 + (ts.tv_nsec + 999) / 1000;
-}
+const int kPageSize =
+#ifndef _WIN32
+    std::max(sysconf(_SC_PAGESIZE), 4096l);
+#else
+    4096;
+#endif
 
 int rand32(void) {
     static unsigned long long lcg = 1;
@@ -45,14 +52,51 @@ float numba(void) { // (-1,1)
     return float01(rand32()) * 2 - 1;
 }
 
+int hamming(int x, int y) {
+    return popcount(x ^ y);
+}
+
+int popcount(unsigned x) {
+    x = x - ((x >> 1) & 0x55555555);
+    x = ((x >> 2) & 0x33333333) + (x & 0x33333333);
+    x = (x + (x >> 4)) & 0x0F0F0F0F;
+    x = (x + (x >> 16));
+    return (x + (x >> 8)) & 0x0000003F;
+}
+
+void cudaFreeOrDie(void *p) {
+    CUDA_OR_DIE(cudaFree(p));
+}
+
 void *cudaMallocManagedOrDie(size_t n) {
     void *p;
     CUDA_OR_DIE(cudaMallocManaged(&p, n));
     return p;
 }
 
-void cudaFreeOrDie(void *p) {
-    CUDA_OR_DIE(cudaFree(p));
+#ifdef _WIN32
+static long long GetQueryPerformanceFrequency() {
+    LARGE_INTEGER t;
+    QueryPerformanceFrequency(&t);
+    return t.QuadPart;
+}
+static long long GetQueryPerformanceCounter() {
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    return t.QuadPart;
+}
+#endif
+
+long long micros(void) {
+#ifndef _WIN32
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ts.tv_sec * 1000000 + (ts.tv_nsec + 999) / 1000;
+#else
+    static long long timer_freq = GetQueryPerformanceFrequency();
+    static long long timer_start = GetQueryPerformanceCounter();
+    return ((GetQueryPerformanceCounter() - timer_start) * 1000000) / timer_freq;
+#endif
 }
 
 [[noreturn]] void cuda_die(const char *stmt, const char *func, const char *file, int line,
@@ -66,7 +110,7 @@ void cudaFreeOrDie(void *p) {
     _Exit(1);
 }
 
-void test_matmul(std::function<void(int m, int n, int k, int l, float α, float β)> f) {
+void test_matmul(std::function<void(int m, int n, int k, int l, float alpha, float beta)> f) {
     static const int kDims[] = {1, 2, 23, 77, 15, 2048, 512, 127, 129, 128, 16};
     static const float kAlphas[] = {1, .1};
     static const float kBetas[] = {0, .1};
@@ -90,24 +134,24 @@ void test_matmul(std::function<void(int m, int n, int k, int l, float α, float 
                 }
     for (int ai = 0; ai < ARRAYLEN(kAlphas); ++ai)
         for (int bi = 0; bi < ARRAYLEN(kBetas); ++bi) {
-            float α = kAlphas[ai];
-            float β = kBetas[bi];
+            float alpha = kAlphas[ai];
+            float beta = kBetas[bi];
             int m = 128;
             int n = 128;
             int k = 128;
             char name[256];
-            sprintf(name, "testing %4d %4d %4d α=%g β=%g", m, n, k, α, β);
+            sprintf(name, "testing %4d %4d %4d alpha=%g beta=%g", m, n, k, alpha, beta);
             if (t++ % 7 == 0)
                 fprintf(stderr, "%s\r", name);
             is_self_testing = name;
-            f(m, n, k, 0, α, β);
+            f(m, n, k, 0, alpha, beta);
             is_self_testing = 0;
         }
 }
 
 static int cuda_tester_init() {
     CUDA_OR_DIE(cudaSetDevice(0));
-#ifdef __HIP_PLATFORM_AMD__
+#ifdef __HIP__
     rocblas_initialize();
 #endif
     CUDA_OR_DIE(cudaDeviceSynchronize());

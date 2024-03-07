@@ -19,10 +19,10 @@
 #include "tester.h"
 #include <iostream>
 
-#if defined(__NVCC__) || defined(__CUDA_ARCH__)
-#define VENDOR "NVIDIA"
-#else
+#ifdef __HIP__
 #define VENDOR "AMD"
+#else
+#define VENDOR "NVIDIA"
 #endif
 
 namespace {

@@ -10,7 +10,7 @@
 //
 // @see IEEE 754-2008
 
-#if defined(__NVCC__) || defined(__CUDA_ARCH__)
+#ifndef __HIP__
 #include <cuda_fp16.h>
 #else
 #include <hip/hip_fp16.h>
