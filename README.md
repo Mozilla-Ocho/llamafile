@@ -5,12 +5,16 @@
 
 **llamafile lets you distribute and run LLMs with a single file. ([announcement blog post](https://hacks.mozilla.org/2023/11/introducing-llamafile/))**
 
-Our goal is to make open source large language models much more 
+[![](https://dcbadge.vercel.app/api/server/teDuGYVTB2)](https://discord.gg/teDuGYVTB2)
+
+Our goal is to make open LLMs much more 
 accessible to both developers and end users. We're doing that by 
 combining [llama.cpp](https://github.com/ggerganov/llama.cpp) with [Cosmopolitan Libc](https://github.com/jart/cosmopolitan) into one 
 framework that collapses all the complexity of LLMs down to 
 a single-file executable (called a "llamafile") that runs
 locally on most computers, with no installation.
+
+[Join us on our Discord](https://discord.gg/teDuGYVTB2)
 
 ## Quickstart
 
@@ -51,7 +55,7 @@ chmod +x llava-v1.5-7b-q4.llamafile
 
 ### JSON API Quickstart
 
-When llamafile is started in server mode, in addition to hosting a web
+When llamafile is started, in addition to hosting a web
 UI chat server at <http://127.0.0.1:8080/>, an [OpenAI
 API](https://platform.openai.com/docs/api-reference/chat) compatible
 chat completions endpoint is provided too. It's designed to support the
@@ -209,7 +213,7 @@ later in this document.
 ## How llamafile works
 
 A llamafile is an executable LLM that you can run on your own 
-computer. It contains the weights for a given open source LLM, as well 
+computer. It contains the weights for a given open LLM, as well 
 as everything needed to actually run that model on your computer. 
 There's nothing to install or configure (with a few caveats, discussed 
 in subsequent sections of this document).
@@ -710,5 +714,5 @@ should that be desired.
 
 The llamafile logo on this page was generated with the assistance of DALL·E 3.
 
-![star-history-2023123](https://github.com/Mozilla-Ocho/llamafile/assets/42821/978d49be-e383-44df-ae6c-3f542c6130f9)
 
+[![Star History Chart](https://api.star-history.com/svg?repos=Mozilla-Ocho/llamafile&type=Date)](https://star-history.com/#Mozilla-Ocho/llamafile&Date)
