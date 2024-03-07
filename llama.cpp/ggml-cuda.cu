@@ -53,7 +53,7 @@
 #define cublasSetStream tinyblasSetStream
 #define cublasSgemm tinyblasSgemm
 #define cublasStatus_t tinyblasStatus_t
-#define cudaDataType_t tinyblasDatatype_t
+#define cudaDataType_t tinyblasDataType_t
 #define cudaDeviceCanAccessPeer hipDeviceCanAccessPeer
 #define cudaDeviceDisablePeerAccess hipDeviceDisablePeerAccess
 #define cudaDeviceEnablePeerAccess hipDeviceEnablePeerAccess
@@ -131,7 +131,7 @@
 #define cublasGemmBatchedEx tinyblasGemmBatchedEx
 #define cublasGemmStridedBatchedEx tinyblasGemmStridedBatchedEx
 #define cublasGetStatusString tinyblasGetStatusString
-#define cudaDataType_t tinyblasDatatype_t
+#define cudaDataType_t tinyblasDataType_t
 #define cublasSetMathMode(handle, mode) CUBLAS_STATUS_SUCCESS
 
 #elif defined(GGML_USE_HIPBLAS)

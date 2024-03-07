@@ -17,6 +17,7 @@
 
 #include "llama.cpp/ggml-quants.h"
 #include "llamafile.h"
+#include <assert.h>
 #include <cosmo.h>
 #include <immintrin.h>
 #include <stdio.h>
@@ -31,11 +32,32 @@
 //                  BASIC LINEAR ALGEBRA SUBPROGRAMS
 //
 
-#define ASSERT(x) \
-    if (!(x)) { \
-        fprintf(stderr, "%s:%d: assertion failed: %s\n", __FILE__, __LINE__, #x); \
-        __builtin_trap(); \
-    }
+// matrix multiplication for x86 microprocessors
+//
+// this file implements optimized cpu kernels for llama.cpp that support
+// column major ordering with the A matrix transposed. they work by
+// computing multiple dot products at once, because it exploits
+// instruction level parallelism, in addition to minimizing register
+// loads since the adjacent dot products can share register loads.
+//
+// this technique usually slightly outperforms mkl and blis at single
+// threaded performance, and usually goes 2x faster than mkl when openmp
+// threading is used. however please note that this code is adapted to
+// use the llama.cpp synchronization model, which isn't as advanced.
+//
+//     ┌───────────┬──────────────────┬───────────────────┐
+//     │ software  │ skinny matrices  │ fat matrices      │
+//     │           │ token generation │ prompt evaluation │
+//     │ ───────── │ ──────────────── │ ───────────────── │
+//     │ llama.cpp │ fast             │ slow              │
+//     │ MKL       │ slow             │ fast              │
+//     │ tinyBLAS  │ fast             │ fast              │
+//     └───────────┴──────────────────┴───────────────────┘
+//
+// these kernels do not have any of the latency overhead typically
+// associated with the blas, which means they can provide the same
+// performance as llama.cpp when performing the most common type of
+// matmul used by text generation, which is matrix-vector product.
 
 #define END_KERNEL() }
 #define BEGIN_KERNEL(RM, RN) \
@@ -100,17 +122,17 @@ template <typename T> class tinyBLAS {
     tinyBLAS(long k, const T *A, long lda, const T *B, long ldb, float *C, long ldc, long ith,
              long nth)
         : k(k), A(A), lda(lda), B(B), ldb(ldb), C(C), ldc(ldc), ith(ith), nth(nth) {
-        ASSERT(A != nullptr);
-        ASSERT(B != nullptr);
-        ASSERT(C != nullptr);
-        ASSERT(k >= 0 && k % 8 == 0);
-        ASSERT(ith >= 0 && ith < nth);
+        assert(A != nullptr);
+        assert(B != nullptr);
+        assert(C != nullptr);
+        assert(k >= 0 && k % 8 == 0);
+        assert(ith >= 0 && ith < nth);
     }
 
     void gemm(long m, long n) {
-        ASSERT(m >= 0);
-        ASSERT(n >= 0);
-        ASSERT(ldc >= m);
+        assert(m >= 0);
+        assert(n >= 0);
+        assert(ldc >= m);
         mnpack(0, m, 0, n);
     }
 
@@ -267,17 +289,17 @@ template <typename T, typename U, int avxvnni> class tinyBLASq {
     tinyBLASq(long k, const T *A, long lda, const U *B, long ldb, float *C, long ldc, long ith,
               long nth)
         : k(k), A(A), lda(lda), B(B), ldb(ldb), C(C), ldc(ldc), ith(ith), nth(nth) {
-        ASSERT(A != nullptr);
-        ASSERT(B != nullptr);
-        ASSERT(C != nullptr);
-        ASSERT(k >= 0 && k % 32 == 0);
-        ASSERT(ith >= 0 && ith < nth);
+        assert(A != nullptr);
+        assert(B != nullptr);
+        assert(C != nullptr);
+        assert(k >= 0 && k % 32 == 0);
+        assert(ith >= 0 && ith < nth);
     }
 
     void gemm(long m, long n) {
-        ASSERT(m >= 0);
-        ASSERT(n >= 0);
-        ASSERT(ldc >= m);
+        assert(m >= 0);
+        assert(n >= 0);
+        assert(ldc >= m);
         mnpack(0, m, 0, n);
     }
 
@@ -428,8 +450,8 @@ template <typename T, typename U, int avxvnni> class tinyBLASq {
 // computes m×k * n×k → n×m
 void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda, const void *B,
                      long ldb, float *C, long ldc, long ith, long nth) {
-    ASSERT(X86_HAVE(FMA));
-    ASSERT(X86_HAVE(AVX2));
+    assert(X86_HAVE(FMA));
+    assert(X86_HAVE(AVX2));
     switch (dtype) {
 #ifdef __x86_64__
 
@@ -440,7 +462,7 @@ void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda,
     }
 
     case GGML_TYPE_F16: {
-        ASSERT(X86_HAVE(F16C));
+        assert(X86_HAVE(F16C));
         tinyBLAS<ggml_fp16_t> tb{
             k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, C, ldc, ith, nth,
         };
@@ -478,6 +500,6 @@ void llamafile_sgemm(long m, long n, long k, int dtype, const void *A, long lda,
 
 #endif
     default:
-        ASSERT(!"unsupported dtype");
+        assert(!"unsupported dtype");
     }
 }

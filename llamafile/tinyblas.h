@@ -7,7 +7,7 @@ enum tinyblasOperation_t {
     TINYBLAS_OP_T,
 };
 
-enum tinyblasDatatype_t {
+enum tinyblasDataType_t {
     TINYBLAS_R_32F,
     TINYBLAS_R_16F,
 };
@@ -26,6 +26,8 @@ enum tinyblasStatus_t {
     TINYBLAS_STATUS_ALLOC_FAILED,
     TINYBLAS_STATUS_INVALID_VALUE,
     TINYBLAS_STATUS_NOT_SUPPORTED,
+    TINYBLAS_STATUS_EXECUTION_FAILED,
+    TINYBLAS_STATUS_DIMENSION_OVERFLOW,
 };
 
 struct tinyblasContext;
@@ -43,21 +45,21 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t, tinyblasOperation_t, tinyblasOp
                                const float *, float *, int);
 
 tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t, tinyblasOperation_t, tinyblasOperation_t, int,
-                                int, int, const void *, const void *, tinyblasDatatype_t, int,
-                                const void *, tinyblasDatatype_t, int, const void *, void *,
-                                tinyblasDatatype_t, int, tinyblasComputeType_t, tinyblasGemmAlgo_t);
+                                int, int, const void *, const void *, tinyblasDataType_t, int,
+                                const void *, tinyblasDataType_t, int, const void *, void *,
+                                tinyblasDataType_t, int, tinyblasComputeType_t, tinyblasGemmAlgo_t);
 
 tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t, tinyblasOperation_t, tinyblasOperation_t,
                                        int, int, int, const void *, const void *const[],
-                                       tinyblasDatatype_t, int, const void *const[],
-                                       tinyblasDatatype_t, int, const void *, void *const[],
-                                       tinyblasDatatype_t, int, int, tinyblasComputeType_t,
+                                       tinyblasDataType_t, int, const void *const[],
+                                       tinyblasDataType_t, int, const void *, void *const[],
+                                       tinyblasDataType_t, int, int, tinyblasComputeType_t,
                                        tinyblasGemmAlgo_t);
 
 tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t, tinyblasOperation_t,
                                               tinyblasOperation_t, int, int, int, const void *,
-                                              const void *, tinyblasDatatype_t, int, long long,
-                                              const void *, tinyblasDatatype_t, int, long long,
-                                              const void *, void *, tinyblasDatatype_t, int,
+                                              const void *, tinyblasDataType_t, int, long long,
+                                              const void *, tinyblasDataType_t, int, long long,
+                                              const void *, void *, tinyblasDataType_t, int,
                                               long long, int, tinyblasComputeType_t,
                                               tinyblasGemmAlgo_t);

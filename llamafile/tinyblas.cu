@@ -21,14 +21,16 @@
 #include <cstdlib>
 #include <type_traits>
 
-#ifdef __NVCC__
+#if defined(__NVCC__) || defined(__CUDA_ARCH__)
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 #define tinyblasStream_t cudaStream_t
 #else
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
+#define cudaSuccess hipSuccess
 #define tinyblasStream_t hipStream_t
+#define cudaGetLastError hipGetLastError
 #endif
 
 //
@@ -41,7 +43,8 @@
 //                    BASIC LINEAR ALGEBRA SUBPROGRAMS
 //
 
-#define SHARELEN (BK * BM + BK * BN)
+#define THREAD_COUNT ((BM * BN) / (TM * TN))
+#define KERNEL __launch_bounds__(THREAD_COUNT)
 #define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
 struct tinyblasContext {
@@ -73,99 +76,6 @@ tinyblasStatus_t tinyblasGetStream(tinyblasHandle_t handle, void **out_stream) {
     return TINYBLAS_STATUS_SUCCESS;
 }
 
-template <int BM, int BN, int BK, int TM, int TN, typename WORD, typename SRC, typename DST>
-static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperation_t transb, int m,
-                                      int n, int k, int x, int y, WORD alpha, const SRC *A, int lda,
-                                      const SRC *B, int ldb, WORD beta, DST *C, int ldc) {
-    static_assert((BM % TM == 0) && (BN % TN == 0), "can't divide work for threads");
-    static_assert((BM * BN) <= (BM * BK) + (BK * BN),
-                  "didn't allocate enough shared mem for threads");
-    const int ii0 = threadIdx.x / (BN / TN); // {0, ..., (BM/TM) - 1}
-    const int ii1 = threadIdx.x % (BN / TN); // {0, ..., (BN/TN) - 1}
-    extern __shared__ char svals[]; // shared across all threads in a block
-    SRC *As /*[BK][BM]*/ = (SRC *)svals;
-    SRC *Bs /*[BK][BN]*/ = (SRC *)svals + BM * BK;
-
-    WORD Cs[TM][TN] = {0};
-    SRC At[TM], Bt[TN];
-    int i, h, j, l, blob;
-
-    for (blob = 0; blob < k; blob += BK) {
-        for (i = threadIdx.x; i < BK; i += blockDim.x)
-            for (j = 0; j < BM; ++j)
-                As[BM * i + j] = 0;
-        for (i = threadIdx.x; i < BK && blob + i < k; i += blockDim.x)
-            for (j = 0; j < BM && x + j < m; ++j)
-                As[BM * i + j] = transa ? A[1ll * lda * (x + j) + (blob + i)]
-                                        : A[1ll * lda * (blob + i) + (x + j)];
-        for (i = threadIdx.x; i < BK; i += blockDim.x)
-            for (j = 0; j < BN; ++j)
-                Bs[BN * i + j] = 0;
-        for (i = threadIdx.x; i < BK && blob + i < k; i += blockDim.x)
-            for (j = 0; j < BN && y + j < n; ++j)
-                Bs[BN * i + j] = transb ? B[1ll * ldb * (blob + i) + (y + j)]
-                                        : B[1ll * ldb * (y + j) + (blob + i)];
-        __syncthreads();
-
-        for (l = 0; l < BK; ++l) {
-            for (j = 0; j < TM; ++j)
-                At[j] = As[BM * l + TM * ii0 + j];
-            for (h = 0; h < TN; ++h)
-                Bt[h] = Bs[BN * l + TN * ii1 + h];
-            for (j = 0; j < TM; ++j) {
-                WORD a = At[j];
-                for (h = 0; h < TN; ++h) {
-                    WORD b = Bt[h];
-                    Cs[j][h] += a * b;
-                }
-            }
-        }
-        __syncthreads();
-    }
-
-    x += ii0 * TM;
-    y += ii1 * TN;
-    for (l = 0; l < TN && y + l < n; ++l)
-        for (j = 0; j < TM && x + j < m; ++j)
-            if (beta) {
-                WORD c = C[1ll * ldc * (y + l) + (x + j)];
-                C[1ll * ldc * (y + l) + (x + j)] = alpha * Cs[j][l] + beta * c;
-            } else {
-                C[1ll * ldc * (y + l) + (x + j)] = alpha * Cs[j][l];
-            }
-}
-
-template <int BM, int BN, int BK, int TM, int TN>
-static __global__ void tinyblasS_entry(tinyblasOperation_t transa, tinyblasOperation_t transb,
-                                       int m, int n, int k, float alpha, const float *A, int lda,
-                                       const float *B, int ldb, float beta, float *C, int ldc) {
-
-    int x = blockIdx.x * BM;
-    const int jump1 = gridDim.x * BM;
-
-    int y = blockIdx.y * BN;
-    const int jump2 = gridDim.y * BN;
-
-    // each block handles a sub-matrix of C, of size BM * BN
-    // each thread handles a sub-matrix of size TM * TN
-    for (x = blockIdx.x * BM; x < m; x += jump1)
-        for (y = blockIdx.y * BN; y < n; y += jump2)
-            matmul_block2d<BM, BN, BK, TM, TN, float>(transa, transb, m, n, k, x, y, alpha, A, lda,
-                                                      B, ldb, beta, C, ldc);
-}
-
-template <int BM, int BN, int BK, int TM, int TN>
-static void tinyblasS_wrapper(tinyblasHandle_t handle, tinyblasOperation_t transa,
-                              tinyblasOperation_t transb, int m, int n, int k, const float alpha,
-                              const float *A, int lda, const float *B, int ldb, const float beta,
-                              float *C, int ldc) {
-    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
-    int sharedmem = sizeof(float) * SHARELEN;
-    int maxthreads = (BM * BN) / (TM * TN);
-    tinyblasS_entry<BM, BN, BK, TM, TN><<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-        transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-}
-
 tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t handle, //
                                tinyblasOperation_t transa, //
                                tinyblasOperation_t transb, //
@@ -175,273 +85,323 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t handle, //
                                const float *B, int ldb, //
                                const float *beta, //
                                float *C, int ldc) {
-    tinyblasS_wrapper<32, 32, 16, 2, 8>(handle, transa, transb, m, n, k, *alpha, A, lda, B, ldb,
-                                        *beta, C, ldc);
-    return TINYBLAS_STATUS_SUCCESS;
+    return tinyblasGemmEx(handle, transa, transb, m, n, k, alpha, A, TINYBLAS_R_32F, lda, B,
+                          TINYBLAS_R_32F, ldb, beta, C, TINYBLAS_R_32F, ldc, TINYBLAS_COMPUTE_32F,
+                          TINYBLAS_GEMM_DEFAULT);
 }
 
-static bool is_valid(tinyblasOperation_t transa, //
-                     tinyblasOperation_t transb, //
-                     int m, int n, int k, //
-                     int lda, int ldb, int ldc) {
-    return m >= 0 && //
-           n >= 0 && //
-           k >= 0 && //
-           lda >= std::max(1, transa ? k : m) && //
-           ldb >= std::max(1, transb ? n : k) && //
-           ldc >= std::max(1, m);
-}
-
-static bool is_supported(tinyblasDatatype_t Atype, tinyblasDatatype_t Btype) {
-    return Atype == TINYBLAS_R_16F && //
-           Btype == TINYBLAS_R_16F;
-}
-
-// https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex
-template <int BM, int BN, int BK, int TM, int TN, typename SRC, typename DST, typename T>
-static __global__ void tinyblasGE_entry(tinyblasOperation_t transa, tinyblasOperation_t transb,
-                                        int m, int n, int k, T alpha, const SRC *A, int lda,
-                                        const SRC *B, int ldb, T beta, DST *C, int ldc) {
-
-    int x = blockIdx.x * BM;
-    const int jump1 = gridDim.x * BM;
-
-    int y = blockIdx.y * BN;
-    const int jump2 = gridDim.y * BN;
-
-    // each block handles a sub-matrix of C, of size BM * BN
-    for (x = blockIdx.x * BM; x < m; x += jump1)
-        for (y = blockIdx.y * BN; y < n; y += jump2)
-            matmul_block2d<BM, BN, BK, TM, TN, float>(transa, transb, m, n, k, x, y, alpha, A, lda,
-                                                      B, ldb, beta, C, ldc);
-}
-
-template <int BM, int BN, int BK, int TM, int TN, typename SRC>
-static tinyblasStatus_t
-tinyblasGE_wrapper(tinyblasHandle_t handle, tinyblasOperation_t transa, tinyblasOperation_t transb,
-                   int m, int n, int k, const void *pAlpha, const SRC *A, int lda, const SRC *B,
-                   int ldb, const void *pBeta, void *C, tinyblasDatatype_t Ctype, int ldc,
-                   tinyblasComputeType_t computeType) {
-    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 1);
-    int sharedmem = sizeof(SRC) * SHARELEN;
-    int maxthreads = (BM * BN) / (TM * TN);
-    switch (Ctype) {
-    case TINYBLAS_R_16F:
-        switch (computeType) {
-        case TINYBLAS_COMPUTE_16F:
-            tinyblasGE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const half *)pAlpha, A, lda, B, ldb,
-                    *(const half *)pBeta, (half *)C, ldc);
-            return TINYBLAS_STATUS_SUCCESS;
-        case TINYBLAS_COMPUTE_32F:
-            tinyblasGE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const float *)pAlpha, A, lda, B, ldb,
-                    *(const float *)pBeta, (half *)C, ldc);
-            return TINYBLAS_STATUS_SUCCESS;
-        default:
-            return TINYBLAS_STATUS_INVALID_VALUE;
-        }
-    case TINYBLAS_R_32F:
-        switch (computeType) {
-        case TINYBLAS_COMPUTE_16F:
-            return TINYBLAS_STATUS_NOT_SUPPORTED;
-        case TINYBLAS_COMPUTE_32F:
-            tinyblasGE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const float *)pAlpha, A, lda, B, ldb,
-                    *(const float *)pBeta, (float *)C, ldc);
-            return TINYBLAS_STATUS_SUCCESS;
-        default:
-            return TINYBLAS_STATUS_INVALID_VALUE;
-        }
+const char *tinyblasGetStatusString(tinyblasStatus_t err) {
+    switch (err) {
+    case TINYBLAS_STATUS_SUCCESS:
+        return "Success";
+    case TINYBLAS_STATUS_ALLOC_FAILED:
+        return "Alloc failed";
+    case TINYBLAS_STATUS_INVALID_VALUE:
+        return "Invalid value";
+    case TINYBLAS_STATUS_NOT_SUPPORTED:
+        return "Not supported";
+    case TINYBLAS_STATUS_EXECUTION_FAILED:
+        return "Execution failed";
+    case TINYBLAS_STATUS_DIMENSION_OVERFLOW:
+        return "Dimension overflow";
     default:
-        return TINYBLAS_STATUS_INVALID_VALUE;
+        return "Unknown error";
     }
+}
+
+__device__ __forceinline__ float madd(float x, float y, float z) {
+    return __fmaf_rn(x, y, z);
+}
+
+template <int BM, int BN, int TM, int TN, typename WORD, typename SRC, typename DST>
+static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperation_t transb, int m,
+                                      int n, int k, WORD alpha, const SRC *A, int lda, const SRC *B,
+                                      int ldb, WORD beta, DST *C, int ldc) {
+
+    constexpr int BK = THREAD_COUNT;
+    static_assert(BM % TM == 0, "can't divide work for threads");
+    static_assert(BN % TN == 0, "can't divide work for threads");
+    static_assert(BM > 0 && BN > 0 && BK > 0 && TM > 0 && TN > 0,
+                  "one of the constexpr configuration values was non-positive");
+    static_assert((BK * BM * sizeof(SRC)) + (BK * BN * sizeof(SRC)) <= 65536,
+                  "you're almost almost certainly using too much shared memory");
+
+    const int th = threadIdx.x;
+    const int ii = blockIdx.x * BM;
+    const int jj = blockIdx.y * BN;
+    const int ti = th / (BN / TN) * TM;
+    const int tj = th % (BN / TN) * TN;
+
+    __shared__ SRC As[BK * BM];
+    __shared__ SRC Bs[BK * BN];
+
+    WORD At[TM];
+    WORD Bt[TN];
+    WORD Cs[TM * TN] = {0};
+
+    for (int ll = 0; ll < k; ll += BK) {
+
+        for (int i = 0; i < BM; ++i)
+            As[BM * th + i] = 0;
+        for (int i = 0; i < BM && ll + th < k && ii + i < m; ++i)
+            As[BM * th + i] = A[transa ? lda * (ii + i) + (ll + th) : lda * (ll + th) + (ii + i)];
+
+        for (int j = 0; j < BN; ++j)
+            Bs[BN * th + j] = 0;
+        for (int j = 0; j < BN && ll + th < k && jj + j < n; ++j)
+            Bs[BN * th + j] = B[transb ? ldb * (ll + th) + (jj + j) : ldb * (jj + j) + (ll + th)];
+
+        __syncthreads();
+
+        for (int l = 0; l < BK; ++l) {
+            for (int j = 0; j < TM; ++j)
+                At[j] = As[BM * l + ti + j];
+            for (int h = 0; h < TN; ++h)
+                Bt[h] = Bs[BN * l + tj + h];
+            for (int j = 0; j < TM; ++j) {
+                WORD a = At[j];
+                for (int h = 0; h < TN; ++h) {
+                    WORD b = Bt[h];
+                    Cs[TN * j + h] = madd(a, b, Cs[TN * j + h]);
+                }
+            }
+        }
+
+        __syncthreads();
+    }
+
+    if (alpha != (WORD)1)
+        for (int i = 0; i < TM * TN; ++i)
+            Cs[i] *= alpha;
+
+    for (int j = 0; j < TN && jj + tj + j < n; ++j)
+        for (int i = 0; i < TM && ii + ti + i < m; ++i)
+            if (beta) {
+                WORD c = C[ldc * (jj + tj + j) + (ii + ti + i)];
+                C[ldc * (jj + tj + j) + (ii + ti + i)] = madd(c, beta, Cs[TN * i + j]);
+            } else {
+                C[ldc * (jj + tj + j) + (ii + ti + i)] = Cs[TN * i + j];
+            }
+}
+
+template <int BM, int BN, int TM, int TN, typename WORD, typename SRC, typename DST>
+static __global__ void KERNEL tinyblasGE_entry(tinyblasOperation_t transa,
+                                               tinyblasOperation_t transb, int m, int n, int k,
+                                               WORD alpha, const SRC *A, int lda, const SRC *B,
+                                               int ldb, WORD beta, DST *C, int ldc) {
+    matmul_block2d<BM, BN, TM, TN>(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+}
+
+template <typename WORD, typename SRC, typename DST>
+static tinyblasStatus_t tinyblasGE_launch(tinyblasHandle_t handle, tinyblasOperation_t transa,
+                                          tinyblasOperation_t transb, int m, int n, int k,
+                                          WORD alpha, const SRC *A, int lda, const SRC *B, int ldb,
+                                          WORD beta, DST *C, int ldc) {
+    constexpr int BM = 48;
+    constexpr int BN = 32;
+    constexpr int TM = 3;
+    constexpr int TN = 8;
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN));
+    tinyblasGE_entry<BM, BN, TM, TN><<<maxblocks, THREAD_COUNT, 0, handle->stream>>>(
+        transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    if (cudaGetLastError() != cudaSuccess)
+        return TINYBLAS_STATUS_EXECUTION_FAILED;
+    return TINYBLAS_STATUS_SUCCESS;
 }
 
 tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t handle, //
                                 tinyblasOperation_t transa, //
                                 tinyblasOperation_t transb, //
                                 int m, int n, int k, //
-                                const void *pAlpha, //
-                                const void *A, tinyblasDatatype_t Atype, int lda, //
-                                const void *B, tinyblasDatatype_t Btype, int ldb, //
-                                const void *pBeta, //
-                                void *C, tinyblasDatatype_t Ctype, int ldc, //
+                                const void *alpha, //
+                                const void *A, tinyblasDataType_t Atype, int lda, //
+                                const void *B, tinyblasDataType_t Btype, int ldb, //
+                                const void *beta, //
+                                void *C, tinyblasDataType_t Ctype, int ldc, //
                                 tinyblasComputeType_t computeType, //
                                 tinyblasGemmAlgo_t algo) {
-    if (!is_valid(transa, transb, m, n, k, lda, ldb, ldc))
+
+    if (m < 0 || n < 0 || k < 0)
         return TINYBLAS_STATUS_INVALID_VALUE;
-    if (!is_supported(Atype, Btype))
+    if (lda < std::max(1, transa ? k : m))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (ldb < std::max(1, transb ? n : k))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (ldc < std::max(1, m))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (1ll * lda * ((transa ? k : m) - 1) + ((transa ? m : k) - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (1ll * ldb * ((transb ? n : k) - 1) + ((transb ? k : n) - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (1ll * ldc * (n - 1) + (m - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (Atype != Btype)
         return TINYBLAS_STATUS_NOT_SUPPORTED;
-    return tinyblasGE_wrapper<48, 32, 64, 3, 8>(handle, transa, transb, m, n, k, pAlpha,
-                                                (const half *)A, lda, (const half *)B, ldb, pBeta,
-                                                C, Ctype, ldc, computeType);
-}
 
-// https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmbatchedex
-template <int BM, int BN, int BK, int TM, int TN, typename SRC, typename DST, typename T>
-static __global__ void tinyblasGBE_entry(tinyblasOperation_t transa, tinyblasOperation_t transb,
-                                         int m, int n, int k, T alpha, const SRC *const Aarray[],
-                                         int lda, const SRC *const Barray[], int ldb, T beta,
-                                         DST *const Carray[], int ldc, int batchCount) {
-
-    int x = blockIdx.x * BM;
-    const int jump1 = gridDim.x * BM;
-
-    int y = blockIdx.y * BN;
-    const int jump2 = gridDim.y * BN;
-
-    int z = blockIdx.z;
-    const int jump3 = gridDim.z;
-
-    // each block handles a sub-matrix of C, of size BM * BN
-    for (z = blockIdx.z; z < batchCount; z += jump3)
-        for (x = blockIdx.x * BM; x < m; x += jump1)
-            for (y = blockIdx.y * BN; y < n; y += jump2)
-                matmul_block2d<BM, BN, BK, TM, TN, float>(transa, transb, m, n, k, x, y, alpha,
-                                                          Aarray[z], lda, Barray[z], ldb, beta,
-                                                          Carray[z], ldc);
-}
-
-template <int BM, int BN, int BK, int TM, int TN, typename SRC>
-static tinyblasStatus_t tinyblasGBE_wrapper(tinyblasHandle_t handle, tinyblasOperation_t transa,
-                                            tinyblasOperation_t transb, int m, int n, int k,
-                                            const void *pAlpha, const SRC *const Aarray[], int lda,
-                                            const SRC *const Barray[], int ldb, const void *pBeta,
-                                            void *const Carray[], tinyblasDatatype_t Ctype, int ldc,
-                                            int batchCount, tinyblasComputeType_t computeType) {
-    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
-    int sharedmem = sizeof(SRC) * SHARELEN;
-    int maxthreads = (BM * BN) / (TM * TN);
-    switch (Ctype) {
+    switch (Atype) {
     case TINYBLAS_R_16F:
-        switch (computeType) {
-        case TINYBLAS_COMPUTE_16F:
-            tinyblasGBE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const half *)pAlpha, Aarray, lda, Barray, ldb,
-                    *(const half *)pBeta, (half *const *)Carray, ldc, batchCount);
-            return TINYBLAS_STATUS_SUCCESS;
-        case TINYBLAS_COMPUTE_32F:
-            tinyblasGBE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const float *)pAlpha, Aarray, lda, Barray, ldb,
-                    *(const float *)pBeta, (half *const *)Carray, ldc, batchCount);
-            return TINYBLAS_STATUS_SUCCESS;
+        switch (Ctype) {
+        case TINYBLAS_R_16F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return tinyblasGE_launch(
+                    handle, transa, transb, m, n, k, (float)*(const half *)alpha, (const half *)A,
+                    lda, (const half *)B, ldb, (float)*(const half *)beta, (half *)C, ldc);
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                         (const half *)A, lda, (const half *)B, ldb,
+                                         *(const float *)beta, (half *)C, ldc);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
+        case TINYBLAS_R_32F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return TINYBLAS_STATUS_NOT_SUPPORTED;
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                         (const half *)A, lda, (const half *)B, ldb,
+                                         *(const float *)beta, (float *)C, ldc);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
         default:
             return TINYBLAS_STATUS_INVALID_VALUE;
         }
     case TINYBLAS_R_32F:
-        switch (computeType) {
-        case TINYBLAS_COMPUTE_16F:
+        switch (Ctype) {
+        case TINYBLAS_R_16F:
             return TINYBLAS_STATUS_NOT_SUPPORTED;
-        case TINYBLAS_COMPUTE_32F:
-            tinyblasGBE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const float *)pAlpha, Aarray, lda, Barray, ldb,
-                    *(const float *)pBeta, (float *const *)Carray, ldc, batchCount);
-            return TINYBLAS_STATUS_SUCCESS;
+        case TINYBLAS_R_32F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return TINYBLAS_STATUS_NOT_SUPPORTED;
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                         (const float *)A, lda, (const float *)B, ldb,
+                                         *(const float *)beta, (float *)C, ldc);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
         default:
             return TINYBLAS_STATUS_INVALID_VALUE;
         }
     default:
         return TINYBLAS_STATUS_INVALID_VALUE;
     }
+}
+
+template <int BM, int BN, int TM, int TN, typename WORD, typename SRC, typename DST>
+static __global__ void KERNEL tinyblasGBE_entry(tinyblasOperation_t transa,
+                                                tinyblasOperation_t transb, int m, int n, int k,
+                                                WORD alpha, const SRC *const Aarray[], int lda,
+                                                const SRC *const Barray[], int ldb, WORD beta,
+                                                DST *const Carray[], int ldc, int batchCount) {
+    for (int z = blockIdx.z; z < batchCount; z += gridDim.z)
+        matmul_block2d<BM, BN, TM, TN>(transa, transb, m, n, k, alpha, Aarray[z], lda, Barray[z],
+                                       ldb, beta, Carray[z], ldc);
+}
+
+template <typename WORD, typename SRC, typename DST>
+static tinyblasStatus_t tinyblasGBE_launch(tinyblasHandle_t handle, tinyblasOperation_t transa,
+                                           tinyblasOperation_t transb, int m, int n, int k,
+                                           WORD alpha, const SRC *const *Aarray, int lda,
+                                           const SRC *const *Barray, int ldb, WORD beta,
+                                           DST *const *Carray, int ldc, int batchCount) {
+    constexpr int BC = 32;
+    constexpr int BM = 32;
+    constexpr int BN = 32;
+    constexpr int TM = 2;
+    constexpr int TN = 8;
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), BC);
+    tinyblasGBE_entry<BM, BN, TM, TN><<<maxblocks, THREAD_COUNT, 0, handle->stream>>>(
+        transa, transb, m, n, k, alpha, Aarray, lda, Barray, ldb, beta, Carray, ldc, batchCount);
+    if (cudaGetLastError() != cudaSuccess)
+        return TINYBLAS_STATUS_EXECUTION_FAILED;
+    return TINYBLAS_STATUS_SUCCESS;
 }
 
 tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t handle, //
                                        tinyblasOperation_t transa, //
                                        tinyblasOperation_t transb, //
                                        int m, int n, int k, //
-                                       const void *pAlpha, //
-                                       const void *const Aarray[], tinyblasDatatype_t Atype,
+                                       const void *alpha, //
+                                       const void *const Aarray[], tinyblasDataType_t Atype,
                                        int lda, //
-                                       const void *const Barray[], tinyblasDatatype_t Btype,
+                                       const void *const Barray[], tinyblasDataType_t Btype,
                                        int ldb, //
-                                       const void *pBeta, //
-                                       void *const Carray[], tinyblasDatatype_t Ctype, int ldc, //
+                                       const void *beta, //
+                                       void *const Carray[], tinyblasDataType_t Ctype, int ldc, //
                                        int batchCount, //
                                        tinyblasComputeType_t computeType, //
                                        tinyblasGemmAlgo_t algo) {
-    if (!is_valid(transa, transb, m, n, k, lda, ldb, ldc))
+
+    if (m < 0 || n < 0 || k < 0)
         return TINYBLAS_STATUS_INVALID_VALUE;
-    if (!is_supported(Atype, Btype))
+    if (lda < std::max(1, transa ? k : m))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (ldb < std::max(1, transb ? n : k))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (ldc < std::max(1, m))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (1ll * lda * ((transa ? k : m) - 1) + ((transa ? m : k) - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (1ll * ldb * ((transb ? n : k) - 1) + ((transb ? k : n) - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (1ll * ldc * (n - 1) + (m - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (Atype != Btype)
         return TINYBLAS_STATUS_NOT_SUPPORTED;
-    return tinyblasGBE_wrapper<48, 32, 64, 3, 8>(handle, transa, transb, //
-                                                 m, n, k, pAlpha, //
-                                                 (const half *const *)Aarray, lda, //
-                                                 (const half *const *)Barray, ldb, //
-                                                 pBeta, Carray, Ctype, ldc, //
-                                                 batchCount, computeType);
-}
 
-// https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmstridedbatchedex
-template <int BM, int BN, int BK, int TM, int TN, typename SRC, typename DST, typename T>
-static __global__ void
-tinyblasGSBE_entry(tinyblasOperation_t transa, tinyblasOperation_t transb, int m, int n, int k,
-                   T alpha, const SRC *A, int lda, long long strideA, const SRC *B, int ldb,
-                   long long strideB, T beta, DST *C, int ldc, long long strideC, int batchCount) {
-
-    int x = blockIdx.x * BM;
-    const int jump1 = gridDim.x * BM;
-
-    int y = blockIdx.y * BN;
-    const int jump2 = gridDim.y * BN;
-
-    int z = blockIdx.z;
-    const int jump3 = gridDim.z;
-
-    // each block handles a sub-matrix of C, of size BM * BN
-    for (z = blockIdx.z; z < batchCount; z += jump3)
-        for (x = blockIdx.x * BM; x < m; x += jump1)
-            for (y = blockIdx.y * BN; y < n; y += jump2)
-                matmul_block2d<BM, BN, BK, TM, TN, float>(transa, transb, m, n, k, x, y, alpha,
-                                                          A + z * strideA, lda, B + z * strideB,
-                                                          ldb, beta, C + z * strideC, ldc);
-}
-
-template <int BM, int BN, int BK, int TM, int TN, typename SRC>
-static tinyblasStatus_t tinyblasGSBE_wrapper(tinyblasHandle_t handle, tinyblasOperation_t transa,
-                                             tinyblasOperation_t transb, int m, int n, int k,
-                                             const void *pAlpha, const SRC *A, int lda,
-                                             long long strideA, const SRC *B, int ldb,
-                                             long long strideB, const void *pBeta, void *C,
-                                             tinyblasDatatype_t Ctype, int ldc, long long strideC,
-                                             int batchCount, tinyblasComputeType_t computeType) {
-    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), 32);
-    int sharedmem = sizeof(SRC) * SHARELEN;
-    int maxthreads = (BM * BN) / (TM * TN);
-    switch (Ctype) {
+    switch (Atype) {
     case TINYBLAS_R_16F:
-        switch (computeType) {
-        case TINYBLAS_COMPUTE_16F:
-            tinyblasGSBE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const half *)pAlpha, A, lda, strideA, B, ldb,
-                    strideB, *(const half *)pBeta, (half *)C, ldc, strideC, batchCount);
-            return TINYBLAS_STATUS_SUCCESS;
-        case TINYBLAS_COMPUTE_32F:
-            tinyblasGSBE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const float *)pAlpha, A, lda, strideA, B, ldb,
-                    strideB, *(const float *)pBeta, (half *)C, ldc, strideC, batchCount);
-            return TINYBLAS_STATUS_SUCCESS;
+        switch (Ctype) {
+        case TINYBLAS_R_16F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return tinyblasGBE_launch(
+                    handle, transa, transb, m, n, k, (float)*(const half *)alpha,
+                    (const half *const *)Aarray, lda, (const half *const *)Barray, ldb,
+                    (float)*(const half *)beta, (half *const *)Carray, ldc, batchCount);
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                          (const half *const *)Aarray, lda,
+                                          (const half *const *)Barray, ldb, *(const float *)beta,
+                                          (half *const *)Carray, ldc, batchCount);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
+        case TINYBLAS_R_32F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return TINYBLAS_STATUS_NOT_SUPPORTED;
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                          (const half *const *)Aarray, lda,
+                                          (const half *const *)Barray, ldb, *(const float *)beta,
+                                          (float *const *)Carray, ldc, batchCount);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
         default:
             return TINYBLAS_STATUS_INVALID_VALUE;
         }
     case TINYBLAS_R_32F:
-        switch (computeType) {
-        case TINYBLAS_COMPUTE_16F:
+        switch (Ctype) {
+        case TINYBLAS_R_16F:
             return TINYBLAS_STATUS_NOT_SUPPORTED;
-        case TINYBLAS_COMPUTE_32F:
-            tinyblasGSBE_entry<BM, BN, BK, TM, TN>
-                <<<maxblocks, maxthreads, sharedmem, handle->stream>>>(
-                    transa, transb, m, n, k, *(const float *)pAlpha, A, lda, strideA, B, ldb,
-                    strideB, *(const float *)pBeta, (float *)C, ldc, strideC, batchCount);
-            return TINYBLAS_STATUS_SUCCESS;
+        case TINYBLAS_R_32F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return TINYBLAS_STATUS_NOT_SUPPORTED;
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                          (const float *const *)Aarray, lda,
+                                          (const float *const *)Barray, ldb, *(const float *)beta,
+                                          (float *const *)Carray, ldc, batchCount);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
         default:
             return TINYBLAS_STATUS_INVALID_VALUE;
         }
@@ -450,41 +410,124 @@ static tinyblasStatus_t tinyblasGSBE_wrapper(tinyblasHandle_t handle, tinyblasOp
     }
 }
 
+template <int BM, int BN, int TM, int TN, typename SRC, typename DST, typename WORD>
+static __global__ void KERNEL tinyblasGSBE_entry(tinyblasOperation_t transa,
+                                                 tinyblasOperation_t transb, int m, int n, int k,
+                                                 WORD alpha, const SRC *A, int lda,
+                                                 long long strideA, const SRC *B, int ldb,
+                                                 long long strideB, WORD beta, DST *C, int ldc,
+                                                 long long strideC, int batchCount) {
+    for (int z = blockIdx.z; z < batchCount; z += gridDim.z)
+        matmul_block2d<BM, BN, TM, TN>(transa, transb, m, n, k, alpha, A + z * strideA, lda,
+                                       B + z * strideB, ldb, beta, C + z * strideC, ldc);
+}
+
+template <typename WORD, typename SRC, typename DST>
+static tinyblasStatus_t tinyblasGSBE_launch(tinyblasHandle_t handle, tinyblasOperation_t transa,
+                                            tinyblasOperation_t transb, int m, int n, int k,
+                                            WORD alpha, const SRC *A, int lda, long long strideA,
+                                            const SRC *B, int ldb, long long strideB, WORD beta,
+                                            DST *C, int ldc, long long strideC, int batchCount) {
+    constexpr int BC = 32;
+    constexpr int BM = 32;
+    constexpr int BN = 32;
+    constexpr int TM = 2;
+    constexpr int TN = 8;
+    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), BC);
+    tinyblasGSBE_entry<BM, BN, TM, TN><<<maxblocks, THREAD_COUNT, 0, handle->stream>>>(
+        transa, transb, m, n, k, alpha, A, lda, strideA, B, ldb, strideB, beta, C, ldc, strideC,
+        batchCount);
+    if (cudaGetLastError() != cudaSuccess)
+        return TINYBLAS_STATUS_EXECUTION_FAILED;
+    return TINYBLAS_STATUS_SUCCESS;
+}
+
 tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t handle, //
                                               tinyblasOperation_t transa, //
                                               tinyblasOperation_t transb, //
                                               int m, int n, int k, //
-                                              const void *pAlpha, //
-                                              const void *A, tinyblasDatatype_t Atype, int lda,
+                                              const void *alpha, //
+                                              const void *A, tinyblasDataType_t Atype, int lda,
                                               long long strideA, //
-                                              const void *B, tinyblasDatatype_t Btype, int ldb,
+                                              const void *B, tinyblasDataType_t Btype, int ldb,
                                               long long strideB, //
-                                              const void *pBeta, //
-                                              void *C, tinyblasDatatype_t Ctype, int ldc,
+                                              const void *beta, //
+                                              void *C, tinyblasDataType_t Ctype, int ldc,
                                               long long strideC, //
                                               int batchCount, //
                                               tinyblasComputeType_t computeType, //
                                               tinyblasGemmAlgo_t algo) {
-    if (!is_valid(transa, transb, m, n, k, lda, ldb, ldc))
-        return TINYBLAS_STATUS_INVALID_VALUE;
-    if (!is_supported(Atype, Btype))
-        return TINYBLAS_STATUS_NOT_SUPPORTED;
-    return tinyblasGSBE_wrapper<32, 4, 64, 1, 2>(
-        handle, transa, transb, m, n, k, pAlpha, (const half *)A, lda, strideA, (const half *)B,
-        ldb, strideB, pBeta, C, Ctype, ldc, strideC, batchCount, computeType);
-}
 
-const char *tinyblasGetStatusString(tinyblasStatus_t err) {
-    switch (err) {
-    case TINYBLAS_STATUS_SUCCESS:
-        return "TINYBLAS_STATUS_SUCCESS";
-    case TINYBLAS_STATUS_ALLOC_FAILED:
-        return "TINYBLAS_STATUS_ALLOC_FAILED";
-    case TINYBLAS_STATUS_INVALID_VALUE:
-        return "TINYBLAS_STATUS_INVALID_VALUE";
-    case TINYBLAS_STATUS_NOT_SUPPORTED:
-        return "TINYBLAS_STATUS_NOT_SUPPORTED";
+    if (m < 0 || n < 0 || k < 0)
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (lda < std::max(1, transa ? k : m))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (ldb < std::max(1, transb ? n : k))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (ldc < std::max(1, m))
+        return TINYBLAS_STATUS_INVALID_VALUE;
+    if (1ll * lda * ((transa ? k : m) - 1) + ((transa ? m : k) - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (1ll * ldb * ((transb ? n : k) - 1) + ((transb ? k : n) - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (1ll * ldc * (n - 1) + (m - 1) > INT_MAX)
+        return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
+    if (Atype != Btype)
+        return TINYBLAS_STATUS_NOT_SUPPORTED;
+
+    switch (Atype) {
+    case TINYBLAS_R_16F:
+        switch (Ctype) {
+        case TINYBLAS_R_16F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return tinyblasGSBE_launch(
+                    handle, transa, transb, m, n, k, (float)*(const half *)alpha, (const half *)A,
+                    lda, strideA, (const half *)B, ldb, strideB, (float)*(const half *)beta,
+                    (half *)C, ldc, strideC, batchCount);
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGSBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                           (const half *)A, lda, strideA, (const half *)B, ldb,
+                                           strideB, *(const float *)beta, (half *)C, ldc, strideC,
+                                           batchCount);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
+        case TINYBLAS_R_32F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return TINYBLAS_STATUS_NOT_SUPPORTED;
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGSBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                           (const half *)A, lda, strideA, (const half *)B, ldb,
+                                           strideB, *(const float *)beta, (float *)C, ldc, strideC,
+                                           batchCount);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
+        default:
+            return TINYBLAS_STATUS_INVALID_VALUE;
+        }
+    case TINYBLAS_R_32F:
+        switch (Ctype) {
+        case TINYBLAS_R_16F:
+            return TINYBLAS_STATUS_NOT_SUPPORTED;
+        case TINYBLAS_R_32F:
+            switch (computeType) {
+            case TINYBLAS_COMPUTE_16F:
+                return TINYBLAS_STATUS_NOT_SUPPORTED;
+            case TINYBLAS_COMPUTE_32F:
+                return tinyblasGSBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
+                                           (const float *)A, lda, strideA, (const float *)B, ldb,
+                                           strideB, *(const float *)beta, (float *)C, ldc, strideC,
+                                           batchCount);
+            default:
+                return TINYBLAS_STATUS_INVALID_VALUE;
+            }
+        default:
+            return TINYBLAS_STATUS_INVALID_VALUE;
+        }
     default:
-        return "unknown tinyblas error";
+        return TINYBLAS_STATUS_INVALID_VALUE;
     }
 }
