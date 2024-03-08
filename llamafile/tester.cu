@@ -20,11 +20,18 @@
 #include <algorithm>
 #include <atomic>
 #include <ctime>
+#include <iostream>
 
 #ifndef _WIN32
 #include <unistd.h>
 #else
-#include "windows.h"
+#include <windows.h>
+#endif
+
+#ifdef __HIP__
+#define VENDOR "AMD"
+#else
+#define VENDOR "NVIDIA"
 #endif
 
 std::recursive_mutex g_log_lock;
@@ -111,7 +118,7 @@ long long micros(void) {
 }
 
 void test_matmul(std::function<void(int m, int n, int k, int l, float alpha, float beta)> f) {
-    static const int kDims[] = {1, 2, 23, 77, 15, 2048, 512, 127, 129, 128, 16};
+    static const int kDims[] = {1, 2, 23, 65, 63, 64, 2048, 512, 127, 129, 128, 16};
     static const float kAlphas[] = {1, .1};
     static const float kBetas[] = {0, .1};
     static const int kLeads[] = {0, 1};
@@ -147,6 +154,53 @@ void test_matmul(std::function<void(int m, int n, int k, int l, float alpha, flo
             f(m, n, k, 0, alpha, beta);
             is_self_testing = 0;
         }
+}
+
+void show_cuda_device(int idev) {
+    cudaDeviceProp dp;
+    CUDA_OR_DIE(cudaSetDevice(idev));
+    CUDA_OR_DIE(cudaGetDeviceProperties(&dp, idev));
+    fprintf(stderr,
+            "\n" VENDOR " %s\n"
+            "\t%.2f Ghz\n"
+            "\t%g GB VRAM\n"
+            "\t%d CPUs\n"
+            "\tcompute_%d\n",
+            dp.name, dp.clockRate * 1e-6, dp.totalGlobalMem / 1073741824., dp.multiProcessorCount,
+            dp.major * 10 + dp.minor);
+#define SHOW(s) std::cout << #s << " = " << dp.s << std::endl;
+    SHOW(warpSize);
+    SHOW(regsPerBlock);
+    SHOW(regsPerMultiprocessor);
+    SHOW(multiProcessorCount);
+    SHOW(memoryBusWidth);
+    SHOW(memoryClockRate);
+    SHOW(sharedMemPerBlock);
+    SHOW(sharedMemPerMultiprocessor);
+    SHOW(totalConstMem);
+    SHOW(maxThreadsPerBlock);
+    SHOW(maxThreadsPerMultiProcessor);
+    SHOW(maxThreadsDim[0]);
+    SHOW(maxThreadsDim[1]);
+    SHOW(maxThreadsDim[2]);
+    SHOW(asyncEngineCount);
+    SHOW(managedMemory);
+    SHOW(concurrentManagedAccess);
+    SHOW(directManagedMemAccessFromHost);
+    SHOW(globalL1CacheSupported);
+    SHOW(hostNativeAtomicSupported);
+    // SHOW(hostRegisterReadOnlySupported);
+    // SHOW(hostRegisterSupported);
+    SHOW(integrated);
+    SHOW(l2CacheSize);
+}
+
+void show_cuda_devices() {
+    int device_count;
+    CUDA_OR_DIE(cudaGetDeviceCount(&device_count));
+    for (int idev = 0; idev < device_count; ++idev) {
+        show_cuda_device(idev);
+    }
 }
 
 static int cuda_tester_init() {

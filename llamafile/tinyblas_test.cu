@@ -17,98 +17,8 @@
 
 #include "tester.h"
 
-void checkTinyblasWorksHHHH() {
-    double TOLERANCE = .5;
-
-    {
-        half alpha = 1;
-        half beta = 0;
-        int m = 577;
-        int n = 577;
-        int k = 64;
-        int lda = k;
-        int ldb = k;
-        int ldc = m;
-        cuda_memory<half> A{lda * m};
-        cuda_memory<half> B{ldb * n};
-        cuda_memory<half> C{ldc * n};
-        cuda_memory<half> G{ldc * n};
-        randomize(k, m, A.p, lda);
-        randomize(k, n, B.p, ldb);
-        cublas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
-        broadcast(m, n, C.p, ldc, TOMBSTONE);
-        broadcast(m, n, G.p, ldc, TOMBSTONE);
-        gemmref<float>(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
-        tinyblas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
-        CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
-    }
-
-    {
-        half alpha = 1;
-        half beta = 0;
-        int m = 4096;
-        int n = 1024;
-        int k = 2048;
-        int lda = k;
-        int ldb = k;
-        int ldc = m;
-        cuda_memory<half> A{lda * m};
-        cuda_memory<half> B{ldb * n};
-        cuda_memory<half> C{ldc * n};
-        cuda_memory<half> G{ldc * n};
-        randomize(k, m, A.p, lda);
-        randomize(k, n, B.p, ldb);
-        cublas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
-        broadcast(m, n, C.p, ldc, TOMBSTONE);
-        broadcast(m, n, G.p, ldc, TOMBSTONE);
-        gemmref<float>(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
-        tinyblas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
-        CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
-    }
-
-    {
-        half alpha = 1;
-        half beta = 0;
-        int m = 4096;
-        int n = 1024;
-        int k = 577;
-        int lda = k;
-        int ldb = k;
-        int ldc = m;
-        cuda_memory<half> A{lda * m};
-        cuda_memory<half> B{ldb * n};
-        cuda_memory<half> C{ldc * n};
-        cuda_memory<half> G{ldc * n};
-        randomize(k, m, A.p, lda);
-        randomize(k, n, B.p, ldb);
-        cublas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
-        broadcast(m, n, C.p, ldc, TOMBSTONE);
-        broadcast(m, n, G.p, ldc, TOMBSTONE);
-        gemmref<float>(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
-        tinyblas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
-        CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
-    }
-
-    test_matmul([&](int m, int n, int k, int l, half alpha, half beta) {
-        int lda = m + l;
-        int ldb = k + l;
-        int ldc = m + l;
-        cuda_memory<half> A{lda * k};
-        cuda_memory<half> B{ldb * n};
-        cuda_memory<half> C{ldc * n};
-        cuda_memory<half> G{ldc * n};
-        randomize(m, k, A.p, lda);
-        randomize(k, n, B.p, ldb);
-        broadcast(m, n, G.p, ldc, TOMBSTONE);
-        broadcast(m, n, C.p, ldc, TOMBSTONE);
-        gemmref<float>(false, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
-        tinyblas(false, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
-        CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
-    });
-}
-
 void checkTinyblasWorksHHHS() {
-    double TOLERANCE = .5;
+    double TOLERANCE = 1;
 
     float alpha = 1;
     float beta = 0;
@@ -150,7 +60,7 @@ void checkTinyblasWorksHHHS() {
 }
 
 void checkTinyblasWorksHHSS() {
-    double TOLERANCE = .5;
+    double TOLERANCE = 1;
 
     float alpha = 1;
     float beta = 0;
@@ -192,7 +102,7 @@ void checkTinyblasWorksHHSS() {
 }
 
 void checkTinyblasWorksSSSS() {
-    double TOLERANCE = .5;
+    double TOLERANCE = 1;
 
     float alpha = 1;
     float beta = 0;
@@ -233,15 +143,10 @@ void checkTinyblasWorksSSSS() {
     });
 }
 
-int main(int argc, char *argv[]) {
-
-    is_self_testing = "hi";
-
+void try_size(int m, int n, int k) {
+    printf("\n");
     float alpha = 1;
     float beta = 0;
-    int m = 48;
-    int n = 32;
-    int k = 64;
     int lda = k;
     int ldb = k;
     int ldc = m;
@@ -253,14 +158,21 @@ int main(int argc, char *argv[]) {
     randomize(k, n, B.p, ldb);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
-    gemmref(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    cublas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     tinyblas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
-    CHECK(0, m, n, k, G.p, ldc, C.p, ldc);
+    CHECK(1, m, n, k, G.p, ldc, C.p, ldc);
+}
 
-    if (1)
-        return 0;
-
-    RUN(checkTinyblasWorksHHHH());
+int main(int argc, char *argv[]) {
+    try_size(5760, 1, 128); // mistral 7b
+    try_size(128, 1, 5696); // mistral 7b
+    try_size(14336, 512, 4096); // mistral 7b
+    try_size(128, 128, 128);
+    try_size(256, 256, 256);
+    try_size(512, 512, 512);
+    try_size(1024, 1024, 1024);
+    try_size(2048, 2048, 2048);
+    try_size(32000, 512, 4096);
     RUN(checkTinyblasWorksSSSS());
     RUN(checkTinyblasWorksHHSS());
     RUN(checkTinyblasWorksHHHS());

@@ -73,9 +73,9 @@ cudaError_t gemm(cudaStream_t stream, //
                  const TA *A, int lda, //
                  const TB *B, int ldb, T beta, //
                  TC *C, int ldc) {
-    dim3 blockDim(32, 32);
-    dim3 gridDim(CEIL_DIV(m, 32), CEIL_DIV(n, 32));
-    kernel<<<gridDim, blockDim, 0, stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    dim3 threads(32, 32);
+    dim3 blocks(CEIL_DIV(m, 32), CEIL_DIV(n, 32));
+    kernel<<<blocks, threads, 0, stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
     return cudaGetLastError();
 }
 

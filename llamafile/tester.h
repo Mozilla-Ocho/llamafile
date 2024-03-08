@@ -47,6 +47,10 @@
 #define ITERATIONS 30
 #define TOMBSTONE 1.666f
 
+#ifdef __HIP__
+#define cublas hipblas
+#endif
+
 extern const int kPageSize;
 extern std::recursive_mutex g_log_lock;
 extern thread_local const char *is_self_testing;
@@ -59,6 +63,8 @@ int rand32(void);
 long long micros(void);
 void *cudaMallocManagedOrDie(size_t);
 void cudaFreeOrDie(void *);
+void show_cuda_device(int);
+void show_cuda_devices();
 void test_matmul(std::function<void(int, int, int, int, float, float)>);
 
 template <typename T> void randomize(T *A, int n) {
@@ -140,7 +146,7 @@ void verify(double tol, int m, int n, const T *A, int lda, const T *B, int ldb) 
             ++hamhist[hamming(xi, yi)];
         }
     double avg = static_cast<double>(diffsum) / (m * n);
-    if (avg > tol || nans) {
+    if (worst > tol || nans || flips > m * n * .01) {
         std::unique_lock<std::recursive_mutex> lock(g_log_lock);
         fprintf(stderr, "error: %d×%d matrix difference exceeds tolerance\n", m, n);
         fprintf(stderr, "       worst element at index (%d, %d)\n", worst_i, worst_j);
@@ -261,9 +267,8 @@ void misfit(FILE *f, int max, int m, int n, const T *A, int lda, const T *B, int
             int zeroes, int denormals, int nans) {
     fprintf(f, "%s:%d: matrix errors exceed tolerance %s\n", file, line,
             is_self_testing ? is_self_testing : "");
-    fprintf(f,
-            "         %g ulp (worst=%g sad=%g nans=%d infs=%d flips=%d zeroes=%d denormals=%d)\n",
-            avg, worst, sad, nans, infs, flips, zeroes, denormals);
+    fprintf(f, "         %g ulp (sad=%g nans=%d infs=%d flips=%d zeroes=%d denormals=%d)\n", worst,
+            sad, nans, infs, flips, zeroes, denormals);
     fprintf(f, "want\n");
     show(f, max, m, n, A, lda, B, ldb);
     fprintf(f, "got\n");
@@ -282,11 +287,11 @@ void check(double tol, //
     assert(lda >= std::max(1, m));
     assert(ldb >= std::max(1, m));
     diff(m, n, k, A, lda, B, ldb, &avg, &sad, &worst, &infs, &flips, &zeroes, &denormals, &nans);
-    if (!nans && avg <= tol) {
+    if (!nans && worst <= tol && flips < m * n * .01) {
         if (!is_self_testing)
-            printf("         %g ulp (worst=%g sad=%g nans=%d infs=%d flips=%d zeroes=%d "
+            printf("         %g ulp (sad=%g nans=%d infs=%d flips=%d zeroes=%d "
                    "denormals=%d)\n",
-                   avg, worst, sad, nans, infs, flips, zeroes, denormals);
+                   worst, sad, nans, infs, flips, zeroes, denormals);
     } else {
         std::unique_lock<std::recursive_mutex> lock(g_log_lock);
         misfit(stderr, 16, m, n, A, lda, B, ldb, file, line, avg, sad, worst, infs, flips, zeroes,
@@ -417,6 +422,10 @@ void cublas(bool aT, bool bT, //
     CUBLAS_OR_DIE(cublasCreate(&blas));
     CUDA_OR_DIE(cudaStreamCreate(&stream));
     CUBLAS_OR_DIE(cublasSetMathMode(blas, CUBLAS_DEFAULT_MATH));
+#ifdef __HIP__
+    CUBLAS_OR_DIE(hipblasSetAtomicsMode(blas, HIPBLAS_ATOMICS_NOT_ALLOWED));
+#endif
+    CUBLAS_OR_DIE(cublasSetMathMode(blas, CUBLAS_DEFAULT_MATH));
     CUBLAS_OR_DIE(cublasSetStream(blas, stream));
     BENCH_CUDA(CUBLAS_OR_DIE(cublasGemmEx(
         blas, aT ? CUBLAS_OP_T : CUBLAS_OP_N, bT ? CUBLAS_OP_T : CUBLAS_OP_N, m, n, k, &alpha, A,
@@ -494,20 +503,4 @@ void gemmref(bool aT, bool bT, //
         CUDA_OR_DIE(naive::gemm(stream, aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)));
     CUDA_OR_DIE(cudaStreamSynchronize(stream));
     CUDA_OR_DIE(cudaStreamDestroy(stream));
-}
-
-// multiplies matrix on gpu with row major ordering
-//
-//     k×m * n×k → n×m
-//     m×k * n×k → n×m if aᵀ
-//     k×m * k×n → n×m if bᵀ
-//     m×k * k×n → n×m if aᵀ and bᵀ
-//
-template <typename T, typename TA, typename TB, typename TC>
-void gemmrefrm(bool aT, bool bT, //
-               int m, int n, int k, T alpha, //
-               const TA *A, int lda, //
-               const TB *B, int ldb, T beta, //
-               TC *C, int ldc) {
-    gemmref(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
 }

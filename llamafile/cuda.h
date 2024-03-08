@@ -6,6 +6,8 @@
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
+#define __shfl(var, srcLane, warpSize) __shfl_sync(-1u, var, srcLane, warpSize)
+#define __shfl_down(var, srcLane, warpSize) __shfl_down_sync(-1u, var, srcLane, warpSize)
 #else
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
