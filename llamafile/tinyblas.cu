@@ -387,8 +387,7 @@ static tinyblasStatus_t tinyblasGE_launcher(tinyblasHandle_t handle, tinyblasOpe
                                             tinyblasOperation_t bT, int m, int n, int k, WORD alpha,
                                             const SRC *A, int lda, const SRC *B, int ldb, WORD beta,
                                             DST *C, int ldc) {
-    constexpr int TT = 256, BM = 128, BN = 128, BK = 64, WM = 64, WN = 32, WNI = 1, TM = 8, TN = 4,
-                  REGS = 21504, SHARED = 16384; // THE BEAST
+    const int TT = 256, BM = 128, BN = 64, BK = 64, WM = 128, WN = 8, WNI = 1, TM = 8, TN = 4;
     dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN));
     if (!aT && bT && !(n % BN) && !(k % BK) && alpha == (WORD)1 && beta == (WORD)0) {
         dim3 blocks(CEIL_DIV(n, BN), CEIL_DIV(m, BM));

@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "gemm.h"
 #include "tester.h"
 
 void checkTinyblasWorksHHHS() {
@@ -156,14 +157,16 @@ void try_size(int m, int n, int k) {
     cuda_memory<half> G{ldc * n};
     randomize(k, m, A.p, lda);
     randomize(k, n, B.p, ldb);
+    cublas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
-    cublas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    gemmref(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     tinyblas(true, false, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
     CHECK(1, m, n, k, G.p, ldc, C.p, ldc);
 }
 
 int main(int argc, char *argv[]) {
+    try_size(512, 512, 512);
     try_size(5760, 1, 128); // mistral 7b
     try_size(128, 1, 5696); // mistral 7b
     try_size(14336, 512, 4096); // mistral 7b

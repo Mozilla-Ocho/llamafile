@@ -135,7 +135,6 @@
 #define cublasSetMathMode(handle, mode) CUBLAS_STATUS_SUCCESS
 
 #elif defined(GGML_USE_HIPBLAS)
-#define HIPBLAS_V2
 #include <hip/hip_runtime.h>
 #include <hipblas/hipblas.h>
 #include <hip/hip_fp16.h>
@@ -143,8 +142,8 @@
 // for rocblas_initialize()
 #include "rocblas/rocblas.h"
 #endif // __HIP_PLATFORM_AMD__
-#define CUBLAS_COMPUTE_16F HIPBLAS_COMPUTE_16F
-#define CUBLAS_COMPUTE_32F HIPBLAS_COMPUTE_32F
+#define CUBLAS_COMPUTE_16F HIPBLAS_R_16F
+#define CUBLAS_COMPUTE_32F HIPBLAS_R_32F
 #define CUBLAS_COMPUTE_32F_FAST_16F HIPBLAS_COMPUTE_32F_FAST_16F
 #define CUBLAS_GEMM_DEFAULT HIPBLAS_GEMM_DEFAULT
 #define CUBLAS_GEMM_DEFAULT_TENSOR_OP HIPBLAS_GEMM_DEFAULT
@@ -152,10 +151,10 @@
 #define CUBLAS_OP_T HIPBLAS_OP_T
 #define CUBLAS_STATUS_SUCCESS HIPBLAS_STATUS_SUCCESS
 #define CUBLAS_TF32_TENSOR_OP_MATH 0
-#define CUDA_R_16F HIP_R_16F
-#define CUDA_R_32F HIP_R_32F
+#define CUDA_R_16F  HIPBLAS_R_16F
+#define CUDA_R_32F  HIPBLAS_R_32F
 #define __shfl_xor_sync(mask, var, laneMask, width) __shfl_xor(var, laneMask, width)
-#define cublasComputeType_t hipblasComputeType_t
+#define cublasComputeType_t hipblasDatatype_t //deprecated, new hipblasComputeType_t not in 5.6
 #define cublasCreate hipblasCreate
 #define cublasGemmEx hipblasGemmEx
 #define cublasGemmBatchedEx hipblasGemmBatchedEx
@@ -166,7 +165,7 @@
 #define cublasSgemm hipblasSgemm
 #define cublasStatus_t hipblasStatus_t
 #define cublasGetStatusString hipblasStatusToString
-#define cudaDataType_t hipDataType
+#define cudaDataType_t hipblasDatatype_t //deprecated, new hipblasDatatype not in 5.6
 #define cudaDeviceCanAccessPeer hipDeviceCanAccessPeer
 #define cudaDeviceDisablePeerAccess hipDeviceDisablePeerAccess
 #define cudaDeviceEnablePeerAccess hipDeviceEnablePeerAccess

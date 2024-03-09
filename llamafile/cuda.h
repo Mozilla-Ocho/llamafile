@@ -9,6 +9,7 @@
 #define __shfl(var, srcLane, warpSize) __shfl_sync(-1u, var, srcLane, warpSize)
 #define __shfl_down(var, srcLane, warpSize) __shfl_down_sync(-1u, var, srcLane, warpSize)
 #else
+#define HIPBLAS_V2
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 #include <hipblas/hipblas.h>

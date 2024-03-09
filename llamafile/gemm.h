@@ -53,7 +53,7 @@ void gemm(bool aT, bool bT, //
         }
 }
 
-// multiplies matrix on cpu with column row ordering
+// multiplies matrix on cpu with row major ordering
 //
 //     k×m * n×k → n×m
 //     m×k * n×k → n×m if aᵀ
