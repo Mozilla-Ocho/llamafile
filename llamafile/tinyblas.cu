@@ -65,10 +65,20 @@
 #define KERNEL __launch_bounds__(THREAD_COUNT)
 #define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
+#define IGNORE_BETA 1
+#define IGNORE_ALPHA 2
+#define ASSUME_A_OP_N 4
+#define ASSUME_B_OP_T 8
+#define ASSUME_M_SAFE 16
+#define ASSUME_N_SAFE 32
+#define ASSUME_K_SAFE 64
+#define ASSUME_A_OP_T 128
+#define ASSUME_B_OP_N 256
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // tinyBLAS block tiling outer product GEMM kernel
 
-template <int BM, int BN, int TM, int TN, typename WORD, typename SRC, typename DST>
+template <int CONFIG, int BM, int BN, int TM, int TN, typename WORD, typename SRC, typename DST>
 static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperation_t transb, int m,
                                       int n, int k, WORD alpha, const SRC *A, int lda, const SRC *B,
                                       int ldb, WORD beta, DST *C, int ldc) {
@@ -81,6 +91,10 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
     static_assert((BK * BM * sizeof(SRC)) + (BK * BN * sizeof(SRC)) <= 65536,
                   "you're almost almost certainly using too much shared memory");
 
+    constexpr bool msafe = !!(CONFIG & ASSUME_M_SAFE);
+    constexpr bool nsafe = !!(CONFIG & ASSUME_N_SAFE);
+    constexpr bool ksafe = !!(CONFIG & ASSUME_K_SAFE);
+
     const int th = threadIdx.x;
     const int ii = blockIdx.x * BM;
     const int jj = blockIdx.y * BN;
@@ -92,18 +106,29 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
 
     WORD At[TM];
     WORD Bt[TN];
-    WORD Cs[TM * TN] = {0};
+    WORD Ct[TM * TN] = {0};
+
+    if (CONFIG & ASSUME_A_OP_T)
+        transa = TINYBLAS_OP_T;
+    if (CONFIG & ASSUME_A_OP_N)
+        transa = TINYBLAS_OP_N;
+    if (CONFIG & ASSUME_B_OP_N)
+        transb = TINYBLAS_OP_N;
+    if (CONFIG & ASSUME_B_OP_T)
+        transb = TINYBLAS_OP_T;
 
     for (int ll = 0; ll < k; ll += BK) {
 
-        for (int i = 0; i < BM; ++i)
-            As[BM * th + i] = 0;
-        for (int i = 0; i < BM && ll + th < k && ii + i < m; ++i)
+        if (!ksafe || !msafe)
+            for (int i = 0; i < BM; ++i)
+                As[BM * th + i] = 0;
+        for (int i = 0; i < BM && (ll + th < k || ksafe) && (ii + i < m || msafe); ++i)
             As[BM * th + i] = A[transa ? lda * (ii + i) + (ll + th) : lda * (ll + th) + (ii + i)];
 
-        for (int j = 0; j < BN; ++j)
-            Bs[BN * th + j] = 0;
-        for (int j = 0; j < BN && ll + th < k && jj + j < n; ++j)
+        if (!ksafe || !nsafe)
+            for (int j = 0; j < BN; ++j)
+                Bs[BN * th + j] = 0;
+        for (int j = 0; j < BN && (ll + th < k || ksafe) && (jj + j < n || nsafe); ++j)
             Bs[BN * th + j] = B[transb ? ldb * (ll + th) + (jj + j) : ldb * (jj + j) + (ll + th)];
 
         __syncthreads();
@@ -117,7 +142,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
                 WORD a = At[j];
                 for (int h = 0; h < TN; ++h) {
                     WORD b = Bt[h];
-                    Cs[TN * j + h] += a * b;
+                    Ct[TN * j + h] += a * b;
                 }
             }
         }
@@ -125,29 +150,29 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
         __syncthreads();
     }
 
-    if (alpha != (WORD)1)
-        for (int i = 0; i < TM * TN; ++i)
-            Cs[i] *= alpha;
-
-    for (int j = 0; j < TN && jj + tj + j < n; ++j)
-        for (int i = 0; i < TM && ii + ti + i < m; ++i)
-            if (beta) {
-                WORD c = C[ldc * (jj + tj + j) + (ii + ti + i)];
-                C[ldc * (jj + tj + j) + (ii + ti + i)] = c * beta + Cs[TN * i + j];
+    for (int j = 0; j < TN && (jj + tj + j < n || nsafe); ++j)
+        for (int i = 0; i < TM && (ii + ti + i < m || msafe); ++i) {
+            WORD r, d = Ct[TN * i + j];
+            if ((CONFIG & IGNORE_BETA) || !beta) {
+                if (CONFIG & IGNORE_ALPHA)
+                    r = d;
+                else
+                    r = alpha * d;
             } else {
-                C[ldc * (jj + tj + j) + (ii + ti + i)] = Cs[TN * i + j];
+                WORD c = C[ldc * (jj + tj + j) + (ii + ti + i)];
+                if (CONFIG & IGNORE_ALPHA)
+                    r = beta * c + d;
+                else
+                    r = alpha * d + beta * c;
             }
+            C[ldc * (jj + tj + j) + (ii + ti + i)] = r;
+        }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // tinyBLAS warp block tiling outer product GEMM kernel
 
-enum Mode {
-    GENERAL,
-    SIMPLE,
-};
-
-template <enum Mode MODE, int BM, int BN, int BK, int WM, int WN, int WNI, int TM, int TN, int TT,
+template <int CONFIG, int BM, int BN, int BK, int WM, int WN, int WNI, int TM, int TN, int TT,
           typename WORD, typename SRC, typename DST>
 static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
                                      tinyblasOperation_t bT, //
@@ -156,6 +181,7 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
                                      const SRC *B, int ldb, WORD beta, //
                                      DST *C, int ldc) {
 
+    const SRC zero = 0;
     const int warpIdx = threadIdx.x / WARPSIZE;
     const int warpCol = warpIdx % (BN / WN);
     const int warpRow = warpIdx / (BN / WN);
@@ -164,22 +190,26 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
     constexpr int WMI = (WM * WN) / (WARPSIZE * TM * TN * WNI);
     constexpr int WSUBM = WM / WMI;
     constexpr int WSUBN = WN / WNI;
-    constexpr int VE = sizeof(float4) / sizeof(SRC);
+    constexpr int BANK = 16;
+
+    constexpr bool msafe = !!(CONFIG & ASSUME_M_SAFE);
+    constexpr bool nsafe = !!(CONFIG & ASSUME_N_SAFE);
+    constexpr bool ksafe = !!(CONFIG & ASSUME_K_SAFE);
 
     const int threadIdxInWarp = threadIdx.x % WARPSIZE;
     const int threadColInWarp = threadIdxInWarp % (WSUBN / TN);
     const int threadRowInWarp = threadIdxInWarp / (WSUBN / TN);
 
-    // want to tune these magnums?
+    // want to tune these magic numbers?
     // use llamafile/pick_a_warp_kernel.c
     static_assert(!(BN % WN) && !(BM % WM), "");
-    static_assert((BN / WN) * (BM / WM) == WARPS, "");
-    static_assert(!((WM * WN) % (WARPSIZE * TM * TN * WNI)), "");
-    static_assert(BN % (sizeof(float4) * TN) == 0, "");
-    static_assert(BM % (sizeof(float4) * TM) == 0, "");
     static_assert(!(WM % WMI) && !(WN % WNI), "");
-    static_assert(!((BM * BK) % (VE * TT)), "");
-    static_assert(!((BN * BK) % (VE * TT)), "");
+    static_assert((BN / WN) * (BM / WM) == WARPS, "");
+    static_assert((WM * WN) % (WARPSIZE * TM * TN * WNI) == 0, "");
+    static_assert((BM * BK) % (BANK * TT) == 0, "");
+    static_assert((BN * BK) % (BANK * TT) == 0, "");
+    static_assert(BK % BANK == 0, "");
+    static_assert(BN % BANK == 0, "");
 
     __shared__ SRC As[BK * BM];
     __shared__ SRC Bs[BK * BN];
@@ -188,26 +218,37 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
     WORD Br[WNI * TN] = {0};
     WORD Cr[WMI * TM * WNI * TN] = {0};
 
-    for (int bkIdx = 0; bkIdx < k; bkIdx += BK) {
+    if (CONFIG & ASSUME_A_OP_T)
+        aT = TINYBLAS_OP_T;
+    if (CONFIG & ASSUME_A_OP_N)
+        aT = TINYBLAS_OP_N;
+    if (CONFIG & ASSUME_B_OP_N)
+        bT = TINYBLAS_OP_N;
+    if (CONFIG & ASSUME_B_OP_T)
+        bT = TINYBLAS_OP_T;
 
-        for (int h = 0; h < BM; h += (TT * VE) / BK)
-            for (int v = 0; v < VE; ++v) {
-                int l = bkIdx + threadIdx.x % (BK / VE) * VE + v;
-                int i = blockIdx.y * BM + threadIdx.x / (BK / VE) + h;
-                As[BM * (threadIdx.x % (BK / VE) * VE + v) + (threadIdx.x / (BK / VE) + h)] =
-                    aT && MODE <= GENERAL
-                        ? ((MODE == SIMPLE ? i < m : (l < k && i < m)) ? A[lda * l + i] : (SRC)0)
-                        : ((MODE == SIMPLE ? i < m : (l < k && i < m)) ? A[lda * i + l] : (SRC)0);
+    for (int ll = 0; ll < k; ll += BK) {
+
+        for (int h = 0; h < BM; h += (TT * BANK) / BK)
+            for (int v = 0; v < BANK; ++v) {
+                int l = ll + threadIdx.x % (BK / BANK) * BANK + v;
+                int i = blockIdx.y * BM + threadIdx.x / (BK / BANK) + h;
+                As[BM * (threadIdx.x % (BK / BANK) * BANK + v) + (threadIdx.x / (BK / BANK) + h)] =
+                    (((i < m || msafe) && //
+                      (l < k || ksafe))
+                         ? A[!aT ? lda * i + l : lda * l + i]
+                         : zero);
             }
 
-        for (int h = 0; h < BK; h += TT / (BN / VE))
-            for (int v = 0; v < VE; ++v) {
-                int l = bkIdx + threadIdx.x / (BN / VE) + h;
-                int j = blockIdx.x * BN + threadIdx.x % (BN / VE) * VE + v;
-                Bs[BN * (threadIdx.x / (BN / VE) + h) + (threadIdx.x % (BN / VE) * VE + v)] =
-                    bT || MODE >= SIMPLE
-                        ? (MODE == SIMPLE || (l < k && j < n) ? B[ldb * j + l] : (SRC)0)
-                        : (MODE == SIMPLE || (l < k && j < n) ? B[ldb * l + j] : (SRC)0);
+        for (int h = 0; h < BK; h += TT / (BN / BANK))
+            for (int v = 0; v < BANK; ++v) {
+                int l = ll + threadIdx.x / (BN / BANK) + h;
+                int j = blockIdx.x * BN + threadIdx.x % (BN / BANK) * BANK + v;
+                Bs[BN * (threadIdx.x / (BN / BANK) + h) + (threadIdx.x % (BN / BANK) * BANK + v)] =
+                    (((j < n || nsafe) && //
+                      (l < k || ksafe))
+                         ? B[bT ? ldb * j + l : ldb * l + j]
+                         : zero);
             }
 
         __syncthreads();
@@ -232,24 +273,29 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
         __syncthreads();
     }
 
-    for (int wSubRowIdx = 0; wSubRowIdx < WMI; ++wSubRowIdx)
-        for (int wSubColIdx = 0; wSubColIdx < WNI; ++wSubColIdx)
-            for (int resIdxM = 0; resIdxM < TM; resIdxM += 1)
-                for (int resIdxN = 0; resIdxN < TN; resIdxN += 1) {
-                    int row = (BM * blockIdx.y + WM * warpRow) + (WSUBM * wSubRowIdx) +
-                              (threadRowInWarp * TM + resIdxM);
-                    int col = (BN * blockIdx.x + WN * warpCol) + (WSUBN * wSubColIdx) +
-                              (threadColInWarp * TN + resIdxN);
-                    if (MODE == SIMPLE) {
-                        if (row < m)
-                            C[ldc * row + col] = Cr[(WNI * TN) * (TM * wSubRowIdx + resIdxM) +
-                                                    TN * wSubColIdx + resIdxN];
-                    } else {
-                        if (row < m && col < n)
-                            C[ldc * row + col] =
-                                alpha * Cr[(WNI * TN) * (TM * wSubRowIdx + resIdxM) +
-                                           TN * wSubColIdx + resIdxN] +
-                                beta * (WORD)C[ldc * row + col];
+    for (int ii = 0; ii < WMI; ++ii)
+        for (int jj = 0; jj < WNI; ++jj)
+            for (int i = 0; i < TM; i += 1)
+                for (int j = 0; j < TN; j += 1) {
+                    int row = (BM * blockIdx.y + WM * warpRow) + (WSUBM * ii) +
+                              (threadRowInWarp * TM + i);
+                    int col = (BN * blockIdx.x + WN * warpCol) + (WSUBN * jj) +
+                              (threadColInWarp * TN + j);
+                    if ((row < m || msafe) && (col < n || nsafe)) {
+                        WORD r, d = Cr[(WNI * TN) * (TM * ii + i) + (TN * jj + j)];
+                        if ((CONFIG & IGNORE_BETA) || !beta) {
+                            if (CONFIG & IGNORE_ALPHA)
+                                r = d;
+                            else
+                                r = alpha * d;
+                        } else {
+                            WORD c = C[ldc * row + col];
+                            if (CONFIG & IGNORE_ALPHA)
+                                r = beta * c + d;
+                            else
+                                r = alpha * d + beta * c;
+                        }
+                        C[ldc * row + col] = r;
                     }
                 }
 }
@@ -334,6 +380,8 @@ const char *tinyblasGetStatusString(tinyblasStatus_t err) {
         return "Not supported";
     case TINYBLAS_STATUS_EXECUTION_FAILED:
         return "Execution failed";
+    case TINYBLAS_STATUS_DIMENSION_OVERLAP:
+        return "Dimension overlap";
     case TINYBLAS_STATUS_DIMENSION_OVERFLOW:
         return "Dimension overflow";
     default:
@@ -357,7 +405,8 @@ const char *tinyblasGetStatusString(tinyblasStatus_t err) {
  * @param lda is row stride of `A`
  * @param B is input array of second matrix
  * @param ldb is row stride of `B`
- * @param beta points to scalar that's multiplied against existing output
+ * @param beta points to scalar that's multiplied against the existing
+ *     output, but this multiplication only happens if beta is nonzero
  * @param C is input/output array of output matrix
  * @param ldc is row stride of `C`
  */
@@ -370,7 +419,7 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t handle, tinyblasOperation_t tran
                           TINYBLAS_GEMM_DEFAULT);
 }
 
-template <enum Mode MODE, int BM, int BN, int BK, int WM, int WN, int WNI, int TM, int TN, int TT,
+template <int CONFIG, int BM, int BN, int BK, int WM, int WN, int WNI, int TM, int TN, int TT,
           typename WORD, typename SRC, typename DST>
 static __global__ void __launch_bounds__(TT) tinyblasGE_entry(tinyblasOperation_t aT, //
                                                               tinyblasOperation_t bT, //
@@ -378,8 +427,8 @@ static __global__ void __launch_bounds__(TT) tinyblasGE_entry(tinyblasOperation_
                                                               const SRC *A, int lda, //
                                                               const SRC *B, int ldb, //
                                                               WORD beta, DST *C, int ldc) {
-    matmul_warp2d<MODE, BM, BN, BK, WM, WN, WNI, TM, TN, TT>(aT, bT, m, n, k, alpha, A, lda, B, ldb,
-                                                             beta, C, ldc);
+    matmul_warp2d<CONFIG, BM, BN, BK, WM, WN, WNI, TM, TN, TT>(aT, bT, m, n, k, alpha, A, lda, B,
+                                                               ldb, beta, C, ldc);
 }
 
 template <typename WORD, typename SRC, typename DST>
@@ -387,18 +436,22 @@ static tinyblasStatus_t tinyblasGE_launcher(tinyblasHandle_t handle, tinyblasOpe
                                             tinyblasOperation_t bT, int m, int n, int k, WORD alpha,
                                             const SRC *A, int lda, const SRC *B, int ldb, WORD beta,
                                             DST *C, int ldc) {
-    const int TT = 256, BM = 128, BN = 64, BK = 64, WM = 128, WN = 8, WNI = 1, TM = 8, TN = 4;
-    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN));
-    if (!aT && bT && !(n % BN) && !(k % BK) && alpha == (WORD)1 && beta == (WORD)0) {
-        dim3 blocks(CEIL_DIV(n, BN), CEIL_DIV(m, BM));
-        tinyblasGE_entry<SIMPLE, BM, BN, BK, WM, WN, WNI, TM, TN, TT>
+    constexpr int TT = 256, BM = 128, BN = 64, BK = 64, WM = 128, WN = 8, WNI = 1, TM = 8, TN = 4;
+    dim3 blocks(CEIL_DIV(n, BN), CEIL_DIV(m, BM));
+    if ((beta == 0 && //
+         alpha == 1 && //
+         n % BN == 0 && //
+         k % BK == 0 && //
+         aT == TINYBLAS_OP_N && //
+         bT == TINYBLAS_OP_T)) {
+        constexpr int CONFIG = IGNORE_BETA | IGNORE_ALPHA | ASSUME_A_OP_N | ASSUME_B_OP_T |
+                               ASSUME_N_SAFE | ASSUME_K_SAFE;
+        tinyblasGE_entry<CONFIG, BM, BN, BK, WM, WN, WNI, TM, TN, TT>
             <<<blocks, TT, 0, handle->stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C,
                                                 ldc);
     } else {
-        dim3 blocks(CEIL_DIV(n, BN), CEIL_DIV(m, BM));
-        tinyblasGE_entry<GENERAL, BM, BN, BK, WM, WN, WNI, TM, TN, TT>
-            <<<blocks, TT, 0, handle->stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C,
-                                                ldc);
+        tinyblasGE_entry<0, BM, BN, BK, WM, WN, WNI, TM, TN, TT><<<blocks, TT, 0, handle->stream>>>(
+            aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
     }
     if (cudaGetLastError() != cudaSuccess)
         return TINYBLAS_STATUS_EXECUTION_FAILED;
@@ -431,7 +484,8 @@ static tinyblasStatus_t tinyblasGE_launch(tinyblasHandle_t handle, tinyblasOpera
  * @param B is input array of second matrix
  * @param Btype is data type of `C`
  * @param ldb is row stride of `B`
- * @param beta points to scalar that's multiplied against existing output
+ * @param beta points to scalar that's multiplied against the existing
+ *     output, but this multiplication only happens if beta is nonzero
  * @param C is input/output array of output matrix
  * @param Ctype is data type of `C`
  * @param ldc is row stride of `C`
@@ -528,9 +582,8 @@ static __global__ void KERNEL tinyblasGBE_entry(tinyblasOperation_t transa,
                                                 WORD alpha, const SRC *const Aarray[], int lda,
                                                 const SRC *const Barray[], int ldb, WORD beta,
                                                 DST *const Carray[], int ldc, int batchCount) {
-    for (int z = blockIdx.z; z < batchCount; z += gridDim.z)
-        matmul_block2d<BM, BN, TM, TN>(transa, transb, m, n, k, alpha, Aarray[z], lda, Barray[z],
-                                       ldb, beta, Carray[z], ldc);
+    matmul_block2d<0, BM, BN, TM, TN>(transa, transb, m, n, k, alpha, Aarray[blockIdx.z], lda,
+                                      Barray[blockIdx.z], ldb, beta, Carray[blockIdx.z], ldc);
 }
 
 template <typename WORD, typename SRC, typename DST>
@@ -539,19 +592,45 @@ static tinyblasStatus_t tinyblasGBE_launch(tinyblasHandle_t handle, tinyblasOper
                                            WORD alpha, const SRC *const *Aarray, int lda,
                                            const SRC *const *Barray, int ldb, WORD beta,
                                            DST *const *Carray, int ldc, int batchCount) {
-    constexpr int BC = 32;
     constexpr int BM = 32;
     constexpr int BN = 32;
     constexpr int TM = 2;
     constexpr int TN = 8;
-    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), BC);
-    tinyblasGBE_entry<BM, BN, TM, TN><<<maxblocks, THREAD_COUNT, 0, handle->stream>>>(
+    dim3 blocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), batchCount);
+    tinyblasGBE_entry<BM, BN, TM, TN><<<blocks, THREAD_COUNT, 0, handle->stream>>>(
         transa, transb, m, n, k, alpha, Aarray, lda, Barray, ldb, beta, Carray, ldc, batchCount);
     if (cudaGetLastError() != cudaSuccess)
         return TINYBLAS_STATUS_EXECUTION_FAILED;
     return TINYBLAS_STATUS_SUCCESS;
 }
 
+/**
+ * Multiplies matrices.
+ *
+ * This is a column major GEMM subroutine for computing C = α*A*B + β*C.
+ *
+ * @param handle was created by tinyblasCreate()
+ * @param transa if `A` should be transposed
+ * @param transb if `B` should be transposed
+ * @param m is rows in `A` and `C`
+ * @param n is cols in `B` and `C`
+ * @param k is cols in `A` and rows in `B`
+ * @param alpha points to scalar that's multiplied against input
+ * @param A is input array of device memory pointing to first matrices
+ * @param Atype is data type of `C`
+ * @param lda is row stride of `A`
+ * @param B is input array of device memory pointing to second matrices
+ * @param Btype is data type of `C`
+ * @param ldb is row stride of `B`
+ * @param beta points to scalar that's multiplied against the existing
+ *     output, but this multiplication only happens if beta is nonzero
+ * @param C is input/output array of output matrices
+ * @param Ctype is data type of `C`
+ * @param ldc is row stride of `C`
+ * @param batchCount is number of elements in `A`, `B`, and `C`
+ * @param computeType is data type of `alpha`, `beta`, and dot product
+ * @param algo specifies algorithm to use
+ */
 tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t handle, tinyblasOperation_t transa,
                                        tinyblasOperation_t transb, int m, int n, int k,
                                        const void *alpha, const void *const Aarray[],
@@ -637,16 +716,16 @@ tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t handle, tinyblasOperatio
     }
 }
 
-template <int BM, int BN, int TM, int TN, typename SRC, typename DST, typename WORD>
+template <int CONFIG, int BM, int BN, int TM, int TN, typename SRC, typename DST, typename WORD>
 static __global__ void KERNEL tinyblasGSBE_entry(tinyblasOperation_t transa,
                                                  tinyblasOperation_t transb, int m, int n, int k,
                                                  WORD alpha, const SRC *A, int lda,
                                                  long long strideA, const SRC *B, int ldb,
                                                  long long strideB, WORD beta, DST *C, int ldc,
                                                  long long strideC, int batchCount) {
-    matmul_block2d<BM, BN, TM, TN>(transa, transb, m, n, k, alpha, A + blockIdx.z * strideA, lda,
-                                   B + blockIdx.z * strideB, ldb, beta, C + blockIdx.z * strideC,
-                                   ldc);
+    matmul_block2d<CONFIG, BM, BN, TM, TN>(transa, transb, m, n, k, alpha, A + strideA * blockIdx.z,
+                                           lda, B + strideB * blockIdx.z, ldb, beta,
+                                           C + strideC * blockIdx.z, ldc);
 }
 
 template <typename WORD, typename SRC, typename DST>
@@ -655,20 +734,63 @@ static tinyblasStatus_t tinyblasGSBE_launch(tinyblasHandle_t handle, tinyblasOpe
                                             WORD alpha, const SRC *A, int lda, long long strideA,
                                             const SRC *B, int ldb, long long strideB, WORD beta,
                                             DST *C, int ldc, long long strideC, int batchCount) {
-    constexpr int BC = 32;
     constexpr int BM = 32;
     constexpr int BN = 32;
     constexpr int TM = 2;
     constexpr int TN = 8;
-    dim3 maxblocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), BC);
-    tinyblasGSBE_entry<BM, BN, TM, TN><<<maxblocks, THREAD_COUNT, 0, handle->stream>>>(
-        transa, transb, m, n, k, alpha, A, lda, strideA, B, ldb, strideB, beta, C, ldc, strideC,
-        batchCount);
+    constexpr int BK = THREAD_COUNT;
+    dim3 blocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), batchCount);
+    if ((beta == 0 && //
+         alpha == 1 && //
+         m % BM == 0 && //
+         k % BK == 0 && //
+         transa == TINYBLAS_OP_T && //
+         transb == TINYBLAS_OP_N)) {
+        constexpr int CONFIG = IGNORE_BETA | IGNORE_ALPHA | ASSUME_A_OP_T | ASSUME_B_OP_N |
+                               ASSUME_M_SAFE | ASSUME_K_SAFE;
+        tinyblasGSBE_entry<CONFIG, BM, BN, TM, TN><<<blocks, THREAD_COUNT, 0, handle->stream>>>(
+            transa, transb, m, n, k, alpha, A, lda, strideA, B, ldb, strideB, beta, C, ldc, strideC,
+            batchCount);
+    } else {
+        tinyblasGSBE_entry<0, BM, BN, TM, TN><<<blocks, THREAD_COUNT, 0, handle->stream>>>(
+            transa, transb, m, n, k, alpha, A, lda, strideA, B, ldb, strideB, beta, C, ldc, strideC,
+            batchCount);
+    }
     if (cudaGetLastError() != cudaSuccess)
         return TINYBLAS_STATUS_EXECUTION_FAILED;
     return TINYBLAS_STATUS_SUCCESS;
 }
 
+/**
+ * Multiplies matrices.
+ *
+ * This is a column major GEMM subroutine for computing C = α*A*B + β*C.
+ *
+ * @param handle was created by tinyblasCreate()
+ * @param transa if `A` should be transposed
+ * @param transb if `B` should be transposed
+ * @param m is rows in `A` and `C`
+ * @param n is cols in `B` and `C`
+ * @param k is cols in `A` and rows in `B`
+ * @param alpha points to scalar that's multiplied against input
+ * @param A is input array of first matrices
+ * @param Atype is data type of `C`
+ * @param lda is row stride of `A`
+ * @param strideA is distance between matrices in `A`
+ * @param B is input array of second matrices
+ * @param Btype is data type of `C`
+ * @param ldb is row stride of `B`
+ * @param strideB is distance between matrices in `B`
+ * @param beta points to scalar that's multiplied against the existing
+ *     output, but this multiplication only happens if beta is nonzero
+ * @param C is input/output array of output matrices
+ * @param Ctype is data type of `C`
+ * @param ldc is row stride of `C`
+ * @param strideC is distance between matrices in `C`, which must not overlap
+ * @param batchCount is number of matrices to multiply
+ * @param computeType is data type of `alpha`, `beta`, and dot product
+ * @param algo specifies algorithm to use
+ */
 tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t handle, //
                                               tinyblasOperation_t transa, //
                                               tinyblasOperation_t transb, //
@@ -693,6 +815,8 @@ tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t handle, //
         return TINYBLAS_STATUS_INVALID_VALUE;
     if (ldc < std::max(1, m))
         return TINYBLAS_STATUS_INVALID_VALUE;
+    if (std::max(0ll, strideC) < std::min(1ll * ldc * n, strideC * 2))
+        return TINYBLAS_STATUS_DIMENSION_OVERLAP;
     if (1ll * lda * ((transa ? k : m) - 1) + ((transa ? m : k) - 1) > INT_MAX)
         return TINYBLAS_STATUS_DIMENSION_OVERFLOW;
     if (1ll * ldb * ((transb ? n : k) - 1) + ((transb ? k : n) - 1) > INT_MAX)

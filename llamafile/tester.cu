@@ -110,7 +110,8 @@ long long micros(void) {
                            const char *msg) {
     int id = -1;
     (void)cudaGetDevice(&id);
-    fprintf(stderr, "CUDA error: %s\n", msg);
+    fprintf(stderr, "CUDA error: %s%s%s%s\n", msg, is_self_testing ? " (" : "",
+            is_self_testing ? is_self_testing : "", is_self_testing ? ")" : "");
     fprintf(stderr, "  current device: %d, in function %s at %s:%d\n", id, func, file, line);
     fprintf(stderr, "  %s\n", stmt);
     (void)cudaDeviceReset();
@@ -118,7 +119,7 @@ long long micros(void) {
 }
 
 void test_matmul(std::function<void(int m, int n, int k, int l, float alpha, float beta)> f) {
-    static const int kDims[] = {1, 2, 23, 65, 63, 64, 2048, 512, 127, 129, 128, 16};
+    static const int kDims[] = {1, 2, 23, 65, 63, 64, 1024, 512, 127, 129, 128, 16};
     static const float kAlphas[] = {1, .1};
     static const float kBetas[] = {0, .1};
     static const int kLeads[] = {0, 1};

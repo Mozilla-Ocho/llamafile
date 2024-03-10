@@ -44,27 +44,53 @@ void gemm(bool aT, bool bT, //
         for (int j = 0; j < n; ++j) {
             T d = 0;
             for (int l = 0; l < k; ++l) {
-                T a = aT ? A[lda * i + l] : A[lda * l + i];
-                T b = bT ? B[ldb * l + j] : B[ldb * j + l];
+                T a = A[aT ? lda * i + l : lda * l + i];
+                T b = B[bT ? ldb * l + j : ldb * j + l];
                 d = std::fma(a, b, d);
             }
-            T c = C[ldc * j + i];
-            C[ldc * j + i] = std::fma(alpha, d, beta * c);
+            if (beta) {
+                T c = C[ldc * j + i];
+                C[ldc * j + i] = std::fma(alpha, d, beta * c);
+            } else {
+                C[ldc * j + i] = alpha * d;
+            }
         }
 }
 
-// multiplies matrix on cpu with row major ordering
+// multiplies matrices on cpu with column major ordering
 //
-//     k×m * n×k → n×m
-//     m×k * n×k → n×m if aᵀ
-//     k×m * k×n → n×m if bᵀ
-//     m×k * k×n → n×m if aᵀ and bᵀ
+//     m×k * k×n → m×n
+//     k×m * k×n → m×n if aᵀ
+//     m×k * n×k → m×n if bᵀ
+//     k×m * n×k → m×n if aᵀ and bᵀ
 //
 template <typename T, typename TA, typename TB, typename TC>
-void gemmrm(bool aT, bool bT, //
-            int m, int n, int k, T alpha, //
-            const TA *A, int lda, //
-            const TB *B, int ldb, T beta, //
-            TC *C, int ldc) {
-    gemm(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
+void gsbe(bool aT, bool bT, //
+          int m, int n, int k, T alpha, //
+          const TA *A, int lda, long long sta, //
+          const TB *B, int ldb, long long stb, T beta, //
+          TC *C, int ldc, long long stc, int batches) {
+    assert(m >= 0 && n >= 0 && k >= 0);
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
+    assert(ldc >= std::max(1, m));
+    assert(1ll * lda * (aT ? m : k) <= INT_MAX);
+    assert(1ll * ldb * (bT ? k : n) <= INT_MAX);
+    assert(std::max(0ll, stc) >= std::min(1ll * ldc * n, stc * 2));
+    for (int z = 0; z < batches; ++z)
+        for (int i = 0; i < m; ++i)
+            for (int j = 0; j < n; ++j) {
+                T d = 0;
+                for (int l = 0; l < k; ++l) {
+                    T a = A[sta * z + (aT ? lda * i + l : lda * l + i)];
+                    T b = B[stb * z + (bT ? ldb * l + j : ldb * j + l)];
+                    d = std::fma(a, b, d);
+                }
+                if (beta) {
+                    T c = C[stc * z + ldc * j + i];
+                    C[stc * z + ldc * j + i] = std::fma(alpha, d, beta * c);
+                } else {
+                    C[stc * z + ldc * j + i] = alpha * d;
+                }
+            }
 }

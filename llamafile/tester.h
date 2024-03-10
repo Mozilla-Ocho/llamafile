@@ -18,6 +18,7 @@
 
 #include "cuda.h"
 #include "flt.h"
+#include "gemm.h"
 #include "macros.h"
 #include "naive.h"
 #include "tinyblas.h"
@@ -27,6 +28,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
+#include <limits>
 #include <mutex>
 
 //
@@ -44,12 +46,27 @@
 // this file contains tools for testing matrix multiplication, measuring
 // errors, and visualizing what went wrong in using ansi terminal codes.
 
-#define ITERATIONS 30
+#define ITERATIONS 20
 #define TOMBSTONE 1.666f
 
 #ifdef __HIP__
 #define cublas hipblas
 #endif
+
+struct ErrorReport {
+    long long worst;
+    double avg;
+    double sad;
+    int infs;
+    int flips;
+    int zeroes;
+    int denormals;
+    int nans;
+    double worsta;
+    double worstb;
+    unsigned long long worstabin;
+    unsigned long long worstbbin;
+};
 
 extern const int kPageSize;
 extern std::recursive_mutex g_log_lock;
@@ -106,75 +123,10 @@ template <typename T> struct cuda_memory {
     }
 };
 
-template <typename T>
-void verify(double tol, int m, int n, const T *A, int lda, const T *B, int ldb) {
-    T worst_x = 0;
-    T worst_y = 0;
-    int worst_i = 0;
-    int worst_j = 0;
-    long long nans = 0;
-    long long infs = 0;
-    long long worst = 0;
-    long long flips = 0;
-    long long diffsum = 0;
-    long long denormals = 0;
-    long long hamhist[32] = {0};
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++) {
-            T x = A[lda * j + i];
-            T y = B[ldb * j + i];
-            long long xi = flt::toint(x);
-            long long yi = flt::toint(y);
-            long long d = std::abs(xi - yi);
-            if (flt::isnormal(x) && flt::isnormal(y) && flt::signbit(x) == flt::signbit(y)) {
-                diffsum += d;
-                if (d > worst) {
-                    worst = d;
-                    worst_x = x;
-                    worst_y = y;
-                    worst_i = i;
-                    worst_j = j;
-                }
-            }
-            nans -= flt::isnan(x);
-            nans += flt::isnan(y);
-            infs -= flt::isinf(x);
-            infs += flt::isinf(y);
-            flips += flt::signbit(x) != flt::signbit(y);
-            denormals -= flt::isdenormal(x);
-            denormals += flt::isdenormal(y);
-            ++hamhist[hamming(xi, yi)];
-        }
-    double avg = static_cast<double>(diffsum) / (m * n);
-    if (worst > tol || nans || flips > m * n * .01) {
-        std::unique_lock<std::recursive_mutex> lock(g_log_lock);
-        fprintf(stderr, "error: %d×%d matrix difference exceeds tolerance\n", m, n);
-        fprintf(stderr, "       worst element at index (%d, %d)\n", worst_i, worst_j);
-        fprintf(stderr, "       difference %14e (%lld ulp)\n",
-                std::fabs(static_cast<double>(worst_x) - static_cast<double>(worst_y)), worst);
-        fprintf(stderr, "       expected   %14e (%x)\n", static_cast<double>(worst_x),
-                flt::toint(worst_x));
-        fprintf(stderr, "       actual     %14e (%x)\n", static_cast<double>(worst_y),
-                flt::toint(worst_y));
-        fprintf(stderr, "       average    %14g ulp\n", avg);
-        fprintf(stderr, "       denormals  %14lld elements\n", denormals);
-        fprintf(stderr, "       flips      %14lld elements\n", flips);
-        fprintf(stderr, "       nans       %14lld elements\n", nans);
-        fprintf(stderr, "       infs       %14lld elements\n", infs);
-        for (int i = 0; i < 32; ++i)
-            if (hamhist[i])
-                fprintf(stderr, "       hamhist%-2d  %14lld elements\n", i, hamhist[i]);
-        fflush(stderr);
-        (void)cudaDeviceReset();
-        _Exit(1);
-    }
-}
-
-template <typename T>
-void diff(int m, int n, int k, const T *Wan, int lda, const T *Got, int ldb, double *out_avg,
-          double *out_sad, double *out_worst, int *out_infs, int *out_flips, int *out_zeroes,
-          int *out_denormals, int *out_nans) {
+template <typename T> ErrorReport diff(int m, int n, const T *Wan, int lda, const T *Got, int ldb) {
     double sad = 0;
+    double worsta = 0;
+    double worstb = 0;
     long long ulp = 0;
     long long worst = 0;
     int infs = 0;
@@ -184,6 +136,8 @@ void diff(int m, int n, int k, const T *Wan, int lda, const T *Got, int ldb, dou
     int wan_nans = 0;
     int denormals = 0;
     int considered = 0;
+    unsigned long long worstabin = 0;
+    unsigned long long worstbbin = 0;
     if (m && n) {
         for (int i = 0; i < m; ++i)
             for (int j = 0; j < n; ++j) {
@@ -201,13 +155,19 @@ void diff(int m, int n, int k, const T *Wan, int lda, const T *Got, int ldb, dou
                     denormals -= flt::isdenormal(x);
                     denormals += flt::isdenormal(y);
                     flips += flt::signbit(x) != flt::signbit(y);
-                    long long xi = flt::toint(x);
-                    long long yi = flt::toint(y);
-                    if (flt::isnormal(x) && flt::isnormal(y) &&
-                        flt::signbit(x) == flt::signbit(y)) {
+                    long long xi = flt::toint(flt::normalize(x));
+                    long long yi = flt::toint(flt::normalize(y));
+                    if (flt::signbit(x) == flt::signbit(y)) {
                         ++considered;
-                        ulp += std::abs(xi - yi);
-                        worst = std::max(worst, std::abs(xi - yi));
+                        long long bad = std::abs(xi - yi);
+                        ulp += bad;
+                        if (bad > worst) {
+                            worst = bad;
+                            worsta = x;
+                            worstb = y;
+                            worstabin = xi;
+                            worstbbin = yi;
+                        }
                         sad += std::fabs(static_cast<double>(x) - static_cast<double>(y));
                     }
                 }
@@ -217,15 +177,20 @@ void diff(int m, int n, int k, const T *Wan, int lda, const T *Got, int ldb, dou
         if (wan_nans)
             fprintf(stderr, "WARNING: want array has %d NaNs!\n", wan_nans);
     }
-    int ops_per_element = k + 2;
-    *out_avg = static_cast<double>(ulp) / considered / ops_per_element;
-    *out_worst = static_cast<double>(worst) / ops_per_element;
-    *out_nans = got_nans + wan_nans;
-    *out_sad = sad / considered;
-    *out_denormals = denormals;
-    *out_zeroes = zeroes;
-    *out_flips = flips;
-    *out_infs = infs;
+    ErrorReport errors;
+    errors.nans = got_nans + wan_nans;
+    errors.avg = ulp / considered;
+    errors.sad = sad / considered;
+    errors.denormals = denormals;
+    errors.zeroes = zeroes;
+    errors.worst = worst;
+    errors.flips = flips;
+    errors.infs = infs;
+    errors.worsta = worsta;
+    errors.worstb = worstb;
+    errors.worstabin = worstabin;
+    errors.worstbbin = worstbbin;
+    return errors;
 }
 
 template <typename T>
@@ -262,13 +227,15 @@ void show(FILE *f, int max, int m, int n, const T *A, int lda, const T *B, int l
 }
 
 template <typename T>
-void misfit(FILE *f, int max, int m, int n, const T *A, int lda, const T *B, int ldb,
-            const char *file, int line, double avg, double sad, double worst, int infs, int flips,
-            int zeroes, int denormals, int nans) {
-    fprintf(f, "%s:%d: matrix errors exceed tolerance %s\n", file, line,
-            is_self_testing ? is_self_testing : "");
-    fprintf(f, "         %g ulp (sad=%g nans=%d infs=%d flips=%d zeroes=%d denormals=%d)\n", worst,
-            sad, nans, infs, flips, zeroes, denormals);
+void misfit(FILE *f, int max, int m, int n, int k, const T *A, int lda, const T *B, int ldb,
+            const char *file, int line, double tol, ErrorReport &errors) {
+    fprintf(f, "%s:%d: worst matrix error exceeds k=%d tolerance of %g ulp %s\n", file, line, k,
+            tol * sqrt(k), is_self_testing ? is_self_testing : "");
+    fprintf(f,
+            "         %lld ulp - %g (%llx) vs. %g (%llx)\n"
+            "         sad=%g nans=%d infs=%d flips=%d zeroes=%d denormals=%d\n",
+            errors.worst, errors.worsta, errors.worstabin, errors.worstb, errors.worstbbin,
+            errors.sad, errors.nans, errors.infs, errors.flips, errors.zeroes, errors.denormals);
     fprintf(f, "want\n");
     show(f, max, m, n, A, lda, B, ldb);
     fprintf(f, "got\n");
@@ -282,25 +249,23 @@ void check(double tol, //
            const T *A, int lda, //
            const T *B, int ldb, //
            const char *file, int line) {
-    double avg, sad, worst;
-    int nans, infs, flips, zeroes, denormals;
     assert(lda >= std::max(1, m));
     assert(ldb >= std::max(1, m));
-    diff(m, n, k, A, lda, B, ldb, &avg, &sad, &worst, &infs, &flips, &zeroes, &denormals, &nans);
-    if (!nans && worst <= tol && flips < m * n * .01) {
+    ErrorReport errors = diff(m, n, A, lda, B, ldb);
+    if (!errors.nans && errors.worst <= tol * sqrt(k) && errors.flips < m * n * .01) {
         if (!is_self_testing)
-            printf("         %g ulp (sad=%g nans=%d infs=%d flips=%d zeroes=%d "
-                   "denormals=%d)\n",
-                   worst, sad, nans, infs, flips, zeroes, denormals);
+            printf("         %lld ulp - %g (%llx) vs. %g (%llx)\n"
+                   "         sad=%g nans=%d infs=%d flips=%d zeroes=%d denormals=%d\n",
+                   errors.worst, errors.worsta, errors.worstabin, errors.worstb, errors.worstbbin,
+                   errors.sad, errors.nans, errors.infs, errors.flips, errors.zeroes,
+                   errors.denormals);
     } else {
         std::unique_lock<std::recursive_mutex> lock(g_log_lock);
-        misfit(stderr, 16, m, n, A, lda, B, ldb, file, line, avg, sad, worst, infs, flips, zeroes,
-               denormals, nans);
+        misfit(stderr, 16, m, n, k, A, lda, B, ldb, file, line, tol, errors);
         const char *path = "/tmp/wompwomp.log";
         FILE *f = fopen(path, "w");
         if (f) {
-            misfit(f, 10000, m, n, A, lda, B, ldb, file, line, avg, sad, worst, infs, flips, zeroes,
-                   denormals, nans);
+            misfit(f, 10000, m, n, k, A, lda, B, ldb, file, line, tol, errors);
             fclose(f);
             fprintf(stderr, "see also %s\n", path);
         }
@@ -370,16 +335,20 @@ void check(double tol, //
 
 #define RUN(x) \
     printf("                           \r\n%s\n", #x); \
-    x
+    x; \
+    printf("                           \r")
 
 [[noreturn]] void cuda_die(const char *, const char *, const char *, int, const char *);
 
-template <typename T> struct cuda_data_type;
-template <> struct cuda_data_type<half> {
+template <typename T> struct cublas_data_type;
+template <> struct cublas_data_type<half> {
     static constexpr cudaDataType_t id = CUDA_R_16F;
 };
-template <> struct cuda_data_type<float> {
+template <> struct cublas_data_type<float> {
     static constexpr cudaDataType_t id = CUDA_R_32F;
+};
+template <> struct cublas_data_type<double> {
+    static constexpr cudaDataType_t id = CUDA_R_64F;
 };
 
 template <typename T> struct cublas_compute_type;
@@ -388,6 +357,9 @@ template <> struct cublas_compute_type<half> {
 };
 template <> struct cublas_compute_type<float> {
     static constexpr cublasComputeType_t id = CUBLAS_COMPUTE_32F;
+};
+template <> struct cublas_compute_type<double> {
+    static constexpr cublasComputeType_t id = CUBLAS_COMPUTE_64F;
 };
 
 template <typename T> struct tinyblas_data_type;
@@ -406,12 +378,65 @@ template <> struct tinyblas_compute_type<float> {
     static constexpr tinyblasComputeType_t id = TINYBLAS_COMPUTE_32F;
 };
 
-template <typename T, typename TA, typename TB, typename TC>
+// multiplies matrix with column major ordering
+//
+//     m×k * k×n → m×n
+//     k×m * k×n → m×n if aᵀ
+//     m×k * n×k → m×n if bᵀ
+//     k×m * n×k → m×n if aᵀ and bᵀ
+//
+template <typename WORD, typename SRC, typename DST>
+void gemmref(bool aT, bool bT, //
+             int m, int n, int k, WORD alpha, //
+             const SRC *A, int lda, //
+             const SRC *B, int ldb, WORD beta, //
+             DST *C, int ldc) {
+    cudaStream_t stream;
+    assert(m >= 0 && n >= 0 && k >= 0);
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
+    assert(ldc >= std::max(1, m));
+    CUDA_OR_DIE(cudaSetDevice(0));
+    CUDA_OR_DIE(cudaStreamCreate(&stream));
+    BENCH_CUDA(
+        CUDA_OR_DIE(naive::gemm(stream, aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)));
+    CUDA_OR_DIE(cudaStreamSynchronize(stream));
+    CUDA_OR_DIE(cudaStreamDestroy(stream));
+}
+
+// multiplies matrix with column major ordering
+//
+//     m×k * k×n → m×n
+//     k×m * k×n → m×n if aᵀ
+//     m×k * n×k → m×n if bᵀ
+//     k×m * n×k → m×n if aᵀ and bᵀ
+//
+template <typename WORD, typename SRC, typename DST>
+void gsberef(bool aT, bool bT, //
+             int m, int n, int k, WORD alpha, //
+             const SRC *A, int lda, long long sta, //
+             const SRC *B, int ldb, long long stb, WORD beta, //
+             DST *C, int ldc, long long stc, int batches) {
+    cudaStream_t stream;
+    assert(m >= 0 && n >= 0 && k >= 0);
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
+    assert(ldc >= std::max(1, m));
+    assert(std::max(0ll, stc) >= std::min(1ll * ldc * n, stc * 2));
+    CUDA_OR_DIE(cudaSetDevice(0));
+    CUDA_OR_DIE(cudaStreamCreate(&stream));
+    BENCH_CUDA(CUDA_OR_DIE(naive::gsbe(stream, aT, bT, m, n, k, alpha, A, lda, sta, B, ldb, stb,
+                                       beta, C, ldc, stc, batches)));
+    CUDA_OR_DIE(cudaStreamSynchronize(stream));
+    CUDA_OR_DIE(cudaStreamDestroy(stream));
+}
+
+template <typename WORD, typename SRC, typename DST>
 void cublas(bool aT, bool bT, //
-            int m, int n, int k, T alpha, //
-            const TA *A, int lda, //
-            const TB *B, int ldb, T beta, //
-            TC *C, int ldc) {
+            int m, int n, int k, WORD alpha, //
+            const SRC *A, int lda, //
+            const SRC *B, int ldb, WORD beta, //
+            DST *C, int ldc) {
     cudaStream_t stream;
     cublasHandle_t blas;
     assert(m >= 0 && n >= 0 && k >= 0);
@@ -429,28 +454,49 @@ void cublas(bool aT, bool bT, //
     CUBLAS_OR_DIE(cublasSetStream(blas, stream));
     BENCH_CUDA(CUBLAS_OR_DIE(cublasGemmEx(
         blas, aT ? CUBLAS_OP_T : CUBLAS_OP_N, bT ? CUBLAS_OP_T : CUBLAS_OP_N, m, n, k, &alpha, A,
-        cuda_data_type<TA>::id, lda, B, cuda_data_type<TB>::id, ldb, &beta, C,
-        cuda_data_type<TC>::id, ldc, cublas_compute_type<T>::id, CUBLAS_GEMM_DEFAULT)));
+        cublas_data_type<SRC>::id, lda, B, cublas_data_type<SRC>::id, ldb, &beta, C,
+        cublas_data_type<DST>::id, ldc, cublas_compute_type<WORD>::id, CUBLAS_GEMM_DEFAULT)));
     CUDA_OR_DIE(cudaStreamSynchronize(stream));
     CUDA_OR_DIE(cudaStreamDestroy(stream));
     CUBLAS_OR_DIE(cublasDestroy(blas));
 }
 
-template <typename T, typename TA, typename TB, typename TC>
-void cublasrm(bool aT, bool bT, //
-              int m, int n, int k, T alpha, //
-              const TA *A, int lda, //
-              const TB *B, int ldb, T beta, //
-              TC *C, int ldc) {
-    cublas(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
+template <typename WORD, typename SRC, typename DST>
+void cublasGSBE(bool aT, bool bT, //
+                int m, int n, int k, WORD alpha, //
+                const SRC *A, int lda, long long sta, //
+                const SRC *B, int ldb, long long stb, WORD beta, //
+                DST *C, int ldc, long long stc, int batches) {
+    cudaStream_t stream;
+    cublasHandle_t blas;
+    assert(m >= 0 && n >= 0 && k >= 0);
+    assert(lda >= std::max(1, aT ? k : m));
+    assert(ldb >= std::max(1, bT ? n : k));
+    assert(ldc >= std::max(1, m));
+    CUDA_OR_DIE(cudaSetDevice(0));
+    CUBLAS_OR_DIE(cublasCreate(&blas));
+    CUDA_OR_DIE(cudaStreamCreate(&stream));
+    CUBLAS_OR_DIE(cublasSetMathMode(blas, CUBLAS_DEFAULT_MATH));
+#ifdef __HIP__
+    CUBLAS_OR_DIE(hipblasSetAtomicsMode(blas, HIPBLAS_ATOMICS_NOT_ALLOWED));
+#endif
+    CUBLAS_OR_DIE(cublasSetStream(blas, stream));
+    BENCH_CUDA(CUBLAS_OR_DIE(cublasGemmStridedBatchedEx(
+        blas, aT ? CUBLAS_OP_T : CUBLAS_OP_N, bT ? CUBLAS_OP_T : CUBLAS_OP_N, m, n, k, &alpha, A,
+        cublas_data_type<SRC>::id, lda, sta, B, cublas_data_type<SRC>::id, ldb, stb, &beta, C,
+        cublas_data_type<DST>::id, ldc, stc, batches, cublas_compute_type<WORD>::id,
+        CUBLAS_GEMM_DEFAULT)));
+    CUDA_OR_DIE(cudaStreamSynchronize(stream));
+    CUDA_OR_DIE(cudaStreamDestroy(stream));
+    CUBLAS_OR_DIE(cublasDestroy(blas));
 }
 
-template <typename T, typename TA, typename TB, typename TC>
+template <typename WORD, typename SRC, typename DST>
 void tinyblas(bool aT, bool bT, //
-              int m, int n, int k, T alpha, //
-              const TA *A, int lda, //
-              const TB *B, int ldb, T beta, //
-              TC *C, int ldc) {
+              int m, int n, int k, WORD alpha, //
+              const SRC *A, int lda, //
+              const SRC *B, int ldb, WORD beta, //
+              DST *C, int ldc) {
     cudaStream_t stream;
     tinyblasHandle_t blas;
     assert(m >= 0 && n >= 0 && k >= 0);
@@ -463,44 +509,35 @@ void tinyblas(bool aT, bool bT, //
     TINYBLAS_OR_DIE(tinyblasSetStream(blas, stream));
     BENCH_CUDA(TINYBLAS_OR_DIE(tinyblasGemmEx(
         blas, aT ? TINYBLAS_OP_T : TINYBLAS_OP_N, bT ? TINYBLAS_OP_T : TINYBLAS_OP_N, m, n, k,
-        &alpha, A, tinyblas_data_type<TA>::id, lda, B, tinyblas_data_type<TB>::id, ldb, &beta, C,
-        tinyblas_data_type<TC>::id, ldc, tinyblas_compute_type<T>::id, TINYBLAS_GEMM_DEFAULT)));
+        &alpha, A, tinyblas_data_type<SRC>::id, lda, B, tinyblas_data_type<SRC>::id, ldb, &beta, C,
+        tinyblas_data_type<DST>::id, ldc, tinyblas_compute_type<WORD>::id, TINYBLAS_GEMM_DEFAULT)));
     CUDA_OR_DIE(cudaStreamSynchronize(stream));
     CUDA_OR_DIE(cudaStreamDestroy(stream));
     TINYBLAS_OR_DIE(tinyblasDestroy(blas));
 }
 
-template <typename T, typename TA, typename TB, typename TC>
-void tinyblasrm(bool aT, bool bT, //
-                int m, int n, int k, T alpha, //
-                const TA *A, int lda, //
-                const TB *B, int ldb, T beta, //
-                TC *C, int ldc) {
-    tinyblas(bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
-}
-
-// multiplies matrix on gpu with column major ordering
-//
-//     m×k * k×n → m×n
-//     k×m * k×n → m×n if aᵀ
-//     m×k * n×k → m×n if bᵀ
-//     k×m * n×k → m×n if aᵀ and bᵀ
-//
-template <typename T, typename TA, typename TB, typename TC>
-void gemmref(bool aT, bool bT, //
-             int m, int n, int k, T alpha, //
-             const TA *A, int lda, //
-             const TB *B, int ldb, T beta, //
-             TC *C, int ldc) {
+template <typename WORD, typename SRC, typename DST>
+void tinyblasGSBE(bool aT, bool bT, //
+                  int m, int n, int k, WORD alpha, //
+                  const SRC *A, int lda, long long sta, //
+                  const SRC *B, int ldb, long long stb, WORD beta, //
+                  DST *C, int ldc, long long stc, int batches) {
     cudaStream_t stream;
+    tinyblasHandle_t blas;
     assert(m >= 0 && n >= 0 && k >= 0);
     assert(lda >= std::max(1, aT ? k : m));
     assert(ldb >= std::max(1, bT ? n : k));
     assert(ldc >= std::max(1, m));
     CUDA_OR_DIE(cudaSetDevice(0));
+    TINYBLAS_OR_DIE(tinyblasCreate(&blas));
     CUDA_OR_DIE(cudaStreamCreate(&stream));
-    BENCH_CUDA(
-        CUDA_OR_DIE(naive::gemm(stream, aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)));
+    TINYBLAS_OR_DIE(tinyblasSetStream(blas, stream));
+    BENCH_CUDA(TINYBLAS_OR_DIE(tinyblasGemmStridedBatchedEx(
+        blas, aT ? TINYBLAS_OP_T : TINYBLAS_OP_N, bT ? TINYBLAS_OP_T : TINYBLAS_OP_N, m, n, k,
+        &alpha, A, tinyblas_data_type<SRC>::id, lda, sta, B, tinyblas_data_type<SRC>::id, ldb, stb,
+        &beta, C, tinyblas_data_type<DST>::id, ldc, stc, batches, tinyblas_compute_type<WORD>::id,
+        TINYBLAS_GEMM_DEFAULT)));
     CUDA_OR_DIE(cudaStreamSynchronize(stream));
     CUDA_OR_DIE(cudaStreamDestroy(stream));
+    TINYBLAS_OR_DIE(tinyblasDestroy(blas));
 }

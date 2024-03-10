@@ -44,7 +44,7 @@ o/$(MODE)/llamafile:					\
 
 o/$(MODE)/llamafile/%.o: llamafile/%.cu llamafile/BUILD.mk
 	@mkdir -p $(@D)
-	build/cudacc -g -O3 -march=native -ffast-math --use_fast_math -c -o $@ $<
+	build/cudacc -g -O3 -march=native -c -o $@ $<
 
 o/$(MODE)/llamafile/tinyblas_test:			\
 		o/$(MODE)/llamafile/tinyblas_test.o	\
@@ -56,6 +56,9 @@ o/$(MODE)/llamafile/cudaprops:				\
 		o/$(MODE)/llamafile/cudaprops.o		\
 		o/$(MODE)/llamafile/tester.o
 	build/cudacc -g -o $@ $^ -lcublas
+
+o/$(MODE)/llamafile/pick_a_warp_kernel: private LDFLAGS += -fopenmp
+o/$(MODE)/llamafile/pick_a_warp_kernel.o: private CFLAGS += -fopenmp
 
 .PHONY: o/$(MODE)/llamafile/check
 o/$(MODE)/llamafile/check:				\

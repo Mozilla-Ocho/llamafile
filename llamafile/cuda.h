@@ -57,12 +57,15 @@
 #define cudaGetDevice hipGetDevice
 #define cudaDeviceReset hipDeviceReset
 #define cublasGemmEx hipblasGemmEx_v2
+#define cublasGemmStridedBatchedEx hipblasGemmStridedBatchedEx_v2
 #define CUDA_R_16F HIP_R_16F
 #define CUDA_R_32F HIP_R_32F
+#define CUDA_R_64F HIP_R_64F
 #define CUBLAS_OP_N HIPBLAS_OP_N
 #define CUBLAS_OP_T HIPBLAS_OP_T
 #define CUBLAS_COMPUTE_16F HIPBLAS_COMPUTE_16F
 #define CUBLAS_COMPUTE_32F HIPBLAS_COMPUTE_32F
+#define CUBLAS_COMPUTE_64F HIPBLAS_COMPUTE_64F
 #define CUBLAS_COMPUTE_32F_FAST_16F HIPBLAS_COMPUTE_32F_FAST_16F
 #define CUBLAS_GEMM_DEFAULT HIPBLAS_GEMM_DEFAULT
 #define CUBLAS_STATUS_SUCCESS HIPBLAS_STATUS_SUCCESS

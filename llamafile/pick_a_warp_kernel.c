@@ -1,5 +1,5 @@
-// -*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;coding:utf-8 -*-
-// vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8 :vi
+// -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
 // Copyright 2024 Mozilla Foundation
 //
@@ -17,109 +17,145 @@
 // clang-format off
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 
 // this program prints legal template args for tinyBLAS matmul_warp2d()
 //
 //     make o//llamafile/pick_a_warp_kernel
-//     o//llamafile/pick_a_warp_kernel | sort
+//     o//llamafile/pick_a_warp_kernel
 //
 // note that the sizes generated are in row major order, as used by the
 // warp kernel implementation which is the opposite of the tinyBLAS API
 
-const int VECTOR = 16;
+#define SRC 2
+#define BANK 8
 
 // run o//llamafile/cudaprops to get these values for your gpu
-const int warpSize = 32;
-const int regsPerBlock = 65536;
-const int maxThreadsPerBlock = 1024;
-const int sharedMemPerBlock = 49152;
-const int warpsPerMultiprocessor = 48;
-const int regsPerMultiprocessor = 65536;
-const int sharedMemPerMultiprocessor = 65536;
-const int maxThreadsPerMultiProcessor = 2048;
+#define regsPerBlock 65536
+#define sharedMemPerBlock 65536 // 49152
+#define warpSize 32
+#define cudaSharedOverhead 1024
+#define maxThreadsPerBlock 1024
+#define regsPerMultiprocessor 65536
+#define sharedMemPerMultiprocessor 65536
+#define maxThreadsPerMultiProcessor 2048
 
 #define MIN(X, Y) ((Y) > (X) ? (X) : (Y))
+#define ROUNDUP(X, K) (((X) + (K) - 1) & -(K))
+#define ARRAYLEN(A) (sizeof(A) / sizeof(*(A)))
 
-#define INTEGER(VAR, START, STOP) \
-  int VAR = START;                \
-  VAR <= STOP;                    \
-  VAR++
+#define INTEGER(VAR, START, STOP)               \
+    int VAR = START;                            \
+    VAR <= STOP;                                \
+    VAR++
 
-#define TWOPOW(VAR, START, STOP) \
-  int VAR = START;               \
-  VAR <= STOP;                   \
-  VAR <<= 1
+#define TWOPOW(VAR, START, STOP)                \
+    int VAR = START;                            \
+    VAR <= STOP;                                \
+    VAR *= 2
+
+#define STRINGS 100000
+char *strings[STRINGS];
+atomic_int lock;
+int results;
+
+static const int kNumbers[] = {
+      1,   2,   4,   8,  12,  14,  16,
+     18,  20,  22,  24,  26,  28,  30,
+     32,  64, 128, 256,
+};
+
+int cmp(const void *x, const void *y) {
+  return strcmp(*(const char *const *)x,
+                *(const char *const *)y);
+}
 
 int main(int argc, char *argv[]) {
-  for (TWOPOW(BM, 1, 256))
-    for (TWOPOW(BN, 1, 128))
-      for (TWOPOW(BK, 1, 64))
-        for (TWOPOW(WM, 1, 256))
-          for (TWOPOW(WN, 1, 256))
-            for (INTEGER(WNI, 1, 8))
-              for (TWOPOW(TM, 2, 16))
-                for (TWOPOW(TN, 2, 16))
-                  for (TWOPOW(TT, warpSize, maxThreadsPerBlock)) {
-                    int warps, VE, WMI, SRC;
+#pragma omp parallel for collapse(4)
+  for (int iBM = 0; iBM < ARRAYLEN(kNumbers); ++iBM)
+  for (int iBN = 0; iBN < ARRAYLEN(kNumbers); ++iBN)
+  for (int iBK = 0; iBK < ARRAYLEN(kNumbers); ++iBK)
+  for (int iWM = 0; iWM < ARRAYLEN(kNumbers); ++iWM)
+  for (int iWN = 0; iWN < ARRAYLEN(kNumbers); ++iWN)
+  for (int TM = 1; TM <= 8; TM<<=1)
+  for (int TN = 1; TN <= 8; TN<<=1)
+  for (int WNI = 1; WNI <= 8; ++WNI)
+  for (int TT = warpSize; TT <= 128/* maxThreadsPerBlock */; TT += warpSize) {
+      int BM = kNumbers[iBM];
+      int BN = kNumbers[iBN];
+      int BK = kNumbers[iBK];
+      int WN = kNumbers[iWN];
+      int WM = kNumbers[iWM];
 
-                    // make sure there's a solution for each word size
-                    // for resource calculation we assume fp16 because
-                    // that's the data type we use most but since it's
-                    // possible to have f32 output type in practice we
-                    // should only choose a kernel with >= 2 occupancy
-                    for (SRC = 4; SRC >= 2; SRC >>= 1) {
-                      warps = TT / warpSize;
-                      WMI = (WM * WN) / (warpSize * TM * TN * WNI);
-                      VE = VECTOR / SRC;
-                      if (warps > warpsPerMultiprocessor) goto nope;
-                      if (BN % WN || BM % WM) goto nope;
-                      if ((BN / WN) * (BM / WM) != warps) goto nope;
-                      if (BN % (VECTOR * TN)) goto nope;
-                      if (BM % (VECTOR * TM)) goto nope;
-                      if ((BM * BK) % (VE * TT)) goto nope;
-                      if ((BN * BK) % (VE * TT)) goto nope;
-                      if ((WM % WMI) || (WN % WNI)) goto nope;
-                      if ((WM * WN) % (warpSize * TM * TN * WNI)) goto nope;
-                      if (!((WM * WN) / (warpSize * TM * TN * WNI))) goto nope;
+      // with LLMs the m dimension is the most wild of
+      // the three, since its size is often determined
+      // by user input. as a result, it has a habit of
+      // being small and also not aligned on a 2 power
+      if (BM > BN) continue;
 
-                      // with LLMs the m dimension is the most wild of
-                      // the three, since its size is often determined
-                      // by user input. as a result, it has a habit of
-                      // being small and also not aligned on a 2 power
-                      if (BM > BN) goto nope;
+      // cargo culting boehm
+      if (WM < WN) continue;
 
-                      // cargo culting boehm
-                      if (WM < WN) goto nope;
+      // seems slightly better
+      if (TN > TM) continue;
 
-                      // seems slightly better
-                      if (TN > TM) goto nope;
-                    }
+      // make warp tiles fit evenly in blocks
+      if (BN % WN) continue;
+      if (BM % WM) continue;
 
-                    int regs = ((WMI * TM) + (WNI * TN) + (WMI * TM * WNI * TN)) * TT; // in 32-bit words
-                    int shared = ((BK * BM) + (BK * BN)) * SRC; // in bytes
-                    if (shared > sharedMemPerBlock) goto nope;
-                    if (regs > regsPerBlock) goto nope;
+      // not worth bothering
+      if (TM * TN < 24) continue;
 
-                    int occupants = MIN(regsPerMultiprocessor / regs,
-                                        MIN(warpsPerMultiprocessor / warps,
-                                            sharedMemPerMultiprocessor / shared));
-                    if (occupants < 2) goto nope;  // so there's room for sgemm float
-                    int occupancy = ((regs * occupants / (double)regsPerMultiprocessor) +
-                                     (shared * occupants / (double)sharedMemPerMultiprocessor)) / 2 * 100 + .5;
-                    if (occupancy < 85) goto nope; // not worth printing
+      // banking possible
+      if (BK % BANK) continue;
+      if (BN % BANK) continue;
+      if ((BM * BK) % (BANK * TT)) continue;
+      if ((BN * BK) % (BANK * TT)) continue;
 
-                    long long score = (long long)      // our goal in scoring is as follows (bigger is better)
-                                      BK * TM * TN *   // - maximize outer product's algorithmic advantage
-                                      occupants *      // - minimize resource usage
-                                      TT *             // - maximize concurrency
-                                      WM * WN;         // - maximum warp engage
+      // plan out warp tiles for each thread
+      int WARPS = TT / warpSize;
+      if ((BN / WN) * (BM / WM) != WARPS) continue;
+      int WMI = (WM * WN) / (warpSize * TM * TN * WNI);
+      if (!((WM * WN) / (warpSize * TM * TN * WNI))) continue;
+      if ((WM % WMI) || (WN % WNI)) continue;
+      if ((WM * WN) % (warpSize * TM * TN * WNI)) continue;
 
-                    printf("%012lld constexpr int TT=%4d, BM=%3d, BN=%3d, BK=%3d, WM=%3d, "
-                           "WN=%3d, WNI=%d, TM=%2d, TN=%3d, REGS=%7d, SHARED=%7d; // %2d occupants (%d%%)\n",
-                           score, TT, BM, BN, BK, WM, WN, WNI, TM, TN, regs, shared, occupants, occupancy);
+      // compute number of bytes of shared memory required per block
+      int SMEM = (BK * BM) + (BK * BN); // in words
+      if (SMEM * 4 > sharedMemPerBlock) continue;
+      SMEM *= SRC; // now in bytes
 
-                 nope:
-                    (void)0;
-                  }
+      // compute number of words used for thread local storage
+      int REGS = ROUNDUP(((WMI * TM) + (WNI * TN) + (WMI * TM * WNI * TN)) * warpSize, 256) * (TT / warpSize);
+      if (REGS > regsPerBlock) continue;
+
+      int occupants = MIN(regsPerMultiprocessor / REGS,
+                          MIN(maxThreadsPerMultiProcessor / TT,
+                              sharedMemPerMultiprocessor / (SMEM + cudaSharedOverhead)));
+      if (occupants < 2) continue;  // so there's room for sgemm float
+      int occupancy = ((REGS * occupants / (double)regsPerMultiprocessor) +
+                       (SMEM * occupants / (double)sharedMemPerMultiprocessor)) / 2 * 100 + .5;
+
+      int score = occupancy;
+
+      int n = 256;
+      char *s = malloc(256);
+      snprintf(s, n, "%07d constexpr int TT = %3d, BM = %3d, BN = %3d, BK = %3d, WM = %3d, "
+               "WN = %3d, WNI = %d, TM = %2d, TN = %3d; // %5d REGS, %5d SMEM, %2d occupants (%d%%)",
+               score, TT, BM, BN, BK, WM, WN, WNI, TM, TN, REGS, SMEM, occupants, occupancy);
+
+      while (atomic_exchange_explicit(&lock, 1, memory_order_acquire));
+      if (results == STRINGS) exit(7);
+      strings[results++] = s;
+      atomic_store_explicit(&lock, 0, memory_order_release);
+  }
+
+  int printed = MIN(results, 500);
+  qsort(strings, results, sizeof(char *), cmp);
+  for (int i = results - printed; i < results; ++i)
+      puts(strings[i]);
+
+  fprintf(stderr, "note: printed %d of the %d legal kernels that exist\n", printed, results);
 }

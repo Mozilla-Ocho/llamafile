@@ -38,22 +38,51 @@ namespace naive {
 namespace {
 
 template <typename T, typename TA, typename TB, typename TC>
-__global__ void kernel(bool aT, bool bT, //
-                       int m, int n, int k, T alpha, //
-                       const TA *A, int lda, //
-                       const TB *B, int ldb, T beta, //
-                       TC *C, int ldc) {
+__global__ void GEMM(bool aT, bool bT, //
+                     int m, int n, int k, T alpha, //
+                     const TA *A, int lda, //
+                     const TB *B, int ldb, T beta, //
+                     TC *C, int ldc) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < m && j < n) {
         T d = 0;
         for (int l = 0; l < k; ++l) {
-            T a = aT ? A[lda * i + l] : A[lda * l + i];
-            T b = bT ? B[ldb * l + j] : B[ldb * j + l];
+            T a = A[aT ? lda * i + l : lda * l + i];
+            T b = B[bT ? ldb * l + j : ldb * j + l];
             d += a * b;
         }
-        T c = C[ldc * j + i];
-        C[ldc * j + i] = alpha * d + beta * c;
+        if (beta) {
+            T c = C[ldc * j + i];
+            C[ldc * j + i] = alpha * d + beta * c;
+        } else {
+            C[ldc * j + i] = alpha * d;
+        }
+    }
+}
+
+template <typename T, typename TA, typename TB, typename TC>
+__global__ void GSBE(bool aT, bool bT, //
+                     int m, int n, int k, T alpha, //
+                     const TA *A, int lda, long long sta, //
+                     const TB *B, int ldb, long long stb, T beta, //
+                     TC *C, int ldc, long long stc) {
+    const int z = blockIdx.z;
+    const int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const int j = blockIdx.y * blockDim.y + threadIdx.y;
+    if (i < m && j < n) {
+        T d = 0;
+        for (int l = 0; l < k; ++l) {
+            T a = A[sta * z + (aT ? lda * i + l : lda * l + i)];
+            T b = B[stb * z + (bT ? ldb * l + j : ldb * j + l)];
+            d += a * b;
+        }
+        if (beta) {
+            T c = C[stc * z + ldc * j + i];
+            C[stc * z + ldc * j + i] = alpha * d + beta * c;
+        } else {
+            C[stc * z + ldc * j + i] = alpha * d;
+        }
     }
 }
 
@@ -75,7 +104,28 @@ cudaError_t gemm(cudaStream_t stream, //
                  TC *C, int ldc) {
     dim3 threads(32, 32);
     dim3 blocks(CEIL_DIV(m, 32), CEIL_DIV(n, 32));
-    kernel<<<blocks, threads, 0, stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    GEMM<<<blocks, threads, 0, stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    return cudaGetLastError();
+}
+
+// multiplies matrices on gpu with column major ordering
+//
+//     m×k * k×n → m×n
+//     k×m * k×n → m×n if aᵀ
+//     m×k * n×k → m×n if bᵀ
+//     k×m * n×k → m×n if aᵀ and bᵀ
+//
+template <typename T, typename TA, typename TB, typename TC>
+cudaError_t gsbe(cudaStream_t stream, //
+                 bool aT, bool bT, //
+                 int m, int n, int k, T alpha, //
+                 const TA *A, int lda, long long sta, //
+                 const TB *B, int ldb, long long stb, T beta, //
+                 TC *C, int ldc, long long stc, int batches) {
+    dim3 threads(32, 32);
+    dim3 blocks(CEIL_DIV(m, 32), CEIL_DIV(n, 32), batches);
+    GSBE<<<blocks, threads, 0, stream>>>(aT, bT, m, n, k, alpha, A, lda, sta, B, ldb, stb, beta, C,
+                                         ldc, stc);
     return cudaGetLastError();
 }
 
