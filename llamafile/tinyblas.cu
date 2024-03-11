@@ -596,9 +596,9 @@ static tinyblasStatus_t tinyblasGBE_launch(tinyblasHandle_t handle, tinyblasOper
                                            WORD alpha, const SRC *const *Aarray, int lda,
                                            const SRC *const *Barray, int ldb, WORD beta,
                                            DST *const *Carray, int ldc, int batchCount) {
-    constexpr int BM = 16;
-    constexpr int BN = 16;
-    constexpr int TM = 4;
+    constexpr int BM = 24;
+    constexpr int BN = 12;
+    constexpr int TM = 8;
     constexpr int TN = 4;
     dim3 blocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), batchCount);
     tinyblasGBE_entry<BM, BN, TM, TN><<<blocks, THREAD_COUNT, 0, handle->stream>>>(
@@ -738,10 +738,10 @@ static tinyblasStatus_t tinyblasGSBE_launch(tinyblasHandle_t handle, tinyblasOpe
                                             WORD alpha, const SRC *A, int lda, long long strideA,
                                             const SRC *B, int ldb, long long strideB, WORD beta,
                                             DST *C, int ldc, long long strideC, int batchCount) {
-    constexpr int BM = 16;
-    constexpr int BN = 16;
-    constexpr int TM = 4;
-    constexpr int TN = 4;
+    constexpr int BM = 32;
+    constexpr int BN = 8;
+    constexpr int TM = 8;
+    constexpr int TN = 2;
     constexpr int BK = THREAD_COUNT;
     dim3 blocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), batchCount);
     if ((beta == 0 && //
