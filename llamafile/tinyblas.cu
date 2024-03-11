@@ -125,7 +125,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
                     As[BK * i + th][ip] = 0;
         for (int i = 0; i < BM && (ll + th < k || ksafe) && (ii + i < m || msafe); ++i)
             for(int ip = 0; ip < BN / TN; ++ip)
-                As[BM * th + i][ip] = A[transa ? lda * (ii + i) + (ll + th) : lda * (ll + th) + (ii + i)];
+                As[BK * i + th][ip] = A[transa ? lda * (ii + i) + (ll + th) : lda * (ll + th) + (ii + i)];
 
         if (!ksafe || !nsafe)
             for (int j = 0; j < BN; ++j)
@@ -139,7 +139,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
 
         for (int l = 0; l < BK; ++l) {
             for (int j = 0; j < TM; ++j)
-                At[j] = As[BM * l + TM * ti + j][tj];
+                At[j] = As[l + BK * (TM * ti + j)][tj];
             for (int h = 0; h < TN; ++h)
                 Bt[h] = Bs[BN * l + TN * tj + h][ti];
             for (int j = 0; j < TM; ++j) {
