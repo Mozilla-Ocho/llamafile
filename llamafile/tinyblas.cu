@@ -88,7 +88,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
     static_assert(BN % TN == 0, "can't divide work for threads");
     static_assert(BM > 0 && BN > 0 && BK > 0 && TM > 0 && TN > 0,
                   "one of the constexpr configuration values was non-positive");
-    static_assert((BK * BM * sizeof(SRC)) + (BK * BN * sizeof(SRC)) <= 65536,
+    static_assert((BK * BM * (BN / TN) * sizeof(SRC)) + (BK * BN * (BM/ TM) * sizeof(SRC)) <= 65536,
                   "you're almost almost certainly using too much shared memory");
 
     constexpr bool msafe = !!(CONFIG & ASSUME_M_SAFE);
@@ -98,11 +98,11 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
     const int th = threadIdx.x;
     const int ii = blockIdx.x * BM;
     const int jj = blockIdx.y * BN;
-    const int ti = th / (BN / TN) * TM;
-    const int tj = th % (BN / TN) * TN;
+    const int ti = th / (BN / TN);
+    const int tj = th % (BN / TN);
 
-    __shared__ SRC As[BK * BM];
-    __shared__ SRC Bs[BK * BN];
+    __shared__ SRC As[BK * BM][(BN / TN)]; // tj in [0, BN/TN]
+    __shared__ SRC Bs[BK * BN][(BM / TM)]; // ti in [0, BM/TM]
 
     WORD At[TM];
     WORD Bt[TN];
@@ -121,23 +121,27 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
 
         if (!ksafe || !msafe)
             for (int i = 0; i < BM; ++i)
-                As[BM * th + i] = 0;
+                for(int ip = 0; ip < BN / TN; ++ip)
+                    As[BK * i + th][ip] = 0;
         for (int i = 0; i < BM && (ll + th < k || ksafe) && (ii + i < m || msafe); ++i)
-            As[BM * th + i] = A[transa ? lda * (ii + i) + (ll + th) : lda * (ll + th) + (ii + i)];
+            for(int ip = 0; ip < BN / TN; ++ip)
+                As[BM * th + i][ip] = A[transa ? lda * (ii + i) + (ll + th) : lda * (ll + th) + (ii + i)];
 
         if (!ksafe || !nsafe)
             for (int j = 0; j < BN; ++j)
-                Bs[BN * th + j] = 0;
+                for(int jp = 0; jp < BM / TM; ++jp)
+                    Bs[BK * j + th][jp] = 0;
         for (int j = 0; j < BN && (ll + th < k || ksafe) && (jj + j < n || nsafe); ++j)
-            Bs[BN * th + j] = B[transb ? ldb * (ll + th) + (jj + j) : ldb * (jj + j) + (ll + th)];
+            for(int jp = 0; jp < BM / TM; ++jp)
+                Bs[BN * th + j][jp] = B[transb ? ldb * (ll + th) + (jj + j) : ldb * (jj + j) + (ll + th)];
 
         __syncthreads();
 
         for (int l = 0; l < BK; ++l) {
             for (int j = 0; j < TM; ++j)
-                At[j] = As[BM * l + ti + j];
+                At[j] = As[BM * l + TM * ti + j][tj];
             for (int h = 0; h < TN; ++h)
-                Bt[h] = Bs[BN * l + tj + h];
+                Bt[h] = Bs[BN * l + TN * tj + h][ti];
             for (int j = 0; j < TM; ++j) {
                 WORD a = At[j];
                 for (int h = 0; h < TN; ++h) {
@@ -150,8 +154,8 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
         __syncthreads();
     }
 
-    for (int j = 0; j < TN && (jj + tj + j < n || nsafe); ++j)
-        for (int i = 0; i < TM && (ii + ti + i < m || msafe); ++i) {
+    for (int j = 0; j < TN && (jj + tj * TN + j < n || nsafe); ++j)
+        for (int i = 0; i < TM && (ii + ti * TM + i < m || msafe); ++i) {
             WORD r, d = Ct[TN * i + j];
             if ((CONFIG & IGNORE_BETA) || !beta) {
                 if (CONFIG & IGNORE_ALPHA)
@@ -159,13 +163,13 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
                 else
                     r = alpha * d;
             } else {
-                WORD c = C[ldc * (jj + tj + j) + (ii + ti + i)];
+                WORD c = C[ldc * (jj + tj * TN + j) + (ii + ti * TM + i)];
                 if (CONFIG & IGNORE_ALPHA)
                     r = beta * c + d;
                 else
                     r = alpha * d + beta * c;
             }
-            C[ldc * (jj + tj + j) + (ii + ti + i)] = r;
+            C[ldc * (jj + tj * TN + j) + (ii + ti * TM + i)] = r;
         }
 }
 
