@@ -252,7 +252,7 @@ void check(double tol, //
     assert(lda >= std::max(1, m));
     assert(ldb >= std::max(1, m));
     ErrorReport errors = diff(m, n, A, lda, B, ldb);
-    if (!errors.nans && errors.worst <= tol * sqrt(k) && errors.flips < m * n * .01) {
+    if (!errors.nans && errors.sad <= tol && errors.flips < m * n * .01) {
         if (!is_self_testing)
             printf("         %lld ulp - %g (%llx) vs. %g (%llx)\n"
                    "         sad=%g nans=%d infs=%d flips=%d zeroes=%d denormals=%d\n",
@@ -325,9 +325,9 @@ void check(double tol, //
             CUDA_OR_DIE(cudaEventRecord(stop_, stream)); \
             CUDA_OR_DIE(cudaEventSynchronize(stop_)); \
             CUDA_OR_DIE(cudaEventElapsedTime(&msecTotal_, start_, stop_)); \
-            printf("%8d us %s(%d, %d, %d)\n", \
+            printf("%8d us %s(%d, %d, %d) %g gigaflops\n", \
                    static_cast<int>(std::ceil(msecTotal_ / ITERATIONS * 1000)), __FUNCTION__, m, \
-                   n, k); \
+                   n, k, 1000. / (msecTotal_ / ITERATIONS) * m * n * k * 1e-9); \
             CUDA_OR_DIE(cudaEventDestroy(start_)); \
             CUDA_OR_DIE(cudaEventDestroy(stop_)); \
         } \

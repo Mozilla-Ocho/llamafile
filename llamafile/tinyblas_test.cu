@@ -15,10 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gemm.h"
 #include "tester.h"
 
-double TOLERANCE = 1;
+double TOLERANCE = 1e-5;
 
 void checkTinyblasWorksHHHS() {
     float alpha = 1;

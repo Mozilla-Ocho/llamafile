@@ -30,7 +30,6 @@
 // warp kernel implementation which is the opposite of the tinyBLAS API
 
 #define SRC 2
-#define BANK 8
 
 // run o//llamafile/cudaprops to get these values for your gpu
 #define regsPerBlock 65536
@@ -79,10 +78,12 @@ int main(int argc, char *argv[]) {
   for (int iBK = 0; iBK < ARRAYLEN(kNumbers); ++iBK)
   for (int iWM = 0; iWM < ARRAYLEN(kNumbers); ++iWM)
   for (int iWN = 0; iWN < ARRAYLEN(kNumbers); ++iWN)
+  for (int BK = 4; BK <= 128; BK<<=1)
+  for (int VE = 4; VE <= 32; VE<<=1)
   for (int TM = 1; TM <= 8; TM<<=1)
   for (int TN = 1; TN <= 8; TN<<=1)
   for (int WNI = 1; WNI <= 8; ++WNI)
-  for (int TT = warpSize; TT <= 128/* maxThreadsPerBlock */; TT += warpSize) {
+  for (int TT = warpSize; TT <= maxThreadsPerBlock; TT += warpSize) {
       int BM = kNumbers[iBM];
       int BN = kNumbers[iBN];
       int BK = kNumbers[iBK];
@@ -109,22 +110,25 @@ int main(int argc, char *argv[]) {
       if (TM * TN < 24) continue;
 
       // banking possible
-      if (BK % BANK) continue;
-      if (BN % BANK) continue;
-      if ((BM * BK) % (BANK * TT)) continue;
-      if ((BN * BK) % (BANK * TT)) continue;
+      if (BK % VE) continue;
+      if (BN % VE) continue;
+      if ((BM * BK) % (VE * TT)) continue;
+      if ((BN * BK) % (VE * TT)) continue;
 
       // plan out warp tiles for each thread
       int WARPS = TT / warpSize;
       if ((BN / WN) * (BM / WM) != WARPS) continue;
-      int WMI = (WM * WN) / (warpSize * TM * TN * WNI);
-      if (!((WM * WN) / (warpSize * TM * TN * WNI))) continue;
-      if ((WM % WMI) || (WN % WNI)) continue;
       if ((WM * WN) % (warpSize * TM * TN * WNI)) continue;
+      int WMI = (WM * WN) / (warpSize * TM * TN * WNI);
+      if ((WM % WMI) || (WN % WNI)) continue;
+      if (WM % WMI) continue;
+      if (WN % WNI) continue;
+      int WSUBN = WN / WNI;
+      if (WSUBN % TN) continue;
 
       // compute number of bytes of shared memory required per block
       int SMEM = (BK * BM) + (BK * BN); // in words
-      if (SMEM * 4 > sharedMemPerBlock) continue;
+      if (SMEM * SRC > sharedMemPerBlock) continue;
       SMEM *= SRC; // now in bytes
 
       // compute number of words used for thread local storage
@@ -134,17 +138,31 @@ int main(int argc, char *argv[]) {
       int occupants = MIN(regsPerMultiprocessor / REGS,
                           MIN(maxThreadsPerMultiProcessor / TT,
                               sharedMemPerMultiprocessor / (SMEM + cudaSharedOverhead)));
-      if (occupants < 2) continue;  // so there's room for sgemm float
-      int occupancy = ((REGS * occupants / (double)regsPerMultiprocessor) +
-                       (SMEM * occupants / (double)sharedMemPerMultiprocessor)) / 2 * 100 + .5;
 
-      int score = occupancy;
+      int register_occupancy = REGS * occupants / (double)regsPerMultiprocessor * 100 + .5;
+      int shared_occupancy = (SMEM + cudaSharedOverhead) * occupants / (double)sharedMemPerMultiprocessor * 100 + .5;
+      int thread_occupancy = TT * occupants / (double)maxThreadsPerMultiProcessor * 100 + .5;
+
+      /* int score = register_occupancy + shared_occupancy + thread_occupancy; */
+
+      int score =
+              (TT > 256) +
+              (BM == 128) +
+              (BN == 64) +
+              (BK == 64) +
+              (VE == 16) +
+              (WM == 32) +
+              (WN == 32) +
+              (WNI == 1) +
+              (TM == 8) +
+              (TN == 4);
 
       int n = 256;
       char *s = malloc(256);
-      snprintf(s, n, "%07d constexpr int TT = %3d, BM = %3d, BN = %3d, BK = %3d, WM = %3d, "
-               "WN = %3d, WNI = %d, TM = %2d, TN = %3d; // %5d REGS, %5d SMEM, %2d occupants (%d%%)",
-               score, TT, BM, BN, BK, WM, WN, WNI, TM, TN, REGS, SMEM, occupants, occupancy);
+      snprintf(s, n, "%07d constexpr int TT = %3d, BM = %3d, BN = %3d, BK = %3d, VE = %3d, WM = %3d, "
+               "WN = %3d, WNI = %d, TM = %2d, TN = %3d; // %5d REGS, %5d SMEM, %2d occupants (%2d%% / %2d%% / %2d%%)",
+               score, TT, BM, BN, BK, VE, WM, WN, WNI, TM, TN, REGS, SMEM, occupants,
+               register_occupancy, shared_occupancy, thread_occupancy);
 
       while (atomic_exchange_explicit(&lock, 1, memory_order_acquire));
       if (results == STRINGS) exit(7);

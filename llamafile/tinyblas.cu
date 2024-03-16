@@ -33,12 +33,7 @@
 // our software open source if it spends most of its time inside NVIDIA
 // proprietary blobs like cuBLAS? tinyBLAS provides a free, open, libre
 // alternative to cuBLAS that's orders of a magnitude tinier (cuBLAS is
-// a 500mb DSO) and goes fast enough that you won't sacrifice much. AMD
-// users might even prefer tinyBLAS, since outperforming hipBLAS is not
-// very difficult for large matrices. tinyBLAS also has better accuracy
-// too, since hipBLAS uses tricks that cause sign flips, and denormals.
-//
-// TODO(jart): make tinyBLAS go fast for skinny matrices
+// a 500mb DSO) and goes fast enough that you won't sacrifice much.
 //
 // [1] S. Boehm, ‘How to Optimize a CUDA Matmul Kernel for cuBLAS-like
 //     Performance’, 2022. [Online]. Available:
@@ -138,13 +133,9 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
                 At[j] = As[BM * l + ti + j];
             for (int h = 0; h < TN; ++h)
                 Bt[h] = Bs[BN * l + tj + h];
-            for (int j = 0; j < TM; ++j) {
-                WORD a = At[j];
-                for (int h = 0; h < TN; ++h) {
-                    WORD b = Bt[h];
-                    Ct[TN * j + h] += a * b;
-                }
-            }
+            for (int j = 0; j < TM; ++j)
+                for (int h = 0; h < TN; ++h)
+                    Ct[TN * j + h] += At[j] * Bt[h];
         }
 
         __syncthreads();
@@ -172,8 +163,8 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // tinyBLAS warp block tiling outer product GEMM kernel
 
-template <int CONFIG, int BM, int BN, int BK, int WM, int WN, int WNI, int TM, int TN, int TT,
-          typename WORD, typename SRC, typename DST>
+template <int CONFIG, int BM, int BN, int BK, int VE, int WM, int WN, int WNI, int TM, int TN,
+          int TT, typename WORD, typename SRC, typename DST>
 static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
                                      tinyblasOperation_t bT, //
                                      int m, int n, int k, WORD alpha, //
@@ -190,7 +181,6 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
     constexpr int WMI = (WM * WN) / (WARPSIZE * TM * TN * WNI);
     constexpr int WSUBM = WM / WMI;
     constexpr int WSUBN = WN / WNI;
-    constexpr int BANK = 16;
 
     constexpr bool msafe = !!(CONFIG & ASSUME_M_SAFE);
     constexpr bool nsafe = !!(CONFIG & ASSUME_N_SAFE);
@@ -206,10 +196,10 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
     static_assert(!(WM % WMI) && !(WN % WNI), "");
     static_assert((BN / WN) * (BM / WM) == WARPS, "");
     static_assert((WM * WN) % (WARPSIZE * TM * TN * WNI) == 0, "");
-    static_assert((BM * BK) % (BANK * TT) == 0, "");
-    static_assert((BN * BK) % (BANK * TT) == 0, "");
-    static_assert(BK % BANK == 0, "");
-    static_assert(BN % BANK == 0, "");
+    static_assert((BM * BK) % (VE * TT) == 0, "");
+    static_assert((BN * BK) % (VE * TT) == 0, "");
+    static_assert(BK % VE == 0, "");
+    static_assert(BN % VE == 0, "");
 
     __shared__ SRC As[BK * BM];
     __shared__ SRC Bs[BK * BN];
@@ -229,22 +219,22 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
 
     for (int ll = 0; ll < k; ll += BK) {
 
-        for (int h = 0; h < BM; h += (TT * BANK) / BK)
-            for (int v = 0; v < BANK; ++v) {
-                int l = ll + threadIdx.x % (BK / BANK) * BANK + v;
-                int i = blockIdx.y * BM + threadIdx.x / (BK / BANK) + h;
-                As[BM * (threadIdx.x % (BK / BANK) * BANK + v) + (threadIdx.x / (BK / BANK) + h)] =
+        for (int h = 0; h < BM; h += (TT * VE) / BK)
+            for (int v = 0; v < VE; ++v) {
+                int l = ll + threadIdx.x % (BK / VE) * VE + v;
+                int i = blockIdx.y * BM + threadIdx.x / (BK / VE) + h;
+                As[BM * (threadIdx.x % (BK / VE) * VE + v) + (threadIdx.x / (BK / VE) + h)] =
                     (((i < m || msafe) && //
                       (l < k || ksafe))
-                         ? A[!aT ? lda * i + l : lda * l + i]
+                         ? A[aT ? lda * l + i : lda * i + l]
                          : zero);
             }
 
-        for (int h = 0; h < BK; h += TT / (BN / BANK))
-            for (int v = 0; v < BANK; ++v) {
-                int l = ll + threadIdx.x / (BN / BANK) + h;
-                int j = blockIdx.x * BN + threadIdx.x % (BN / BANK) * BANK + v;
-                Bs[BN * (threadIdx.x / (BN / BANK) + h) + (threadIdx.x % (BN / BANK) * BANK + v)] =
+        for (int h = 0; h < BK; h += TT / (BN / VE))
+            for (int v = 0; v < VE; ++v) {
+                int l = ll + threadIdx.x / (BN / VE) + h;
+                int j = blockIdx.x * BN + threadIdx.x % (BN / VE) * VE + v;
+                Bs[BN * (threadIdx.x / (BN / VE) + h) + (threadIdx.x % (BN / VE) * VE + v)] =
                     (((j < n || nsafe) && //
                       (l < k || ksafe))
                          ? B[bT ? ldb * j + l : ldb * l + j]
@@ -419,24 +409,24 @@ tinyblasStatus_t tinyblasSgemm(tinyblasHandle_t handle, tinyblasOperation_t tran
                           TINYBLAS_GEMM_DEFAULT);
 }
 
-template <int CONFIG, int BM, int BN, int BK, int WM, int WN, int WNI, int TM, int TN, int TT,
-          typename WORD, typename SRC, typename DST>
+template <int CONFIG, int BM, int BN, int BK, int VE, int WM, int WN, int WNI, int TM, int TN,
+          int TT, typename WORD, typename SRC, typename DST>
 static __global__ void __launch_bounds__(TT) tinyblasGE_entry(tinyblasOperation_t aT, //
                                                               tinyblasOperation_t bT, //
                                                               int m, int n, int k, WORD alpha, //
                                                               const SRC *A, int lda, //
                                                               const SRC *B, int ldb, //
                                                               WORD beta, DST *C, int ldc) {
-    matmul_warp2d<CONFIG, BM, BN, BK, WM, WN, WNI, TM, TN, TT>(aT, bT, m, n, k, alpha, A, lda, B,
-                                                               ldb, beta, C, ldc);
+    matmul_warp2d<CONFIG, BM, BN, BK, VE, WM, WN, WNI, TM, TN, TT>(aT, bT, m, n, k, alpha, A, lda,
+                                                                   B, ldb, beta, C, ldc);
 }
 
-template <typename WORD, typename SRC, typename DST>
+template <int BM, int BN, int BK, int VE, int WM, int WN, int WNI, int TM, int TN, int TT,
+          typename WORD, typename SRC, typename DST>
 static tinyblasStatus_t tinyblasGE_launcher(tinyblasHandle_t handle, tinyblasOperation_t aT,
                                             tinyblasOperation_t bT, int m, int n, int k, WORD alpha,
                                             const SRC *A, int lda, const SRC *B, int ldb, WORD beta,
                                             DST *C, int ldc) {
-    constexpr int TT = 256, BM = 128, BN = 64, BK = 64, WM = 128, WN = 8, WNI = 1, TM = 8, TN = 4;
     dim3 blocks(CEIL_DIV(n, BN), CEIL_DIV(m, BM));
     if ((beta == 0 && //
          alpha == 1 && //
@@ -446,12 +436,13 @@ static tinyblasStatus_t tinyblasGE_launcher(tinyblasHandle_t handle, tinyblasOpe
          bT == TINYBLAS_OP_T)) {
         constexpr int CONFIG = IGNORE_BETA | IGNORE_ALPHA | ASSUME_A_OP_N | ASSUME_B_OP_T |
                                ASSUME_N_SAFE | ASSUME_K_SAFE;
-        tinyblasGE_entry<CONFIG, BM, BN, BK, WM, WN, WNI, TM, TN, TT>
+        tinyblasGE_entry<CONFIG, BM, BN, BK, VE, WM, WN, WNI, TM, TN, TT>
             <<<blocks, TT, 0, handle->stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C,
                                                 ldc);
     } else {
-        tinyblasGE_entry<0, BM, BN, BK, WM, WN, WNI, TM, TN, TT><<<blocks, TT, 0, handle->stream>>>(
-            aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+        tinyblasGE_entry<0, BM, BN, BK, VE, WM, WN, WNI, TM, TN, TT>
+            <<<blocks, TT, 0, handle->stream>>>(aT, bT, m, n, k, alpha, A, lda, B, ldb, beta, C,
+                                                ldc);
     }
     if (cudaGetLastError() != cudaSuccess)
         return TINYBLAS_STATUS_EXECUTION_FAILED;
@@ -459,11 +450,22 @@ static tinyblasStatus_t tinyblasGE_launcher(tinyblasHandle_t handle, tinyblasOpe
 }
 
 template <typename WORD, typename SRC, typename DST>
-static tinyblasStatus_t tinyblasGE_launch(tinyblasHandle_t handle, tinyblasOperation_t aT,
-                                          tinyblasOperation_t bT, int m, int n, int k, WORD alpha,
-                                          const SRC *A, int lda, const SRC *B, int ldb, WORD beta,
-                                          DST *C, int ldc) {
-    return tinyblasGE_launcher(handle, bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
+tinyblasStatus_t tinyblasGE_launch(tinyblasHandle_t handle, tinyblasOperation_t aT,
+                                   tinyblasOperation_t bT, int m, int n, int k, WORD alpha,
+                                   const SRC *A, int lda, const SRC *B, int ldb, WORD beta, DST *C,
+                                   int ldc) {
+    constexpr int TT = 256;
+    constexpr int BM = 128;
+    constexpr int BN = 64;
+    constexpr int BK = 64;
+    constexpr int VE = 16;
+    constexpr int WM = 32;
+    constexpr int WN = 32;
+    constexpr int WNI = 1;
+    constexpr int TM = 8;
+    constexpr int TN = 4;
+    return tinyblasGE_launcher<BM, BN, BK, VE, WM, WN, WNI, TM, TN, TT>(
+        handle, bT, aT, n, m, k, alpha, B, ldb, A, lda, beta, C, ldc);
 }
 
 /**
@@ -592,10 +594,10 @@ static tinyblasStatus_t tinyblasGBE_launch(tinyblasHandle_t handle, tinyblasOper
                                            WORD alpha, const SRC *const *Aarray, int lda,
                                            const SRC *const *Barray, int ldb, WORD beta,
                                            DST *const *Carray, int ldc, int batchCount) {
-    constexpr int BM = 32;
-    constexpr int BN = 32;
-    constexpr int TM = 2;
-    constexpr int TN = 8;
+    constexpr int BM = 16;
+    constexpr int BN = 16;
+    constexpr int TM = 4;
+    constexpr int TN = 4;
     dim3 blocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), batchCount);
     tinyblasGBE_entry<BM, BN, TM, TN><<<blocks, THREAD_COUNT, 0, handle->stream>>>(
         transa, transb, m, n, k, alpha, Aarray, lda, Barray, ldb, beta, Carray, ldc, batchCount);
@@ -728,16 +730,12 @@ static __global__ void KERNEL tinyblasGSBE_entry(tinyblasOperation_t transa,
                                            C + strideC * blockIdx.z, ldc);
 }
 
-template <typename WORD, typename SRC, typename DST>
-static tinyblasStatus_t tinyblasGSBE_launch(tinyblasHandle_t handle, tinyblasOperation_t transa,
-                                            tinyblasOperation_t transb, int m, int n, int k,
-                                            WORD alpha, const SRC *A, int lda, long long strideA,
-                                            const SRC *B, int ldb, long long strideB, WORD beta,
-                                            DST *C, int ldc, long long strideC, int batchCount) {
-    constexpr int BM = 32;
-    constexpr int BN = 32;
-    constexpr int TM = 2;
-    constexpr int TN = 8;
+template <int BM, int BN, int TM, int TN, typename WORD, typename SRC, typename DST>
+static tinyblasStatus_t tinyblasGSBE_launcher(tinyblasHandle_t handle, tinyblasOperation_t transa,
+                                              tinyblasOperation_t transb, int m, int n, int k,
+                                              WORD alpha, const SRC *A, int lda, long long strideA,
+                                              const SRC *B, int ldb, long long strideB, WORD beta,
+                                              DST *C, int ldc, long long strideC, int batchCount) {
     constexpr int BK = THREAD_COUNT;
     dim3 blocks(CEIL_DIV(m, BM), CEIL_DIV(n, BN), batchCount);
     if ((beta == 0 && //
@@ -759,6 +757,21 @@ static tinyblasStatus_t tinyblasGSBE_launch(tinyblasHandle_t handle, tinyblasOpe
     if (cudaGetLastError() != cudaSuccess)
         return TINYBLAS_STATUS_EXECUTION_FAILED;
     return TINYBLAS_STATUS_SUCCESS;
+}
+
+template <typename WORD, typename SRC, typename DST>
+static tinyblasStatus_t tinyblasGSBE_launch(tinyblasHandle_t handle, tinyblasOperation_t transa,
+                                            tinyblasOperation_t transb, int m, int n, int k,
+                                            WORD alpha, const SRC *A, int lda, long long strideA,
+                                            const SRC *B, int ldb, long long strideB, WORD beta,
+                                            DST *C, int ldc, long long strideC, int batchCount) {
+    constexpr int BM = 16;
+    constexpr int BN = 16;
+    constexpr int TM = 4;
+    constexpr int TN = 4;
+    return tinyblasGSBE_launcher<BM, BN, TM, TN>(handle, transa, transb, m, n, k, alpha, A, lda,
+                                                 strideA, B, ldb, strideB, beta, C, ldc, strideC,
+                                                 batchCount);
 }
 
 /**
