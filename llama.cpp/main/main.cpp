@@ -152,8 +152,7 @@ int main(int argc, char ** argv) {
     llama_log_set(llama_log_callback_logTee, nullptr);
 #endif // LOG_DISABLE_LOGS
 
-    if (!params.image.empty() ||
-        params.prompt.find("<img src=\"") != std::string::npos) {
+    if (!params.image.empty()) {
         return llava_cli(argc, argv, &params);
     }
 
