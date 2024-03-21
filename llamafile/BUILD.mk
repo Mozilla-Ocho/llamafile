@@ -44,7 +44,7 @@ o/$(MODE)/llamafile:					\
 
 o/$(MODE)/llamafile/%.o: llamafile/%.cu llamafile/BUILD.mk
 	@mkdir -p $(@D)
-	build/cudacc -g -O3 -march=native -c -o $@ $<
+	build/cudacc -fPIE -g -O3 -march=native -c -o $@ $<
 
 o/$(MODE)/llamafile/tinyblas_test:			\
 		o/$(MODE)/llamafile/tinyblas_test.o	\
