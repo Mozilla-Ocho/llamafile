@@ -152,8 +152,14 @@ int main(int argc, char ** argv) {
     llama_log_set(llama_log_callback_logTee, nullptr);
 #endif // LOG_DISABLE_LOGS
 
-    if (!params.image.empty() &&
-        params.prompt.find("<img src=\"") != std::string::npos) {
+    if (!params.image.empty() && params.mmproj.empty()) {
+        fprintf(stderr, "%s: fatal error: --mmproj must also be passed when an --image is specified in cli mode\n", argv[0]);
+        return 1;
+    }
+
+    if (!params.mmproj.empty() &&
+        (!params.image.empty() ||
+         params.prompt.find("<img src=\"") != std::string::npos)) {
         return llava_cli(argc, argv, &params);
     }
 

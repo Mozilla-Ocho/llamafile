@@ -275,11 +275,6 @@ static void llava_free(struct llava_context * ctx_llava) {
 
 int llava_cli(int argc, char ** argv, gpt_params * params) {
 
-    if (params->mmproj.empty()) {
-        fprintf(stderr, "%s: fatal error: --mmproj must also be passed when an --image is specified in cli mode\n", argv[0]);
-        return 1;
-    }
-
     auto ctx_llava = llava_init(params);
     if (ctx_llava == NULL) {
         fprintf(stderr, "%s: error: failed to init llava\n", __func__);
