@@ -46,17 +46,21 @@ __global__ void GEMM(bool aT, bool bT, //
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < m && j < n) {
-        T d = 0;
+        T sum = 0;
+        T err = 0;
         for (int l = 0; l < k; ++l) {
             T a = A[aT ? lda * i + l : lda * l + i];
             T b = B[bT ? ldb * l + j : ldb * j + l];
-            d += a * b;
+            T y = a * b - err;
+            T t = sum + y;
+            err = (t - sum) - y;
+            sum = t;
         }
         if (beta) {
             T c = C[ldc * j + i];
-            C[ldc * j + i] = alpha * d + beta * c;
+            C[ldc * j + i] = alpha * sum + beta * c;
         } else {
-            C[ldc * j + i] = alpha * d;
+            C[ldc * j + i] = alpha * sum;
         }
     }
 }
@@ -71,17 +75,21 @@ __global__ void GSBE(bool aT, bool bT, //
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < m && j < n) {
-        T d = 0;
+        T sum = 0;
+        T err = 0;
         for (int l = 0; l < k; ++l) {
             T a = A[sta * z + (aT ? lda * i + l : lda * l + i)];
             T b = B[stb * z + (bT ? ldb * l + j : ldb * j + l)];
-            d += a * b;
+            T y = a * b - err;
+            T t = sum + y;
+            err = (t - sum) - y;
+            sum = t;
         }
         if (beta) {
             T c = C[stc * z + ldc * j + i];
-            C[stc * z + ldc * j + i] = alpha * d + beta * c;
+            C[stc * z + ldc * j + i] = alpha * sum + beta * c;
         } else {
-            C[stc * z + ldc * j + i] = alpha * d;
+            C[stc * z + ldc * j + i] = alpha * sum;
         }
     }
 }

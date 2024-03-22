@@ -155,8 +155,8 @@ template <typename T> ErrorReport diff(int m, int n, const T *Wan, int lda, cons
                     denormals -= flt::isdenormal(x);
                     denormals += flt::isdenormal(y);
                     flips += flt::signbit(x) != flt::signbit(y);
-                    long long xi = flt::toint(flt::normalize(x));
-                    long long yi = flt::toint(flt::normalize(y));
+                    long long xi = flt::toint(x);
+                    long long yi = flt::toint(y);
                     if (flt::signbit(x) == flt::signbit(y)) {
                         ++considered;
                         long long bad = std::abs(xi - yi);
@@ -260,7 +260,7 @@ void check(double tol, //
                    errors.sad, errors.nans, errors.infs, errors.flips, errors.zeroes,
                    errors.denormals);
     } else {
-        std::unique_lock<std::recursive_mutex> lock(g_log_lock);
+        // std::unique_lock<std::recursive_mutex> lock(g_log_lock);
         misfit(stderr, 16, m, n, k, A, lda, B, ldb, file, line, tol, errors);
         const char *path = "/tmp/wompwomp.log";
         FILE *f = fopen(path, "w");

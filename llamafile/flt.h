@@ -72,33 +72,4 @@ template <typename T> inline bool isdenormal(T f) {
     return f && !isnormal(f) && !isnan(f) && !isinf(f);
 }
 
-inline float normalize(float f) {
-    union {
-        float f;
-        unsigned u;
-    } fb;
-    fb.f = f;
-    unsigned sign = (fb.u >> 31) & 1;
-    unsigned exponent = (fb.u >> 23) & 0xFF;
-    unsigned mantissa = fb.u & 0x7FFFFF;
-    if (exponent == 0xFF) {
-        // Special case: Infinity or NaN
-        return f;
-    }
-    if (exponent == 0) {
-        // Denormalized number
-        while ((mantissa & 0x800000) == 0) {
-            mantissa <<= 1;
-            exponent--;
-        }
-        exponent++;
-        mantissa &= 0x7FFFFF;
-    } else {
-        // Normalized number
-        mantissa |= 0x800000;
-    }
-    fb.u = (sign << 31) | (exponent << 23) | mantissa;
-    return fb.f;
-}
-
 } // namespace flt

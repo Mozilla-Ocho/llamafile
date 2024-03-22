@@ -17,9 +17,48 @@
 
 #include "tester.h"
 
-double TOLERANCE = 1e-5;
+void checkTinyblasWorksHHHH() {
+    double TOLERANCE = 1e-3;
+    half alpha = 1;
+    half beta = 0;
+    int m = 128;
+    int n = 128;
+    int k = 8192;
+    int lda = k;
+    int ldb = k;
+    int ldc = m;
+    cuda_memory<half> A{lda * m};
+    cuda_memory<half> B{ldb * n};
+    cuda_memory<half> C{ldc * n};
+    cuda_memory<half> G{ldc * n};
+    randomize(k, m, A.p, lda);
+    randomize(k, n, B.p, ldb);
+    broadcast(m, n, C.p, ldc, TOMBSTONE);
+    broadcast(m, n, G.p, ldc, TOMBSTONE);
+    gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    tinyblas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
+    CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
+
+    test_matmul([&](int m, int n, int k, int l, half alpha, half beta) {
+        int lda = m + l;
+        int ldb = k + l;
+        int ldc = m + l;
+        cuda_memory<half> A{lda * k};
+        cuda_memory<half> B{ldb * n};
+        cuda_memory<half> C{ldc * n};
+        cuda_memory<half> G{ldc * n};
+        randomize(m, k, A.p, lda);
+        randomize(k, n, B.p, ldb);
+        broadcast(m, n, G.p, ldc, TOMBSTONE);
+        broadcast(m, n, C.p, ldc, TOMBSTONE);
+        gemmref(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+        tinyblas(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
+        CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
+    });
+}
 
 void checkTinyblasWorksHHHS() {
+    double TOLERANCE = 1e-5;
     float alpha = 1;
     float beta = 0;
     int m = 4096;
@@ -34,7 +73,6 @@ void checkTinyblasWorksHHHS() {
     cuda_memory<half> G{ldc * n};
     randomize(k, m, A.p, lda);
     randomize(k, n, B.p, ldb);
-    cublas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
     gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
@@ -60,6 +98,7 @@ void checkTinyblasWorksHHHS() {
 }
 
 void checkTinyblasWorksHHSS() {
+    double TOLERANCE = 1e-5;
     float alpha = 1;
     float beta = 0;
     int m = 4096;
@@ -74,7 +113,6 @@ void checkTinyblasWorksHHSS() {
     cuda_memory<float> G{ldc * n};
     randomize(k, m, A.p, lda);
     randomize(k, n, B.p, ldb);
-    cublas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
@@ -100,6 +138,7 @@ void checkTinyblasWorksHHSS() {
 }
 
 void checkTinyblasWorksSSSS() {
+    double TOLERANCE = 1e-5;
     float alpha = 1;
     float beta = 0;
     int m = 4096;
@@ -114,7 +153,6 @@ void checkTinyblasWorksSSSS() {
     cuda_memory<float> G{ldc * n};
     randomize(k, m, A.p, lda);
     randomize(k, n, B.p, ldb);
-    cublas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
     gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
@@ -152,7 +190,6 @@ void try_size(int m, int n, int k) {
     cuda_memory<half> G{ldc * n};
     randomize(k, m, A.p, lda);
     randomize(k, n, B.p, ldb);
-    cublas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
     gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
@@ -161,6 +198,7 @@ void try_size(int m, int n, int k) {
 }
 
 void test_gsbe() {
+    double TOLERANCE = 1e-5;
     test_matmul([&](int m, int n, int k, int l, float alpha, float beta) {
         int lda = k;
         int ldb = k;
@@ -197,7 +235,10 @@ int main(int argc, char *argv[]) {
     try_size(32000, 512, 4096);
 
     RUN(test_gsbe());
+    RUN(checkTinyblasWorksHHHH());
     RUN(checkTinyblasWorksSSSS());
     RUN(checkTinyblasWorksHHSS());
     RUN(checkTinyblasWorksHHHS());
+
+    printf("done\n");
 }
