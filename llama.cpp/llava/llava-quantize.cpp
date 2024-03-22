@@ -5,6 +5,7 @@
 #include "llamafile/version.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "llamafile/llamafile.h"
 #include <string.h>
 
 int main(int argc, char *argv[]) {

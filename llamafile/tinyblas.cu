@@ -76,13 +76,17 @@ inline bool isone(float x) {
 }
 
 template <typename T, typename TA, typename TB>
-__device__ __forceinline__ void kahan(T *sum, T *err, TA a, TB b) {
+__device__ __forceinline__ void madd(T *tally, T *kahan, TA a, TB b) {
     T x = a;
     T y = b;
-    T z = x * y - *err;
-    T t = *sum + z;
-    *err = (t - *sum) - z;
-    *sum = t;
+#ifdef __FAST_MATH__
+    *tally += x * y;
+#else
+    T z = x * y - *kahan;
+    T t = *tally + z;
+    *kahan = (t - *tally) - z;
+    *tally = t;
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +106,7 @@ static __device__ void matvec(int m, int k, const SRC *A, int lda, const SRC *B,
     for (int l = threadIdx.x; l < k; l += WARPSIZE) {
         WORD b = B[l];
         for (int j = 0; j < WARPSIZE; ++j)
-            kahan(&Ct[j], &Ce[j], A[lda * (i + j) + l], b);
+            madd(&Ct[j], &Ce[j], A[lda * (i + j) + l], b);
     }
     for (int j = 0; j < WARPSIZE; ++j) {
         WORD c = warpSum(Ct[j]);
@@ -201,7 +205,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
                 Bt[h] = Bs[BN * l + tj + h];
             for (int j = 0; j < TM; ++j)
                 for (int h = 0; h < TN; ++h)
-                    kahan(&Ct[TN * j + h], &Ce[TN * j + h], At[j], Bt[h]);
+                    madd(&Ct[TN * j + h], &Ce[TN * j + h], At[j], Bt[h]);
         }
 
         __syncthreads();
@@ -323,9 +327,9 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
                 for (int jj = 0; jj < WNI; ++jj)
                     for (int i = 0; i < TM; ++i)
                         for (int j = 0; j < TN; ++j)
-                            kahan(&Ct[(WNI * TN) * (TM * ii + i) + (TN * jj) + j],
-                                  &Ce[(WNI * TN) * (TM * ii + i) + (TN * jj) + j], Ar[TM * ii + i],
-                                  Br[TN * jj + j]);
+                            madd(&Ct[(WNI * TN) * (TM * ii + i) + (TN * jj) + j],
+                                 &Ce[(WNI * TN) * (TM * ii + i) + (TN * jj) + j], Ar[TM * ii + i],
+                                 Br[TN * jj + j]);
         }
 
         __syncthreads();

@@ -18,6 +18,7 @@
 #include "llama.cpp/ggml-backend-impl.h"
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
+#include "llamafile/llamafile.h"
 #include "llamafile/log.h"
 #include "llamafile/x.h"
 #include <assert.h>
@@ -45,6 +46,7 @@ __static_yoink("llamafile/llamafile.h");
 __static_yoink("llama.cpp/ggml-cuda.h");
 __static_yoink("llama.cpp/ggml-alloc.h");
 __static_yoink("llama.cpp/ggml-cuda.cu");
+__static_yoink("llama.cpp/ggml-common.h");
 __static_yoink("llama.cpp/ggml-backend.h");
 __static_yoink("llama.cpp/ggml-backend-impl.h");
 
@@ -56,7 +58,7 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 #define NVCC_LIBS BLAS_ONLY("-lcublas"), "-lcuda"
 
 #define NVCC_FLAGS \
-    "--shared", "--forward-unknown-to-host-compiler", "-use_fast_math", "--compiler-options", \
+    "--shared", "--forward-unknown-to-host-compiler", "--compiler-options", \
         (!IsWindows() ? (!IsAarch64() ? "-fPIC -O3 -march=native -mtune=native" \
                                       : "-fPIC -O3 -march=native -mtune=native -ffixed-x28") \
                       : "/nologo /EHsc /O2 /GR /MT"), \
@@ -77,6 +79,7 @@ static const struct Source {
     {"/zip/llama.cpp/ggml-impl.h", "ggml-impl.h"},
     {"/zip/llama.cpp/ggml-cuda.h", "ggml-cuda.h"},
     {"/zip/llama.cpp/ggml-alloc.h", "ggml-alloc.h"},
+    {"/zip/llama.cpp/ggml-common.h", "ggml-common.h"},
     {"/zip/llama.cpp/ggml-backend.h", "ggml-backend.h"},
     {"/zip/llama.cpp/ggml-backend-impl.h", "ggml-backend-impl.h"},
     {"/zip/llama.cpp/ggml-cuda.cu", "ggml-cuda.cu"}, // must come last
@@ -88,21 +91,14 @@ static struct Cuda {
     bool supported;
     atomic_uint once;
     typeof(ggml_cuda_link) *GGML_CALL link;
-    typeof(ggml_init_cublas) *GGML_CALL init;
-    typeof(ggml_cublas_loaded) *GGML_CALL loaded;
-    typeof(ggml_cuda_host_free) *GGML_CALL host_free;
-    typeof(ggml_cuda_host_malloc) *GGML_CALL host_malloc;
-    typeof(ggml_cuda_can_mul_mat) *GGML_CALL can_mul_mat;
-    typeof(ggml_cuda_compute_forward) *GGML_CALL compute_forward;
-    typeof(ggml_cuda_get_device_count) *GGML_CALL get_device_count;
-    typeof(ggml_cuda_get_device_description) *GGML_CALL get_device_description;
     typeof(ggml_backend_cuda_buffer_type) *GGML_CALL buffer_type;
     typeof(ggml_backend_cuda_host_buffer_type) *GGML_CALL host_buffer_type;
     typeof(ggml_backend_cuda_init) *GGML_CALL backend_init;
-    typeof(ggml_backend_cuda_get_device_count) *GGML_CALL get_device_count2;
     typeof(ggml_backend_cuda_split_buffer_type) *GGML_CALL split_buffer_type;
     typeof(ggml_backend_cuda_reg_devices) *GGML_CALL reg_devices;
     typeof(ggml_backend_cuda_get_device_memory) *GGML_CALL get_device_memory;
+    typeof(ggml_backend_cuda_get_device_count) *GGML_CALL get_device_count;
+    typeof(ggml_backend_cuda_unregister_host_buffer) *GGML_CALL unreg_host_buf;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -534,7 +530,6 @@ static bool compile_amd_unix(const char *dso, const char *src, const char *tmpds
         offload_arch,
         "-march=native",
         "-mtune=native",
-        "-use_fast_math",
         "-DGGML_BUILD=1",
         "-DGGML_SHARED=1",
         "-Wno-return-type",
@@ -648,21 +643,14 @@ static bool link_cuda_dso(const char *dso, const char *dir) {
     // import functions
     bool ok = true;
     ok &= !!(ggml_cuda.link = imp(lib, "ggml_cuda_link"));
-    ok &= !!(ggml_cuda.init = imp(lib, "ggml_init_cublas"));
-    ok &= !!(ggml_cuda.loaded = imp(lib, "ggml_cublas_loaded"));
-    ok &= !!(ggml_cuda.host_free = imp(lib, "ggml_cuda_host_free"));
-    ok &= !!(ggml_cuda.host_malloc = imp(lib, "ggml_cuda_host_malloc"));
-    ok &= !!(ggml_cuda.can_mul_mat = imp(lib, "ggml_cuda_can_mul_mat"));
-    ok &= !!(ggml_cuda.compute_forward = imp(lib, "ggml_cuda_compute_forward"));
-    ok &= !!(ggml_cuda.get_device_count = imp(lib, "ggml_cuda_get_device_count"));
-    ok &= !!(ggml_cuda.get_device_description = imp(lib, "ggml_cuda_get_device_description"));
     ok &= !!(ggml_cuda.host_buffer_type = imp(lib, "ggml_backend_cuda_host_buffer_type"));
     ok &= !!(ggml_cuda.buffer_type = imp(lib, "ggml_backend_cuda_buffer_type"));
     ok &= !!(ggml_cuda.backend_init = imp(lib, "ggml_backend_cuda_init"));
-    ok &= !!(ggml_cuda.get_device_count2 = imp(lib, "ggml_backend_cuda_get_device_count"));
     ok &= !!(ggml_cuda.split_buffer_type = imp(lib, "ggml_backend_cuda_split_buffer_type"));
     ok &= !!(ggml_cuda.reg_devices = imp(lib, "ggml_backend_cuda_reg_devices"));
     ok &= !!(ggml_cuda.get_device_memory = imp(lib, "ggml_backend_cuda_get_device_memory"));
+    ok &= !!(ggml_cuda.get_device_count = imp(lib, "ggml_backend_cuda_get_device_count"));
+    ok &= !!(ggml_cuda.unreg_host_buf = imp(lib, "ggml_backend_cuda_unregister_host_buffer"));
     if (!ok) {
         tinylog(__func__, ": error: not all cuda symbols could be imported\n", NULL);
         cosmo_dlclose(lib);
@@ -670,14 +658,11 @@ static bool link_cuda_dso(const char *dso, const char *dir) {
     }
 
     // ask the library if actual gpu devices exist
-    ggml_cuda.link(ggml_backend_api());
-    tinylog(__func__, ": GPU support linked\n", NULL);
-    ggml_cuda.init();
-    if (ggml_cuda.loaded()) {
+    if (ggml_cuda.link(ggml_backend_api())) {
         tinylog(__func__, ": GPU support loaded\n", NULL);
         return true;
     } else {
-        tinylog(__func__, ": GPU support not possible\n", NULL);
+        tinylog(__func__, ": No GPU devices found\n", NULL);
         cosmo_dlclose(lib);
         return false;
     }
@@ -884,57 +869,6 @@ bool llamafile_has_cuda(void) {
     return ggml_cuda.supported;
 }
 
-GGML_CALL void ggml_init_cublas(void) {
-    if (!llamafile_has_cuda())
-        return;
-    return ggml_cuda.init();
-}
-
-GGML_CALL bool ggml_cublas_loaded(void) {
-    if (!llamafile_has_cuda())
-        return false;
-    return ggml_cuda.loaded();
-}
-
-GGML_CALL void *ggml_cuda_host_malloc(size_t n) {
-    if (!llamafile_has_cuda())
-        return NULL;
-    return ggml_cuda.host_malloc(n);
-}
-
-GGML_CALL void ggml_cuda_host_free(void *data) {
-    if (!llamafile_has_cuda())
-        return;
-    return ggml_cuda.host_free(data);
-}
-
-GGML_CALL bool ggml_cuda_can_mul_mat(const struct ggml_tensor *src0, const struct ggml_tensor *src1,
-                                     struct ggml_tensor *dst) {
-    if (!llamafile_has_cuda())
-        return false;
-    return ggml_cuda.can_mul_mat(src0, src1, dst);
-}
-
-GGML_CALL bool ggml_cuda_compute_forward(struct ggml_compute_params *params,
-                                         struct ggml_tensor *tensor) {
-    if (!llamafile_has_cuda())
-        return false;
-    return ggml_cuda.compute_forward(params, tensor);
-}
-
-GGML_CALL int ggml_cuda_get_device_count(void) {
-    if (!llamafile_has_cuda())
-        return 0;
-    return ggml_cuda.get_device_count();
-}
-
-GGML_CALL void ggml_cuda_get_device_description(int device, char *description,
-                                                size_t description_size) {
-    if (!llamafile_has_cuda())
-        return;
-    return ggml_cuda.get_device_description(device, description, description_size);
-}
-
 GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {
     if (!llamafile_has_cuda())
         return 0;
@@ -951,12 +885,6 @@ GGML_CALL ggml_backend_t ggml_backend_cuda_init(int device) {
     if (!llamafile_has_cuda())
         return 0;
     return ggml_cuda.backend_init(device);
-}
-
-GGML_CALL int ggml_backend_cuda_get_device_count(void) {
-    if (!llamafile_has_cuda())
-        return 0;
-    return ggml_cuda.get_device_count();
 }
 
 GGML_CALL ggml_backend_buffer_type_t
@@ -976,4 +904,16 @@ GGML_CALL void ggml_backend_cuda_get_device_memory(int device, size_t *free, siz
     if (!llamafile_has_cuda())
         return;
     return ggml_cuda.get_device_memory(device, free, total);
+}
+
+GGML_CALL int ggml_backend_cuda_get_device_count(void) {
+    if (!llamafile_has_cuda())
+        return 0;
+    return ggml_cuda.get_device_count();
+}
+
+GGML_CALL void ggml_backend_cuda_unregister_host_buffer(void *buffer) {
+    if (!llamafile_has_cuda())
+        return;
+    return ggml_cuda.unreg_host_buf(buffer);
 }
