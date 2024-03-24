@@ -630,16 +630,14 @@
 
       const grammarJsonSchemaPropOrder = signal('')
       const updateGrammarJsonSchemaPropOrder = (el) => grammarJsonSchemaPropOrder.value = el.target.value
-      const convertJSONSchemaGrammar = async () => {
+      const convertJSONSchemaGrammar = () => {
         try {
-          let schema = JSON.parse(params.value.grammar)
-          const converter = new SchemaConverter({
-            prop_order: grammarJsonSchemaPropOrder.value
+          const schema = JSON.parse(params.value.grammar)
+          const converter = new SchemaConverter(
+            grammarJsonSchemaPropOrder.value
               .split(',')
-              .reduce((acc, cur, i) => ({ ...acc, [cur.trim()]: i }), {}),
-            allow_fetch: true,
-          })
-          schema = await converter.resolveRefs(schema, 'input')
+              .reduce((acc, cur, i) => ({ ...acc, [cur.trim()]: i }), {})
+          )
           converter.visit(schema, '')
           params.value = {
             ...params.value,

@@ -36,22 +36,23 @@ float numba(void) { // (-1,1)
     return float01(rand32()) * 2 - 1;
 }
 
-template <typename T> void randomize(T *A, int n) {
-    for (int i = 0; i < n; ++i)
-        A[i] = numba();
-}
-
 template <typename T> void broadcast(T *A, int n, T x) {
     for (int i = 0; i < n; ++i)
         A[i] = x;
 }
 
+template <typename T> void randomize(int m, int n, T *A, int lda) {
+    for (int j = 0; j < n; ++j)
+        for (int i = 0; i < m; ++i)
+            A[lda * j + i] = numba();
+}
+
 int main(int argc, char *argv[]) {
     float tolerance = 1e-5;
-    int n = 32;
-    int m = 32;
-    int k = 1024;
-    int l = 0;
+    int m = 510;
+    int n = 513;
+    int k = 512;
+    int l = 3;
     int lda = k + l;
     int ldb = k + l;
     int ldc = m + l;
@@ -59,11 +60,13 @@ int main(int argc, char *argv[]) {
     float *B = new float[ldb * n];
     float *C = new float[ldc * n];
     float *G = new float[ldc * n];
-    randomize(A, lda * m);
-    randomize(B, ldb * n);
+    broadcast(A, lda * m, NAN);
+    broadcast(B, ldb * n, NAN);
     broadcast(C, ldc * n, NAN);
     broadcast(G, ldc * n, NAN);
-    gemm<double>(true, false, m, n, k, 1.f, A, lda, B, ldb, 0.f, G, ldc);
+    randomize(k, m, A, lda);
+    randomize(k, n, B, ldb);
+    gemm(true, false, m, n, k, 1., A, lda, B, ldb, 0., G, ldc);
     if (!llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
                          GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32))
         return 1;

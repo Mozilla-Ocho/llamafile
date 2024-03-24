@@ -4,12 +4,11 @@
     int ytiles = (m - m0) / RM; \
     int xtiles = (n - n0) / RN; \
     int tiles = ytiles * xtiles; \
-    double duty = (double)tiles / nth; \
+    int duty = (tiles + nth - 1) / nth; \
     if (duty < 1) \
         duty = 1; \
-    double spot = duty * ith + .5; \
-    int end = spot + duty; \
-    int start = spot; \
+    int start = duty * ith; \
+    int end = start + duty; \
     if (end > tiles) \
         end = tiles; \
     for (int job = start; job < end; ++job) { \

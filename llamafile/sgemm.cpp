@@ -16,13 +16,9 @@
 // limitations under the License.
 
 #ifdef __x86_64__
-
-#include "llamafile.h"
-
-#include <cosmo.h>
-#include <stdio.h>
-
 #include "sgemm.h"
+#include "llamafile.h"
+#include <cosmo.h>
 
 bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B, int ldb, void *C,
                      int ldc, int ith, int nth, int task, int Atype, int Btype, int Ctype) {
