@@ -929,7 +929,7 @@ static bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg,
         else { invalid_param = true; }
         return true;
     }
-    if (arg == "--verbose-prompt") {
+    if (arg == "--verbose-prompt" || arg == "--silent-prompt") {
         params.verbose_prompt = true;
         return true;
     }

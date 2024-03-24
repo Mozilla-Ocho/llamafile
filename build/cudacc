@@ -44,7 +44,6 @@ for x; do
       set -- "$@" -lhipblas -lrocblas
       continue
     elif [ x"$x" = x"--use_fast_math" ]; then
-      set -- "$@" -ffast-math -DHIP_FAST_MATH
       continue
     fi
   fi

@@ -75,20 +75,6 @@ inline bool isone(float x) {
     return x == 1;
 }
 
-template <typename T, typename TA, typename TB>
-__device__ __forceinline__ void madd(T *tally, T *kahan, TA a, TB b) {
-    T x = a;
-    T y = b;
-#ifdef __FAST_MATH__
-    *tally += x * y;
-#else
-    T z = x * y - *kahan;
-    T t = *tally + z;
-    *kahan = (t - *tally) - z;
-    *tally = t;
-#endif
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // tinyBLAS specialized matrix vector product kernel
 
@@ -98,16 +84,24 @@ __forceinline__ __device__ float warpSum(float x) {
     return x;
 }
 
+template <typename WORD, typename SRC>
+__device__ __forceinline__ void madd(WORD *tally, WORD *kahan, SRC a, SRC b) {
+    WORD x = a;
+    WORD y = b;
+    WORD z = x * y - *kahan;
+    WORD t = *tally + z;
+    *kahan = (t - *tally) - z;
+    *tally = t;
+}
+
 template <typename WORD, typename SRC, typename DST>
 static __device__ void matvec(int m, int k, const SRC *A, int lda, const SRC *B, DST *C) {
     WORD Ct[WARPSIZE] = {0};
     WORD Ce[WARPSIZE] = {0};
     int i = blockIdx.y * WARPSIZE;
-    for (int l = threadIdx.x; l < k; l += WARPSIZE) {
-        WORD b = B[l];
+    for (int l = threadIdx.x; l < k; l += WARPSIZE)
         for (int j = 0; j < WARPSIZE; ++j)
-            madd(&Ct[j], &Ce[j], A[lda * (i + j) + l], b);
-    }
+            madd(&Ct[j], &Ce[j], A[lda * (i + j) + l], B[l]);
     for (int j = 0; j < WARPSIZE; ++j) {
         WORD c = warpSum(Ct[j]);
         if (!threadIdx.x)
@@ -134,7 +128,7 @@ static tinyblasStatus_t matvec_launch(tinyblasHandle_t handle, int m, int k, con
 template <typename WORD>
 static bool can_use_matvec(tinyblasOperation_t aT, tinyblasOperation_t bT, int m, int n, int k,
                            WORD alpha, WORD beta) {
-    return n == 1 && aT && !bT && //
+    return n == 1 && k >= 4096 && aT && !bT && //
            !(m % WARPSIZE) && !(k % WARPSIZE) && //
            isone(alpha) && !beta;
 }
@@ -171,7 +165,6 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
     WORD At[TM];
     WORD Bt[TN];
     WORD Ct[TM * TN] = {0};
-    WORD Ce[TM * TN] = {0};
 
     if (CONFIG & ASSUME_A_OP_T)
         transa = TINYBLAS_OP_T;
@@ -205,7 +198,7 @@ static __device__ void matmul_block2d(tinyblasOperation_t transa, tinyblasOperat
                 Bt[h] = Bs[BN * l + tj + h];
             for (int j = 0; j < TM; ++j)
                 for (int h = 0; h < TN; ++h)
-                    madd(&Ct[TN * j + h], &Ce[TN * j + h], At[j], Bt[h]);
+                    Ct[TN * j + h] += At[j] * Bt[h];
         }
 
         __syncthreads();
@@ -277,7 +270,6 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
     WORD Ar[WMI * TM] = {0};
     WORD Br[WNI * TN] = {0};
     WORD Ct[WMI * TM * WNI * TN] = {0};
-    WORD Ce[WMI * TM * WNI * TN] = {0};
 
     if (CONFIG & ASSUME_A_OP_T)
         aT = TINYBLAS_OP_T;
@@ -327,9 +319,8 @@ static __device__ void matmul_warp2d(tinyblasOperation_t aT, //
                 for (int jj = 0; jj < WNI; ++jj)
                     for (int i = 0; i < TM; ++i)
                         for (int j = 0; j < TN; ++j)
-                            madd(&Ct[(WNI * TN) * (TM * ii + i) + (TN * jj) + j],
-                                 &Ce[(WNI * TN) * (TM * ii + i) + (TN * jj) + j], Ar[TM * ii + i],
-                                 Br[TN * jj + j]);
+                            Ct[(WNI * TN) * (TM * ii + i) + (TN * jj) + j] +=
+                                Ar[TM * ii + i] * Br[TN * jj + j];
         }
 
         __syncthreads();
@@ -601,9 +592,9 @@ tinyblasStatus_t tinyblasGemmEx(tinyblasHandle_t handle, //
         case TINYBLAS_R_16F:
             switch (computeType) {
             case TINYBLAS_COMPUTE_16F:
-                return tinyblasGE_launch(handle, transa, transb, m, n, k, *(const half *)alpha,
-                                         (const half *)A, lda, (const half *)B, ldb,
-                                         *(const half *)beta, (half *)C, ldc);
+                return tinyblasGE_launch(
+                    handle, transa, transb, m, n, k, (float)*(const half *)alpha, (const half *)A,
+                    lda, (const half *)B, ldb, (float)*(const half *)beta, (half *)C, ldc);
             case TINYBLAS_COMPUTE_32F:
                 return tinyblasGE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
                                          (const half *)A, lda, (const half *)B, ldb,
@@ -752,10 +743,10 @@ tinyblasStatus_t tinyblasGemmBatchedEx(tinyblasHandle_t handle, tinyblasOperatio
         case TINYBLAS_R_16F:
             switch (computeType) {
             case TINYBLAS_COMPUTE_16F:
-                return tinyblasGBE_launch(handle, transa, transb, m, n, k, *(const half *)alpha,
-                                          (const half *const *)Aarray, lda,
-                                          (const half *const *)Barray, ldb, *(const half *)beta,
-                                          (half *const *)Carray, ldc, batchCount);
+                return tinyblasGBE_launch(
+                    handle, transa, transb, m, n, k, (float)*(const half *)alpha,
+                    (const half *const *)Aarray, lda, (const half *const *)Barray, ldb,
+                    (float)*(const half *)beta, (half *const *)Carray, ldc, batchCount);
             case TINYBLAS_COMPUTE_32F:
                 return tinyblasGBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
                                           (const half *const *)Aarray, lda,
@@ -936,10 +927,10 @@ tinyblasStatus_t tinyblasGemmStridedBatchedEx(tinyblasHandle_t handle, //
         case TINYBLAS_R_16F:
             switch (computeType) {
             case TINYBLAS_COMPUTE_16F:
-                return tinyblasGSBE_launch(handle, transa, transb, m, n, k, *(const half *)alpha,
-                                           (const half *)A, lda, strideA, (const half *)B, ldb,
-                                           strideB, *(const half *)beta, (half *)C, ldc, strideC,
-                                           batchCount);
+                return tinyblasGSBE_launch(
+                    handle, transa, transb, m, n, k, (float)*(const half *)alpha, (const half *)A,
+                    lda, strideA, (const half *)B, ldb, strideB, (float)*(const half *)beta,
+                    (half *)C, ldc, strideC, batchCount);
             case TINYBLAS_COMPUTE_32F:
                 return tinyblasGSBE_launch(handle, transa, transb, m, n, k, *(const float *)alpha,
                                            (const half *)A, lda, strideA, (const half *)B, ldb,

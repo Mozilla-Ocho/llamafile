@@ -5,6 +5,7 @@ PKGS += LLAMAFILE
 
 LLAMAFILE_FILES := $(wildcard llamafile/*.*)
 LLAMAFILE_HDRS = $(filter %.h,$(LLAMAFILE_FILES))
+LLAMAFILE_INCS = $(filter %.inc,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_C = $(filter %.c,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_CU = $(filter %.cu,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_CPP = $(filter %.cpp,$(LLAMAFILE_FILES))
@@ -15,6 +16,18 @@ LLAMAFILE_OBJS =					\
 	$(LLAMAFILE_SRCS_C:%.c=o/$(MODE)/%.o)		\
 	$(LLAMAFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.o)	\
 	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)
+
+o/$(MODE)/llamafile/sgemm_sss_avx.o: private TARGET_ARCH += -Xx86_64-mavx
+o/$(MODE)/llamafile/sgemm_sss_fma.o: private TARGET_ARCH += -Xx86_64-mfma
+o/$(MODE)/llamafile/sgemm_sss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
+o/$(MODE)/llamafile/sgemm_hss_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
+o/$(MODE)/llamafile/sgemm_hss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
+o/$(MODE)/llamafile/sgemm_qqs_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
+o/$(MODE)/llamafile/sgemm_qqs_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/sgemm_qqs_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/sgemm_eqs_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
+o/$(MODE)/llamafile/sgemm_eqs_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/sgemm_eqs_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
 
 o/$(MODE)/llamafile/zipalign:				\
 		o/$(MODE)/llamafile/zipalign.o		\
@@ -42,9 +55,13 @@ o/$(MODE)/llamafile:					\
 ################################################################################
 # testing
 
+o/$(MODE)/llamafile/sgemm_test:				\
+		o/$(MODE)/llamafile/sgemm_test.o	\
+		o/$(MODE)/llama.cpp/llama.cpp.a
+
 o/$(MODE)/llamafile/%.o: llamafile/%.cu llamafile/BUILD.mk
 	@mkdir -p $(@D)
-	build/cudacc -fPIE -g -O3 -march=native -c -o $@ $<
+	build/cudacc -fPIE -g -O3 -march=native -ffast-math --use_fast_math -c -o $@ $<
 
 o/$(MODE)/llamafile/tinyblas_test:			\
 		o/$(MODE)/llamafile/tinyblas_test.o	\

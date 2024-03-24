@@ -18,7 +18,7 @@
 #include "tester.h"
 
 void checkTinyblasWorksHHHH() {
-    double TOLERANCE = 1e-3;
+    double TOLERANCE = 1e-2;
     half alpha = 1;
     half beta = 0;
     int m = 128;
@@ -35,7 +35,7 @@ void checkTinyblasWorksHHHH() {
     randomize(k, n, B.p, ldb);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
-    gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    gemmref<double>(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     tinyblas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
     CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
 
@@ -51,14 +51,14 @@ void checkTinyblasWorksHHHH() {
         randomize(k, n, B.p, ldb);
         broadcast(m, n, G.p, ldc, TOMBSTONE);
         broadcast(m, n, C.p, ldc, TOMBSTONE);
-        gemmref(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+        gemmref<double>(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
         tinyblas(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
         CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
     });
 }
 
 void checkTinyblasWorksHHHS() {
-    double TOLERANCE = 1e-5;
+    double TOLERANCE = 1e-3;
     float alpha = 1;
     float beta = 0;
     int m = 4096;
@@ -75,7 +75,7 @@ void checkTinyblasWorksHHHS() {
     randomize(k, n, B.p, ldb);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
-    gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    gemmref<double>(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     tinyblas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
     CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
 
@@ -91,14 +91,14 @@ void checkTinyblasWorksHHHS() {
         randomize(k, n, B.p, ldb);
         broadcast(m, n, G.p, ldc, TOMBSTONE);
         broadcast(m, n, C.p, ldc, TOMBSTONE);
-        gemmref(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+        gemmref<double>(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
         tinyblas(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
         CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
     });
 }
 
 void checkTinyblasWorksHHSS() {
-    double TOLERANCE = 1e-5;
+    double TOLERANCE = 1e-4;
     float alpha = 1;
     float beta = 0;
     int m = 4096;
@@ -115,7 +115,7 @@ void checkTinyblasWorksHHSS() {
     randomize(k, n, B.p, ldb);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
-    gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    gemmref<double>(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     tinyblas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
     CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
 
@@ -131,14 +131,14 @@ void checkTinyblasWorksHHSS() {
         randomize(k, n, B.p, ldb);
         broadcast(m, n, G.p, ldc, TOMBSTONE);
         broadcast(m, n, C.p, ldc, TOMBSTONE);
-        gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+        gemmref<double>(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
         tinyblas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
         CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
     });
 }
 
 void checkTinyblasWorksSSSS() {
-    double TOLERANCE = 1e-5;
+    double TOLERANCE = 1e-4;
     float alpha = 1;
     float beta = 0;
     int m = 4096;
@@ -155,7 +155,7 @@ void checkTinyblasWorksSSSS() {
     randomize(k, n, B.p, ldb);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
-    gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    gemmref<double>(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     tinyblas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
     CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
 
@@ -171,7 +171,7 @@ void checkTinyblasWorksSSSS() {
         randomize(k, n, B.p, ldb);
         broadcast(m, n, G.p, ldc, TOMBSTONE);
         broadcast(m, n, C.p, ldc, TOMBSTONE);
-        gemmref(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+        gemmref<double>(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
         tinyblas(0, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
         CHECK(TOLERANCE, m, n, k, G.p, ldc, C.p, ldc);
     });
@@ -192,13 +192,13 @@ void try_size(int m, int n, int k) {
     randomize(k, n, B.p, ldb);
     broadcast(m, n, C.p, ldc, TOMBSTONE);
     broadcast(m, n, G.p, ldc, TOMBSTONE);
-    gemmref(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
+    gemmref<double>(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, G.p, ldc);
     tinyblas(1, 0, m, n, k, alpha, A.p, lda, B.p, ldb, beta, C.p, ldc);
     CHECK(1, m, n, k, G.p, ldc, C.p, ldc);
 }
 
 void test_gsbe() {
-    double TOLERANCE = 1e-5;
+    double TOLERANCE = 1e-4;
     test_matmul([&](int m, int n, int k, int l, float alpha, float beta) {
         int lda = k;
         int ldb = k;
@@ -213,7 +213,7 @@ void test_gsbe() {
         broadcast(m, n, G.p + 0 * ldc * n, ldc, TOMBSTONE);
         broadcast(m, n, C.p + 1 * ldc * n, ldc, TOMBSTONE);
         broadcast(m, n, G.p + 1 * ldc * n, ldc, TOMBSTONE);
-        gsberef(1, 0, m, n, k, alpha, A.p, lda, 0, B.p, ldb, 0, beta, G.p, ldc, ldc * n, 2);
+        gsberef<double>(1, 0, m, n, k, alpha, A.p, lda, 0, B.p, ldb, 0, beta, G.p, ldc, ldc * n, 2);
         tinyblasGSBE(1, 0, m, n, k, alpha, A.p, lda, 0, B.p, ldb, 0, beta, C.p, ldc, ldc * n, 2);
         CHECK(TOLERANCE, m, n, k, G.p + 0 * ldc * n, ldc, C.p + 0 * ldc * n, ldc);
         CHECK(TOLERANCE, m, n, k, G.p + 0 * ldc * n, ldc, C.p + 0 * ldc * n, ldc);

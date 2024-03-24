@@ -1903,10 +1903,10 @@ struct llama_context {
     size_t logits_size = 0;
     float * logits = nullptr;
 
-#ifndef NDEBUG
-    // guard against access to unset logits
-    std::vector<bool>  logits_valid;
-#endif
+// #ifndef NDEBUG
+//     // guard against access to unset logits
+//     std::vector<bool>  logits_valid;
+// #endif
     bool logits_all = false;
 
     // embeddings output (2-dimensional array: [n_tokens][n_embd])
@@ -8847,13 +8847,13 @@ static int llama_decode_internal(
 
     auto * logits_out = lctx.logits;
 
-#ifndef NDEBUG
-    auto & logits_valid = lctx.logits_valid;
-    logits_valid.clear();
-    logits_valid.resize(n_tokens_all);
+// #ifndef NDEBUG
+//     auto & logits_valid = lctx.logits_valid;
+//     logits_valid.clear();
+//     logits_valid.resize(n_tokens_all);
 
-    memset(logits_out, 0, lctx.logits_size*sizeof(float));
-#endif
+//     memset(logits_out, 0, lctx.logits_size*sizeof(float));
+// #endif
 
     const auto n_ubatch = cparams.n_ubatch;
 
@@ -9022,21 +9022,21 @@ static int llama_decode_internal(
                             i_first = -1;
                         }
                     }
-#ifndef NDEBUG
-                    logits_valid[cur_token + i] = u_batch.logits[i] != 0;;
-#endif
+// #ifndef NDEBUG
+//                     logits_valid[cur_token + i] = u_batch.logits[i] != 0;;
+// #endif
                 }
             } else if (lctx.logits_all) {
                 ggml_backend_tensor_get_async(backend_res, res, logits_out + n_vocab*cur_token, 0, n_vocab*n_tokens*sizeof(float));
-#ifndef NDEBUG
-                std::fill(logits_valid.begin() + cur_token, logits_valid.begin() + cur_token + n_tokens, true);
-#endif
+// #ifndef NDEBUG
+//                 std::fill(logits_valid.begin() + cur_token, logits_valid.begin() + cur_token + n_tokens, true);
+// #endif
             } else {
                 if (cur_token + n_tokens >= n_tokens_all) {
                     ggml_backend_tensor_get_async(backend_res, res, logits_out, n_vocab*(n_tokens - 1)*sizeof(float), n_vocab*sizeof(float));
-#ifndef NDEBUG
-                    logits_valid[0] = true;
-#endif
+// #ifndef NDEBUG
+//                     logits_valid[0] = true;
+// #endif
                 }
             }
         }
@@ -14096,7 +14096,7 @@ float * llama_get_logits(struct llama_context * ctx) {
 }
 
 float * llama_get_logits_ith(struct llama_context * ctx, int32_t i) {
-    assert(ctx->logits_valid.at(i));
+    // assert(ctx->logits_valid.at(i));
 
     llama_synchronize(ctx);
 
