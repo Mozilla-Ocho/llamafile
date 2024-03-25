@@ -1,6 +1,6 @@
 #!/bin/sh
 if printf '%s\n' "$*" | grep aarch64 >/dev/null 2>&1; then
-  exec aarch64-unknown-cosmo-objdump "$@"
+  exec aarch64-unknown-cosmo-objdump $1 ${2%/*}/.aarch64/${2##*/}
 else
   exec x86_64-unknown-cosmo-objdump "$@"
 fi

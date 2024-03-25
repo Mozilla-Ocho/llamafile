@@ -10716,13 +10716,13 @@ static void ggml_compute_forward_mul_mat(
     }
 #endif
 
-#ifdef __x86_64__
-    bool can_use_tinyblas = ggml_is_contiguous(src0) &&
-                            ggml_is_contiguous(src1) &&
+    bool can_use_tinyblas = src1_cont &&
                             ((ne2 == 1 && ne3 == 1) &&
                              (ne02 == 1 && ne03 == 1) &&
                              (ne12 == 1 && ne13 == 1));
+
     if (can_use_tinyblas &&
+        src0->type == GGML_TYPE_F16 &&
         llamafile_sgemm(ne01, ne11, ne00,
                         src0->data, nb01/ggml_type_size(src0->type),
                         src1->data, nb11/ggml_type_size(src1->type),
@@ -10734,7 +10734,6 @@ static void ggml_compute_forward_mul_mat(
                         dst->type)) {
         return;
     }
-#endif
 
     if (params->type == GGML_TASK_TYPE_INIT) {
         if (ith != 0) {
@@ -10767,7 +10766,6 @@ static void ggml_compute_forward_mul_mat(
     const void * wdata    = (src1->type == vec_dot_type) ? src1->data : params->wdata;
     const size_t row_size = ggml_row_size(vec_dot_type, ne10);
 
-#ifdef __x86_64__
     if (can_use_tinyblas &&
         llamafile_sgemm(ne01, ne11, ne00,
                         src0->data, nb01/ggml_type_size(src0->type),
@@ -10780,7 +10778,6 @@ static void ggml_compute_forward_mul_mat(
                         dst->type)) {
         return;
     }
-#endif
 
     const int64_t nr0 = ne01;          // src0 rows
     const int64_t nr1 = ne1*ne12*ne13; // src1 rows

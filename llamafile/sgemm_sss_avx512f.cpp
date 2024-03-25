@@ -18,15 +18,23 @@
 #ifdef __x86_64__
 
 #include "sgemm.h"
+#include <immintrin.h>
 
 #define KN 16
-#define V __m512
-#define TA float
-#define TB float
-#define TC float
-#define zero() _mm512_setzero_ps()
-#define load_a(p) _mm512_loadu_ps(p)
-#define load_b(p) _mm512_loadu_ps(p)
+
+typedef __m512 V;
+typedef float TA;
+typedef float TB;
+typedef float TC;
+
+static inline V zero() {
+    return _mm512_setzero_ps();
+}
+
+static inline V load(const float *p) {
+    return _mm512_loadu_ps(p);
+}
+
 #include "sgemmer.inc"
 
 bool llamafile_sgemm_sss_avx512f(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,

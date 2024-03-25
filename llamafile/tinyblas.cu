@@ -867,11 +867,11 @@ static tinyblasStatus_t tinyblasGSBE_launch(tinyblasHandle_t handle, tinyblasOpe
  * @param k is cols in `A` and rows in `B`
  * @param alpha points to scalar that's multiplied against input
  * @param A is input array of first matrices
- * @param Atype is data type of `C`
+ * @param Atype is data type of `A`
  * @param lda is row stride of `A`
  * @param strideA is distance between matrices in `A`
  * @param B is input array of second matrices
- * @param Btype is data type of `C`
+ * @param Btype is data type of `B`
  * @param ldb is row stride of `B`
  * @param strideB is distance between matrices in `B`
  * @param beta points to scalar that's multiplied against the existing

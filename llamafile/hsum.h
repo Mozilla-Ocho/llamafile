@@ -1,7 +1,23 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #pragma once
-#ifdef __SSE__
+
+#if defined(__ARM_NEON) && defined(__ARM_FEATURE_FMA)
+#include <arm_neon.h>
+
+inline float hsum(float32x4_t x) {
+    return vaddvq_f32(x);
+}
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline float hsum(float16x8_t x) {
+    float32x4_t t = vcvt_f32_f16(vget_low_f16(x));
+    float32x4_t u = vcvt_f32_f16(vget_high_f16(x));
+    return vaddvq_f32(vaddq_f32(t, u));
+}
+#endif // __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+
+#elif defined(__SSE__)
 #include <immintrin.h>
 
 inline float hsum(__m128 x) {
@@ -18,8 +34,6 @@ inline float hsum(__m256 x) {
 
 #ifdef __AVX512F__
 
-#include <immintrin.h>
-
 inline float hsum(__m512 x) {
     return _mm512_reduce_add_ps(x);
 }
@@ -27,3 +41,10 @@ inline float hsum(__m512 x) {
 #endif // __AVX512F__
 #endif // __AVX__
 #endif // __SSE__
+
+template <typename T> float hsums(const T *x, int n) {
+    float sum = 0;
+    for (int i = 0; i < n; ++i)
+        sum += hsum(x[i]);
+    return sum;
+}

@@ -18,15 +18,23 @@
 #ifdef __x86_64__
 
 #include "sgemm.h"
+#include <immintrin.h>
 
 #define KN 8
-#define V __m256
-#define TA float
-#define TB float
-#define TC float
-#define zero() _mm256_setzero_ps()
-#define load_a(p) _mm256_loadu_ps(p)
-#define load_b(p) _mm256_loadu_ps(p)
+
+typedef __m256 V;
+typedef float TA;
+typedef float TB;
+typedef float TC;
+
+static inline V zero() {
+    return _mm256_setzero_ps();
+}
+
+static inline V load(const float *p) {
+    return _mm256_loadu_ps(p);
+}
+
 #include "sgemmer.inc"
 
 bool llamafile_sgemm_sss_fma(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb, TC *C,

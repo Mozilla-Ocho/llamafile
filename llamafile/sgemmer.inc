@@ -94,36 +94,36 @@ class SGEMMER {
         V c43 = zero();
         V c44 = zero();
         for (int l = 0; l < k; l += KN) {
-            V k0 = load_b(B + ldb * (j + 0) + l);
-            V k1 = load_b(B + ldb * (j + 1) + l);
-            V k2 = load_b(B + ldb * (j + 2) + l);
-            V k3 = load_b(B + ldb * (j + 3) + l);
-            V k4 = load_b(B + ldb * (j + 4) + l);
-            V a0 = load_a(A + lda * (i + 0) + l);
+            V k0 = load(B + ldb * (j + 0) + l);
+            V k1 = load(B + ldb * (j + 1) + l);
+            V k2 = load(B + ldb * (j + 2) + l);
+            V k3 = load(B + ldb * (j + 3) + l);
+            V k4 = load(B + ldb * (j + 4) + l);
+            V a0 = load(A + lda * (i + 0) + l);
             c00 = madd(a0, k0, c00);
             c01 = madd(a0, k1, c01);
             c02 = madd(a0, k2, c02);
             c03 = madd(a0, k3, c03);
             c04 = madd(a0, k4, c04);
-            V a1 = load_a(A + lda * (i + 1) + l);
+            V a1 = load(A + lda * (i + 1) + l);
             c10 = madd(a1, k0, c10);
             c11 = madd(a1, k1, c11);
             c12 = madd(a1, k2, c12);
             c13 = madd(a1, k3, c13);
             c14 = madd(a1, k4, c14);
-            V a2 = load_a(A + lda * (i + 2) + l);
+            V a2 = load(A + lda * (i + 2) + l);
             c20 = madd(a2, k0, c20);
             c21 = madd(a2, k1, c21);
             c22 = madd(a2, k2, c22);
             c23 = madd(a2, k3, c23);
             c24 = madd(a2, k4, c24);
-            V a3 = load_a(A + lda * (i + 3) + l);
+            V a3 = load(A + lda * (i + 3) + l);
             c30 = madd(a3, k0, c30);
             c31 = madd(a3, k1, c31);
             c32 = madd(a3, k2, c32);
             c33 = madd(a3, k3, c33);
             c34 = madd(a3, k4, c34);
-            V a4 = load_a(A + lda * (i + 4) + l);
+            V a4 = load(A + lda * (i + 4) + l);
             c40 = madd(a4, k0, c40);
             c41 = madd(a4, k1, c41);
             c42 = madd(a4, k2, c42);
@@ -158,6 +158,82 @@ class SGEMMER {
         END_KERNEL()
     }
 
+    dontinline void gemm5x4(int m0, int m, int n0, int n) {
+        BEGIN_KERNEL(5, 4)
+        V c00 = zero();
+        V c01 = zero();
+        V c02 = zero();
+        V c03 = zero();
+        V c10 = zero();
+        V c11 = zero();
+        V c12 = zero();
+        V c13 = zero();
+        V c20 = zero();
+        V c21 = zero();
+        V c22 = zero();
+        V c23 = zero();
+        V c30 = zero();
+        V c31 = zero();
+        V c32 = zero();
+        V c33 = zero();
+        V c40 = zero();
+        V c41 = zero();
+        V c42 = zero();
+        V c43 = zero();
+        for (int l = 0; l < k; l += KN) {
+            V k0 = load(B + ldb * (j + 0) + l);
+            V k1 = load(B + ldb * (j + 1) + l);
+            V k2 = load(B + ldb * (j + 2) + l);
+            V k3 = load(B + ldb * (j + 3) + l);
+            V a0 = load(A + lda * (i + 0) + l);
+            c00 = madd(a0, k0, c00);
+            c01 = madd(a0, k1, c01);
+            c02 = madd(a0, k2, c02);
+            c03 = madd(a0, k3, c03);
+            V a1 = load(A + lda * (i + 1) + l);
+            c10 = madd(a1, k0, c10);
+            c11 = madd(a1, k1, c11);
+            c12 = madd(a1, k2, c12);
+            c13 = madd(a1, k3, c13);
+            V a2 = load(A + lda * (i + 2) + l);
+            c20 = madd(a2, k0, c20);
+            c21 = madd(a2, k1, c21);
+            c22 = madd(a2, k2, c22);
+            c23 = madd(a2, k3, c23);
+            V a3 = load(A + lda * (i + 3) + l);
+            c30 = madd(a3, k0, c30);
+            c31 = madd(a3, k1, c31);
+            c32 = madd(a3, k2, c32);
+            c33 = madd(a3, k3, c33);
+            V a4 = load(A + lda * (i + 4) + l);
+            c40 = madd(a4, k0, c40);
+            c41 = madd(a4, k1, c41);
+            c42 = madd(a4, k2, c42);
+            c43 = madd(a4, k3, c43);
+        }
+        C[ldc * (j + 0) + (i + 0)] = hsum(c00);
+        C[ldc * (j + 0) + (i + 1)] = hsum(c10);
+        C[ldc * (j + 0) + (i + 2)] = hsum(c20);
+        C[ldc * (j + 0) + (i + 3)] = hsum(c30);
+        C[ldc * (j + 0) + (i + 4)] = hsum(c40);
+        C[ldc * (j + 1) + (i + 0)] = hsum(c01);
+        C[ldc * (j + 1) + (i + 1)] = hsum(c11);
+        C[ldc * (j + 1) + (i + 2)] = hsum(c21);
+        C[ldc * (j + 1) + (i + 3)] = hsum(c31);
+        C[ldc * (j + 1) + (i + 4)] = hsum(c41);
+        C[ldc * (j + 2) + (i + 0)] = hsum(c02);
+        C[ldc * (j + 2) + (i + 1)] = hsum(c12);
+        C[ldc * (j + 2) + (i + 2)] = hsum(c22);
+        C[ldc * (j + 2) + (i + 3)] = hsum(c32);
+        C[ldc * (j + 2) + (i + 4)] = hsum(c42);
+        C[ldc * (j + 3) + (i + 0)] = hsum(c03);
+        C[ldc * (j + 3) + (i + 1)] = hsum(c13);
+        C[ldc * (j + 3) + (i + 2)] = hsum(c23);
+        C[ldc * (j + 3) + (i + 3)] = hsum(c33);
+        C[ldc * (j + 3) + (i + 4)] = hsum(c43);
+        END_KERNEL()
+    }
+
     dontinline void gemm3x4(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(3, 4)
         V c00 = zero();
@@ -173,21 +249,21 @@ class SGEMMER {
         V c22 = zero();
         V c23 = zero();
         for (int l = 0; l < k; l += KN) {
-            V k0 = load_b(B + ldb * (j + 0) + l);
-            V k1 = load_b(B + ldb * (j + 1) + l);
-            V k2 = load_b(B + ldb * (j + 2) + l);
-            V k3 = load_b(B + ldb * (j + 3) + l);
-            V a0 = load_a(A + lda * (i + 0) + l);
+            V k0 = load(B + ldb * (j + 0) + l);
+            V k1 = load(B + ldb * (j + 1) + l);
+            V k2 = load(B + ldb * (j + 2) + l);
+            V k3 = load(B + ldb * (j + 3) + l);
+            V a0 = load(A + lda * (i + 0) + l);
             c00 = madd(a0, k0, c00);
             c01 = madd(a0, k1, c01);
             c02 = madd(a0, k2, c02);
             c03 = madd(a0, k3, c03);
-            V a1 = load_a(A + lda * (i + 1) + l);
+            V a1 = load(A + lda * (i + 1) + l);
             c10 = madd(a1, k0, c10);
             c11 = madd(a1, k1, c11);
             c12 = madd(a1, k2, c12);
             c13 = madd(a1, k3, c13);
-            V a2 = load_a(A + lda * (i + 2) + l);
+            V a2 = load(A + lda * (i + 2) + l);
             c20 = madd(a2, k0, c20);
             c21 = madd(a2, k1, c21);
             c22 = madd(a2, k2, c22);
@@ -215,11 +291,11 @@ class SGEMMER {
         V c02 = zero();
         V c03 = zero();
         for (int l = 0; l < k; l += KN) {
-            V a0 = load_a(A + lda * (i + 0) + l);
-            V k0 = load_b(B + ldb * (j + 0) + l);
-            V k1 = load_b(B + ldb * (j + 1) + l);
-            V k2 = load_b(B + ldb * (j + 2) + l);
-            V k3 = load_b(B + ldb * (j + 3) + l);
+            V a0 = load(A + lda * (i + 0) + l);
+            V k0 = load(B + ldb * (j + 0) + l);
+            V k1 = load(B + ldb * (j + 1) + l);
+            V k2 = load(B + ldb * (j + 2) + l);
+            V k3 = load(B + ldb * (j + 3) + l);
             c00 = madd(a0, k0, c00);
             c01 = madd(a0, k1, c01);
             c02 = madd(a0, k2, c02);
@@ -239,14 +315,14 @@ class SGEMMER {
         V c20 = zero();
         V c30 = zero();
         for (int l = 0; l < k; l += KN) {
-            V k0 = load_b(B + ldb * (j + 0) + l);
-            V a0 = load_a(A + lda * (i + 0) + l);
+            V k0 = load(B + ldb * (j + 0) + l);
+            V a0 = load(A + lda * (i + 0) + l);
             c00 = madd(a0, k0, c00);
-            V a1 = load_a(A + lda * (i + 1) + l);
+            V a1 = load(A + lda * (i + 1) + l);
             c10 = madd(a1, k0, c10);
-            V a2 = load_a(A + lda * (i + 2) + l);
+            V a2 = load(A + lda * (i + 2) + l);
             c20 = madd(a2, k0, c20);
-            V a3 = load_a(A + lda * (i + 3) + l);
+            V a3 = load(A + lda * (i + 3) + l);
             c30 = madd(a3, k0, c30);
         }
         C[ldc * (j + 0) + (i + 0)] = hsum(c00);
@@ -260,7 +336,7 @@ class SGEMMER {
         BEGIN_KERNEL(1, 1)
         V c = zero();
         for (int l = 0; l < k; l += KN)
-            c = madd(load_a(A + lda * i + l), load_b(B + ldb * j + l), c);
+            c = madd(load(A + lda * i + l), load(B + ldb * j + l), c);
         C[ldc * j + i] = hsum(c);
         END_KERNEL()
     }

@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef __AVX512F__
+#if defined(__ARM_NEON) || defined(__AVX512F__)
 #define VECTOR_REGISTERS 32
 #else
 #define VECTOR_REGISTERS 16

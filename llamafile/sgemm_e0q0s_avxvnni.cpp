@@ -19,9 +19,10 @@
 
 #include "sgemm.h"
 
-#define TA block_q4_0
-#define TB block_q8_0
-#define TC float
+typedef block_q4_0 TA;
+typedef block_q8_0 TB;
+typedef float TC;
+
 #include "sgemmer0.inc"
 
 bool llamafile_sgemm_e0q0s_avxvnni(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,

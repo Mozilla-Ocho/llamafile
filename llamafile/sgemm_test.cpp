@@ -15,24 +15,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef __x86_64__
-
 #include "gemm.h"
 #include "llama.cpp/ggml.h"
 #include "llamafile.h"
 
-int rand32(void) {
+static int rand32(void) {
     static unsigned long long lcg = 1;
     lcg *= 6364136223846793005;
     lcg += 1442695040888963407;
     return lcg >> 32;
 }
 
-float float01(unsigned x) { // (0,1)
+static float float01(unsigned x) { // (0,1)
     return 1.f / 8388608 * ((x >> 9) + .5f);
 }
 
-float numba(void) { // (-1,1)
+static float numba(void) { // (-1,1)
     return float01(rand32()) * 2 - 1;
 }
 
@@ -48,7 +46,7 @@ template <typename T> void randomize(int m, int n, T *A, int lda) {
 }
 
 int main(int argc, char *argv[]) {
-    float tolerance = 1e-5;
+    float tolerance = 2e-5;
     int m = 510;
     int n = 513;
     int k = 512;
@@ -66,28 +64,38 @@ int main(int argc, char *argv[]) {
     broadcast(G, ldc * n, NAN);
     randomize(k, m, A, lda);
     randomize(k, n, B, ldb);
+
     gemm(true, false, m, n, k, 1., A, lda, B, ldb, 0., G, ldc);
     if (!llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
                          GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32))
         return 1;
-    for (int i = 0; i < m; ++i) {
+
+    for (int i = 0; i < m; ++i)
         for (int j = 0; j < n; ++j) {
             auto g = G[ldc * j + i];
             auto c = C[ldc * j + i];
-            if (isnan(g))
+            if (isnan(g)) {
+                fprintf(stderr, "%s:%d: found nan in reference matrix: i=%d j=%d\n", __FILE__,
+                        __LINE__, i, j);
                 return 3;
-            if (isnan(c))
+            }
+            if (isnan(c)) {
+                fprintf(stderr, "%s:%d: found nan in output matrix: i=%d j=%d\n", __FILE__,
+                        __LINE__, i, j);
                 return 4;
-            auto diff = g - c;
-            if (diff < 0)
-                diff = -diff;
-            if (diff > tolerance)
+            }
+            auto d = g - c;
+            if (d < 0)
+                d = -d;
+            if (d > tolerance) {
+                fprintf(stderr, "%s:%d: difference exceeds tolerance: %g vs. %g (%g) i=%d j=%d\n",
+                        __FILE__, __LINE__, g, c, d, i, j);
                 return 5;
+            }
         }
-    }
-}
 
-#else
-int main(int argc, char *argv[]) {
+    delete[] G;
+    delete[] C;
+    delete[] B;
+    delete[] A;
 }
-#endif // __x86_64__

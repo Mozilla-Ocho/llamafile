@@ -15,23 +15,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef __x86_64__
+#ifdef __aarch64__
 
 #include "sgemm.h"
+#include <arm_neon.h>
 
-typedef block_q4_0 TA;
-typedef block_q8_0 TB;
+#define KN 8
+
+typedef float16x8_t V;
+typedef unsigned short TA;
+typedef unsigned short TB;
 typedef float TC;
 
-#include "sgemmer0.inc"
+static inline V zero() {
+    return vdupq_n_f16(0.f);
+}
 
-bool llamafile_sgemm_e0q0s_avx512vnni(int m, int n, int k, const TA *A, int lda, const TB *B,
-                                      int ldb, TC *C, int ldc, int ith, int nth, int task) {
+static inline V load(const unsigned short *p) {
+    return vld1q_f16((const __fp16 *)p);
+}
+
+#include "sgemmer.inc"
+
+bool llamafile_sgemm_hhs_neon(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,
+                              TC *C, int ldc, int ith, int nth, int task) {
     if (task != GGML_TASK_TYPE_COMPUTE)
         return true;
-    SGEMMER0 tb{k, A, lda, B, ldb, C, ldc, ith, nth};
+    SGEMMER tb{k, A, lda, B, ldb, C, ldc, ith, nth};
     tb.matmul(m, n);
     return true;
 }
 
-#endif // __x86_64__
+#endif // __aarch64__
