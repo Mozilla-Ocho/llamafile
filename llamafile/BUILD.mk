@@ -17,18 +17,6 @@ LLAMAFILE_OBJS =					\
 	$(LLAMAFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.o)	\
 	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)
 
-o/$(MODE)/llamafile/sgemm_sss_avx.o: private TARGET_ARCH += -Xx86_64-mavx
-o/$(MODE)/llamafile/sgemm_sss_fma.o: private TARGET_ARCH += -Xx86_64-mfma
-o/$(MODE)/llamafile/sgemm_sss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
-o/$(MODE)/llamafile/sgemm_hss_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
-o/$(MODE)/llamafile/sgemm_hss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
-o/$(MODE)/llamafile/sgemm_qqs_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
-o/$(MODE)/llamafile/sgemm_qqs_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
-o/$(MODE)/llamafile/sgemm_qqs_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
-o/$(MODE)/llamafile/sgemm_eqs_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
-o/$(MODE)/llamafile/sgemm_eqs_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
-o/$(MODE)/llamafile/sgemm_eqs_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
-
 o/$(MODE)/llamafile/zipalign:				\
 		o/$(MODE)/llamafile/zipalign.o		\
 		o/$(MODE)/llamafile/help.o		\
@@ -51,6 +39,24 @@ o/$(MODE)/llamafile:					\
 		o/$(MODE)/llamafile/zipalign		\
 		o/$(MODE)/llamafile/zipcheck		\
 		o/$(MODE)/llamafile/addnl
+
+################################################################################
+# microarchitectures
+
+o/$(MODE)/llamafile/sgemm_sss_avx.o: private TARGET_ARCH += -Xx86_64-mavx
+o/$(MODE)/llamafile/sgemm_sss_fma.o: private TARGET_ARCH += -Xx86_64-mfma
+o/$(MODE)/llamafile/sgemm_sss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
+o/$(MODE)/llamafile/sgemm_hss_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
+o/$(MODE)/llamafile/sgemm_hss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
+o/$(MODE)/llamafile/sgemm_q0q0s_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
+o/$(MODE)/llamafile/sgemm_q0q0s_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/sgemm_q0q0s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/sgemm_e0q0s_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
+o/$(MODE)/llamafile/sgemm_e0q0s_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/sgemm_e0q0s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/sgemm_e1q1s_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
+o/$(MODE)/llamafile/sgemm_e1q1s_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/sgemm_e1q1s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
 
 ################################################################################
 # testing

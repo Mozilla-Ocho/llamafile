@@ -19,21 +19,16 @@
 
 #include "sgemm.h"
 
-#define KN 16
-#define V __m512
-#define TA unsigned short
-#define TB float
+#define TA block_q4_1
+#define TB block_q8_1
 #define TC float
-#define zero() _mm512_setzero_ps()
-#define load_a(p) _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)(p)))
-#define load_b(p) _mm512_loadu_ps(p)
-#include "sgemmer.inc"
+#include "sgemmer1.inc"
 
-bool llamafile_sgemm_hss_avx512f(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,
-                                 TC *C, int ldc, int ith, int nth, int task) {
+bool llamafile_sgemm_e1q1s_avx512vnni(int m, int n, int k, const TA *A, int lda, const TB *B,
+                                      int ldb, TC *C, int ldc, int ith, int nth, int task) {
     if (task != GGML_TASK_TYPE_COMPUTE)
         return true;
-    SGEMMER tb{k, A, lda, B, ldb, C, ldc, ith, nth};
+    SGEMMER1 tb{k, A, lda, B, ldb, C, ldc, ith, nth};
     tb.matmul(m, n);
     return true;
 }

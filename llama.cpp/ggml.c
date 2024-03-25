@@ -305,7 +305,7 @@ static void ggml_fp32_to_fp16_row_f16c(const float * x, ggml_fp16_t * y, int n) 
         _mm_storel_epi64((__m128i *)(y + i), y_vec);
     }
     for (; i < n; i++) {
-        y[i] = GGML_FP32_TO_FP16__F16C(x[i]);
+        y[i] = GGML_FP32_TO_FP16(x[i]);
     }
 }
 #pragma GCC pop_options
@@ -10874,6 +10874,25 @@ static void ggml_compute_forward_mul_mat(
             }
         }
     }
+
+#if 0
+    if (dst->type == GGML_TYPE_F32) {
+        for (int j = 0; j < ne1; ++j) {
+            for (int i = 0; i < ne0; ++i) {
+                if (isnan(*(float *)((char *)dst->data + nb1*j + nb0*i))) {
+                    fprintf(stderr, "error: matmul(%s, %s/%s, %s, m=%d, n=%d, k=%d) produced nan at (%d,%d)\n",
+                            ggml_type_name(src0->type),
+                            ggml_type_name(src1->type),
+                            ggml_type_name(vec_dot_type),
+                            ggml_type_name(dst->type),
+                            ne01, ne11, ne00,
+                            j, i);
+                    exit(1);
+                }
+            }
+        }
+    }
+#endif
 }
 
 // ggml_compute_forward_mul_mat_id

@@ -155,18 +155,9 @@ static inline __m256 sum_i16_pairs_float_avx2(const __m256i x) {
 
 __attribute__((__target__("avx2,fma,f16c")))
 static inline __m256 mul_sum_us8_pairs_float_avx2(const __m256i ax, const __m256i sy) {
-    if (X86_HAVE(AVXVNNI)) {
-        // {vex} vpdpbusd %ymm1,%ymm2,%ymm0
-        register __m256i ymm2 asm("ymm2") = ax;
-        register __m256i ymm1 asm("ymm1") = sy;
-        register __m256i ymm0 asm("ymm0") = _mm256_setzero_si256();
-        asm(".byte\t0xc4,0xe2,0x6d,0x50,0xc1" : "+x"(ymm0) : "x"(ymm1), "x"(ymm2));
-        return _mm256_cvtepi32_ps(ymm0);
-    } else {
-        // Perform multiplication and create 16-bit values
-        const __m256i dot = _mm256_maddubs_epi16(ax, sy);
-        return sum_i16_pairs_float_avx2(dot);
-    }
+    // Perform multiplication and create 16-bit values
+    const __m256i dot = _mm256_maddubs_epi16(ax, sy);
+    return sum_i16_pairs_float_avx2(dot);
 }
 
 __attribute__((__target__("avx")))
@@ -967,7 +958,7 @@ void quantize_row_q8_1_reference(const float * restrict x, block_q8_1 * restrict
         const float d = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f/d : 0.0f;
 
-        y[i].d = d;
+        y[i].d = GGML_FP32_TO_FP16(d);
 
         int sum = 0;
 
@@ -982,7 +973,7 @@ void quantize_row_q8_1_reference(const float * restrict x, block_q8_1 * restrict
             sum += y[i].qs[QK8_1/2 + j];
         }
 
-        y[i].s = sum*d;
+        y[i].s = GGML_FP32_TO_FP16(sum*d);
     }
 }
 
@@ -1010,7 +1001,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
         const float d = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f/d : 0.0f;
 
-        y[i].d = d;
+        y[i].d = GGML_FP32_TO_FP16(d);
 
         int32x4_t accv = vdupq_n_s32(0);
 
@@ -1026,7 +1017,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
             accv = vaddq_s32(accv, vi);
         }
 
-        y[i].s = d * vaddvq_s32(accv);
+        y[i].s = GGML_FP32_TO_FP16(d * vaddvq_s32(accv));
     }
 #elif defined(__wasm_simd128__)
     for (int i = 0; i < nb; i++) {
@@ -1049,7 +1040,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
         const float d = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f/d : 0.0f;
 
-        y[i].d = d;
+        y[i].d = GGML_FP32_TO_FP16(d);
 
         v128_t accv = wasm_i32x4_splat(0);
 
@@ -1065,10 +1056,11 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
             accv = wasm_i32x4_add(accv, vi);
         }
 
-        y[i].s = d * (wasm_i32x4_extract_lane(accv, 0) +
-                      wasm_i32x4_extract_lane(accv, 1) +
-                      wasm_i32x4_extract_lane(accv, 2) +
-                      wasm_i32x4_extract_lane(accv, 3));
+        y[i].s = GGML_FP32_TO_FP16(
+                d * (wasm_i32x4_extract_lane(accv, 0) +
+                     wasm_i32x4_extract_lane(accv, 1) +
+                     wasm_i32x4_extract_lane(accv, 2) +
+                     wasm_i32x4_extract_lane(accv, 3)));
     }
 #elif defined(__AVX2__) || defined(__AVX__)
     for (int i = 0; i < nb; i++) {
@@ -1093,7 +1085,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
 
         // Quantize these floats
         const float d = maxScalar / 127.f;
-        y[i].d = d;
+        y[i].d = GGML_FP32_TO_FP16(d);
         const float id = ( maxScalar != 0.0f ) ? 127.f / maxScalar : 0.0f;
         const __m256 mul = _mm256_set1_ps( id );
 
@@ -1117,7 +1109,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
 
 #if defined(__AVX2__)
         // Compute the sum of the quants and set y[i].s
-        y[i].s = d * hsum_i32_8(_mm256_add_epi32(_mm256_add_epi32(i0, i1), _mm256_add_epi32(i2, i3)));
+        y[i].s = GGML_FP32_TO_FP16(d * hsum_i32_8(_mm256_add_epi32(_mm256_add_epi32(i0, i1), _mm256_add_epi32(i2, i3))));
 
         // Convert int32 to int16
         i0 = _mm256_packs_epi32( i0, i1 );	// 0, 1, 2, 3,  8, 9, 10, 11,  4, 5, 6, 7, 12, 13, 14, 15
@@ -1147,7 +1139,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
         // Compute the sum of the quants and set y[i].s
         const __m128i s0 = _mm_add_epi32(_mm_add_epi32(ni0, ni1), _mm_add_epi32(ni2, ni3));
         const __m128i s1 = _mm_add_epi32(_mm_add_epi32(ni4, ni5), _mm_add_epi32(ni6, ni7));
-        y[i].s = d * hsum_i32_4(_mm_add_epi32(s0, s1));
+        y[i].s = GGML_FP32_TO_FP16(d * hsum_i32_4(_mm_add_epi32(s0, s1)));
 
         // Convert int32 to int16
         ni0 = _mm_packs_epi32( ni0, ni1 );
@@ -1178,7 +1170,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
         const float d  = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f/d : 0.0f;
 
-        y[i].d = d;
+        y[i].d = GGML_FP32_TO_FP16(d);
 
         vfloat32m4_t x0 = __riscv_vfmul_vf_f32m4(v_x, id, vl);
 
@@ -1195,7 +1187,7 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int k) {
 
         // set y[i].s
         int sum = __riscv_vmv_x_s_i16m1_i16(vwrs);
-        y[i].s = sum*d;
+        y[i].s = GGML_FP32_TO_FP16(sum*d);
     }
 #else
     GGML_UNUSED(nb);

@@ -219,6 +219,7 @@ int main(int argc, char ** argv) {
     }
 
     llama_model_quantize_params params = llama_model_quantize_default_params();
+    params.nthread = 8;
 
     int arg_idx = 1;
     std::string imatrix_file;

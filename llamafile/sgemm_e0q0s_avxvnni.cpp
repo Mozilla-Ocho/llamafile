@@ -19,16 +19,16 @@
 
 #include "sgemm.h"
 
-#define TA block_q8_0
+#define TA block_q4_0
 #define TB block_q8_0
 #define TC float
-#include "llmmq0.inc"
+#include "sgemmer0.inc"
 
-bool llamafile_sgemm_qqs_avxvnni(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,
-                                 TC *C, int ldc, int ith, int nth, int task) {
+bool llamafile_sgemm_e0q0s_avxvnni(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,
+                                   TC *C, int ldc, int ith, int nth, int task) {
     if (task != GGML_TASK_TYPE_COMPUTE)
         return true;
-    LLMMQ0 tb{k, A, lda, B, ldb, C, ldc, ith, nth};
+    SGEMMER0 tb{k, A, lda, B, ldb, C, ldc, ith, nth};
     tb.matmul(m, n);
     return true;
 }

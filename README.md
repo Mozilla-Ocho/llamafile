@@ -343,9 +343,8 @@ llamafile supports the following CPUs:
   print an error and refuse to run. This means that if you have an Intel
   CPU, it needs to be Intel Sandybridge or newer (circa 2011+), and if
   you have an AMD CPU, then it needs to be Bulldozer or newer (circa
-  2011+). Support for AVX2, FMA, F16C, and VNNI are conditionally
-  enabled at runtime if you have a newer CPU. There's no support for
-  AVX512 runtime dispatching yet.
+  2011+). Support for AVX512, AVX2, FMA, F16C, and VNNI are
+  conditionally enabled at runtime if you have a newer CPU.
 
 - **ARM64** microprocessors must have ARMv8a+. This means everything
   from Apple Silicon to 64-bit Raspberry Pis will work, provided your

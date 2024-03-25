@@ -15,9 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
-#include <cassert>
-
 #include "llama.cpp/ggml-impl.h"
 #include "llama.cpp/ggml.h"
 
@@ -25,13 +22,11 @@
 #include "kernel.h"
 #include "madd.h"
 
-#define MM256_SET_M128I(a, b) _mm256_insertf128_si256(_mm256_castsi128_si256(b), (a), 1)
-
 namespace {
 
-class LLMMQ0 {
+class SGEMMER0 {
   public:
-    LLMMQ0(int k, const TA *A, int lda, const TB *B, int ldb, TC *C, int ldc, int ith, int nth)
+    SGEMMER0(int k, const TA *A, int lda, const TB *B, int ldb, TC *C, int ldc, int ith, int nth)
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
@@ -44,14 +39,18 @@ class LLMMQ0 {
         if (m - m0 <= 0 || n - n0 <= 0)
             return;
         int mc, nc, mp, np;
-        if (m - m0 >= 1 && n - n0 >= 4) {
-            mc = 1;
-            nc = 4;
-            gemm1x4(m0, m, n0, n);
+        if (m - m0 >= 4 && n - n0 >= 3) {
+            mc = 4;
+            nc = 3;
+            gemm4x3(m0, m, n0, n);
         } else if (m - m0 >= 4 && n - n0 >= 1) {
             mc = 4;
             nc = 1;
             gemm4x1(m0, m, n0, n);
+        } else if (m - m0 >= 1 && n - n0 >= 4) {
+            mc = 1;
+            nc = 4;
+            gemm1x4(m0, m, n0, n);
         } else {
             mc = 1;
             nc = 1;
@@ -62,6 +61,98 @@ class LLMMQ0 {
         mnpack(mp, m, n0, np);
         mnpack(m0, mp, np, n);
         mnpack(mp, m, np, n);
+    }
+
+    dontinline void gemm4x3(int m0, int m, int n0, int n) {
+        BEGIN_KERNEL(4, 3)
+        int k2 = k / 32;
+        __m256 c00 = _mm256_setzero_ps();
+        __m256 c10 = _mm256_setzero_ps();
+        __m256 c20 = _mm256_setzero_ps();
+        __m256 c30 = _mm256_setzero_ps();
+        __m256 c01 = _mm256_setzero_ps();
+        __m256 c11 = _mm256_setzero_ps();
+        __m256 c21 = _mm256_setzero_ps();
+        __m256 c31 = _mm256_setzero_ps();
+        __m256 c02 = _mm256_setzero_ps();
+        __m256 c12 = _mm256_setzero_ps();
+        __m256 c22 = _mm256_setzero_ps();
+        __m256 c32 = _mm256_setzero_ps();
+        const TA *Ap0 = A + lda * (i + 0);
+        const TA *Ap1 = A + lda * (i + 1);
+        const TA *Ap2 = A + lda * (i + 2);
+        const TA *Ap3 = A + lda * (i + 3);
+        const TB *Bp0 = B + ldb * (j + 0);
+        const TB *Bp1 = B + ldb * (j + 1);
+        const TB *Bp2 = B + ldb * (j + 2);
+        for (int l = 0; l < k2; ++l) {
+            float da0 = unhalf(Ap0[l].d);
+            float da1 = unhalf(Ap1[l].d);
+            float da2 = unhalf(Ap2[l].d);
+            float da3 = unhalf(Ap3[l].d);
+            __m256i e0 = load(Ap0 + l);
+            __m256i e1 = load(Ap1 + l);
+            __m256i e2 = load(Ap2 + l);
+            __m256i e3 = load(Ap3 + l);
+            float db0 = unhalf(Bp0[l].d);
+            __m256 d00 = _mm256_set1_ps(da0 * db0);
+            __m256 d10 = _mm256_set1_ps(da1 * db0);
+            __m256 d20 = _mm256_set1_ps(da2 * db0);
+            __m256 d30 = _mm256_set1_ps(da3 * db0);
+            __m256i f0 = load(Bp0 + l);
+            __m256i u0 = _mm256_sign_epi8(f0, f0);
+            __m256i s00 = _mm256_sign_epi8(e0, f0);
+            __m256i s10 = _mm256_sign_epi8(e1, f0);
+            __m256i s20 = _mm256_sign_epi8(e2, f0);
+            __m256i s30 = _mm256_sign_epi8(e3, f0);
+            c00 = madd(d00, updot(u0, s00), c00);
+            c10 = madd(d10, updot(u0, s10), c10);
+            c20 = madd(d20, updot(u0, s20), c20);
+            c30 = madd(d30, updot(u0, s30), c30);
+            float db1 = unhalf(Bp1[l].d);
+            __m256 d01 = _mm256_set1_ps(da0 * db1);
+            __m256 d11 = _mm256_set1_ps(da1 * db1);
+            __m256 d21 = _mm256_set1_ps(da2 * db1);
+            __m256 d31 = _mm256_set1_ps(da3 * db1);
+            __m256i f1 = load(Bp1 + l);
+            __m256i u1 = _mm256_sign_epi8(f1, f1);
+            __m256i s01 = _mm256_sign_epi8(e0, f1);
+            __m256i s11 = _mm256_sign_epi8(e1, f1);
+            __m256i s21 = _mm256_sign_epi8(e2, f1);
+            __m256i s31 = _mm256_sign_epi8(e3, f1);
+            c01 = madd(d01, updot(u1, s01), c01);
+            c11 = madd(d11, updot(u1, s11), c11);
+            c21 = madd(d21, updot(u1, s21), c21);
+            c31 = madd(d31, updot(u1, s31), c31);
+            float db2 = unhalf(Bp2[l].d);
+            __m256 d02 = _mm256_set1_ps(da0 * db2);
+            __m256 d12 = _mm256_set1_ps(da1 * db2);
+            __m256 d22 = _mm256_set1_ps(da2 * db2);
+            __m256 d32 = _mm256_set1_ps(da3 * db2);
+            __m256i f2 = load(Bp2 + l);
+            __m256i u2 = _mm256_sign_epi8(f2, f2);
+            __m256i s02 = _mm256_sign_epi8(e0, f2);
+            __m256i s12 = _mm256_sign_epi8(e1, f2);
+            __m256i s22 = _mm256_sign_epi8(e2, f2);
+            __m256i s32 = _mm256_sign_epi8(e3, f2);
+            c02 = madd(d02, updot(u2, s02), c02);
+            c12 = madd(d12, updot(u2, s12), c12);
+            c22 = madd(d22, updot(u2, s22), c22);
+            c32 = madd(d32, updot(u2, s32), c32);
+        }
+        C[ldc * (j + 0) + (i + 0)] = hsum(c00);
+        C[ldc * (j + 0) + (i + 1)] = hsum(c10);
+        C[ldc * (j + 0) + (i + 2)] = hsum(c20);
+        C[ldc * (j + 0) + (i + 3)] = hsum(c30);
+        C[ldc * (j + 1) + (i + 0)] = hsum(c01);
+        C[ldc * (j + 1) + (i + 1)] = hsum(c11);
+        C[ldc * (j + 1) + (i + 2)] = hsum(c21);
+        C[ldc * (j + 1) + (i + 3)] = hsum(c31);
+        C[ldc * (j + 2) + (i + 0)] = hsum(c02);
+        C[ldc * (j + 2) + (i + 1)] = hsum(c12);
+        C[ldc * (j + 2) + (i + 2)] = hsum(c22);
+        C[ldc * (j + 2) + (i + 3)] = hsum(c32);
+        END_KERNEL()
     }
 
     dontinline void gemm4x1(int m0, int m, int n0, int n) {

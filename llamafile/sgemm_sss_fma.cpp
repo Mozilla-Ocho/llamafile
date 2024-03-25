@@ -27,13 +27,13 @@
 #define zero() _mm256_setzero_ps()
 #define load_a(p) _mm256_loadu_ps(p)
 #define load_b(p) _mm256_loadu_ps(p)
-#include "llmm3x4.inc"
+#include "sgemmer.inc"
 
 bool llamafile_sgemm_sss_fma(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb, TC *C,
                              int ldc, int ith, int nth, int task) {
     if (task != GGML_TASK_TYPE_COMPUTE)
         return true;
-    LLMM3X4 tb{k, A, lda, B, ldb, C, ldc, ith, nth};
+    SGEMMER tb{k, A, lda, B, ldb, C, ldc, ith, nth};
     tb.matmul(m, n);
     return true;
 }

@@ -59,7 +59,7 @@ void ggml_vec_dot_q4_0_q8_0(const int n, float * restrict s, size_t bs, const vo
     // Main loop
     for (int i = 0; i < nb; ++i) {
         /* Compute combined scale for the block */
-        const __m256 d = _mm256_set1_ps( GGML_FP16_TO_FP32__F16C(x[i].d) * GGML_FP16_TO_FP32__F16C(y[i].d) );
+        const __m256 d = _mm256_set1_ps( GGML_FP16_TO_FP32(x[i].d) * GGML_FP16_TO_FP32(y[i].d) );
 
         __m256i bx = bytes_from_nibbles_32_avx2(x[i].qs);
 
