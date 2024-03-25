@@ -1,6 +1,7 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #define LLAMA_API_INTERNAL
+#include "llamafile/log.h"
 #include "llama.h"
 
 #include "unicode.h"
@@ -14552,7 +14553,7 @@ const std::vector<std::pair<std::string, struct ggml_tensor *>> & llama_internal
 void llama_log_set(ggml_log_callback log_callback, void * user_data) {
     g_state.log_callback = log_callback ? log_callback : llama_log_callback_default;
     g_state.log_callback_user_data = user_data;
-    ggml_backend_metal_log_set_callback(g_state.log_callback, g_state.log_callback_user_data);
+    // ggml_backend_metal_log_set_callback(g_state.log_callback, g_state.log_callback_user_data); [jart]
 }
 
 static void llama_log_internal_v(ggml_log_level level, const char * format, va_list args) {
@@ -14573,6 +14574,7 @@ static void llama_log_internal_v(ggml_log_level level, const char * format, va_l
 }
 
 static void llama_log_internal(ggml_log_level level, const char * format, ...) {
+    if (FLAG_log_disable) return; // [jart]
     va_list args;
     va_start(args, format);
     llama_log_internal_v(level, format, args);
@@ -14580,6 +14582,7 @@ static void llama_log_internal(ggml_log_level level, const char * format, ...) {
 }
 
 static void llama_log_callback_default(ggml_log_level level, const char * text, void * user_data) {
+    if (FLAG_log_disable) return; // [jart]
     (void) level;
     (void) user_data;
     fputs(text, stderr);

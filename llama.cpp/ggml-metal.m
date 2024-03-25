@@ -238,6 +238,8 @@ struct ggml_metal_context {
 @end
 
 static void ggml_metal_default_log_callback(enum ggml_log_level level, const char * msg, void * user_data) {
+    if (FLAG_log_disable) return; // [jart]
+
     fprintf(stderr, "%s", msg);
 
     UNUSED(level);

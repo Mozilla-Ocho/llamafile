@@ -497,7 +497,6 @@ int main(int argc, char ** argv) {
         __builtin_unreachable();
     }
 
-    llamafile_init();
     llamafile_check_cpu();
 
     StatParams sparams;

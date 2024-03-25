@@ -15,7 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef __x86_64__
 #include "sgemm.h"
 #include "llamafile.h"
 #include <cosmo.h>
@@ -111,5 +110,3 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
         return false;
     }
 }
-
-#endif // __x86_64__

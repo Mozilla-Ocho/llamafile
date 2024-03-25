@@ -53,9 +53,13 @@ static bool eval_string(struct llama_context *ctx_llama, const char *str, int n_
 }
 
 int main(int argc, char **argv) {
+
+    llamafile_check_cpu();
+    ShowCrashReports();
+    log_disable();
+
     gpt_params params;
     params.n_ctx = 0;
-    FLAG_log_disable = true;
 
     if (!gpt_params_parse(argc, argv, params))
         return 1;
