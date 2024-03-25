@@ -25,9 +25,12 @@
 static const long hwcap = getauxval(AT_HWCAP);
 
 /**
- * Multiplies matrices.
+ * Performs optimized matrix multiplication on CPU.
  *
- * This is a column major GEMM subroutine for computing C = α*A*B + β*C.
+ * This subroutine may compute C = Aᵀ * B with column major ordering.
+ * Despite its name, this isn't a generalized implementation. Work is
+ * only performed when a handwritten kernel is written and available.
+ * Otherwise the caller should fall back to a general matmul routine.
  *
  * @param m is rows in `A` and `C`
  * @param n is cols in `B` and `C`
@@ -52,9 +55,6 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
     assert(m >= 0);
     assert(n >= 0);
     assert(k >= 0);
-    assert(lda >= k);
-    assert(ldb >= k);
-    assert(ldc >= m);
     assert(nth > 0);
     assert(ith < nth);
 
