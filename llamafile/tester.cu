@@ -19,14 +19,7 @@
 
 #include <algorithm>
 #include <atomic>
-#include <ctime>
 #include <iostream>
-
-#ifndef _WIN32
-#include <unistd.h>
-#else
-#include <windows.h>
-#endif
 
 #ifdef __HIP__
 #define VENDOR "AMD"
@@ -44,33 +37,6 @@ const int kPageSize =
     4096;
 #endif
 
-int rand32(void) {
-    static unsigned long long lcg = 1;
-    lcg *= 6364136223846793005;
-    lcg += 1442695040888963407;
-    return lcg >> 32;
-}
-
-float float01(unsigned x) { // (0,1)
-    return 1.f / 8388608 * ((x >> 9) + .5f);
-}
-
-float numba(void) { // (-1,1)
-    return float01(rand32()) * 2 - 1;
-}
-
-int hamming(int x, int y) {
-    return popcount(x ^ y);
-}
-
-int popcount(unsigned x) {
-    x = x - ((x >> 1) & 0x55555555);
-    x = ((x >> 2) & 0x33333333) + (x & 0x33333333);
-    x = (x + (x >> 4)) & 0x0F0F0F0F;
-    x = (x + (x >> 16));
-    return (x + (x >> 8)) & 0x0000003F;
-}
-
 void cudaFreeOrDie(void *p) {
     CUDA_OR_DIE(cudaFree(p));
 }
@@ -79,31 +45,6 @@ void *cudaMallocManagedOrDie(size_t n) {
     void *p;
     CUDA_OR_DIE(cudaMallocManaged(&p, n));
     return p;
-}
-
-#ifdef _WIN32
-static long long GetQueryPerformanceFrequency() {
-    LARGE_INTEGER t;
-    QueryPerformanceFrequency(&t);
-    return t.QuadPart;
-}
-static long long GetQueryPerformanceCounter() {
-    LARGE_INTEGER t;
-    QueryPerformanceCounter(&t);
-    return t.QuadPart;
-}
-#endif
-
-long long micros(void) {
-#ifndef _WIN32
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return ts.tv_sec * 1000000 + (ts.tv_nsec + 999) / 1000;
-#else
-    static long long timer_freq = GetQueryPerformanceFrequency();
-    static long long timer_start = GetQueryPerformanceCounter();
-    return ((GetQueryPerformanceCounter() - timer_start) * 1000000) / timer_freq;
-#endif
 }
 
 [[noreturn]] void cuda_die(const char *stmt, const char *func, const char *file, int line,

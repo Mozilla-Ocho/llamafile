@@ -15,35 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "bench.h"
+#include "float.h"
 #include "gemm.h"
 #include "llama.cpp/ggml.h"
 #include "llamafile.h"
+#include "numba.h"
 
-static int rand32(void) {
-    static unsigned long long lcg = 1;
-    lcg *= 6364136223846793005;
-    lcg += 1442695040888963407;
-    return lcg >> 32;
-}
-
-static float float01(unsigned x) { // (0,1)
-    return 1.f / 8388608 * ((x >> 9) + .5f);
-}
-
-static float numba(void) { // (-1,1)
-    return float01(rand32()) * 2 - 1;
-}
-
-template <typename T> void broadcast(T *A, int n, T x) {
-    for (int i = 0; i < n; ++i)
-        A[i] = x;
-}
-
-template <typename T> void randomize(int m, int n, T *A, int lda) {
-    for (int j = 0; j < n; ++j)
-        for (int i = 0; i < m; ++i)
-            A[lda * j + i] = numba();
-}
+#define ITERATIONS 5
 
 int main(int argc, char *argv[]) {
     float tolerance = 2e-5;
@@ -65,21 +44,20 @@ int main(int argc, char *argv[]) {
     randomize(k, m, A, lda);
     randomize(k, n, B, ldb);
 
-    gemm(true, false, m, n, k, 1., A, lda, B, ldb, 0., G, ldc);
-    if (!llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
-                         GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32))
-        return 1;
+    BENCH(gemm(true, false, m, n, k, 1., A, lda, B, ldb, 0., G, ldc));
+    BENCH(llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
+                          GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32));
 
     for (int i = 0; i < m; ++i)
         for (int j = 0; j < n; ++j) {
             auto g = G[ldc * j + i];
             auto c = C[ldc * j + i];
-            if (isnan(g)) {
+            if (flt::isnan(g)) {
                 fprintf(stderr, "%s:%d: found nan in reference matrix: i=%d j=%d\n", __FILE__,
                         __LINE__, i, j);
                 return 3;
             }
-            if (isnan(c)) {
+            if (flt::isnan(c)) {
                 fprintf(stderr, "%s:%d: found nan in output matrix: i=%d j=%d\n", __FILE__,
                         __LINE__, i, j);
                 return 4;

@@ -17,8 +17,9 @@
 #pragma once
 
 #include "cuda.h"
-#include "flt.h"
+#include "float.h"
 #include "gemm.h"
+#include "half.h"
 #include "macros.h"
 #include "naive.h"
 #include "tinyblas.h"
@@ -72,39 +73,12 @@ extern const int kPageSize;
 extern std::recursive_mutex g_log_lock;
 extern thread_local const char *is_self_testing;
 
-float float01(unsigned);
-float numba(void);
-int hamming(int, int);
-int popcount(unsigned);
-int rand32(void);
 long long micros(void);
 void *cudaMallocManagedOrDie(size_t);
 void cudaFreeOrDie(void *);
 void show_cuda_device(int);
 void show_cuda_devices();
 void test_matmul(std::function<void(int, int, int, int, float, float)>);
-
-template <typename T> void randomize(T *A, int n) {
-    for (int i = 0; i < n; ++i)
-        A[i] = numba();
-}
-
-template <typename T> void randomize(int m, int n, T *A, int lda) {
-    for (int j = 0; j < n; ++j)
-        for (int i = 0; i < m; ++i)
-            A[lda * j + i] = numba();
-}
-
-template <typename T, typename U> void broadcast(T *A, int n, U x) {
-    for (int i = 0; i < n; ++i)
-        A[i] = x;
-}
-
-template <typename T, typename U> void broadcast(int m, int n, T *A, int lda, U x) {
-    for (int j = 0; j < n; ++j)
-        for (int i = 0; i < m; ++i)
-            A[lda * j + i] = x;
-}
 
 template <typename T> struct cuda_memory {
     const size_t size;
@@ -276,19 +250,6 @@ void check(double tol, //
 }
 
 #define CHECK(tol, m, n, k, A, lda, B, ldb) check(tol, m, n, k, A, lda, B, ldb, __FILE__, __LINE__)
-
-#define BENCH_CPU(x) \
-    do { \
-        x; \
-        __asm__ volatile("" ::: "memory"); \
-        long long start = micros(); \
-        for (int i = 0; i < ITERATIONS; ++i) { \
-            __asm__ volatile("" ::: "memory"); \
-            x; \
-            __asm__ volatile("" ::: "memory"); \
-        } \
-        printf("%8lld us %s\n", (micros() - start + ITERATIONS - 1) / ITERATIONS, #x); \
-    } while (0)
 
 #define CUDA_OR_DIE(x) \
     do { \

@@ -63,8 +63,12 @@ o/$(MODE)/llamafile/sgemm_e1q1s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx
 ################################################################################
 # testing
 
-o/$(MODE)/llamafile/sgemm_test:				\
-		o/$(MODE)/llamafile/sgemm_test.o	\
+o/$(MODE)/llamafile/sgemm_sss_test:			\
+		o/$(MODE)/llamafile/sgemm_sss_test.o	\
+		o/$(MODE)/llama.cpp/llama.cpp.a
+
+o/$(MODE)/llamafile/sgemm_vecdot_test:			\
+		o/$(MODE)/llamafile/sgemm_vecdot_test.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a
 
 o/$(MODE)/llamafile/%.o: llamafile/%.cu llamafile/BUILD.mk
