@@ -1,7 +1,7 @@
 #-*-mode:makefile-gmake;indent-tabs-mode:t;tab-width:8;coding:utf-8-*-┐
 #── vi: set noet ft=make ts=8 sw=8 fenc=utf-8 :vi ────────────────────┘
 
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 COSMOCC = .cosmocc/3.3.2
 TOOLCHAIN = $(COSMOCC)/bin/cosmo
 
