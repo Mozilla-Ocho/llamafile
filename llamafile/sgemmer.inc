@@ -38,19 +38,19 @@ class SGEMMER {
         if (m - m0 <= 0 || n - n0 <= 0)
             return;
         int mc, nc, mp, np;
-        if (VECTOR_REGISTERS >= 32 && m - m0 >= 5 && n - n0 >= 5) {
+        if (VECTOR_REGISTERS >= 32 && n - n0 >= 5 && m - m0 >= 5) {
             mc = 5;
             nc = 5;
             gemm5x5(m0, m, n0, n);
-        } else if (m - m0 >= 3 && n - n0 >= 4) {
+        } else if (n - n0 >= 4 && m - m0 >= 3) {
             mc = 3;
             nc = 4;
             gemm3x4(m0, m, n0, n);
-        } else if (m - m0 >= 1 && n - n0 >= 4) {
+        } else if (n - n0 >= 4) {
             mc = 1;
             nc = 4;
             gemm1x4(m0, m, n0, n);
-        } else if (m - m0 >= 4 && n - n0 >= 1) {
+        } else if (m - m0 >= 4) {
             mc = 4;
             nc = 1;
             gemm4x1(m0, m, n0, n);

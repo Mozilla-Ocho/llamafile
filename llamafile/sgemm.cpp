@@ -128,9 +128,10 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
                                              (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth,
                                              task);
 #elif defined(__aarch64__)
-        return llamafile_sgemm_q0q0s_dotprod(m, n, k, (const block_q8_0 *)A, lda,
-                                             (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth,
-                                             task);
+        if (hwcap & HWCAP_FPHP)
+            return llamafile_sgemm_q0q0s_dotprod(m, n, k, (const block_q8_0 *)A, lda,
+                                                 (const block_q8_0 *)B, ldb, (float *)C, ldc, ith,
+                                                 nth, task);
 #endif
         return false;
 
