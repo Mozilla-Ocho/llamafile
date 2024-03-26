@@ -65,7 +65,6 @@ class SGEMMER0 {
 
     dontinline void gemm4x3(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(4, 3)
-        int k2 = k / 32;
         __m256 c00 = _mm256_setzero_ps();
         __m256 c10 = _mm256_setzero_ps();
         __m256 c20 = _mm256_setzero_ps();
@@ -85,7 +84,7 @@ class SGEMMER0 {
         const TB *Bp0 = B + ldb * (j + 0);
         const TB *Bp1 = B + ldb * (j + 1);
         const TB *Bp2 = B + ldb * (j + 2);
-        for (int l = 0; l < k2; ++l) {
+        for (int l = 0; l < k; ++l) {
             float da0 = unhalf(Ap0[l].d);
             float da1 = unhalf(Ap1[l].d);
             float da2 = unhalf(Ap2[l].d);
@@ -157,7 +156,6 @@ class SGEMMER0 {
 
     dontinline void gemm4x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(4, 1)
-        int k2 = k / 32;
         __m256 c0 = _mm256_setzero_ps();
         __m256 c1 = _mm256_setzero_ps();
         __m256 c2 = _mm256_setzero_ps();
@@ -167,7 +165,7 @@ class SGEMMER0 {
         const TA *Ap2 = A + lda * (i + 2);
         const TA *Ap3 = A + lda * (i + 3);
         const TB *Bp = B + ldb * j;
-        for (int l = 0; l < k2; ++l) {
+        for (int l = 0; l < k; ++l) {
             float db0 = unhalf(Bp[l].d);
             __m256i f = load(Bp + l);
             __m256i u = _mm256_sign_epi8(f, f);
@@ -201,7 +199,6 @@ class SGEMMER0 {
 
     dontinline void gemm1x4(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(1, 4)
-        int k2 = k / 32;
         __m256 c0 = _mm256_setzero_ps();
         __m256 c1 = _mm256_setzero_ps();
         __m256 c2 = _mm256_setzero_ps();
@@ -211,7 +208,7 @@ class SGEMMER0 {
         const TB *Bp2 = B + ldb * (j + 2);
         const TB *Bp3 = B + ldb * (j + 3);
         const TA *Ap = A + lda * i;
-        for (int l = 0; l < k2; ++l) {
+        for (int l = 0; l < k; ++l) {
             float da0 = unhalf(Ap[l].d);
             __m256i f = load(Ap + l);
             __m256i u = _mm256_sign_epi8(f, f);
@@ -237,11 +234,10 @@ class SGEMMER0 {
 
     dontinline void gemm1x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(1, 1)
-        int k2 = k / 32;
         __m256 c = _mm256_setzero_ps();
         const TA *Ap = A + lda * i;
         const TB *Bp = B + ldb * j;
-        for (int l = 0; l < k2; ++l) {
+        for (int l = 0; l < k; ++l) {
             __m256 d = _mm256_set1_ps(unhalf(Ap[l].d) * unhalf(Bp[l].d));
             __m256i e = load(Ap + l);
             __m256i f = load(Bp + l);

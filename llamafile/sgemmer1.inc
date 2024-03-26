@@ -61,7 +61,6 @@ class SGEMMER1 {
 
     dontinline void gemm4x2(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(4, 2)
-        int k2 = k / 32;
         __m128 s0 = _mm_setzero_ps();
         __m128 s1 = _mm_setzero_ps();
         __m256 c00 = _mm256_setzero_ps();
@@ -78,7 +77,7 @@ class SGEMMER1 {
         const TA *Ap3 = A + lda * (i + 3);
         const TB *Bp0 = B + ldb * (j + 0);
         const TB *Bp1 = B + ldb * (j + 1);
-        for (int l = 0; l < k2; ++l) {
+        for (int l = 0; l < k; ++l) {
             __m128 sa = _mm_set_ps(unhalf(Ap3[l].dm >> 16), //
                                    unhalf(Ap2[l].dm >> 16), //
                                    unhalf(Ap1[l].dm >> 16), //
@@ -119,7 +118,6 @@ class SGEMMER1 {
 
     dontinline void gemm4x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(4, 1)
-        int k2 = k / 32;
         __m128 s = _mm_setzero_ps();
         __m256 c0 = _mm256_setzero_ps();
         __m256 c1 = _mm256_setzero_ps();
@@ -130,7 +128,7 @@ class SGEMMER1 {
         const TA *Ap2 = A + lda * (i + 2);
         const TA *Ap3 = A + lda * (i + 3);
         const TB *Bp = B + ldb * j;
-        for (int l = 0; l < k2; ++l) {
+        for (int l = 0; l < k; ++l) {
             s = madd(_mm_set1_ps(unhalf(Bp[l].ds >> 16)),
                      _mm_set_ps(unhalf(Ap3[l].dm >> 16), //
                                 unhalf(Ap2[l].dm >> 16), //
@@ -157,12 +155,11 @@ class SGEMMER1 {
 
     dontinline void gemm1x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(1, 1)
-        int k2 = k / 32;
         float s = 0;
         __m256 c = _mm256_setzero_ps();
         const TA *Ap = A + lda * i;
         const TB *Bp = B + ldb * j;
-        for (int l = 0; l < k2; ++l) {
+        for (int l = 0; l < k; ++l) {
             unsigned dm = Ap[l].dm;
             unsigned ds = Bp[l].ds;
             __m256 d0 = _mm256_set1_ps(unhalf(dm));

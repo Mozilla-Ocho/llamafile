@@ -51,6 +51,14 @@ const char *llamafile_describe_gpu(void);
 bool llamafile_sgemm(int, int, int, const void *, int, const void *, int, void *, int, int, int,
                      int, int, int, int);
 
+#if 0
+void llamafile_sgemm_was_used(long long);
+void llamafile_sgemm_was_not_used(long long, bool);
+#else
+#define llamafile_sgemm_was_used(x)
+#define llamafile_sgemm_was_not_used(x, y)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

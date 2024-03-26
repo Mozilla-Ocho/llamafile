@@ -115,16 +115,20 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
 #ifdef __x86_64__
         if (!X86_HAVE(AVX))
             return false;
-        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI) && !(k % 32))
+        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI))
             return llamafile_sgemm_q0q0s_avx512vnni(m, n, k, (const block_q8_0 *)A, lda,
                                                     (const block_q8_0 *)B, ldb, (float *)C, ldc,
                                                     ith, nth, task);
-        if (X86_HAVE(FMA) && X86_HAVE(AVXVNNI) && !(k % 32))
+        if (X86_HAVE(FMA) && X86_HAVE(AVXVNNI))
             return llamafile_sgemm_q0q0s_avxvnni(m, n, k, (const block_q8_0 *)A, lda,
                                                  (const block_q8_0 *)B, ldb, (float *)C, ldc, ith,
                                                  nth, task);
-        if (X86_HAVE(FMA) && X86_HAVE(AVX2) && !(k % 32))
+        if (X86_HAVE(FMA) && X86_HAVE(AVX2))
             return llamafile_sgemm_q0q0s_fma(m, n, k, (const block_q8_0 *)A, lda,
+                                             (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth,
+                                             task);
+#elif defined(__aarch64__)
+        return llamafile_sgemm_q0q0s_dotprod(m, n, k, (const block_q8_0 *)A, lda,
                                              (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth,
                                              task);
 #endif
@@ -136,15 +140,15 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
 #ifdef __x86_64__
         if (!X86_HAVE(AVX))
             return false;
-        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI) && !(k % 32))
+        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI))
             return llamafile_sgemm_e0q0s_avx512vnni(m, n, k, (const block_q4_0 *)A, lda,
                                                     (const block_q8_0 *)B, ldb, (float *)C, ldc,
                                                     ith, nth, task);
-        if (X86_HAVE(FMA) && X86_HAVE(AVXVNNI) && !(k % 32))
+        if (X86_HAVE(FMA) && X86_HAVE(AVXVNNI))
             return llamafile_sgemm_e0q0s_avxvnni(m, n, k, (const block_q4_0 *)A, lda,
                                                  (const block_q8_0 *)B, ldb, (float *)C, ldc, ith,
                                                  nth, task);
-        if (X86_HAVE(FMA) && X86_HAVE(AVX2) && !(k % 32))
+        if (X86_HAVE(FMA) && X86_HAVE(AVX2))
             return llamafile_sgemm_e0q0s_fma(m, n, k, (const block_q4_0 *)A, lda,
                                              (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth,
                                              task);
@@ -157,15 +161,15 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
 #ifdef __x86_64__
         if (!X86_HAVE(AVX))
             return false;
-        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI) && !(k % 32))
+        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI))
             return llamafile_sgemm_e1q1s_avx512vnni(m, n, k, (const block_q4_1 *)A, lda,
                                                     (const block_q8_1 *)B, ldb, (float *)C, ldc,
                                                     ith, nth, task);
-        if (X86_HAVE(FMA) && X86_HAVE(AVXVNNI) && !(k % 32))
+        if (X86_HAVE(FMA) && X86_HAVE(AVXVNNI))
             return llamafile_sgemm_e1q1s_avxvnni(m, n, k, (const block_q4_1 *)A, lda,
                                                  (const block_q8_1 *)B, ldb, (float *)C, ldc, ith,
                                                  nth, task);
-        if (X86_HAVE(FMA) && X86_HAVE(AVX2) && !(k % 32))
+        if (X86_HAVE(FMA) && X86_HAVE(AVX2))
             return llamafile_sgemm_e1q1s_fma(m, n, k, (const block_q4_1 *)A, lda,
                                              (const block_q8_1 *)B, ldb, (float *)C, ldc, ith, nth,
                                              task);

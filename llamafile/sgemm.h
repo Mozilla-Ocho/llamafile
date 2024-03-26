@@ -29,6 +29,8 @@ bool llamafile_sgemm_q0q0s_avxvnni(int, int, int, const block_q8_0 *, int, const
                                    float *, int, int, int, int);
 bool llamafile_sgemm_q0q0s_fma(int, int, int, const block_q8_0 *, int, const block_q8_0 *, int,
                                float *, int, int, int, int);
+bool llamafile_sgemm_q0q0s_dotprod(int, int, int, const block_q8_0 *, int, const block_q8_0 *, int,
+                                   float *, int, int, int, int);
 
 bool llamafile_sgemm_e0q0s_avx512vnni(int, int, int, const block_q4_0 *, int, const block_q8_0 *,
                                       int, float *, int, int, int, int);

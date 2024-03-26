@@ -41,10 +41,3 @@ inline float hsum(__m512 x) {
 #endif // __AVX512F__
 #endif // __AVX__
 #endif // __SSE__
-
-template <typename T> float hsums(const T *x, int n) {
-    float sum = 0;
-    for (int i = 0; i < n; ++i)
-        sum += hsum(x[i]);
-    return sum;
-}
