@@ -14,6 +14,7 @@ ORIGIN
 
 LOCAL MODIFICATIONS
 
+  - Count the number of cores correctly on Intel's Alderlake architecture
   - Remove MAP_POPULATE because it makes mmap(tinyllama) block for 100ms
   - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
   - Unify main, server, and llava-cli into single llamafile program
