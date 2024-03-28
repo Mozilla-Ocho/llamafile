@@ -1067,7 +1067,7 @@ struct llama_mmap {
         }
         // prefetch/readahead impairs performance on NUMA systems
         if (numa) { prefetch = 0; }
-        addr = mmap(NULL, size, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, 0);
+        addr = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
         if (addr == MAP_FAILED) {
             throw std::runtime_error(format("mmap failed: %s", strerror(errno)));
         }

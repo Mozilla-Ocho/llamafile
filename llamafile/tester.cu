@@ -21,6 +21,10 @@
 #include <atomic>
 #include <iostream>
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 #ifdef __HIP__
 #define VENDOR "AMD"
 #else

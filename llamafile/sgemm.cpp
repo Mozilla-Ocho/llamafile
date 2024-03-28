@@ -55,6 +55,9 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
     assert(m >= 0);
     assert(n >= 0);
     assert(k >= 0);
+    assert(lda >= k);
+    assert(ldb >= k);
+    assert(ldc >= m);
     assert(nth > 0);
     assert(ith < nth);
 

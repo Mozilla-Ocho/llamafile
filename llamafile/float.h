@@ -29,7 +29,7 @@ inline bool isnormal(float f) {
     return expo && expo != 0x7f800000;
 }
 
-template <typename T> inline bool isdenormal(T f) {
+inline bool isdenormal(float f) {
     return f && !isnormal(f) && !isnan(f) && !isinf(f);
 }
 

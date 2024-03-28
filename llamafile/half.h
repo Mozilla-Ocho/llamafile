@@ -35,4 +35,8 @@ inline bool isnormal(half f) {
     return expo && expo != 0x7c00;
 }
 
+inline bool isdenormal(half f) {
+    return f && !isnormal(f) && !isnan(f) && !isinf(f);
+}
+
 } // namespace flt
