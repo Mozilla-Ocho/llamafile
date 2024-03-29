@@ -48,7 +48,7 @@ static int count_math_cpus(int cpu_count) {
     int result = 0;
     for (int cpu = 0; cpu < cpu_count; ++cpu) {
         if (pin_cpu(cpu))
-            return cpu_count / 2; // xnu and openbsd don't support affinity
+            return -1; // xnu and openbsd don't support affinity
         if (is_running_on_efficiency_core())
             continue; // efficiency cores harm lockstep threading
         ++cpu; // hyperthreading isn't useful for linear algebra
@@ -69,16 +69,19 @@ static void *count_math_cpus_worker(void *arg) {
 int llamafile_get_math_cpu_count(void) {
     int cpu_count = __get_cpu_count();
     if (cpu_count < 1)
-        return 1;
+        return 4;
 #ifdef __x86_64__
     if (is_hybrid_cpu()) {
         pthread_t th; // some OSes don't support getaffinity
         if (!pthread_create(&th, 0, count_math_cpus_worker, (void *)(intptr_t)cpu_count)) {
             void *result;
-            if (!pthread_join(th, &result))
+            if (!pthread_join(th, &result) && (intptr_t)result > 0)
                 return (intptr_t)result;
         }
     }
 #endif
-    return cpu_count / 2;
+    if (cpu_count <= 4)
+        return cpu_count;
+    else
+        return cpu_count / 2;
 }

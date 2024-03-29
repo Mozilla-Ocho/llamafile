@@ -10733,8 +10733,6 @@ static void ggml_compute_forward_mul_mat(
                                      src1->type,
                                      dst->type))
                     goto UseGgmlGemm1;
-        if (!ith && ne11 > 1 && params->type == GGML_TASK_TYPE_COMPUTE)
-            llamafile_sgemm_was_used(ne01 * ne11 * ne00);
         return;
     }
 UseGgmlGemm1:
@@ -10774,10 +10772,10 @@ UseGgmlGemm1:
         for (int64_t j = 0; j < ne13; j++)
             for (int64_t i = 0; i < ne12; i++)
                 if (!llamafile_sgemm(ne01, ne11, ne00/ggml_blck_size(src0->type),
-                                     (char *)src0->data + i/r2*nb02 + j/r3*nb03,
+                                     (const char *)src0->data + i/r2*nb02 + j/r3*nb03,
                                      nb01/ggml_type_size(src0->type),
-                                     (char *)wdata + (nb12/ggml_type_size(src1->type)*ggml_type_size(vec_dot_type)*i +
-                                                      nb13/ggml_type_size(src1->type)*ggml_type_size(vec_dot_type)*j),
+                                     (const char *)wdata + (nb12/ggml_type_size(src1->type)*ggml_type_size(vec_dot_type)*i +
+                                                            nb13/ggml_type_size(src1->type)*ggml_type_size(vec_dot_type)*j),
                                      row_size/ggml_type_size(vec_dot_type),
                                      (char *)dst->data + i*nb2 + j*nb3,
                                      nb1/ggml_type_size(dst->type),
@@ -10787,14 +10785,9 @@ UseGgmlGemm1:
                                      vec_dot_type,
                                      dst->type))
                     goto UseGgmlGemm2;
-        if (!ith && ne11 > 1 && params->type == GGML_TASK_TYPE_COMPUTE)
-            llamafile_sgemm_was_used(ne01 * ne11 * ne00);
         return;
     }
 UseGgmlGemm2:
-
-    if (!ith && ne11 > 1)
-        llamafile_sgemm_was_not_used(ne01 * ne11 * ne00 * ne13 * ne12, src1_cont);
 
     const int64_t nr0 = ne01;          // src0 rows
     const int64_t nr1 = ne1*ne12*ne13; // src1 rows
