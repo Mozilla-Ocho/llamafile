@@ -19,10 +19,26 @@
 #include "llamafile.h"
 #include <cassert>
 #include <cosmo.h>
+#include <cpuid.h>
 #include <libc/sysv/consts/hwcap.h>
 #include <sys/auxv.h>
 
+// TODO(jart): Delete when cosmocc 3.3.3 goes live.
+static bool check_avx512bf16(void) {
+#ifdef __x86_64__
+    // available on cooperlake, zen4, etc.
+    int abcd[4];
+    __cpuidex(abcd, 1, 0);
+    if (abcd[0] >= 7) {
+        __cpuidex(abcd, 7, 1);
+        return !!(abcd[0] & (1u << 5));
+    }
+#endif
+    return false;
+}
+
 static const long hwcap = getauxval(AT_HWCAP);
+const bool have_avx512bf16 = check_avx512bf16();
 
 /**
  * Performs optimized matrix multiplication on CPU.
@@ -109,6 +125,24 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
         if (n > 1 && !(k % 4) && !(hwcap & HWCAP_FPHP) && Btype == GGML_TYPE_F32)
             return llamafile_sgemm_hss_neon(m, n, k, (const unsigned short *)A, lda,
                                             (const float *)B, ldb, (float *)C, ldc, ith, nth, task);
+#endif
+        return false;
+
+    case GGML_TYPE_BF16:
+#ifdef __x86_64__
+        if (Btype != GGML_TYPE_F32)
+            return false;
+        if (have_avx512bf16 && !(k % 16))
+            return llamafile_sgemm_bss_avx512bf16(m, n, k, (const ggml_bf16_t *)A, lda,
+                                                  (const float *)B, ldb, (float *)C, ldc, ith, nth,
+                                                  task);
+        if (X86_HAVE(AVX512F) && !(k % 16))
+            return llamafile_sgemm_bss_avx512(m, n, k, (const ggml_bf16_t *)A, lda,
+                                              (const float *)B, ldb, (float *)C, ldc, ith, nth,
+                                              task);
+        if (X86_HAVE(AVX2) && X86_HAVE(FMA) && !(k % 8))
+            return llamafile_sgemm_bss_avx2(m, n, k, (const ggml_bf16_t *)A, lda, (const float *)B,
+                                            ldb, (float *)C, ldc, ith, nth, task);
 #endif
         return false;
 

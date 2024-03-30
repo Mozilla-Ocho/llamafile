@@ -23,6 +23,7 @@
 #define KN 16
 
 typedef __m512 V;
+typedef __m512 D;
 typedef unsigned short TA;
 typedef float TB;
 typedef float TC;
@@ -36,7 +37,7 @@ static inline V load(const float *p) {
 }
 
 static inline V load(const unsigned short *p) {
-    return _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)(p)));
+    return _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)p));
 }
 
 #include "sgemmer.inc"

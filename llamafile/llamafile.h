@@ -31,6 +31,7 @@ void llamafile_launch_browser(const char *);
 int llamafile_get_math_cpu_count(void);
 
 extern bool FLAG_unsecure;
+extern const bool have_avx512bf16;
 
 #define LLAMAFILE_GPU_ERROR -2
 #define LLAMAFILE_GPU_DISABLE -1

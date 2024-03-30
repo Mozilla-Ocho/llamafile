@@ -23,6 +23,7 @@
 #define KN 8
 
 typedef float16x8_t V;
+typedef float16x8_t D;
 typedef unsigned short TA;
 typedef unsigned short TB;
 typedef float TC;

@@ -1,3 +1,5 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #pragma once
 
 #include "ggml.h"
@@ -9,7 +11,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h> // memcpy
-#include <math.h>   // fabsf
+#include <math.h>   // fabsf, fpclassify
 
 #ifdef __cplusplus
 extern "C" {
@@ -259,6 +261,9 @@ size_t ggml_hash_insert        (      struct ggml_hash_set hash_set, struct ggml
 
 // return index, asserts if table is full
 size_t ggml_hash_find_or_insert(      struct ggml_hash_set hash_set, struct ggml_tensor * key);
+
+#define GGML_FP32_TO_BF16(x) ggml_fp32_to_bf16(x)
+#define GGML_BF16_TO_FP32(x) ggml_bf16_to_fp32(x)
 
 #ifdef __cplusplus
 }

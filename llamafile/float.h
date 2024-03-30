@@ -12,6 +12,14 @@ inline unsigned toint(float f) {
     return u.i;
 }
 
+inline float tofloat(unsigned i) {
+    union {
+        unsigned i;
+        float f;
+    } u = {i};
+    return u.f;
+}
+
 inline bool isnan(float f) {
     return (toint(f) & 0x7fffffff) > 0x7f800000;
 }
@@ -20,7 +28,7 @@ inline bool isinf(float f) {
     return (toint(f) & 0x7fffffff) == 0x7f800000;
 }
 
-inline unsigned signbit(float f) {
+inline unsigned sign(float f) {
     return toint(f) & 0x80000000u;
 }
 

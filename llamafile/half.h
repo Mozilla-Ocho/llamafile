@@ -26,7 +26,7 @@ inline bool isinf(half f) {
     return (toint(f) & 0x7fff) == 0x7c00;
 }
 
-inline int signbit(half f) {
+inline int sign(half f) {
     return toint(f) & 0x8000;
 }
 

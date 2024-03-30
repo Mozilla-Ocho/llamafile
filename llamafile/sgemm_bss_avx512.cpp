@@ -24,22 +24,27 @@
 
 typedef __m512 V;
 typedef __m512 D;
-typedef float TA;
+typedef ggml_bf16_t TA;
 typedef float TB;
 typedef float TC;
 
-static inline V zero() {
+static inline __m512 zero() {
     return _mm512_setzero_ps();
 }
 
-static inline V load(const float *p) {
+static inline __m512 load(const float *p) {
     return _mm512_loadu_ps(p);
+}
+
+static inline __m512 load(const ggml_bf16_t *p) {
+    return _mm512_castsi512_ps(
+        _mm512_slli_epi32(_mm512_cvtepu16_epi32(_mm256_loadu_si256((const __m256i *)p)), 16));
 }
 
 #include "sgemmer.inc"
 
-bool llamafile_sgemm_sss_avx512f(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,
-                                 TC *C, int ldc, int ith, int nth, int task) {
+bool llamafile_sgemm_bss_avx512(int m, int n, int k, const TA *A, int lda, const TB *B, int ldb,
+                                TC *C, int ldc, int ith, int nth, int task) {
     if (task != GGML_TASK_TYPE_COMPUTE)
         return true;
     SGEMMER tb{k, A, lda, B, ldb, C, ldc, ith, nth};

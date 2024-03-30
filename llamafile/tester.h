@@ -128,10 +128,10 @@ template <typename T> ErrorReport diff(int m, int n, const T *Wan, int lda, cons
                     infs += flt::isinf(y);
                     denormals -= flt::isdenormal(x);
                     denormals += flt::isdenormal(y);
-                    flips += flt::signbit(x) != flt::signbit(y);
+                    flips += flt::sign(x) != flt::sign(y);
                     long long xi = flt::toint(x);
                     long long yi = flt::toint(y);
-                    if (flt::signbit(x) == flt::signbit(y)) {
+                    if (flt::sign(x) == flt::sign(y)) {
                         ++considered;
                         long long bad = std::abs(xi - yi);
                         ulp += bad;

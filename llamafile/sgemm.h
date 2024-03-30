@@ -23,6 +23,13 @@ bool llamafile_sgemm_hss_neon(int, int, int, const unsigned short *, int, const 
 bool llamafile_sgemm_hhs_neon(int, int, int, const unsigned short *, int, const unsigned short *,
                               int, float *, int, int, int, int);
 
+bool llamafile_sgemm_bss_avx2(int, int, int, const ggml_bf16_t *, int, const float *, int, float *,
+                              int, int, int, int);
+bool llamafile_sgemm_bss_avx512(int, int, int, const ggml_bf16_t *, int, const float *, int,
+                                float *, int, int, int, int);
+bool llamafile_sgemm_bss_avx512bf16(int, int, int, const ggml_bf16_t *, int, const float *, int,
+                                    float *, int, int, int, int);
+
 bool llamafile_sgemm_q0q0s_avx512vnni(int, int, int, const block_q8_0 *, int, const block_q8_0 *,
                                       int, float *, int, int, int, int);
 bool llamafile_sgemm_q0q0s_avxvnni(int, int, int, const block_q8_0 *, int, const block_q8_0 *, int,

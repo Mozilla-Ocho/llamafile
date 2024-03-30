@@ -68,31 +68,31 @@ class SGEMMER {
 
     dontinline void gemm5x5(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(5, 5)
-        V c00 = zero();
-        V c01 = zero();
-        V c02 = zero();
-        V c03 = zero();
-        V c04 = zero();
-        V c10 = zero();
-        V c11 = zero();
-        V c12 = zero();
-        V c13 = zero();
-        V c14 = zero();
-        V c20 = zero();
-        V c21 = zero();
-        V c22 = zero();
-        V c23 = zero();
-        V c24 = zero();
-        V c30 = zero();
-        V c31 = zero();
-        V c32 = zero();
-        V c33 = zero();
-        V c34 = zero();
-        V c40 = zero();
-        V c41 = zero();
-        V c42 = zero();
-        V c43 = zero();
-        V c44 = zero();
+        D c00 = zero();
+        D c01 = zero();
+        D c02 = zero();
+        D c03 = zero();
+        D c04 = zero();
+        D c10 = zero();
+        D c11 = zero();
+        D c12 = zero();
+        D c13 = zero();
+        D c14 = zero();
+        D c20 = zero();
+        D c21 = zero();
+        D c22 = zero();
+        D c23 = zero();
+        D c24 = zero();
+        D c30 = zero();
+        D c31 = zero();
+        D c32 = zero();
+        D c33 = zero();
+        D c34 = zero();
+        D c40 = zero();
+        D c41 = zero();
+        D c42 = zero();
+        D c43 = zero();
+        D c44 = zero();
         for (int l = 0; l < k; l += KN) {
             V k0 = load(B + ldb * (j + 0) + l);
             V k1 = load(B + ldb * (j + 1) + l);
@@ -160,18 +160,18 @@ class SGEMMER {
 
     dontinline void gemm3x4(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(3, 4)
-        V c00 = zero();
-        V c01 = zero();
-        V c02 = zero();
-        V c03 = zero();
-        V c10 = zero();
-        V c11 = zero();
-        V c12 = zero();
-        V c13 = zero();
-        V c20 = zero();
-        V c21 = zero();
-        V c22 = zero();
-        V c23 = zero();
+        D c00 = zero();
+        D c01 = zero();
+        D c02 = zero();
+        D c03 = zero();
+        D c10 = zero();
+        D c11 = zero();
+        D c12 = zero();
+        D c13 = zero();
+        D c20 = zero();
+        D c21 = zero();
+        D c22 = zero();
+        D c23 = zero();
         for (int l = 0; l < k; l += KN) {
             V k0 = load(B + ldb * (j + 0) + l);
             V k1 = load(B + ldb * (j + 1) + l);
@@ -210,10 +210,10 @@ class SGEMMER {
 
     dontinline void gemm1x4(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(1, 4)
-        V c00 = zero();
-        V c01 = zero();
-        V c02 = zero();
-        V c03 = zero();
+        D c00 = zero();
+        D c01 = zero();
+        D c02 = zero();
+        D c03 = zero();
         for (int l = 0; l < k; l += KN) {
             V a0 = load(A + lda * (i + 0) + l);
             V k0 = load(B + ldb * (j + 0) + l);
@@ -234,18 +234,18 @@ class SGEMMER {
 
     dontinline void gemm4x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(4, 1)
-        V c00 = zero();
-        V c01 = zero();
-        V c02 = zero();
-        V c10 = zero();
-        V c11 = zero();
-        V c12 = zero();
-        V c20 = zero();
-        V c21 = zero();
-        V c22 = zero();
-        V c30 = zero();
-        V c31 = zero();
-        V c32 = zero();
+        D c00 = zero();
+        D c01 = zero();
+        D c02 = zero();
+        D c10 = zero();
+        D c11 = zero();
+        D c12 = zero();
+        D c20 = zero();
+        D c21 = zero();
+        D c22 = zero();
+        D c30 = zero();
+        D c31 = zero();
+        D c32 = zero();
         int l = 0;
         while (l + KN * 3 <= k) {
             {
@@ -289,10 +289,10 @@ class SGEMMER {
 
     dontinline void gemm1x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(1, 1)
-        V c0 = zero();
-        V c1 = zero();
-        V c2 = zero();
-        V c3 = zero();
+        D c0 = zero();
+        D c1 = zero();
+        D c2 = zero();
+        D c3 = zero();
         int l = 0;
         while (l + KN * 4 <= k) {
             c0 = madd(load(A + lda * i + l), load(B + ldb * j + l), c0);

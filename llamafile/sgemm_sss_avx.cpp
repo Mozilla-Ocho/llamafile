@@ -23,6 +23,7 @@
 #define KN 8
 
 typedef __m256 V;
+typedef __m256 D;
 typedef float TA;
 typedef float TB;
 typedef float TC;

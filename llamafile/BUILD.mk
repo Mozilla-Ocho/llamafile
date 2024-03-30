@@ -45,6 +45,9 @@ o/$(MODE)/llamafile:					\
 
 o/$(MODE)/llamafile/sgemm_sss_avx.o: private TARGET_ARCH += -Xx86_64-mavx
 o/$(MODE)/llamafile/sgemm_sss_fma.o: private TARGET_ARCH += -Xx86_64-mfma
+o/$(MODE)/llamafile/sgemm_bss_avx2.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/sgemm_bss_avx512.o: private TARGET_ARCH += -Xx86_64-mavx512f
+o/$(MODE)/llamafile/sgemm_bss_avx512bf16.o: private TARGET_ARCH += -Xx86_64-mavx512bf16 -Xx86_64-mavx512vl
 o/$(MODE)/llamafile/sgemm_sss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
 o/$(MODE)/llamafile/sgemm_hss_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
 o/$(MODE)/llamafile/sgemm_hss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f

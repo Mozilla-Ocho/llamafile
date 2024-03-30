@@ -23,6 +23,7 @@
 #define KN 4
 
 typedef float32x4_t V;
+typedef float32x4_t D;
 typedef float TA;
 typedef float TB;
 typedef float TC;
