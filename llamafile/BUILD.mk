@@ -70,6 +70,10 @@ o/$(MODE)/llamafile/sgemm_sss_test:			\
 		o/$(MODE)/llamafile/sgemm_sss_test.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a
 
+o/$(MODE)/llamafile/fun:				\
+		o/$(MODE)/llamafile/fun.o		\
+		o/$(MODE)/llama.cpp/llama.cpp.a
+
 o/$(MODE)/llamafile/sgemm_vecdot_test:			\
 		o/$(MODE)/llamafile/sgemm_vecdot_test.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a

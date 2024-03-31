@@ -27,6 +27,20 @@ include llama.cpp/perplexity/BUILD.mk
 
 $(LLAMA_CPP_OBJS): private CCFLAGS += -DGGML_MULTIPLATFORM
 
+o/$(MODE)/llama.cpp/ggml-alloc.o			\
+o/$(MODE)/llama.cpp/ggml-backend.o			\
+o/$(MODE)/llama.cpp/grammar-parser.o			\
+o/$(MODE)/llama.cpp/json-schema-to-grammar.o		\
+o/$(MODE)/llama.cpp/llama.o				\
+o/$(MODE)/llama.cpp/stb_image.o				\
+o/$(MODE)/llama.cpp/unicode.o				\
+o/$(MODE)/llama.cpp/sampling.o				\
+o/$(MODE)/llama.cpp/ggml-alloc.o			\
+o/$(MODE)/llama.cpp/common.o: private			\
+		CCFLAGS += -Os
+
+$(LLAMA_CPP_OBJS): llama.cpp/BUILD.mk
+
 .PHONY: o/$(MODE)/llama.cpp
 o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/main		\

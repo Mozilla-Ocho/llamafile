@@ -19,6 +19,14 @@ o/$(MODE)/llama.cpp/llava/llava-quantize:				\
 		o/$(MODE)/llama.cpp/llava/llava.a			\
 		o/$(MODE)/llama.cpp/llama.cpp.a
 
+o/$(MODE)/llama.cpp/llava/clip.o					\
+o/$(MODE)/llama.cpp/llava/llava.o					\
+o/$(MODE)/llama.cpp/llava/llava-cli.o					\
+o/$(MODE)/llama.cpp/llava/llava-quantize.o: private			\
+		CCFLAGS += -Os
+
+$(LLAMA_CPP_LLAVA_OBJS): llama.cpp/llava/BUILD.mk
+
 .PHONY: o/$(MODE)/llama.cpp/llava
 o/$(MODE)/llama.cpp/llava:						\
 		o/$(MODE)/llama.cpp/llava/llava.a			\

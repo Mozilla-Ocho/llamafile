@@ -16,6 +16,11 @@ o/$(MODE)/llama.cpp/main/main:					\
 		o/$(MODE)/llama.cpp/main/main.1.asc.zip.o	\
 		$(LLAMA_CPP_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)
 
+o/$(MODE)/llama.cpp/main/main.o: private			\
+		CCFLAGS += -Os
+
+$(LLAMA_CPP_MAIN_OBJS): llama.cpp/main/BUILD.mk
+
 .PHONY: o/$(MODE)/llama.cpp/main
 o/$(MODE)/llama.cpp/main:					\
 		o/$(MODE)/llama.cpp/main/main

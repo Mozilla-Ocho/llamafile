@@ -14,6 +14,11 @@ o/$(MODE)/llama.cpp/server/impl.o: private CXXFLAGS += -O1
 o/$(MODE)/llama.cpp/server/server.a:				\
 		$(LLAMA_CPP_SERVER_OBJS)
 
+o/$(MODE)/llama.cpp/server/server.o: private			\
+		CCFLAGS += -Os
+
+$(LLAMA_CPP_SERVER_OBJS): llama.cpp/server/BUILD.mk
+
 .PHONY: o/$(MODE)/llama.cpp/server
 o/$(MODE)/llama.cpp/server:					\
 		o/$(MODE)/llama.cpp/server/server.a

@@ -18,15 +18,31 @@
 #include "zip.h"
 #include <stdint.h>
 
-int64_t get_zip_cfile_compressed_size(const uint8_t *z) {
-    if (ZIP_CFILE_COMPRESSEDSIZE(z) != 0xFFFFFFFFu)
-        return ZIP_CFILE_COMPRESSEDSIZE(z);
+int64_t get_zip_cfile_uncompressed_size(const uint8_t *z) {
+    if (ZIP_CFILE_UNCOMPRESSEDSIZE(z) != 0xFFFFFFFFu)
+        return ZIP_CFILE_UNCOMPRESSEDSIZE(z);
     const uint8_t *p = ZIP_CFILE_EXTRA(z);
     const uint8_t *pe = p + ZIP_CFILE_EXTRASIZE(z);
     for (; p + ZIP_EXTRA_SIZE(p) <= pe; p += ZIP_EXTRA_SIZE(p))
         if (ZIP_EXTRA_HEADERID(p) == kZipExtraZip64)
             if (8 <= ZIP_EXTRA_CONTENTSIZE(p))
                 return ZIP_READ64(ZIP_EXTRA_CONTENT(p));
+    return -1;
+}
+
+int64_t get_zip_cfile_compressed_size(const uint8_t *z) {
+    if (ZIP_CFILE_COMPRESSEDSIZE(z) != 0xFFFFFFFFu)
+        return ZIP_CFILE_COMPRESSEDSIZE(z);
+    const uint8_t *p = ZIP_CFILE_EXTRA(z);
+    const uint8_t *pe = p + ZIP_CFILE_EXTRASIZE(z);
+    for (; p + ZIP_EXTRA_SIZE(p) <= pe; p += ZIP_EXTRA_SIZE(p))
+        if (ZIP_EXTRA_HEADERID(p) == kZipExtraZip64) {
+            int offset = 0;
+            if (ZIP_CFILE_UNCOMPRESSEDSIZE(z) == 0xFFFFFFFFu)
+                offset += 8;
+            if (offset + 8 <= ZIP_EXTRA_CONTENTSIZE(p))
+                return ZIP_READ64(ZIP_EXTRA_CONTENT(p) + offset);
+        }
     return -1;
 }
 
@@ -38,9 +54,9 @@ int64_t get_zip_cfile_offset(const uint8_t *z) {
     for (; p + ZIP_EXTRA_SIZE(p) <= pe; p += ZIP_EXTRA_SIZE(p))
         if (ZIP_EXTRA_HEADERID(p) == kZipExtraZip64) {
             int offset = 0;
-            if (ZIP_CFILE_COMPRESSEDSIZE(z) == 0xFFFFFFFFu)
-                offset += 8;
             if (ZIP_CFILE_UNCOMPRESSEDSIZE(z) == 0xFFFFFFFFu)
+                offset += 8;
+            if (ZIP_CFILE_COMPRESSEDSIZE(z) == 0xFFFFFFFFu)
                 offset += 8;
             if (offset + 8 <= ZIP_EXTRA_CONTENTSIZE(p))
                 return ZIP_READ64(ZIP_EXTRA_CONTENT(p) + offset);
