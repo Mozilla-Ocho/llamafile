@@ -3100,6 +3100,13 @@ int server_cli(int argc, char **argv)
         log_data["api_key"] = "api_key: " + std::to_string(sparams.api_keys.size()) + " keys loaded";
     }
 
+    // launch browser tab
+    if (!sparams.nobrowser) {
+        char url[128];
+        snprintf(url, sizeof(url), "http://%s:%d/", connect_host, sparams.port);
+        llamafile_launch_browser(url);
+    }
+
     if (!FLAG_unsecure) {
         if (IsXnu()) {
             // Cosmopolitan libc explicitly does not support cosmo_dlopen on x64
@@ -3169,13 +3176,6 @@ int server_cli(int argc, char **argv)
 
                 return 0;
             });
-
-    // launch browser tab
-    if (!sparams.nobrowser) {
-        char url[128];
-        snprintf(url, sizeof(url), "http://%s:%d/", connect_host, sparams.port);
-        llamafile_launch_browser(url);
-    }
 
     if (sparams.chat_template.empty()) { // custom chat template is not supplied
         // check if the template comes with the model is supported by us
