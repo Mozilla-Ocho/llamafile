@@ -8,7 +8,6 @@ nvcc -arch=all ^
      --shared ^
      --forward-unknown-to-host-compiler ^
      -Xcompiler="/nologo /EHsc /O2 /GR /MT" ^
-     -use_fast_math ^
      -DNDEBUG ^
      -DGGML_BUILD=1 ^
      -DGGML_SHARED=1 ^

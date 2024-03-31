@@ -19,7 +19,7 @@
 ::
 :: TODO(jart): How do we get this to not depend on VCRUNTIME140?
 
-%HIP_PATH%\bin\clang++.exe ^
+"%HIP_PATH%\bin\clang++.exe" ^
   -fuse-ld=lld ^
   -shared ^
   -nostartfiles ^
@@ -36,7 +36,7 @@
   -D_XOPEN_SOURCE=600 ^
   -D__HIP_PLATFORM_AMD__=1 ^
   -D__HIP_PLATFORM_HCC__=1 ^
-  -isystem %HIP_PATH%\include ^
+  -isystem "%HIP_PATH%\include" ^
   -O3 ^
   -DNDEBUG ^
   -D_DLL ^
@@ -50,7 +50,5 @@
   --offload-arch=gfx1010,gfx1012,gfx906,gfx1030,gfx1031,gfx1032,gfx1100,gfx1101,gfx1102,gfx1103 ^
   -o ggml-rocm.dll ^
   ggml-cuda.cu ^
-  -l%HIP_PATH%\lib\hipblas.lib ^
-  -l%HIP_PATH%\lib\rocblas.lib ^
-  -l%HIP_PATH%\lib\amdhip64.lib ^
+  "-l%HIP_PATH%\lib\amdhip64.lib" ^
   -lkernel32
