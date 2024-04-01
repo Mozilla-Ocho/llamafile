@@ -132,7 +132,7 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
 #ifdef __x86_64__
         if (Btype != GGML_TYPE_F32)
             return false;
-        if (have_avx512bf16 && !(k % 16))
+        if (have_avx512bf16 && !(k % 32))
             return llamafile_sgemm_bss_avx512bf16(m, n, k, (const ggml_bf16_t *)A, lda,
                                                   (const float *)B, ldb, (float *)C, ldc, ith, nth,
                                                   task);
