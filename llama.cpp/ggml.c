@@ -4,6 +4,7 @@
 __notice(ggml_notice, "\
 llama.cpp (MIT License)\n\
 Copyright (c) 2023 Georgi Gerganov\n\
+Copyright (c) 2023 Iwan Kawrakow\n\
 Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng.\n\
 Copyright (c) 2023 Yuji Hirose\n\
 Copyright (c) 2022 Niels Lohmann <https://nlohmann.me>\n\
