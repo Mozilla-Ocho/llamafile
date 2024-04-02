@@ -22,15 +22,11 @@
 
 #define KN 16
 
-typedef __m512 V;
-typedef __m512 D;
-typedef ggml_bf16_t TA;
-typedef float TB;
-typedef float TC;
-
-static inline __m512 zero() {
-    return _mm512_setzero_ps();
-}
+#define V __m512
+#define D __m512
+#define TA ggml_bf16_t
+#define TB float
+#define TC float
 
 static inline __m512 load(const float *p) {
     return _mm512_loadu_ps(p);

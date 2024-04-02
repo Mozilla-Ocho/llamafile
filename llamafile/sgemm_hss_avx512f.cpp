@@ -22,15 +22,11 @@
 
 #define KN 16
 
-typedef __m512 V;
-typedef __m512 D;
-typedef unsigned short TA;
-typedef float TB;
-typedef float TC;
-
-static inline V zero() {
-    return _mm512_setzero_ps();
-}
+#define V __m512
+#define D __m512
+#define TA unsigned short
+#define TB float
+#define TC float
 
 static inline V load(const float *p) {
     return _mm512_loadu_ps(p);

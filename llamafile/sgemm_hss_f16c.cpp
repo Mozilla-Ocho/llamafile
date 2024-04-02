@@ -22,15 +22,11 @@
 
 #define KN 8
 
-typedef __m256 V;
-typedef __m256 D;
-typedef unsigned short TA;
-typedef float TB;
-typedef float TC;
-
-static inline V zero() {
-    return _mm256_setzero_ps();
-}
+#define V __m256
+#define D __m256
+#define TA unsigned short
+#define TB float
+#define TC float
 
 static inline V load(const float *p) {
     return _mm256_loadu_ps(p);

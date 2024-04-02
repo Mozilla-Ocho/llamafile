@@ -85,6 +85,10 @@ int main(int argc, char *argv[]) {
     //   22.291 average ulp
     //   1566 worst ulp
 
+    // using kahan summation
+    //   2.14244 average ulp
+    //   134 worst ulp
+
     if (err_avg > 30)
         return 5;
     if (err_worst > 3000)

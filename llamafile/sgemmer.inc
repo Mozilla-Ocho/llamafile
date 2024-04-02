@@ -19,7 +19,7 @@
 
 #include "hsum.h"
 #include "kernel.h"
-#include "madd.h"
+#include "varith.h"
 
 namespace {
 
@@ -68,31 +68,31 @@ class SGEMMER {
 
     dontinline void gemm5x5(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(5, 5)
-        D c00 = zero();
-        D c01 = zero();
-        D c02 = zero();
-        D c03 = zero();
-        D c04 = zero();
-        D c10 = zero();
-        D c11 = zero();
-        D c12 = zero();
-        D c13 = zero();
-        D c14 = zero();
-        D c20 = zero();
-        D c21 = zero();
-        D c22 = zero();
-        D c23 = zero();
-        D c24 = zero();
-        D c30 = zero();
-        D c31 = zero();
-        D c32 = zero();
-        D c33 = zero();
-        D c34 = zero();
-        D c40 = zero();
-        D c41 = zero();
-        D c42 = zero();
-        D c43 = zero();
-        D c44 = zero();
+        D c00 = {0};
+        D c01 = {0};
+        D c02 = {0};
+        D c03 = {0};
+        D c04 = {0};
+        D c10 = {0};
+        D c11 = {0};
+        D c12 = {0};
+        D c13 = {0};
+        D c14 = {0};
+        D c20 = {0};
+        D c21 = {0};
+        D c22 = {0};
+        D c23 = {0};
+        D c24 = {0};
+        D c30 = {0};
+        D c31 = {0};
+        D c32 = {0};
+        D c33 = {0};
+        D c34 = {0};
+        D c40 = {0};
+        D c41 = {0};
+        D c42 = {0};
+        D c43 = {0};
+        D c44 = {0};
         for (int l = 0; l < k; l += KN) {
             V k0 = load(B + ldb * (j + 0) + l);
             V k1 = load(B + ldb * (j + 1) + l);
@@ -160,18 +160,18 @@ class SGEMMER {
 
     dontinline void gemm3x4(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(3, 4)
-        D c00 = zero();
-        D c01 = zero();
-        D c02 = zero();
-        D c03 = zero();
-        D c10 = zero();
-        D c11 = zero();
-        D c12 = zero();
-        D c13 = zero();
-        D c20 = zero();
-        D c21 = zero();
-        D c22 = zero();
-        D c23 = zero();
+        D c00 = {0};
+        D c01 = {0};
+        D c02 = {0};
+        D c03 = {0};
+        D c10 = {0};
+        D c11 = {0};
+        D c12 = {0};
+        D c13 = {0};
+        D c20 = {0};
+        D c21 = {0};
+        D c22 = {0};
+        D c23 = {0};
         for (int l = 0; l < k; l += KN) {
             V k0 = load(B + ldb * (j + 0) + l);
             V k1 = load(B + ldb * (j + 1) + l);
@@ -210,20 +210,16 @@ class SGEMMER {
 
     dontinline void gemm1x4(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(1, 4)
-        D c00 = zero();
-        D c01 = zero();
-        D c02 = zero();
-        D c03 = zero();
+        D c00 = {0}, e00 = {0};
+        D c01 = {0}, e01 = {0};
+        D c02 = {0}, e02 = {0};
+        D c03 = {0}, e03 = {0};
         for (int l = 0; l < k; l += KN) {
-            V a0 = load(A + lda * (i + 0) + l);
-            V k0 = load(B + ldb * (j + 0) + l);
-            V k1 = load(B + ldb * (j + 1) + l);
-            V k2 = load(B + ldb * (j + 2) + l);
-            V k3 = load(B + ldb * (j + 3) + l);
-            c00 = madd(a0, k0, c00);
-            c01 = madd(a0, k1, c01);
-            c02 = madd(a0, k2, c02);
-            c03 = madd(a0, k3, c03);
+            V a = load(A + lda * (i + 0) + l);
+            c00 = madder(a, load(B + ldb * (j + 0) + l), c00, &e00);
+            c01 = madder(a, load(B + ldb * (j + 1) + l), c01, &e01);
+            c02 = madder(a, load(B + ldb * (j + 2) + l), c02, &e02);
+            c03 = madder(a, load(B + ldb * (j + 3) + l), c03, &e03);
         }
         C[ldc * (j + 0) + (i + 0)] = hsum(c00);
         C[ldc * (j + 1) + (i + 0)] = hsum(c01);
@@ -234,79 +230,30 @@ class SGEMMER {
 
     dontinline void gemm4x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(4, 1)
-        D c00 = zero();
-        D c01 = zero();
-        D c02 = zero();
-        D c10 = zero();
-        D c11 = zero();
-        D c12 = zero();
-        D c20 = zero();
-        D c21 = zero();
-        D c22 = zero();
-        D c30 = zero();
-        D c31 = zero();
-        D c32 = zero();
-        int l = 0;
-        while (l + KN * 3 <= k) {
-            {
-                V k0 = load(B + ldb * (j + 0) + l);
-                c00 = madd(load(A + lda * (i + 0) + l), k0, c00);
-                c10 = madd(load(A + lda * (i + 1) + l), k0, c10);
-                c20 = madd(load(A + lda * (i + 2) + l), k0, c20);
-                c30 = madd(load(A + lda * (i + 3) + l), k0, c30);
-            }
-            l += KN;
-            {
-                V k0 = load(B + ldb * (j + 0) + l);
-                c01 = madd(load(A + lda * (i + 0) + l), k0, c01);
-                c11 = madd(load(A + lda * (i + 1) + l), k0, c11);
-                c21 = madd(load(A + lda * (i + 2) + l), k0, c21);
-                c31 = madd(load(A + lda * (i + 3) + l), k0, c31);
-            }
-            l += KN;
-            {
-                V k0 = load(B + ldb * (j + 0) + l);
-                c02 = madd(load(A + lda * (i + 0) + l), k0, c02);
-                c12 = madd(load(A + lda * (i + 1) + l), k0, c12);
-                c22 = madd(load(A + lda * (i + 2) + l), k0, c22);
-                c32 = madd(load(A + lda * (i + 3) + l), k0, c32);
-            }
-            l += KN;
+        D c00 = {0}, e00 = {0};
+        D c10 = {0}, e10 = {0};
+        D c20 = {0}, e20 = {0};
+        D c30 = {0}, e30 = {0};
+        for (int l = 0; l < k; l += KN) {
+            V b = load(B + ldb * (j + 0) + l);
+            c00 = madder(load(A + lda * (i + 0) + l), b, c00, &e00);
+            c10 = madder(load(A + lda * (i + 1) + l), b, c10, &e10);
+            c20 = madder(load(A + lda * (i + 2) + l), b, c20, &e20);
+            c30 = madder(load(A + lda * (i + 3) + l), b, c30, &e30);
         }
-        for (; l < k; l += KN) {
-            V k0 = load(B + ldb * (j + 0) + l);
-            c00 = madd(load(A + lda * (i + 0) + l), k0, c00);
-            c10 = madd(load(A + lda * (i + 1) + l), k0, c10);
-            c20 = madd(load(A + lda * (i + 2) + l), k0, c20);
-            c30 = madd(load(A + lda * (i + 3) + l), k0, c30);
-        }
-        C[ldc * (j + 0) + (i + 0)] = hsum(c00) + hsum(c01) + hsum(c02);
-        C[ldc * (j + 0) + (i + 1)] = hsum(c10) + hsum(c11) + hsum(c12);
-        C[ldc * (j + 0) + (i + 2)] = hsum(c20) + hsum(c21) + hsum(c22);
-        C[ldc * (j + 0) + (i + 3)] = hsum(c30) + hsum(c31) + hsum(c32);
+        C[ldc * (j + 0) + (i + 0)] = hsum(c00);
+        C[ldc * (j + 0) + (i + 1)] = hsum(c10);
+        C[ldc * (j + 0) + (i + 2)] = hsum(c20);
+        C[ldc * (j + 0) + (i + 3)] = hsum(c30);
         END_KERNEL()
     }
 
     dontinline void gemm1x1(int m0, int m, int n0, int n) {
         BEGIN_KERNEL(1, 1)
-        D c0 = zero();
-        D c1 = zero();
-        D c2 = zero();
-        D c3 = zero();
-        int l = 0;
-        while (l + KN * 4 <= k) {
-            c0 = madd(load(A + lda * i + l), load(B + ldb * j + l), c0);
-            l += KN;
-            c1 = madd(load(A + lda * i + l), load(B + ldb * j + l), c1);
-            l += KN;
-            c2 = madd(load(A + lda * i + l), load(B + ldb * j + l), c2);
-            l += KN;
-            c3 = madd(load(A + lda * i + l), load(B + ldb * j + l), c3);
-            l += KN;
-        }
-        for (; l < k; l += KN)
-            c0 = madd(load(A + lda * i + l), load(B + ldb * j + l), c0);
-        C[ldc * j + i] = hsum(c0) + hsum(c1) + hsum(c2) + hsum(c3);
+        D c = {0}, e = {0};
+        for (int l = 0; l < k; l += KN)
+            c = madder(load(A + lda * i + l), load(B + ldb * j + l), c, &e);
+        C[ldc * j + i] = hsum(c);
         END_KERNEL()
     }
 

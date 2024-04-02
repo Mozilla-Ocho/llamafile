@@ -19,9 +19,9 @@
 
 #include "sgemm.h"
 
-typedef block_q4_1 TA;
-typedef block_q8_1 TB;
-typedef float TC;
+#define TA block_q4_1
+#define TB block_q8_1
+#define TC float
 
 #include "sgemmer1.inc"
 

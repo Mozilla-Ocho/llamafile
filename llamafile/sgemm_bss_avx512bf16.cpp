@@ -18,19 +18,16 @@
 #ifdef __x86_64__
 
 #include "sgemm.h"
+#include "varith.h"
 #include <immintrin.h>
 
 #define KN 32
 
-typedef __m512 D;
-typedef __m512bh V;
-typedef ggml_bf16_t TA;
-typedef float TB;
-typedef float TC;
-
-static inline __m512 zero() {
-    return _mm512_setzero_ps();
-}
+#define D __m512
+#define V __m512bh
+#define TA ggml_bf16_t
+#define TB float
+#define TC float
 
 static inline __m512bh load(const ggml_bf16_t *p) {
     return (__m512bh)_mm512_loadu_ps((const float *)p);
@@ -40,7 +37,11 @@ static inline __m512bh load(const float *p) {
     return _mm512_cvtne2ps_pbh(_mm512_loadu_ps(p + 16), _mm512_loadu_ps(p));
 }
 
-static inline __m512 madd(__m512bh x, __m512bh y, __m512 z) {
+template <> inline __m512 madd(__m512bh x, __m512bh y, __m512 z) {
+    return _mm512_dpbf16_ps(z, x, y);
+}
+
+template <> inline __m512 madder(__m512bh x, __m512bh y, __m512 z, __m512 *e) {
     return _mm512_dpbf16_ps(z, x, y);
 }
 

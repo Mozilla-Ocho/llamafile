@@ -20,7 +20,7 @@
 
 #include "hsum.h"
 #include "kernel.h"
-#include "madd.h"
+#include "varith.h"
 
 namespace {
 

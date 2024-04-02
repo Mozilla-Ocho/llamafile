@@ -22,15 +22,11 @@
 
 #define KN 8
 
-typedef float16x8_t V;
-typedef float16x8_t D;
-typedef unsigned short TA;
-typedef unsigned short TB;
-typedef float TC;
-
-static inline V zero() {
-    return vdupq_n_f16(0.f);
-}
+#define V float16x8_t
+#define D float16x8_t
+#define TA unsigned short
+#define TB unsigned short
+#define TC float
 
 static inline V load(const unsigned short *p) {
     return vld1q_f16((const __fp16 *)p);

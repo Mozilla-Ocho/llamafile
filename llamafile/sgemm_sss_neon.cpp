@@ -22,15 +22,11 @@
 
 #define KN 4
 
-typedef float32x4_t V;
-typedef float32x4_t D;
-typedef float TA;
-typedef float TB;
-typedef float TC;
-
-static inline V zero() {
-    return vdupq_n_f32(0.f);
-}
+#define V float32x4_t
+#define D float32x4_t
+#define TA float
+#define TB float
+#define TC float
 
 static inline V load(const float *p) {
     return vld1q_f32(p);
