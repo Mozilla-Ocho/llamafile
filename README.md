@@ -690,7 +690,7 @@ Our approach to security has these benefits:
 2. The main CLI command won't be able to access the network at all. This
    is enforced by the operating system kernel. It also won't be able to
    write to the file system. This keeps your computer safe in the event
-   that a bug is ever discovered in the the GGUF file format that lets
+   that a bug is ever discovered in the GGUF file format that lets
    an attacker craft malicious weights files and post them online. The
    only exception to this rule is if you pass the `--prompt-cache` flag
    without also specifying `--prompt-cache-ro`. In that case, security
