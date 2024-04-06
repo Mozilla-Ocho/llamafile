@@ -10020,7 +10020,8 @@ struct llm_tokenizer_wpm {
             if (type == CODEPOINT_TYPE_ACCENT_MARK || type == CODEPOINT_TYPE_CONTROL) {
                 continue;
             }
-            code = to_lower(code);
+            // see also: https://github.com/ggerganov/llama.cpp/pull/6305
+            code = unicode_tolower(code);
             if (type == CODEPOINT_TYPE_WHITESPACE) {
                 code = ' ';
             }
