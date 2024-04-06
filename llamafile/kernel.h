@@ -6,13 +6,19 @@
 #define VECTOR_REGISTERS 16
 #endif
 
+#if defined(__AVX512F__)
+#define VECTOR_WIDTH 64
+#elif defined(__AVX__) || defined(__AVX2__)
+#define VECTOR_WIDTH 32
+#else
+#define VECTOR_WIDTH 16
+#endif
+
 #define BEGIN_KERNEL(RM, RN) \
     int ytiles = (m - m0) / RM; \
     int xtiles = (n - n0) / RN; \
     int tiles = ytiles * xtiles; \
     int duty = (tiles + nth - 1) / nth; \
-    if (duty < 1) \
-        duty = 1; \
     int start = duty * ith; \
     int end = start + duty; \
     if (end > tiles) \

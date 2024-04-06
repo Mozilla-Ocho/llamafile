@@ -3,8 +3,16 @@
 // clang-format off
 #pragma once
 
+#ifdef __ARM_NEON
 #include <arm_neon.h>
+#endif
+#ifdef __x86_64__
 #include <immintrin.h>
+#endif
+
+inline float add(float x, float y) { return x + y; }
+inline float sub(float x, float y) { return x - y; }
+inline float mul(float x, float y) { return x * y; }
 
 #ifdef __SSE__
 inline __m128 add(__m128 x, __m128 y) { return _mm_add_ps(x, y); }

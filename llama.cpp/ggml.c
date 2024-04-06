@@ -353,7 +353,7 @@ static void ggml_fp32_to_bf16_row_avx512bf16(const float * x, ggml_bf16_t * y, i
 
 void ggml_fp32_to_bf16_row(const float * x, ggml_bf16_t * y, int n) {
 #ifdef __x86_64__
-    if (have_avx512bf16)
+    if (X86_HAVE(AVX512_BF16))
         return ggml_fp32_to_bf16_row_avx512bf16(x, y, n);
 #endif
     for (int i = 0; i < n; i++) {
