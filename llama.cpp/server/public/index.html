@@ -1001,6 +1001,10 @@
     }
 
     function App(props) {
+      useEffect(() => {
+        const query = new URLSearchParams(location.search).get("q");
+        if (query) chat(query);
+      }, []);
 
       return html`
         <div class="mode-${session.value.type}">
