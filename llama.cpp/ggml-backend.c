@@ -2150,6 +2150,8 @@ static const struct ggml_backend_api kGgmlBackendApi = {
     ggml_rope_yarn_corr_dims,
     ggml_op_desc,
     ggml_backend_buffer_is_host,
+    ggml_guid_matches,
+    ggml_is_empty,
 };
 
 const struct ggml_backend_api *ggml_backend_api(void) {

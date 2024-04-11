@@ -1,9 +1,14 @@
-static void ggml_vec_dot_q5_0_q8_0(const int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
+static void ggml_vec_dot_q5_0_q8_0(int n, float * restrict s, size_t bs, const void * restrict vx, size_t bx, const void * restrict vy, size_t by, int nrc) {
     const int qk = QK8_0;
     const int nb = n / qk;
 
     assert(n % qk == 0);
     assert(qk == QK5_0);
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
 
     const block_q5_0 * restrict x = vx;
     const block_q8_0 * restrict y = vy;
@@ -147,14 +152,14 @@ static void ggml_vec_dot_q5_0_q8_0(const int n, float * restrict s, size_t bs, c
         /* Compute combined scale for the block */
         const __m256 d = _mm256_set1_ps(GGML_FP16_TO_FP32(x[i].d) * GGML_FP16_TO_FP32(y[i].d));
 
-        __m256i bx = bytes_from_nibbles_32_avx2(x[i].qs);
-        __m256i bxhi = bytes_from_bits_32_avx2(x[i].qh);
+        __m256i qx = bytes_from_nibbles_32(x[i].qs);
+        __m256i bxhi = bytes_from_bits_32(x[i].qh);
         bxhi = _mm256_andnot_si256(bxhi, _mm256_set1_epi8((char)0xF0));
-        bx = _mm256_or_si256(bx, bxhi);
+        qx = _mm256_or_si256(qx, bxhi);
 
-        __m256i by = _mm256_loadu_si256((const __m256i *)y[i].qs);
+        __m256i qy = _mm256_loadu_si256((const __m256i *)y[i].qs);
 
-        const __m256 q = mul_sum_i8_pairs_float_avx2(bx, by);
+        const __m256 q = mul_sum_i8_pairs_float_avx2(qx, qy);
 
         /* Multiply q with scale and accumulate */
         acc = _mm256_fmadd_ps(d, q, acc);
@@ -171,21 +176,21 @@ static void ggml_vec_dot_q5_0_q8_0(const int n, float * restrict s, size_t bs, c
         /* Compute combined scale for the block */
         const __m256 d = _mm256_set1_ps(GGML_FP16_TO_FP32(x[i].d) * GGML_FP16_TO_FP32(y[i].d));
 
-        __m256i bx = bytes_from_nibbles_32_avx(x[i].qs);
-        const __m256i bxhi = bytes_from_bits_32_avx(x[i].qh);
+        __m256i bx_0 = bytes_from_nibbles_32(x[i].qs);
+        const __m256i bxhi = bytes_from_bits_32(x[i].qh);
         __m128i bxhil = _mm256_castsi256_si128(bxhi);
         __m128i bxhih = _mm256_extractf128_si256(bxhi, 1);
         bxhil = _mm_andnot_si128(bxhil, mask);
         bxhih = _mm_andnot_si128(bxhih, mask);
-        __m128i bxl = _mm256_castsi256_si128(bx);
-        __m128i bxh = _mm256_extractf128_si256(bx, 1);
+        __m128i bxl = _mm256_castsi256_si128(bx_0);
+        __m128i bxh = _mm256_extractf128_si256(bx_0, 1);
         bxl = _mm_or_si128(bxl, bxhil);
         bxh = _mm_or_si128(bxh, bxhih);
-        bx = MM256_SET_M128I(bxh, bxl);
+        bx_0 = MM256_SET_M128I(bxh, bxl);
 
-        const __m256i by = _mm256_loadu_si256((const __m256i *)y[i].qs);
+        const __m256i by_0 = _mm256_loadu_si256((const __m256i *)y[i].qs);
 
-        const __m256 q = mul_sum_i8_pairs_float_avx(bx, by);
+        const __m256 q = mul_sum_i8_pairs_float_avx(bx_0, by_0);
 
         /* Multiply q with scale and accumulate */
         acc = _mm256_add_ps(_mm256_mul_ps(d, q), acc);
@@ -199,7 +204,7 @@ static void ggml_vec_dot_q5_0_q8_0(const int n, float * restrict s, size_t bs, c
 
     size_t vl = __riscv_vsetvl_e8m1(qk/2);
 
-    // These tempory registers are for masking and shift operations
+    // These temporary registers are for masking and shift operations
     vuint32m2_t vt_1 = __riscv_vid_v_u32m2(vl);
     vuint32m2_t vt_2 = __riscv_vsll_vv_u32m2(__riscv_vmv_v_x_u32m2(1, vl), vt_1, vl);
 

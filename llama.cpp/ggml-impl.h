@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h> // memcpy
-#include <math.h>   // fabsf, fpclassify
+#include <math.h>   // fabsf
 
 #ifdef __cplusplus
 extern "C" {

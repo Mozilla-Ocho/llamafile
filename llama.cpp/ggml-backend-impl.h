@@ -176,6 +176,8 @@ extern "C" {
         void (*GGML_CALL ggml_rope_yarn_corr_dims)(int, int, float, float, float, float[2]);
         const char *(*GGML_CALL ggml_op_desc)(const struct ggml_tensor *);
         bool (*GGML_CALL ggml_backend_buffer_is_host)(ggml_backend_buffer_t);
+        bool (*GGML_CALL ggml_guid_matches)(ggml_guid_t, ggml_guid_t);
+        bool (*GGML_CALL ggml_is_empty)(const struct ggml_tensor *);
     };
 
 #ifdef  __cplusplus
