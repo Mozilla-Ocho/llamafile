@@ -1,6 +1,7 @@
 #pragma once
 #include "llama.cpp/ggml-quants.h"
 #include "llama.cpp/ggml.h"
+#include "llamafile/fp16.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,6 +23,13 @@ bool llamafile_sgemm_hss_neon(int, int, int, const unsigned short *, int, const 
                               float *, int, int, int, int);
 bool llamafile_sgemm_hhs_neon(int, int, int, const unsigned short *, int, const unsigned short *,
                               int, float *, int, int, int, int);
+
+bool llamafile_sgemm_hsh_f16c(int, int, int, const unsigned short *, int, const float *, int,
+                              llamafile_fp16 *, int, int, int, int);
+bool llamafile_sgemm_hsh_avx512f(int, int, int, const unsigned short *, int, const float *, int,
+                                 llamafile_fp16 *, int, int, int, int);
+bool llamafile_sgemm_hsh_neon(int, int, int, const unsigned short *, int, const float *, int,
+                              llamafile_fp16 *, int, int, int, int);
 
 bool llamafile_sgemm_bss_avx2(int, int, int, const ggml_bf16_t *, int, const float *, int, float *,
                               int, int, int, int);

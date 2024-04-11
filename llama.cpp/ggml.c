@@ -10810,9 +10810,9 @@ static void ggml_compute_forward_mul_mat(
     }
 #endif
 
-    if (src1_cont && (src1->type == vec_dot_type ||
-                      src0->type == GGML_TYPE_F16 ||
-                      src0->type == GGML_TYPE_BF16)) {
+    if (nb10 == ggml_type_size(src1->type) && (src1->type == vec_dot_type ||
+                                               src0->type == GGML_TYPE_F16 ||
+                                               src0->type == GGML_TYPE_BF16)) {
         for (int64_t j = 0; j < ne13; j++)
             for (int64_t i = 0; i < ne12; i++)
                 if (!llamafile_sgemm(ne01, ne11, ne00/ggml_blck_size(src0->type),
@@ -10863,7 +10863,7 @@ UseGgmlGemm1:
     const void * wdata    = (src1->type == vec_dot_type) ? src1->data : params->wdata;
     const size_t row_size = ggml_row_size(vec_dot_type, ne10);
 
-    if (src1_cont) {
+    if (src1->type != vec_dot_type || nb10 == ggml_type_size(src1->type)) {
         for (int64_t j = 0; j < ne13; j++)
             for (int64_t i = 0; i < ne12; i++)
                 if (!llamafile_sgemm(ne01, ne11, ne00/ggml_blck_size(src0->type),
@@ -10978,13 +10978,11 @@ UseGgmlGemm2:
     }
 
 #if 0
-    fprintf(stderr, "warning: matmul(%s, %s/%s, %s, m=%d, n=%d, k=%d, %d, %d) cont=%d\n",
-            ggml_type_name(src0->type),
-            ggml_type_name(src1->type),
-            ggml_type_name(vec_dot_type),
-            ggml_type_name(dst->type),
-            ne01, ne11, ne00, ne12, ne13,
-            src1_cont);
+    fprintf(stderr, "MULMAT %s[%8ld,%8ld,%8ld](%8zu,%8zu,%8zu) * %s[%8ld,%8ld,%8ld](%8zu,%8zu,%8zu) -> %s[%8ld,%8ld,%8ld](%8zu,%8zu,%8zu) vdt=%s\n",
+            ggml_type_name(src0->type), ne00, ne01, ne02, nb00, nb01, nb02,
+            ggml_type_name(src1->type), ne10, ne11, ne12, nb10, nb11, nb12,
+            ggml_type_name(src0->type), ne0, ne1, ne2, nb0, nb1, nb2,
+            ggml_type_name(vec_dot_type));
 #endif
 }
 

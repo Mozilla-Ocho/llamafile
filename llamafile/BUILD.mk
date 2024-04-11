@@ -52,6 +52,9 @@ o/$(MODE)/llamafile/sgemm_sss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512
 o/$(MODE)/llamafile/sgemm_hss_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
 o/$(MODE)/llamafile/sgemm_hss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
 o/$(MODE)/llamafile/sgemm_hhs_neon.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+fp16
+o/$(MODE)/llamafile/sgemm_hsh_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
+o/$(MODE)/llamafile/sgemm_hsh_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
+o/$(MODE)/llamafile/sgemm_hhh_neon.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+fp16
 o/$(MODE)/llamafile/sgemm_q0q0s_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
 o/$(MODE)/llamafile/sgemm_q0q0s_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
 o/$(MODE)/llamafile/sgemm_q0q0s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
