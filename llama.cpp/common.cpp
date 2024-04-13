@@ -929,11 +929,11 @@ static bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg,
         else { invalid_param = true; }
         return true;
     }
-    if (arg == "--verbose-prompt" || arg == "--silent-prompt") {
+    if (arg == "--verbose-prompt") {
         params.verbose_prompt = true;
         return true;
     }
-    if (arg == "--no-display-prompt") {
+    if (arg == "--no-display-prompt" || arg == "--silent-prompt") {
         params.display_prompt = false;
         return true;
     }
