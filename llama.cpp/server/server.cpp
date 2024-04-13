@@ -2516,7 +2516,7 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 break;
             }
             FLAG_gpu = llamafile_gpu_parse(argv[i]);
-            if (FLAG_gpu == -1)
+            if (FLAG_gpu == -2)
             {
                 fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
                 exit(1);
