@@ -1753,7 +1753,7 @@ int clip_n_patches(const struct clip_ctx * ctx) {
 
 bool clip_image_encode(struct clip_ctx * ctx, const int n_threads, clip_image_f32 * img, float * vec) {
     if (!ctx->has_vision_encoder) {
-        printf("This gguf file seems to have no vision encoder\n");
+        fprintf(stderr, "This gguf file seems to have no vision encoder\n");
         return false;
     }
 
@@ -1765,7 +1765,7 @@ bool clip_image_encode(struct clip_ctx * ctx, const int n_threads, clip_image_f3
 
 bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_image_f32_batch * imgs, float * vec) {
     if (!ctx->has_vision_encoder) {
-        printf("This gguf file seems to have no vision encoder\n");
+        fprintf(stderr, "This gguf file seems to have no vision encoder\n");
         return false;
     }
 
@@ -1946,7 +1946,7 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
                 f32_data = (float *)conv_buf.data();
                 break;
             default:
-                printf("Please use an input file in f32 or f16\n");
+                fprintf(stderr, "Please use an input file in f32 or f16\n");
                 gguf_free(ctx_out);
                 return false;
             }
@@ -1973,8 +1973,8 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
             fout.put(0);
         }
 
-        printf("%s: n_dims = %d | quantize=%d | size = %f MB -> %f MB\n", name.c_str(), ggml_n_dims(cur), quantize,
-               orig_size / 1024.0 / 1024.0, new_size / 1024.0 / 1024.0);
+        tinylogf("%s: n_dims = %d | quantize=%d | size = %f MB -> %f MB\n", name.c_str(), ggml_n_dims(cur), quantize,
+                 orig_size / 1024.0 / 1024.0, new_size / 1024.0 / 1024.0);
     }
 
     // go back to beginning of file and write the updated metadata
@@ -1989,8 +1989,8 @@ bool clip_model_quantize(const char * fname_inp, const char * fname_out, const i
     gguf_free(ctx_out);
 
     {
-        printf("%s: original  size = %8.2f MB\n", __func__, total_size_org / 1024.0 / 1024.0);
-        printf("%s: quantized size = %8.2f MB\n", __func__, total_size_new / 1024.0 / 1024.0);
+        tinylogf("%s: original  size = %8.2f MB\n", __func__, total_size_org / 1024.0 / 1024.0);
+        tinylogf("%s: quantized size = %8.2f MB\n", __func__, total_size_new / 1024.0 / 1024.0);
     }
 
     return true;

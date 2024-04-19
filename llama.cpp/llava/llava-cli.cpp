@@ -169,18 +169,18 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
         // new templating mode: Provide the full prompt including system message and use <image> as a placeholder for the image
         system_prompt = prompt.substr(0, image_pos);
         user_prompt = prompt.substr(image_pos + std::string("<image>").length());
-        printf("system_prompt: %s\n", system_prompt.c_str());
+        tinylogf("system_prompt: %s\n", system_prompt.c_str());
         if (params->verbose_prompt) {
             auto tmp = ::llama_tokenize(ctx_llava->ctx_llama, system_prompt, true, true);
             for (int i = 0; i < (int) tmp.size(); i++) {
-                printf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
+                tinylogf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
             }
         }
-        printf("user_prompt: %s\n", user_prompt.c_str());
+        tinylogf("user_prompt: %s\n", user_prompt.c_str());
         if (params->verbose_prompt) {
             auto tmp = ::llama_tokenize(ctx_llava->ctx_llama, user_prompt, true, true);
             for (int i = 0; i < (int) tmp.size(); i++) {
-                printf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
+                tinylogf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
             }
         }
     } else {
@@ -190,7 +190,7 @@ static void process_prompt(struct llava_context * ctx_llava, struct llava_image_
         if (params->verbose_prompt) {
             auto tmp = ::llama_tokenize(ctx_llava->ctx_llama, user_prompt, true, true);
             for (int i = 0; i < (int) tmp.size(); i++) {
-                printf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
+                tinylogf("%6d -> '%s'\n", tmp[i], llama_token_to_piece(ctx_llava->ctx_llama, tmp[i]).c_str());
             }
         }
     }
