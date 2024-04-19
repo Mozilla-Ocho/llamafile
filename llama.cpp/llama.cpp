@@ -14593,3 +14593,12 @@ static void llama_log_callback_default(ggml_log_level level, const char * text, 
     fputs(text, stderr);
     fflush(stderr);
 }
+
+llama_token llama_string_to_token(const struct llama_model *model, const char *str) {
+    auto i = model->vocab.token_to_id.find(str);
+    if (i != model->vocab.token_to_id.end()) {
+        return i->second;
+    } else {
+        return -1;
+    }
+}

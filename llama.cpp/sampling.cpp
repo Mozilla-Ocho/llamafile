@@ -382,7 +382,15 @@ llama_token llama_sampling_sample(
                   struct llama_context * ctx_cfg,
                   const int idx) {
     // Call the implementation function with is_resampling set to false by default
-    return llama_sampling_sample_impl(ctx_sampling, ctx_main, ctx_cfg, idx, false);
+    llama_token tok = llama_sampling_sample_impl(ctx_sampling, ctx_main, ctx_cfg, idx, false);
+
+    // [jart] llama3 <|eot_id|> → <|end_of_text|>
+    //        https://github.com/ggerganov/llama.cpp/pull/6745#issuecomment-2064950897
+    if (tok == llama_string_to_token(llama_get_model(ctx_main), "<|eot_id|>")) {
+        tok = llama_token_eos(llama_get_model(ctx_main));
+    }
+
+    return tok;
 }
 
 llama_token_data_array llama_sampling_probability_distribution(
