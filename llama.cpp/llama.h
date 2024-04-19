@@ -1065,6 +1065,8 @@ extern "C" {
 
     LLAMA_API void llama_dump_timing_info_yaml(FILE * stream, const struct llama_context * ctx);
 
+    LLAMA_API llama_token llama_string_to_token(const struct llama_model *, const char *);
+
 #ifdef __cplusplus
 }
 #endif
