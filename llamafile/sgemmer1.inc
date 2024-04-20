@@ -55,8 +55,7 @@ class SGEMMER1 {
         mp = m0 + (m - m0) / mc * mc;
         np = n0 + (n - n0) / nc * nc;
         mnpack(mp, m, n0, np);
-        mnpack(m0, mp, np, n);
-        mnpack(mp, m, np, n);
+        mnpack(m0, m, np, n);
     }
 
     dontinline void gemm4x2(int m0, int m, int n0, int n) {
