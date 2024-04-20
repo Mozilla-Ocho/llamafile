@@ -28,7 +28,6 @@ int llamafile_is_file_newer_than(const char *, const char *);
 void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 void llamafile_launch_browser(const char *);
-int llamafile_get_math_cpu_count(void);
 
 extern bool FLAG_unsecure;
 

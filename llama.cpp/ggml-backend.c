@@ -2,6 +2,8 @@
 // vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
 #include "ggml-backend-impl.h"
+#include "ggml-alloc.h"
+#include "ggml-impl.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -9,21 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdlib.h>
-
-#include "ggml-alloc.h"
-#include "ggml-cuda.h"
-#include "ggml-impl.h"
-#include "ggml-metal.h"
-#include "llamafile/log.h"
 
 #ifndef NDEBUG
 #define NDEBUG // [jart] delete printf debugging
 #endif
 
-
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-
 
 // backend buffer type
 
@@ -2106,6 +2099,8 @@ bool ggml_backend_compare_graph_backend(ggml_backend_t backend1, ggml_backend_t 
 
     return true;
 }
+
+#include "llamafile/log.h"
 
 GGML_CALL static void system_exit(int rc) {
     exit(rc);

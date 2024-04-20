@@ -1,6 +1,3 @@
-// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
-// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
-
 #pragma once
 
 #include <chrono>
@@ -11,8 +8,6 @@
 #include <vector>
 #include <algorithm>
 #include <cinttypes>
-
-#include "llamafile/log.h"
 
 // --------------------------------
 //
@@ -239,7 +234,7 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
 // INTERNAL, DO NOT USE
 //  USE LOG() INSTEAD
 //
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) or defined(__INTEL_LLVM_COMPILER)
     #define LOG_IMPL(str, ...)                                                                                      \
     do {                                                                                                            \
         if (LOG_TARGET != nullptr)                                                                                  \
@@ -262,7 +257,7 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
 // INTERNAL, DO NOT USE
 //  USE LOG_TEE() INSTEAD
 //
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) or defined(__INTEL_LLVM_COMPILER)
     #define LOG_TEE_IMPL(str, ...)                                                                                                      \
     do {                                                                                                                                \
         if (LOG_TARGET != nullptr)                                                                                                      \
@@ -398,13 +393,13 @@ inline FILE *log_handler1_impl(bool change = false, LogTriState append = LogTriS
             }
         }
 
-        logfile = fopen(filename.c_str(), _append ? "ae" : "we");
+        logfile = fopen(filename.c_str(), _append ? "a" : "w");
     }
 
     if (!logfile)
     {
-        //  Verify whether the file was opened, otherwise fallback to /dev/null
-        logfile = fopen("/dev/null", _append ? "ae" : "we");
+        //  Verify whether the file was opened, otherwise fallback to stderr
+        logfile = stderr;
 
         fprintf(stderr, "Failed to open logfile '%s' with error '%s'\n", filename.c_str(), std::strerror(errno));
         fflush(stderr);
@@ -432,7 +427,6 @@ inline FILE *log_handler2_impl(bool change = false, LogTriState append = LogTriS
 // INTERNAL, DO NOT USE
 inline FILE *log_disable_impl()
 {
-    FLAG_log_disable = true;
     return log_handler1_impl(true, LogTriStateSame, LogTriStateTrue);
 }
 
@@ -442,7 +436,6 @@ inline FILE *log_disable_impl()
 // INTERNAL, DO NOT USE
 inline FILE *log_enable_impl()
 {
-    FLAG_log_disable = false;
     return log_handler1_impl(true, LogTriStateSame, LogTriStateFalse);
 }
 
