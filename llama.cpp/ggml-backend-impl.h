@@ -150,6 +150,8 @@ extern "C" {
         void (*GGML_CALL exit)(int);
         void (*GGML_CALL free)(void *);
         void *(*GGML_CALL malloc)(size_t);
+        char *(*GGML_CALL getenv)(const char *);
+        long (*GGML_CALL write)(int, const void *, long);
         void (*GGML_CALL ggml_backend_register)(const char *, ggml_backend_init_fn, ggml_backend_buffer_type_t, void *);
         ggml_backend_buffer_t (*GGML_CALL ggml_backend_buffer_init)(ggml_backend_buffer_type_t, struct ggml_backend_buffer_i, ggml_backend_buffer_context_t, size_t);
         ggml_backend_buffer_t (*GGML_CALL ggml_backend_cpu_buffer_from_ptr)(void *, size_t);

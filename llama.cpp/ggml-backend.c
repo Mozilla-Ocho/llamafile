@@ -2114,11 +2114,21 @@ GGML_CALL static void *system_malloc(size_t n) {
     return malloc(n);
 }
 
+GGML_CALL static char *system_getenv(const char *s) {
+    return getenv(s);
+}
+
+GGML_CALL static long system_write(int fd, const void *p, long n) {
+  return write(fd, p, n);
+}
+
 static const struct ggml_backend_api kGgmlBackendApi = {
     &FLAG_log_disable,
     system_exit,
     system_free,
     system_malloc,
+    system_getenv,
+    system_write,
     ggml_backend_register,
     ggml_backend_buffer_init,
     ggml_backend_cpu_buffer_from_ptr,
