@@ -75,23 +75,7 @@ inline float unhalf(ggml_fp16_t d) {
 #define NCB 2
 #define NCC 4
 
-#define INDEX(A, lda, j, i) index<CONFIG & NC##A>(A, lda, j, i)
-
-template <int NC, typename T>
-inline T &index(T *A, int lda, int j, int i) {
-    if (NC)
-        return ((T **)A)[j][i];
-    else
-        return A[lda * j + i];
-}
-
-template <int NC, typename T>
-inline const T &index(const T *A, int lda, int j, int i) {
-    if (NC)
-        return ((const T *const *)A)[j][i];
-    else
-        return A[lda * j + i];
-}
+#define INDEX(A, lda, j, i) (CONFIG & NC##A ? ((T##A **)A)[j] + i : A + lda * (j) + i)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // GGML TYPE TRAITS
@@ -222,13 +206,15 @@ inline __m512 madd(__m512 a, __m512 b, __m512 c) {
 #if defined(__ARM_FEATURE_FMA)
 template <>
 inline float32x4_t madd(float32x4_t a, float32x4_t b, float32x4_t c) {
-    return vfmaq_f32(c, b, a);
+    return vfmaq_f32(c, a, b);
 }
-#if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER)
+#if 0 // todo: this specialization chops gcc 12.3 performance in half
+#if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER) && 0
 template <>
 inline float16x8_t madd(float16x8_t a, float16x8_t b, float16x8_t c) {
     return vfmaq_f16(c, b, a);
 }
+#endif
 #endif
 #endif
 
@@ -254,6 +240,7 @@ inline float hsum(float32x4_t x) {
 
 #if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER)
 inline float hsum(float16x8_t x) {
+    // todo: this works great on clang but it produces terrible code on gcc 12.3
     return vaddvq_f32(vaddq_f32(vcvt_f32_f16(vget_low_f16(x)), vcvt_f32_f16(vget_high_f16(x))));
 }
 #endif // __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -386,19 +373,15 @@ class tinyBLAS {
         switch ((std::min(m - m0, 5) << 4) | std::min(n - n0, 5)) {
 #if VECTOR_REGISTERS == 32
         case 0x55:
+        case 0x54:
             mc = 5;
-            nc = 5;
-            gemm<5, 5, false>(m0, m, n0, n);
+            nc = 4;
+            gemm<5, 4, false>(m0, m, n0, n);
             break;
         case 0x45:
             mc = 4;
             nc = 5;
             gemm<4, 5, false>(m0, m, n0, n);
-            break;
-        case 0x54:
-            mc = 5;
-            nc = 4;
-            gemm<5, 4, false>(m0, m, n0, n);
             break;
         case 0x44:
             mc = 4;
@@ -551,16 +534,16 @@ class tinyBLAS {
                 for (int j = 0; j < RN; ++j)
                     for (int i = 0; i < RM; ++i)
                         if (KAHAN)
-                            Cv[j][i] = madder(load<V>(&INDEX(A, lda, ii + i, l)), //
-                                              load<V>(&INDEX(B, ldb, jj + j, l)), //
+                            Cv[j][i] = madder(load<V>(INDEX(A, lda, ii + i, l)), //
+                                              load<V>(INDEX(B, ldb, jj + j, l)), //
                                               Cv[j][i], &Ce[j][i]);
                         else
-                            Cv[j][i] = madd(load<V>(&INDEX(A, lda, ii + i, l)), //
-                                            load<V>(&INDEX(B, ldb, jj + j, l)), //
+                            Cv[j][i] = madd(load<V>(INDEX(A, lda, ii + i, l)), //
+                                            load<V>(INDEX(B, ldb, jj + j, l)), //
                                             Cv[j][i]);
             for (int j = 0; j < RN; ++j)
                 for (int i = 0; i < RM; ++i)
-                    INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
+                    *INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
         }
     }
 
@@ -579,11 +562,11 @@ class tinyBLAS {
 // QUANT ZERO MATRIX MULTIPLICATION
 
 #if defined(__ARM_FEATURE_DOTPROD)
-template <int CONFIG, typename TA>
+template <int CONFIG, typename TA, typename TB, typename TC>
 class tinyBLAS_Q0_ARM {
   public:
-    tinyBLAS_Q0_ARM(int k, const TA *A, int lda, const block_q8_0 *B, int ldb, float *C, int ldc,
-                    int ith, int nth)
+    tinyBLAS_Q0_ARM(int k, const TA *A, int lda, const TB *B, int ldb, TC *C, int ldc, int ith,
+                    int nth)
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
@@ -670,15 +653,15 @@ class tinyBLAS_Q0_ARM {
                         Cv[j][i] = vmlaq_n_f32(
                             Cv[j][i],
                             vcvtq_f32_s32(vdotq_s32(vdotq_s32(vdupq_n_s32(0),
-                                                              load_lo(&INDEX(A, lda, ii + i, l)),
-                                                              load_lo(&INDEX(B, ldb, jj + j, l))),
-                                                    load_hi(&INDEX(A, lda, ii + i, l)),
-                                                    load_hi(&INDEX(B, ldb, jj + j, l)))),
-                            (unhalf(INDEX(A, lda, ii + i, l).d) *
-                             unhalf(INDEX(B, ldb, jj + j, l).d)));
+                                                              load_lo(INDEX(A, lda, ii + i, l)),
+                                                              load_lo(INDEX(B, ldb, jj + j, l))),
+                                                    load_hi(INDEX(A, lda, ii + i, l)),
+                                                    load_hi(INDEX(B, ldb, jj + j, l)))),
+                            (unhalf(INDEX(A, lda, ii + i, l)->d) *
+                             unhalf(INDEX(B, ldb, jj + j, l)->d)));
             for (int j = 0; j < RN; ++j)
                 for (int i = 0; i < RM; ++i)
-                    INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
+                    *INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
         }
     }
 
@@ -700,8 +683,8 @@ class tinyBLAS_Q0_ARM {
     }
 
     const TA *const A;
-    const block_q8_0 *const B;
-    float *const C;
+    const TB *const B;
+    TC *const C;
     const int k;
     const int lda;
     const int ldb;
@@ -852,16 +835,16 @@ class tinyBLAS_Q0_AVX2 {
             for (int l = 0; l < k; ++l)
                 for (int j = 0; j < RN; ++j)
                     for (int i = 0; i < RM; ++i)
-                        Cv[j][i] = madd(_mm256_set1_ps(unhalf(INDEX(A, lda, ii + i, l).d) *
-                                                       unhalf(INDEX(B, ldb, jj + j, l).d)),
-                                        updot(_mm256_sign_epi8(load(&INDEX(A, lda, ii + i, l)),
-                                                               load(&INDEX(A, lda, ii + i, l))),
-                                              _mm256_sign_epi8(load(&INDEX(B, ldb, jj + j, l)),
-                                                               load(&INDEX(A, lda, ii + i, l)))),
+                        Cv[j][i] = madd(_mm256_set1_ps(unhalf(INDEX(A, lda, ii + i, l)->d) *
+                                                       unhalf(INDEX(B, ldb, jj + j, l)->d)),
+                                        updot(_mm256_sign_epi8(load(INDEX(A, lda, ii + i, l)),
+                                                               load(INDEX(A, lda, ii + i, l))),
+                                              _mm256_sign_epi8(load(INDEX(B, ldb, jj + j, l)),
+                                                               load(INDEX(A, lda, ii + i, l)))),
                                         Cv[j][i]);
             for (int j = 0; j < RN; ++j)
                 for (int i = 0; i < RM; ++i)
-                    INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
+                    *INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
         }
     }
 
@@ -1006,7 +989,6 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
         tb.matmul(m, n, task);
         return true;
 #elif defined(__AVX2__)
-        // TODO(jart): Why is this the fastest on Zen4?
         if (k % 8)
             return false;
         if (Btype != GGML_TYPE_F32)
@@ -1082,7 +1064,7 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
         tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
-        tinyBLAS_Q0_ARM<0, block_q8_0> tb{
+        tinyBLAS_Q0_ARM<0, block_q8_0, block_q8_0, float> tb{
             k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
         tb.matmul(m, n, task);
         return true;
@@ -1100,7 +1082,7 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
         tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
-        tinyBLAS_Q0_ARM<0, block_q4_0> tb{
+        tinyBLAS_Q0_ARM<0, block_q4_0, block_q8_0, float> tb{
             k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
         tb.matmul(m, n, task);
         return true;
@@ -1337,8 +1319,8 @@ class MixMul {
             return mixmat<32, 32, tinyBLAS_Q0_AVX2<NCB | NCC, block_q4_0, block_q8_0, float>,
                           block_q4_0, block_q8_0, float>();
 #elif defined(__ARM_FEATURE_DOTPROD)
-            return mixmat<32, 32, tinyBLAS_Q0_ARM<NCB | NCC, block_q4_0>, block_q4_0, block_q8_0,
-                          float>();
+            return mixmat<32, 32, tinyBLAS_Q0_ARM<NCB | NCC, block_q4_0, block_q8_0, float>,
+                          block_q4_0, block_q8_0, float>();
 #else
             return false;
 #endif
@@ -1350,8 +1332,8 @@ class MixMul {
             return mixmat<32, 32, tinyBLAS_Q0_AVX2<NCB | NCC, block_q8_0, block_q8_0, float>,
                           block_q8_0, block_q8_0, float>();
 #elif defined(__ARM_FEATURE_DOTPROD)
-            return mixmat<32, 32, tinyBLAS_Q0_ARM<NCB | NCC, block_q8_0>, block_q8_0, block_q8_0,
-                          float>();
+            return mixmat<32, 32, tinyBLAS_Q0_ARM<NCB | NCC, block_q8_0, block_q8_0, float>,
+                          block_q8_0, block_q8_0, float>();
 #else
             return false;
 #endif

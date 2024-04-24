@@ -374,11 +374,25 @@ static void ggml_fp32_to_fp16_row_f16c(const float * x, ggml_fp16_t * y, int64_t
 #pragma GCC pop_options
 #endif
 
+#ifdef __aarch64__
+static void ggml_fp32_to_fp16_row_neon(const float *x, ggml_fp16_t *y, int64_t n) {
+    int64_t i = 0;
+    for (; i + 3 < n; i += 4) {
+        vst1_f16((ggml_fp16_t *)(y + i), vcvt_f16_f32(vld1q_f32(x + i)));
+    }
+    for (; i < n; i++) {
+        y[i] = GGML_FP32_TO_FP16(x[i]);
+    }
+}
+#endif
+
 void ggml_fp32_to_fp16_row(const float * x, ggml_fp16_t * y, int64_t n) {
 #ifdef __x86_64__
     if (X86_HAVE(F16C)) {
         return ggml_fp32_to_fp16_row_f16c(x, y, n);
     }
+#elif defined(__aarch64__)
+    return ggml_fp32_to_fp16_row_neon(x, y, n);
 #endif
     for (int64_t i = 0; i < n; i++) {
         y[i] = GGML_FP32_TO_FP16(x[i]);
