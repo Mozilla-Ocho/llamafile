@@ -23,7 +23,70 @@
 #include <libc/sysv/consts/hwcap.h>
 #include <sys/auxv.h>
 
-static const long hwcap = getauxval(AT_HWCAP);
+static const struct GemmFuncs {
+    typeof(llamafile_sgemm) *sgemm;
+    typeof(llamafile_mixmul) *mixmul;
+    GemmFuncs() {
+#ifdef __x86_64__
+        if (X86_HAVE(AVX)) {
+            if (X86_HAVE(FMA)) {
+                if (X86_HAVE(AVX2)) {
+                    if (X86_HAVE(AVX512F)) {
+                        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI) && X86_HAVE(AVX512_BF16)) {
+                            // AMD Zen4+ (2023-)
+                            sgemm = llamafile_sgemm_amd_zen4;
+                            mixmul = llamafile_mixmul_amd_zen4;
+                        } else {
+                            // Intel Xeon Skylake+ (2015-)
+                            sgemm = llamafile_sgemm_amd_avx512f;
+                            mixmul = llamafile_mixmul_amd_avx512f;
+                        }
+                    } else if (X86_HAVE(AVXVNNI)) {
+                        // Intel Alderlake (2021-)
+                        sgemm = llamafile_sgemm_amd_avxvnni;
+                        mixmul = llamafile_mixmul_amd_avxvnni;
+                    } else {
+                        // Intel Haswell/Broadwell/Skylake (2013-2020)
+                        // AMD Excavator (2015-2022)
+                        sgemm = llamafile_sgemm_amd_avx2;
+                        mixmul = llamafile_mixmul_amd_avx2;
+                    }
+                } else {
+                    // AMD Piledriver (2011-2014)
+                    sgemm = llamafile_sgemm_amd_fma;
+                    mixmul = llamafile_mixmul_amd_fma;
+                }
+            } else {
+                // Intel Sandybridge/Ivybridge (2010-2012)
+                // AMD Bulldozer (2011)
+                sgemm = llamafile_sgemm_amd_avx;
+                mixmul = llamafile_mixmul_amd_avx;
+            }
+        } else {
+            // AMD K8/Barcelona (2003-2010)
+            // Intel Core/Nehalem (2006-2009)
+            sgemm = llamafile_sgemm_unsupported;
+            mixmul = llamafile_mixmul_unsupported;
+        }
+#elif defined(__aarch64__)
+        long hwcap = getauxval(AT_HWCAP);
+        if ((hwcap & HWCAP_FPHP) && // fp16 scalar isa (ID_AA64PFR0_EL1.FP == 1)
+            (hwcap & HWCAP_ASIMDHP) && // fp16 vector isa (ID_AA64PFR0_EL1.AdvSIMD == 1)
+            (hwcap & HWCAP_ASIMDDP)) { // dotprod isa (ID_AA64ISAR0_EL1.DP == 1)
+            // e.g. Apple M1, Raspberry Pi 5
+            sgemm = llamafile_sgemm_arm82;
+            mixmul = llamafile_mixmul_arm82;
+        } else {
+            // ARM64 baseline ISA
+            sgemm = llamafile_sgemm_arm80;
+            mixmul = llamafile_mixmul_arm80;
+        }
+#else
+        sgemm = llamafile_sgemm_unsupported;
+        mixmul = llamafile_mixmul_unsupported;
+#endif
+    }
+} funcs;
 
 /**
  * Performs optimized matrix multiplication on CPU.
@@ -52,59 +115,7 @@ static const long hwcap = getauxval(AT_HWCAP);
  */
 bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B, int ldb, void *C,
                      int ldc, int ith, int nth, int task, int Atype, int Btype, int Ctype) {
-#ifdef __x86_64__
-    if (X86_HAVE(AVX)) {
-        if (X86_HAVE(FMA)) {
-            if (X86_HAVE(AVX2)) {
-                if (X86_HAVE(AVX512F)) {
-                    if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI) && X86_HAVE(AVX512_BF16)) {
-                        // AMD Zen4+ (2023-)
-                        return llamafile_sgemm_amd_zen4(m, n, k, A, lda, B, ldb, C, ldc, ith, nth,
-                                                        task, Atype, Btype, Ctype);
-                    } else {
-                        // Intel Xeon Skylake+ (2015-)
-                        return llamafile_sgemm_amd_avx512f(m, n, k, A, lda, B, ldb, C, ldc, ith,
-                                                           nth, task, Atype, Btype, Ctype);
-                    }
-                } else if (X86_HAVE(AVXVNNI)) {
-                    // Intel Alderlake (2021-)
-                    return llamafile_sgemm_amd_avxvnni(m, n, k, A, lda, B, ldb, C, ldc, ith, nth,
-                                                       task, Atype, Btype, Ctype);
-                } else {
-                    // Intel Haswell/Broadwell/Skylake (2013-2020)
-                    // AMD Excavator (2015-2022)
-                    return llamafile_sgemm_amd_avx2(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task,
-                                                    Atype, Btype, Ctype);
-                }
-            } else {
-                // AMD Piledriver (2011-2014)
-                return llamafile_sgemm_amd_fma(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task,
-                                               Atype, Btype, Ctype);
-            }
-        } else {
-            // Intel Sandybridge/Ivybridge (2010-2012)
-            // AMD Bulldozer (2011)
-            return llamafile_sgemm_amd_avx(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype,
-                                           Btype, Ctype);
-        }
-    } else {
-        // AMD K8/Barcelona (2003-2010)
-        // Intel Core/Nehalem (2006-2009)
-        return false;
-    }
-#else
-    if ((hwcap & HWCAP_FPHP) && // fp16 scalar isa (ID_AA64PFR0_EL1.FP == 1)
-        (hwcap & HWCAP_ASIMDHP) && // fp16 vector isa (ID_AA64PFR0_EL1.AdvSIMD == 1)
-        (hwcap & HWCAP_ASIMDDP)) { // dotprod isa (ID_AA64ISAR0_EL1.DP == 1)
-        // e.g. Apple M1, Raspberry Pi 5
-        return llamafile_sgemm_arm82(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype,
-                                     Ctype);
-    } else {
-        // ARM64 baseline ISA
-        return llamafile_sgemm_arm80(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype,
-                                     Ctype);
-    }
-#endif
+    return funcs.sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype, Ctype);
 }
 
 /**
@@ -112,37 +123,5 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
  */
 bool llamafile_mixmul(const ggml_compute_params *params, const ggml_tensor *weights,
                       const ggml_tensor *thought, const ggml_tensor *plan, ggml_tensor *result) {
-#ifdef __x86_64__
-    if (X86_HAVE(AVX)) {
-        if (X86_HAVE(FMA)) {
-            if (X86_HAVE(AVX2)) {
-                if (X86_HAVE(AVX512F)) {
-                    if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI) && X86_HAVE(AVX512_BF16)) {
-                        return llamafile_mixmul_amd_zen4(params, weights, thought, plan, result);
-                    } else {
-                        return llamafile_mixmul_amd_avx512f(params, weights, thought, plan, result);
-                    }
-                } else if (X86_HAVE(AVXVNNI)) {
-                    return llamafile_mixmul_amd_avxvnni(params, weights, thought, plan, result);
-                } else {
-                    return llamafile_mixmul_amd_avx2(params, weights, thought, plan, result);
-                }
-            } else {
-                return llamafile_mixmul_amd_fma(params, weights, thought, plan, result);
-            }
-        } else {
-            return llamafile_mixmul_amd_avx(params, weights, thought, plan, result);
-        }
-    } else {
-        return false;
-    }
-#elif defined(__aarch64__)
-    if ((hwcap & HWCAP_FPHP) && // fp16 scalar isa (ID_AA64PFR0_EL1.FP == 1)
-        (hwcap & HWCAP_ASIMDHP) && // fp16 vector isa (ID_AA64PFR0_EL1.AdvSIMD == 1)
-        (hwcap & HWCAP_ASIMDDP)) { // dotprod isa (ID_AA64ISAR0_EL1.DP == 1)
-        return llamafile_mixmul_arm82(params, weights, thought, plan, result);
-    } else {
-        return llamafile_mixmul_arm80(params, weights, thought, plan, result);
-    }
-#endif
+    return funcs.mixmul(params, weights, thought, plan, result);
 }

@@ -43,6 +43,7 @@ o/$(MODE)/llamafile:					\
 ################################################################################
 # microarchitectures
 
+o/$(MODE)/llamafile/sgemm.o: private CXXFLAGS += -Os
 o/$(MODE)/llamafile/tinyblas_cpu_amd_fma.o: private TARGET_ARCH += -Xx86_64-mtune=bdver2 -Xx86_64-mfma
 o/$(MODE)/llamafile/tinyblas_cpu_amd_avx2.o: private TARGET_ARCH += -Xx86_64-mtune=skylake -Xx86_64-mavx2 -Xx86_64-mfma
 o/$(MODE)/llamafile/tinyblas_cpu_amd_avxvnni.o: private TARGET_ARCH += -Xx86_64-mtune=alderlake -Xx86_64-mavx2 -Xx86_64-mfma -Xx86_64-mavxvnni
