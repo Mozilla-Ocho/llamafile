@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 #include <algorithm>
+#include "llamafile/log.h"
 #include <cinttypes>
 
 // --------------------------------
@@ -427,6 +428,7 @@ inline FILE *log_handler2_impl(bool change = false, LogTriState append = LogTriS
 // INTERNAL, DO NOT USE
 inline FILE *log_disable_impl()
 {
+    FLAG_log_disable = true; // [jart]
     return log_handler1_impl(true, LogTriStateSame, LogTriStateTrue);
 }
 
