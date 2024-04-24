@@ -43,11 +43,11 @@ o/$(MODE)/llamafile:					\
 ################################################################################
 # microarchitectures
 
-o/$(MODE)/llamafile/tinyblas_cpu_amd_fma.o: private TARGET_ARCH += -Xx86_64-mfma
-o/$(MODE)/llamafile/tinyblas_cpu_amd_avx2.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
-o/$(MODE)/llamafile/tinyblas_cpu_amd_avxvnni.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma -Xx86_64-mavxvnni
-o/$(MODE)/llamafile/tinyblas_cpu_amd_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
-o/$(MODE)/llamafile/tinyblas_cpu_amd_zen4.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni -Xx86_64-mavx512bf16
+o/$(MODE)/llamafile/tinyblas_cpu_amd_fma.o: private TARGET_ARCH += -Xx86_64-mtune=bdver2 -Xx86_64-mfma
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avx2.o: private TARGET_ARCH += -Xx86_64-mtune=skylake -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avxvnni.o: private TARGET_ARCH += -Xx86_64-mtune=alderlake -Xx86_64-mavx2 -Xx86_64-mfma -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avx512f.o: private TARGET_ARCH += -Xx86_64-mtune=cannonlake -Xx86_64-mavx512f
+o/$(MODE)/llamafile/tinyblas_cpu_amd_zen4.o: private TARGET_ARCH += -Xx86_64-mtune=znver4 -Xx86_64-mavx512vl -Xx86_64-mavx512vnni -Xx86_64-mavx512bf16
 o/$(MODE)/llamafile/tinyblas_cpu_arm82.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+dotprod+fp16
 
 ################################################################################

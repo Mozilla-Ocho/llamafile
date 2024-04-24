@@ -15,7 +15,7 @@ INSTALL = install
 ARFLAGS = rcsD
 CCFLAGS = -g -O3 -fexceptions
 CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM -Wno-attributes
-TARGET_ARCH = -Xx86_64-mavx -Xx86_64-mtune=alderlake
+TARGET_ARCH = -Xx86_64-mavx -Xx86_64-mtune=znver4
 
 TMPDIR = o//tmp
 IGNORE := $(shell mkdir -p $(TMPDIR))
