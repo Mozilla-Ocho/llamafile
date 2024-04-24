@@ -42,13 +42,54 @@ o/$(MODE)/llamafile:					\
 
 ################################################################################
 # microarchitectures
+#
+#### Intel CPU Line
+#
+# - 2006 core           X64 SSE4.1 (only on 45nm variety) (-march=core2)
+# - 2008 nehalem        SSE4.2 VT-x VT-d RDTSCP POPCNT (-march=nehalem)
+# - 2010 westmere       CLMUL AES (-march=westmere)
+# - 2011 sandybridge    AVX TXT (-march=sandybridge)
+# - 2012 ivybridge      F16C MOVBE FSGSBASE (-march=ivybridge)
+# - 2013 haswell        AVX2 TSX BMI1 BMI2 FMA (-march=haswell)
+# - 2014 broadwell      RDSEED ADX PREFETCHW (-march=broadwell)
+# - 2015 skylake        SGX ADX MPX AVX-512[xeon-only] (-march=skylake / -march=skylake-avx512)
+# - 2018 cannonlake     SHA (-march=cannonlake)
+# - 2019 cascadelake    VNNI
+# - 2021 alderlake      efficiency cores
+#
+#### AMD CPU Line
+#
+# - 2003 k8             SSE SSE2 (-march=k8)
+# - 2005 k8 (Venus)     SSE3 (-march=k8-sse3)
+# - 2008 barcelona      SSE4a?! (-march=barcelona)
+# - 2011 bulldozer      SSSE3 SSE4.1 SSE4.2 CLMUL AVX AES FMA4?! (-march=bdver1)
+# - 2011 piledriver     BMI1 FMA (-march=bdver2)
+# - 2015 excavator      AVX2 BMI2 MOVBE (-march=bdver4)
+# - 2017 ryzen          F16C SHA ADX (-march=znver1)
+# - 2023 zen4           AVX512F AVX512VL AVX512VNNI AVX512BF16 (-march=znver4)
+#
+#### ARM Revisions
+#
+# - armv8.0-a           raspberry pi 4
+# - armv8.2-a           raspberry pi 5
+# - armv8.5-a           apple m1
+# - armv8.6-a           apple m2
+#
+#### ARM Features
+#
+# - HWCAP_CRC32         +crc32    (e.g. m1, rpi4)  __ARM_FEATRUE_CRC32
+# - HWCAP_FPHP          +fp16     (e.g. m1, rpi5)  __ARM_FEATURE_FP16_SCALAR_ARITHMETIC
+# - HWCAP_ASIMDHP       +fp16     (e.g. m1, rpi5)  __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+# - HWCAP_ASIMDDP       +dotprod  (e.g. m1, rpi5)  __ARM_FEATURE_DOTPROD
+#
 
 o/$(MODE)/llamafile/sgemm.o: private CXXFLAGS += -Os
-o/$(MODE)/llamafile/tinyblas_cpu_amd_fma.o: private TARGET_ARCH += -Xx86_64-mtune=bdver2 -Xx86_64-mfma
-o/$(MODE)/llamafile/tinyblas_cpu_amd_avx2.o: private TARGET_ARCH += -Xx86_64-mtune=skylake -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mfma
-o/$(MODE)/llamafile/tinyblas_cpu_amd_avxvnni.o: private TARGET_ARCH += -Xx86_64-mtune=alderlake -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavxvnni
-o/$(MODE)/llamafile/tinyblas_cpu_amd_avx512f.o: private TARGET_ARCH += -Xx86_64-mtune=cannonlake -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavx512f
-o/$(MODE)/llamafile/tinyblas_cpu_amd_zen4.o: private TARGET_ARCH += -Xx86_64-mtune=znver4 -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavx512f -Xx86_64-mavx512vl -Xx86_64-mavx512vnni -Xx86_64-mavx512bf16
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avx.o: private TARGET_ARCH += -Xx86_64-mtune=sandybridge -Xx86_64-mf16c
+o/$(MODE)/llamafile/tinyblas_cpu_amd_fma.o: private TARGET_ARCH += -Xx86_64-mtune=bdver2 -Xx86_64-mf16c -Xx86_64-mfma
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avx2.o: private TARGET_ARCH += -Xx86_64-mtune=skylake -Xx86_64-mf16c -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avxvnni.o: private TARGET_ARCH += -Xx86_64-mtune=alderlake -Xx86_64-mf16c -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avx512f.o: private TARGET_ARCH += -Xx86_64-mtune=cannonlake -Xx86_64-mf16c -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavx512f
+o/$(MODE)/llamafile/tinyblas_cpu_amd_zen4.o: private TARGET_ARCH += -Xx86_64-mtune=znver4 -Xx86_64-mf16c -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavx512f -Xx86_64-mavx512vl -Xx86_64-mavx512vnni -Xx86_64-mavx512bf16
 o/$(MODE)/llamafile/tinyblas_cpu_arm82.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+dotprod+fp16
 
 ################################################################################

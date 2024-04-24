@@ -42,6 +42,7 @@
 #include "llama.cpp/ggml-quants.h"
 #include "llamafile.h"
 #include <algorithm>
+#include <cosmo.h>
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wignored-attributes"
@@ -1022,14 +1023,18 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
         tb.matmul(m, n, task);
         return true;
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
-        if (k % 8)
+        if (X86_HAVE(F16C)) {
+            if (k % 8)
+                return false;
+            if (Btype != GGML_TYPE_F32)
+                return false;
+            tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, float> tb{
+                k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
+            tb.matmul(m, n, task);
+            return true;
+        } else {
             return false;
-        if (Btype != GGML_TYPE_F32)
-            return false;
-        tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, float> tb{
-            k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
-        return true;
+        }
 #elif defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER)
         if (n < 8)
             return false;
@@ -1295,9 +1300,13 @@ class MixMul {
                           tinyBLAS<NCB | NCC, 16, __m512, __m512, ggml_fp16_t, ggml_fp16_t, float>,
                           ggml_fp16_t, ggml_fp16_t, float>();
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
-            return mixmat<8, 1,
-                          tinyBLAS<NCB | NCC, 8, __m256, __m256, ggml_fp16_t, ggml_fp16_t, float>,
-                          ggml_fp16_t, ggml_fp16_t, float>();
+            if (X86_HAVE(F16C)) {
+                return mixmat<
+                    8, 1, tinyBLAS<NCB | NCC, 8, __m256, __m256, ggml_fp16_t, ggml_fp16_t, float>,
+                    ggml_fp16_t, ggml_fp16_t, float>();
+            } else {
+                return false;
+            }
 #elif defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER)
             return mixmat<
                 8, 1,

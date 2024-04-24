@@ -22,6 +22,7 @@
 #include <vector>
 #include <cinttypes>
 #include <codecvt>
+#include <cosmo.h>
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <sys/types.h>
@@ -76,7 +77,7 @@
 using json = nlohmann::ordered_json;
 
 int32_t get_num_physical_cores() {
-#ifdef __linux__
+    if (IsLinux()) {
     // enumerate the set of thread siblings, num entries is num cores
     std::unordered_set<std::string> siblings;
     for (uint32_t cpu=0; cpu < UINT32_MAX; ++cpu) {
@@ -93,25 +94,12 @@ int32_t get_num_physical_cores() {
     if (!siblings.empty()) {
         return static_cast<int32_t>(siblings.size());
     }
-#elif defined(__APPLE__) && defined(__MACH__)
-    int32_t num_physical_cores;
-    size_t len = sizeof(num_physical_cores);
-    int result = sysctlbyname("hw.perflevel0.physicalcpu", &num_physical_cores, &len, NULL, 0);
-    if (result == 0) {
-        return num_physical_cores;
     }
-    result = sysctlbyname("hw.physicalcpu", &num_physical_cores, &len, NULL, 0);
-    if (result == 0) {
-        return num_physical_cores;
-    }
-#elif defined(_WIN32)
-    //TODO: Implement
-#endif
     unsigned int n_threads = std::thread::hardware_concurrency();
     return n_threads > 0 ? (n_threads <= 4 ? n_threads : n_threads / 2) : 4;
 }
 
-#if defined(__x86_64__) && defined(__linux__) && !defined(__ANDROID__)
+#if defined(__x86_64__) && (defined(__linux__) || defined(__COSMOPOLITAN__)) && !defined(__ANDROID__)
 #include <pthread.h>
 
 static void cpuid(unsigned leaf, unsigned subleaf,
@@ -165,7 +153,7 @@ static int count_math_cpus(int cpu_count) {
  * Returns number of CPUs on system that are useful for math.
  */
 int get_math_cpu_count() {
-#if defined(__x86_64__) && defined(__linux__) && !defined(__ANDROID__)
+#if defined(__x86_64__) && (defined(__linux__) || defined(__COSMOPOLITAN__)) && !defined(__ANDROID__)
     int cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
     if (cpu_count < 1) {
         return get_num_physical_cores();
