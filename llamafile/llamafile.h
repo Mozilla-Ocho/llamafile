@@ -51,6 +51,13 @@ const char *llamafile_describe_gpu(void);
 bool llamafile_sgemm(int, int, int, const void *, int, const void *, int, void *, int, int, int,
                      int, int, int, int);
 
+struct ggml_tensor;
+struct ggml_compute_params;
+bool llamafile_mixmul(const struct ggml_compute_params *, const struct ggml_tensor *,
+                      const struct ggml_tensor *, const struct ggml_tensor *, struct ggml_tensor *);
+size_t llamafile_mixmul_needs(const struct ggml_tensor *, const struct ggml_tensor *,
+                              const struct ggml_tensor *);
+
 #ifdef __cplusplus
 }
 #endif

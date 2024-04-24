@@ -74,24 +74,28 @@ int main(int argc, char *argv[]) {
         }
 
     double err_avg = err_sum / (m * n);
-    fprintf(stderr, "note: %g average ulp\n", err_avg);
-    fprintf(stderr, "note: %lld worst ulp\n", err_worst);
+    fprintf(stderr, "%9g ulp average\n", err_avg);
+    fprintf(stderr, "%9lld ulp worst\n", err_worst);
 
     // using one accumulator
-    //   52.7393 average ulp
-    //   9052 worst ulp
+    //    40209 us gemm
+    //     2851 us llamafile_sgemm
+    //  42.0078 ulp average
+    //     6731 ulp worst
 
     // using three accumulators
     //   22.291 average ulp
     //   1566 worst ulp
 
     // using kahan summation
-    //   2.14244 average ulp
-    //   134 worst ulp
+    //    40190 us gemm
+    //     3028 us llamafile_sgemm
+    //  2.14244 ulp average
+    //      134 ulp worst
 
-    if (err_avg > 30)
+    if (err_avg > 2.15)
         return 5;
-    if (err_worst > 3000)
+    if (err_worst > 134)
         return 6;
 
     delete[] G;

@@ -298,8 +298,56 @@ void ggml_fp16_to_fp32_row(const ggml_fp16_t * x, float * y, int64_t n) {
     }
 }
 
+#ifdef __x86_64__
+#pragma GCC push_options
+#pragma GCC target("avx512f")
+static void ggml_bf16_to_fp32_row_avx512f(const ggml_bf16_t * x, float * y, int64_t n) {
+    int64_t i = 0;
+    for (; i + 16 <= n; i += 16) {
+        _mm512_storeu_ps(y + i,
+                         _mm512_castsi512_ps(
+                             _mm512_slli_epi32(
+                                 _mm512_cvtepu16_epi32(
+                                     _mm256_loadu_si256(
+                                         (const __m256i *)(x + i))),
+                                 16)));
+    }
+    for (; i < n; i++) {
+        y[i] = GGML_BF16_TO_FP32(x[i]);
+    }
+}
+#pragma GCC pop_options
+#endif
+
+#ifdef __x86_64__
+#pragma GCC push_options
+#pragma GCC target("avx2")
+static void ggml_bf16_to_fp32_row_avx2(const ggml_bf16_t * x, float * y, int64_t n) {
+    int64_t i = 0;
+    for (; i + 8 <= n; i += 8) {
+        _mm256_storeu_ps(y + i,
+                         _mm256_castsi256_ps(
+                             _mm256_slli_epi32(
+                                 _mm256_cvtepu16_epi32(
+                                     _mm_loadu_si128(
+                                         (const __m128i *)(x + i))),
+                                 16)));
+    }
+    for (; i < n; i++) {
+        y[i] = GGML_BF16_TO_FP32(x[i]);
+    }
+}
+#pragma GCC pop_options
+#endif
+
 void ggml_bf16_to_fp32_row(const ggml_bf16_t * x, float * y, int64_t n) {
-    for (int64_t i = 0; i < n; i++) {
+#ifdef __x86_64__
+    if (X86_HAVE(AVX512F))
+        return ggml_bf16_to_fp32_row_avx512f(x, y, n);
+    if (X86_HAVE(AVX2))
+        return ggml_bf16_to_fp32_row_avx2(x, y, n);
+#endif
+    for (int i = 0; i < n; i++) {
         y[i] = GGML_BF16_TO_FP32(x[i]);
     }
 }
@@ -11010,10 +11058,13 @@ static void ggml_compute_forward_mul_mat_id(
     const struct ggml_tensor * src1 = dst->src[1];
     const struct ggml_tensor * ids = dst->src[2];
 
-    GGML_TENSOR_BINARY_OP_LOCALS
+    if (llamafile_mixmul(params, src0, src1, ids, dst))
+        return;
 
     const int ith = params->ith;
     const int nth = params->nth;
+
+    GGML_TENSOR_BINARY_OP_LOCALS
 
     const enum ggml_type type = src0->type;
 
@@ -18558,6 +18609,7 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph * cgraph, int n_threa
                     cur = 0;
                     const struct ggml_tensor * src0 = node->src[0];
                     const struct ggml_tensor * src1 = node->src[1];
+                    const struct ggml_tensor * src2 = node->src[2];
                     const enum ggml_type vec_dot_type = type_traits[src0->type].vec_dot_type;
                     if (src1->type != vec_dot_type) {
                         cur += ggml_row_size(vec_dot_type, ggml_nelements(src1));
@@ -18566,6 +18618,8 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph * cgraph, int n_threa
                     cur += GGML_PAD(cur, sizeof(int64_t));       // align
                     cur += n_as * sizeof(int64_t);               // matrix_row_counts
                     cur += n_as * src1->ne[2] * sizeof(int64_t); // matrix_rows
+                    size_t cur2 = llamafile_mixmul_needs(src0, src1, src2);
+                    cur = cur > cur2 ? cur : cur2;
                 } break;
             case GGML_OP_OUT_PROD:
                 {

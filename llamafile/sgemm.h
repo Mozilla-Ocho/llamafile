@@ -1,65 +1,52 @@
 #pragma once
-#include "llama.cpp/ggml-quants.h"
-#include "llama.cpp/ggml.h"
-#include "llamafile/fp16.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-bool llamafile_sgemm_sss_avx(int, int, int, const float *, int, const float *, int, float *, int,
-                             int, int, int);
-bool llamafile_sgemm_sss_fma(int, int, int, const float *, int, const float *, int, float *, int,
-                             int, int, int);
-bool llamafile_sgemm_sss_avx512f(int, int, int, const float *, int, const float *, int, float *,
-                                 int, int, int, int);
-bool llamafile_sgemm_sss_neon(int, int, int, const float *, int, const float *, int, float *, int,
-                              int, int, int);
+struct ggml_tensor;
+struct ggml_compute_params;
 
-bool llamafile_sgemm_hss_f16c(int, int, int, const unsigned short *, int, const float *, int,
-                              float *, int, int, int, int);
-bool llamafile_sgemm_hss_avx512f(int, int, int, const unsigned short *, int, const float *, int,
-                                 float *, int, int, int, int);
-bool llamafile_sgemm_hss_neon(int, int, int, const unsigned short *, int, const float *, int,
-                              float *, int, int, int, int);
-bool llamafile_sgemm_hhs_neon(int, int, int, const unsigned short *, int, const unsigned short *,
-                              int, float *, int, int, int, int);
+bool llamafile_sgemm_amd_avx(int, int, int, const void *, int, const void *, int, void *, int, int,
+                             int, int, int, int, int);
+bool llamafile_sgemm_amd_fma(int, int, int, const void *, int, const void *, int, void *, int, int,
+                             int, int, int, int, int);
+bool llamafile_sgemm_amd_avx2(int, int, int, const void *, int, const void *, int, void *, int, int,
+                              int, int, int, int, int);
+bool llamafile_sgemm_amd_avxvnni(int, int, int, const void *, int, const void *, int, void *, int,
+                                 int, int, int, int, int, int);
+bool llamafile_sgemm_amd_avx512f(int, int, int, const void *, int, const void *, int, void *, int,
+                                 int, int, int, int, int, int);
+bool llamafile_sgemm_amd_zen4(int, int, int, const void *, int, const void *, int, void *, int, int,
+                              int, int, int, int, int);
+bool llamafile_sgemm_arm80(int, int, int, const void *, int, const void *, int, void *, int, int,
+                           int, int, int, int, int);
+bool llamafile_sgemm_arm82(int, int, int, const void *, int, const void *, int, void *, int, int,
+                           int, int, int, int, int);
 
-bool llamafile_sgemm_hsh_f16c(int, int, int, const unsigned short *, int, const float *, int,
-                              llamafile_fp16 *, int, int, int, int);
-bool llamafile_sgemm_hsh_avx512f(int, int, int, const unsigned short *, int, const float *, int,
-                                 llamafile_fp16 *, int, int, int, int);
-bool llamafile_sgemm_hsh_neon(int, int, int, const unsigned short *, int, const float *, int,
-                              llamafile_fp16 *, int, int, int, int);
-
-bool llamafile_sgemm_bss_avx2(int, int, int, const ggml_bf16_t *, int, const float *, int, float *,
-                              int, int, int, int);
-bool llamafile_sgemm_bss_avx512(int, int, int, const ggml_bf16_t *, int, const float *, int,
-                                float *, int, int, int, int);
-bool llamafile_sgemm_bss_avx512bf16(int, int, int, const ggml_bf16_t *, int, const float *, int,
-                                    float *, int, int, int, int);
-
-bool llamafile_sgemm_q0q0s_avx512vnni(int, int, int, const block_q8_0 *, int, const block_q8_0 *,
-                                      int, float *, int, int, int, int);
-bool llamafile_sgemm_q0q0s_avxvnni(int, int, int, const block_q8_0 *, int, const block_q8_0 *, int,
-                                   float *, int, int, int, int);
-bool llamafile_sgemm_q0q0s_fma(int, int, int, const block_q8_0 *, int, const block_q8_0 *, int,
-                               float *, int, int, int, int);
-bool llamafile_sgemm_q0q0s_dotprod(int, int, int, const block_q8_0 *, int, const block_q8_0 *, int,
-                                   float *, int, int, int, int);
-
-bool llamafile_sgemm_e0q0s_avx512vnni(int, int, int, const block_q4_0 *, int, const block_q8_0 *,
-                                      int, float *, int, int, int, int);
-bool llamafile_sgemm_e0q0s_avxvnni(int, int, int, const block_q4_0 *, int, const block_q8_0 *, int,
-                                   float *, int, int, int, int);
-bool llamafile_sgemm_e0q0s_fma(int, int, int, const block_q4_0 *, int, const block_q8_0 *, int,
-                               float *, int, int, int, int);
-
-bool llamafile_sgemm_e1q1s_avx512vnni(int, int, int, const block_q4_1 *, int, const block_q8_1 *,
-                                      int, float *, int, int, int, int);
-bool llamafile_sgemm_e1q1s_avxvnni(int, int, int, const block_q4_1 *, int, const block_q8_1 *, int,
-                                   float *, int, int, int, int);
-bool llamafile_sgemm_e1q1s_fma(int, int, int, const block_q4_1 *, int, const block_q8_1 *, int,
-                               float *, int, int, int, int);
+bool llamafile_mixmul_amd_avx(const struct ggml_compute_params *, const struct ggml_tensor *,
+                              const struct ggml_tensor *, const struct ggml_tensor *,
+                              struct ggml_tensor *);
+bool llamafile_mixmul_amd_fma(const struct ggml_compute_params *, const struct ggml_tensor *,
+                              const struct ggml_tensor *, const struct ggml_tensor *,
+                              struct ggml_tensor *);
+bool llamafile_mixmul_amd_avx2(const struct ggml_compute_params *, const struct ggml_tensor *,
+                               const struct ggml_tensor *, const struct ggml_tensor *,
+                               struct ggml_tensor *);
+bool llamafile_mixmul_amd_avxvnni(const struct ggml_compute_params *, const struct ggml_tensor *,
+                                  const struct ggml_tensor *, const struct ggml_tensor *,
+                                  struct ggml_tensor *);
+bool llamafile_mixmul_amd_avx512f(const struct ggml_compute_params *, const struct ggml_tensor *,
+                                  const struct ggml_tensor *, const struct ggml_tensor *,
+                                  struct ggml_tensor *);
+bool llamafile_mixmul_amd_zen4(const struct ggml_compute_params *, const struct ggml_tensor *,
+                               const struct ggml_tensor *, const struct ggml_tensor *,
+                               struct ggml_tensor *);
+bool llamafile_mixmul_arm80(const struct ggml_compute_params *, const struct ggml_tensor *,
+                            const struct ggml_tensor *, const struct ggml_tensor *,
+                            struct ggml_tensor *);
+bool llamafile_mixmul_arm82(const struct ggml_compute_params *, const struct ggml_tensor *,
+                            const struct ggml_tensor *, const struct ggml_tensor *,
+                            struct ggml_tensor *);
 
 #ifdef __cplusplus
 }

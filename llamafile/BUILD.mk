@@ -43,28 +43,12 @@ o/$(MODE)/llamafile:					\
 ################################################################################
 # microarchitectures
 
-o/$(MODE)/llamafile/sgemm_sss_avx.o: private TARGET_ARCH += -Xx86_64-mavx
-o/$(MODE)/llamafile/sgemm_sss_fma.o: private TARGET_ARCH += -Xx86_64-mfma
-o/$(MODE)/llamafile/sgemm_bss_avx2.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
-o/$(MODE)/llamafile/sgemm_bss_avx512.o: private TARGET_ARCH += -Xx86_64-mavx512f
-o/$(MODE)/llamafile/sgemm_bss_avx512bf16.o: private TARGET_ARCH += -Xx86_64-mavx512bf16 -Xx86_64-mavx512vl
-o/$(MODE)/llamafile/sgemm_sss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
-o/$(MODE)/llamafile/sgemm_hss_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
-o/$(MODE)/llamafile/sgemm_hss_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
-o/$(MODE)/llamafile/sgemm_hhs_neon.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+fp16
-o/$(MODE)/llamafile/sgemm_hsh_f16c.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mf16c
-o/$(MODE)/llamafile/sgemm_hsh_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
-o/$(MODE)/llamafile/sgemm_hhh_neon.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+fp16
-o/$(MODE)/llamafile/sgemm_q0q0s_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
-o/$(MODE)/llamafile/sgemm_q0q0s_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
-o/$(MODE)/llamafile/sgemm_q0q0s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
-o/$(MODE)/llamafile/sgemm_q0q0s_dotprod.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+dotprod
-o/$(MODE)/llamafile/sgemm_e0q0s_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
-o/$(MODE)/llamafile/sgemm_e0q0s_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
-o/$(MODE)/llamafile/sgemm_e0q0s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
-o/$(MODE)/llamafile/sgemm_e1q1s_avx512vnni.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni
-o/$(MODE)/llamafile/sgemm_e1q1s_avxvnni.o: private TARGET_ARCH += -Xx86_64-mfma -Xx86_64-mavxvnni
-o/$(MODE)/llamafile/sgemm_e1q1s_fma.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/tinyblas_cpu_amd_fma.o: private TARGET_ARCH += -Xx86_64-mfma
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avx2.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avxvnni.o: private TARGET_ARCH += -Xx86_64-mavx2 -Xx86_64-mfma -Xx86_64-mavxvnni
+o/$(MODE)/llamafile/tinyblas_cpu_amd_avx512f.o: private TARGET_ARCH += -Xx86_64-mavx512f
+o/$(MODE)/llamafile/tinyblas_cpu_amd_zen4.o: private TARGET_ARCH += -Xx86_64-mavx512vl -Xx86_64-mavx512vnni -Xx86_64-mavx512bf16
+o/$(MODE)/llamafile/tinyblas_cpu_arm82.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+dotprod+fp16
 
 ################################################################################
 # testing

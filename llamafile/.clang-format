@@ -7,4 +7,6 @@ Language: Cpp
 AllowShortFunctionsOnASingleLine: false
 AlignTrailingComments: false
 AlignEscapedNewlines: DontAlign
+AlwaysBreakTemplateDeclarations: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ---
