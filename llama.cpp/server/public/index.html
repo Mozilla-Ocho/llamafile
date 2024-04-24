@@ -1134,13 +1134,24 @@
       return html`<span dangerouslySetInnerHTML=${{ __html: md }} />`;
     };
 
+    const ModelProcessingInfo = (params) => {
+      if (!llamaStats.value) {
+        return html`<span/>`
+      }
+      return html`
+        <span>
+          ${llamaStats.value.tokens_evaluated} tokens evaluated (${llamaStats.value.tokens_cached} cached), ${llamaStats.value.timings.prompt_per_token_ms.toFixed()} ms per token, ${llamaStats.value.timings.prompt_per_second.toFixed(2)} tokens per second
+        </span>
+      `
+    }
+
     const ModelGenerationInfo = (params) => {
       if (!llamaStats.value) {
         return html`<span/>`
       }
       return html`
         <span>
-          ${llamaStats.value.tokens_predicted} predicted, ${llamaStats.value.tokens_cached} cached, ${llamaStats.value.timings.predicted_per_token_ms.toFixed()}ms per token, ${llamaStats.value.timings.predicted_per_second.toFixed(2)} tokens per second
+          ${llamaStats.value.tokens_predicted} tokens predicted, ${llamaStats.value.timings.predicted_per_token_ms.toFixed()} ms per token, ${llamaStats.value.timings.predicted_per_second.toFixed(2)} tokens per second
         </span>
       `
     }
@@ -1277,6 +1288,7 @@
           </section>
 
           <footer>
+            <p><${ModelProcessingInfo} /></p>
             <p><${ModelGenerationInfo} /></p>
             <p>Powered by <a href="https://github.com/ggerganov/llama.cpp">llama.cpp</a>, <a href="https://ggml.ai">ggml.ai</a>, and <a href="https://github.com/Mozilla-Ocho/llamafile/">llamafile</a></p>
           </footer>
