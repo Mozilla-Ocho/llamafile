@@ -7,6 +7,7 @@
 #include "llama.cpp/stb_image.h"
 #include "utils.h"
 #include "oai.h"
+#include "llamafile/micros.h"
 #include "macsandbox.h"
 
 // increase max payload length to allow use of larger context size
@@ -23,6 +24,8 @@
 #include <libc/calls/pledge.h>
 #include <tool/args/args.h>
 #include <libc/dce.h>
+
+double g_prompt_per_second_jart;
 
 using json = nlohmann::json;
 
@@ -288,6 +291,7 @@ struct llama_client_slot
             {"prompt_ms",              t_prompt_processing},
             {"prompt_per_token_ms",    t_prompt_processing / num_prompt_tokens_processed},
             {"prompt_per_second",      1e3 / t_prompt_processing * num_prompt_tokens_processed},
+            {"prompt_per_second_jart", g_prompt_per_second_jart},
 
             {"predicted_n",            n_decoded},
             {"predicted_ms",           t_token_generation},
@@ -896,6 +900,8 @@ struct llama_server_context
                 llama_batch_add(batch, system_tokens[i], i, { 0 }, false);
             }
 
+            long t1 = micros();
+
             for (int32_t i = 0; i < (int32_t) batch.n_tokens; i += params.n_batch)
             {
                 const int32_t n_tokens = std::min(params.n_batch, (int32_t) (batch.n_tokens - i));
@@ -915,6 +921,12 @@ struct llama_server_context
                     return;
                 }
             }
+
+            long t2 = micros();
+            int n_tokens = batch.n_tokens;
+            g_prompt_per_second_jart = 1e6 / (t2 - t1) * n_tokens;
+            LOG_TEE("evaluated %d prompt tokens in %ld us at %g tok/sec\n",
+                    n_tokens, t2 - t1, g_prompt_per_second_jart);
 
             // assign the system KV cache to all parallel sequences
             for (int32_t i = 1; i < params.n_parallel; ++i)
@@ -1363,6 +1375,8 @@ struct llama_server_context
         {
             slot_image &img = slot.images[image_idx];
 
+            long t1 = micros();
+
             // process prefix prompt
             for (int32_t i = 0; i < (int32_t) batch.n_tokens; i += n_batch)
             {
@@ -1403,6 +1417,12 @@ struct llama_server_context
                 slot.n_past += n_eval;
             }
             image_idx++;
+
+            long t2 = micros();
+            int n_tokens = batch.n_tokens + img.image_tokens;
+            g_prompt_per_second_jart = 1e6 / (t2 - t1) * n_tokens;
+            LOG_TEE("evaluated %d image tokens in %ld us at %g tok/sec\n",
+                    n_tokens, t2 - t1, g_prompt_per_second_jart);
 
             llama_batch_clear(batch);
 

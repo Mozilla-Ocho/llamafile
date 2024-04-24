@@ -1140,7 +1140,7 @@
       }
       return html`
         <span>
-          ${llamaStats.value.tokens_evaluated} tokens evaluated (${llamaStats.value.tokens_cached} cached), ${llamaStats.value.timings.prompt_per_token_ms.toFixed()} ms per token, ${llamaStats.value.timings.prompt_per_second.toFixed(2)} tokens per second
+          prompt evaluation speed is ${llamaStats.value.timings.prompt_per_second_jart.toFixed(2)} prompt tokens evaluated per second
         </span>
       `
     }
@@ -1288,9 +1288,9 @@
           </section>
 
           <footer>
-            <p><${ModelProcessingInfo} /></p>
             <p><${ModelGenerationInfo} /></p>
-            <p>Powered by <a href="https://github.com/ggerganov/llama.cpp">llama.cpp</a>, <a href="https://ggml.ai">ggml.ai</a>, and <a href="https://github.com/Mozilla-Ocho/llamafile/">llamafile</a></p>
+            <p><${ModelProcessingInfo} /></p>
+            <p>powered by <a href="https://github.com/ggerganov/llama.cpp">llama.cpp</a>, <a href="https://ggml.ai">ggml.ai</a>, and <a href="https://github.com/Mozilla-Ocho/llamafile/">llamafile</a></p>
           </footer>
         </div>
       `;
