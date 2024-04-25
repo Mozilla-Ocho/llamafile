@@ -242,30 +242,6 @@ void CopyStringListToStringArray(struct StringList *string_list, char ***string_
     }
 }
 
-void PrintStringList(struct StringList* string_list) {
-    struct StringListEntry* current = string_list->head;
-    printf("[");
-    while (current != NULL) {
-        printf("%s", current->string);
-        if (current != string_list->tail) {
-            printf(",");
-        }
-        current = current->next;
-    }
-    printf("]");
-}
-
-void PrintStringArray(char** string_list, size_t length) {
-    printf("[");
-    for (int i = 0; i < length; ++i) {
-        printf("%s", string_list[i]);
-        if (i != length - 1) {
-            printf(",");
-        }
-    }
-    printf("]");
-}
-
 int RemoveDuplicatesFromStringArray(char **strings, int num_strings) {
     if (num_strings == 1) {
         return 1;
@@ -761,9 +737,8 @@ static bool import_cuda_impl(void) {
     case LLAMAFILE_GPU_AMD:
     case LLAMAFILE_GPU_NVIDIA:
         break;
-    default: {
+    default:
         return false;
-    }
     }
     tinylog(__func__, ": initializing gpu module...\n", NULL);
 
@@ -784,9 +759,8 @@ static bool import_cuda_impl(void) {
             break;
         case true:
             needs_rebuild = true;
-            if (!llamafile_extract(srcs[i].zip, src)) {
+            if (!llamafile_extract(srcs[i].zip, src))
                 return false;
-            }
             break;
         default:
             __builtin_unreachable();
@@ -832,20 +806,16 @@ static bool import_cuda_impl(void) {
             }
         }
 
-
         // Check if DSO is already compiled.
         if (!needs_rebuild && !FLAG_recompile) {
             switch (llamafile_is_file_newer_than(src, dso)) {
-            case -1: {
+            case -1:
                 return false;
-            }
             case false:
-                if (link_cuda_dso(dso, library_path)) {
+                if (link_cuda_dso(dso, library_path))
                     return true;
-                }
-                else {
+                else 
                     goto TryNvidia;
-                }
             case true:
                 break;
             default:
