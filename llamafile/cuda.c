@@ -243,9 +243,8 @@ void CopyStringListToStringArray(struct StringList *string_list, char ***string_
 }
 
 int RemoveDuplicatesFromStringArray(char **strings, int num_strings) {
-    if (num_strings == 1) {
+    if (num_strings == 1)
         return 1;
-    }
     int tail = 0;
     for (int current = 1; current < num_strings; ++current) {
         if (strcmp(strings[tail], strings[current]) != 0) {
@@ -814,7 +813,7 @@ static bool import_cuda_impl(void) {
             case false:
                 if (link_cuda_dso(dso, library_path))
                     return true;
-                else 
+                else
                     goto TryNvidia;
             case true:
                 break;
