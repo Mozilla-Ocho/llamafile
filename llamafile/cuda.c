@@ -217,7 +217,11 @@ struct StringList {
     size_t length;
 };
 
-void AddStringToStringList(struct StringList *string_list, char *string, size_t string_length) {
+static int StringCompare(const void* a, const void* b) {
+    return strcmp(*(const char**)a, *(const char**)b);
+}
+
+static void AddStringToStringList(struct StringList *string_list, char *string, size_t string_length) {
     struct StringListEntry *new_entry = malloc(sizeof(struct StringListEntry));
     new_entry->string = malloc(sizeof(char) * (string_length + 1));
     strncpy(new_entry->string, string, string_length);
@@ -232,7 +236,7 @@ void AddStringToStringList(struct StringList *string_list, char *string, size_t 
     ++string_list->length;
 }
 
-void CopyStringListToStringArray(struct StringList *string_list, char ***string_array) {
+static void CopyStringListToStringArray(struct StringList *string_list, char ***string_array) {
     *string_array = malloc(sizeof(char *) * string_list->length);
     struct StringListEntry *current = string_list->head;
     int i = 0;
@@ -243,7 +247,7 @@ void CopyStringListToStringArray(struct StringList *string_list, char ***string_
     }
 }
 
-int RemoveDuplicatesFromStringArray(char **strings, int num_strings) {
+static int RemoveDuplicatesFromSortedStringArray(char **strings, int num_strings) {
     if (num_strings == 1)
         return 1;
     int tail = 0;
@@ -258,7 +262,7 @@ int RemoveDuplicatesFromStringArray(char **strings, int num_strings) {
     return tail + 1;
 }
 
-void FreeStringList(struct StringList *string_list) {
+static void FreeStringList(struct StringList *string_list) {
     struct StringListEntry *current = string_list->head;
     while (current != NULL) {
         struct StringListEntry *next = current->next;
@@ -372,7 +376,10 @@ static bool get_amd_offload_arch_flag(char out[static 64]) {
     char **names = NULL;
 
     CopyStringListToStringArray(&name_list, &names);
-    int num_names = RemoveDuplicatesFromStringArray(names, name_list.length);
+    qsort(names, name_list.length, sizeof(char*), StringCompare);
+
+    int num_names = RemoveDuplicatesFromSortedStringArray(names, name_list.length);
+
     for (int i = 0; i < num_names; ++i) {
         if (i > 0)
             *p++ = ',';
