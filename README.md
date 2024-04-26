@@ -574,7 +574,7 @@ that describes the changes, and mention it in your Hugging Face commit.
 
 ## Documentation
 
-There's a man page for each of the llamafile programs installed when you
+There's a main page for each of the llamafile programs installed when you
 run `sudo make install`. The command manuals are also typeset as PDF
 files that you can download from our GitHub releases page. Lastly, most
 commands will display that information when passing the `--help` flag.
