@@ -4,8 +4,13 @@
 :: NVCUDA DLLs are provided by the installation of the windows GPU
 :: driver on a Windows system that has a CUDA-capable GPU installed.
 
-nvcc -arch=all ^
-     --shared ^
+nvcc --shared ^
+     -gencode=arch=compute_50,code=sm_50 ^
+     -gencode=arch=compute_60,code=sm_60 ^
+     -gencode=arch=compute_70,code=sm_70 ^
+     -gencode=arch=compute_75,code=sm_75 ^
+     -gencode=arch=compute_80,code=sm_80 ^
+     -gencode=arch=compute_90,code=sm_90 ^
      --forward-unknown-to-host-compiler ^
      -Xcompiler="/nologo /EHsc /O2 /GR /MT" ^
      -DNDEBUG ^
