@@ -9,12 +9,11 @@ LICENSE
 ORIGIN
 
   https://github.com/ggerganov/llama.cpp/pull/4406/
-  b8109bc0139f15a5b321909f47510b89dca47ffc
-  2024-04-21
+  46e12c4692a37bdd31a0432fc5153d7d22bc7f72
+  2024-04-25
 
 LOCAL MODIFICATIONS
 
-  - Count the number of cores correctly on Intel's Alderlake architecture
   - Remove MAP_POPULATE because it makes mmap(tinyllama) block for 100ms
   - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
   - Unify main, server, and llava-cli into single llamafile program

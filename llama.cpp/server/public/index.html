@@ -1305,24 +1305,3 @@
   <input type="file" id="fileInput" accept="image/*" style="display: none;">
 </div>
 <div id="portal"></div>
-
-<script>
-
-function load_config(id, url) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200 && xhr.responseText.trim())
-            document.getElementById(id).value = xhr.responseText.trim();
-    };
-    xhr.open('GET', url, true);
-    xhr.send();
-}
-
-function on_load() {
-    load_config('template', '/prompt-template.txt');
-    load_config('historyTemplate', '/history-template.txt');
-}
-
-document.addEventListener('DOMContentLoaded', on_load);
-
-</script>

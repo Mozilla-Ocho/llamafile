@@ -1,5 +1,6 @@
 #define GGML_COMMON_DECL_METAL
 #define GGML_COMMON_IMPL_METAL
+
 #ifndef GGML_COMMON_DECL
 
 #if defined(GGML_COMMON_DECL_C)
@@ -1853,6 +1854,7 @@ GGML_TABLE_END()
 
 #endif // GGML_COMMON_IMPL
 #endif // GGML_COMMON_IMPL
+
 
 #include <metal_stdlib>
 

@@ -16,6 +16,9 @@
 #include <unistd.h>
 #include <vector>
 #include <tool/args/args.h>
+#include <sys/auxv.h>
+#include <stdatomic.h>
+#include <third_party/nsync/futex.internal.h>
 
 #include "llamafile/version.h"
 #include "llama.cpp/llama.h"
@@ -90,16 +93,40 @@ static void write_logfile(
     fclose(logfile);
 }
 
+static atomic_int is_killed;
+
+static void *safe_sigint_handler(void *arg) {
+    while (!is_killed)
+        nsync_futex_wait_(&is_killed, 0, 0, 0);
+    console::cleanup();
+    printf("\n");
+    llama_print_timings(*g_ctx);
+    write_logfile(*g_ctx, *g_params, *g_model, *g_input_tokens, g_output_ss->str(), *g_output_tokens);
+    _exit(128 + SIGINT);
+}
+
+static void launch_sigint_thread(void) {
+    pthread_t th;
+    sigset_t block_every_signal;
+    sigfillset(&block_every_signal);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 65536);
+    pthread_attr_setguardsize(&attr, getauxval(AT_PAGESZ));
+    pthread_attr_setsigmask_np(&attr, &block_every_signal);
+    pthread_create(&th, &attr, safe_sigint_handler, 0);
+    pthread_attr_destroy(&attr);
+}
+
 static void sigint_handler(int signo) {
     if (signo == SIGINT) {
         if (g_params->interactive && !is_interacting) {
             is_interacting = true;
         } else {
-            console::cleanup();
-            printf("\n");
-            llama_print_timings(*g_ctx);
-            write_logfile(*g_ctx, *g_params, *g_model, *g_input_tokens, g_output_ss->str(), *g_output_tokens);
-            _exit(128 + SIGINT);
+            is_killed = true;
+            nsync_futex_wake_(&is_killed, 1, 0);
+            for (;;) {
+            }
         }
     }
 }
@@ -127,6 +154,7 @@ int main(int argc, char ** argv) {
     llamafile_check_cpu();
     ShowCrashReports();
     LoadZipArgs(&argc, &argv);
+    launch_sigint_thread();
 
     if (!llamafile_has(argv, "--cli") &&
         (llamafile_has(argv, "--server") ||
@@ -291,7 +319,6 @@ int main(int argc, char ** argv) {
                 return 1;
             }
             session_tokens.resize(n_token_count_out);
-            llama_set_rng_seed(ctx, params.seed);
             LOG_TEE("%s: loaded a session with prompt size of %d tokens\n", __func__, (int)session_tokens.size());
         }
     }
@@ -562,6 +589,7 @@ int main(int argc, char ** argv) {
     }
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(sparams);
+    bool should_show_special_tokens = sparams.grammar.empty();
 
     while ((n_remain != 0 && !is_antiprompt) || params.interactive) {
         // predict
@@ -775,7 +803,8 @@ int main(int argc, char ** argv) {
         // display text
         if (input_echo && display) {
             for (auto id : embd) {
-                const std::string token_str = llama_token_to_piece(ctx, id);
+                const std::string token_str =
+                        llama_token_to_piece(ctx, id, should_show_special_tokens);
                 printf("%s", token_str.c_str());
 
                 if (embd.size() > 1) {
@@ -836,8 +865,8 @@ int main(int argc, char ** argv) {
                 }
             }
 
-            // deal with end of text token in interactive mode
-            if (llama_sampling_last(ctx_sampling) == llama_token_eos(model)) {
+            // deal with end of generation tokens in interactive mode
+            if (llama_token_is_eog(model, llama_sampling_last(ctx_sampling))) {
                 LOG("found EOS token\n");
 
                 if (params.interactive) {
@@ -941,7 +970,7 @@ int main(int argc, char ** argv) {
                     for (size_t i = original_size; i < embd_inp.size(); ++i) {
                         const llama_token token = embd_inp[i];
                         output_tokens.push_back(token);
-                        output_ss << llama_token_to_piece(ctx, token);
+                        output_ss << llama_token_to_piece(ctx, token, should_show_special_tokens);
                     }
 
                     n_remain -= line_inp.size();
@@ -961,8 +990,8 @@ int main(int argc, char ** argv) {
             }
         }
 
-        // end of text token
-        if (!embd.empty() && embd.back() == llama_token_eos(model) && !(params.instruct || params.interactive || params.chatml)) {
+        // end of generation
+        if (!embd.empty() && llama_token_is_eog(model, embd.back()) && !(params.instruct || params.interactive || params.chatml)) {
             LOG_TEE(" [end of text]\n");
             break;
         }
@@ -975,7 +1004,7 @@ int main(int argc, char ** argv) {
         }
     }
 
-    // ensure trailing newline
+    // [jart] ensure trailing newline
     printf("\n");
 
     if (!path_session.empty() && params.prompt_cache_all && !params.prompt_cache_ro) {

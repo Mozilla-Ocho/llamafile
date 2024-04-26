@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
     for (;;) {
         llama_token id = llama_sampling_sample(ctx_sampling, ctx, NULL);
         llama_sampling_accept(ctx_sampling, ctx, id, true);
-        if (id == llama_token_eos(model))
+        if (llama_token_is_eog(model, id))
             break;
         printf("%s", llama_token_to_piece(ctx, id).c_str());
         fflush(stdout);

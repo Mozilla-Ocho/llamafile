@@ -95,7 +95,7 @@ static std::string tokens_to_str(llama_context *ctx, Iter begin, Iter end)
     std::string ret;
     for (; begin != end; ++begin)
     {
-        ret += llama_token_to_piece(ctx, *begin);
+        ret += llama_token_to_piece(ctx, *begin, false);
     }
     return ret;
 }
@@ -103,7 +103,7 @@ static std::string tokens_to_str(llama_context *ctx, Iter begin, Iter end)
 // format incomplete utf-8 multibyte character for output
 static std::string tokens_to_output_formatted_string(const llama_context *ctx, const llama_token token)
 {
-    std::string out = token == -1 ? "" : llama_token_to_piece(ctx, token);
+    std::string out = token == -1 ? "" : llama_token_to_piece(ctx, token, false);
     // if the size is 1 and first bit is 1, meaning it's a partial character
     //   (size > 1 meaning it's already a known token)
     if (out.size() == 1 && (out[0] & 0x80) == 0x80)
@@ -462,6 +462,7 @@ struct llama_server_context
         n_ctx = llama_n_ctx(ctx);
 
         add_bos_token = llama_should_add_bos_token(model);
+        GGML_ASSERT(llama_add_eos_token(model) != 1);
 
         return true;
     }
@@ -527,7 +528,7 @@ struct llama_server_context
         batch = llama_batch_init(n_ctx, 0, params.n_parallel);
     }
 
-    std::vector<llama_token> tokenize(const json & json_prompt, bool add_bos) const
+    std::vector<llama_token> tokenize(const json & json_prompt, bool add_special) const
     {
         // TODO: currently, we tokenize using special tokens by default
         //       this is not always correct (see https://github.com/ggerganov/llama.cpp/pull/4160#issuecomment-1824826216)
@@ -549,7 +550,7 @@ struct llama_server_context
                     std::vector<llama_token> p;
                     if (first)
                     {
-                        p = ::llama_tokenize(ctx, s, add_bos, TMP_FORCE_SPECIAL);
+                        p = ::llama_tokenize(ctx, s, add_special, TMP_FORCE_SPECIAL);
                         first = false;
                     }
                     else
@@ -571,7 +572,7 @@ struct llama_server_context
         else
         {
             auto s = json_prompt.template get<std::string>();
-            prompt_tokens = ::llama_tokenize(ctx, s, add_bos, TMP_FORCE_SPECIAL);
+            prompt_tokens = ::llama_tokenize(ctx, s, add_special, TMP_FORCE_SPECIAL);
         }
 
         return prompt_tokens;
@@ -1083,7 +1084,7 @@ struct llama_server_context
             slot.has_next_token = false;
         }
 
-        if (!slot.cache_tokens.empty() && result.tok == llama_token_eos(model))
+        if (!slot.cache_tokens.empty() && llama_token_is_eog(model, result.tok))
         {
             slot.stopped_eos = true;
             slot.has_next_token = false;
@@ -2717,7 +2718,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         else
         {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
-            server_print_usage(argv[0], default_params, default_sparams);
             exit(1);
         }
     }
@@ -2733,7 +2733,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
     if (invalid_param)
     {
         fprintf(stderr, "error: invalid parameter for argument: %s\n", arg.c_str());
-        server_print_usage(argv[0], default_params, default_sparams);
         exit(1);
     }
 }
@@ -2799,7 +2798,7 @@ static void log_server_request(const httplib::Request &req, const httplib::Respo
 struct token_translator
 {
     llama_context * ctx;
-    std::string operator()(llama_token tok)                    const { return llama_token_to_piece(ctx, tok); }
+    std::string operator()(llama_token tok)                    const { return llama_token_to_piece(ctx, tok, false); }
     std::string operator()(const completion_token_output &cto) const { return (*this)(cto.tok); }
 };
 

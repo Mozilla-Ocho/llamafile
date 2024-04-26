@@ -1,7 +1,9 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
+#define LLAMA_API_INTERNAL
 #include "sampling.h"
+#include <random>
 
 struct llama_sampling_context * llama_sampling_init(const struct llama_sampling_params & params) {
     struct llama_sampling_context * result = new llama_sampling_context();
@@ -36,6 +38,8 @@ struct llama_sampling_context * llama_sampling_init(const struct llama_sampling_
 
     result->prev.resize(params.n_prev);
 
+    llama_sampling_set_rng_seed(result, params.seed);
+
     return result;
 }
 
@@ -63,6 +67,13 @@ void llama_sampling_reset(llama_sampling_context * ctx) {
 
     std::fill(ctx->prev.begin(), ctx->prev.end(), 0);
     ctx->cur.clear();
+}
+
+void llama_sampling_set_rng_seed(struct llama_sampling_context * ctx, uint32_t seed) {
+    if (seed == LLAMA_DEFAULT_SEED) {
+        seed = time(NULL);
+    }
+    ctx->rng.seed(seed);
 }
 
 void llama_sampling_cp(llama_sampling_context * src, llama_sampling_context * dst) {
@@ -206,7 +217,7 @@ static llama_token llama_sampling_sample_impl(
 
             sampler_queue(ctx_main, params, cur_p, min_keep);
 
-            id = llama_sample_token(ctx_main, &cur_p);
+            id = llama_sample_token_with_rng(ctx_main, &cur_p, ctx_sampling->rng);
 
             //{
             //    const int n_top = 10;
@@ -329,15 +340,7 @@ llama_token llama_sampling_sample(
                   struct llama_context * ctx_cfg,
                   const int idx) {
     // Call the implementation function with is_resampling set to false by default
-    llama_token tok = llama_sampling_sample_impl(ctx_sampling, ctx_main, ctx_cfg, idx, false);
-
-    // [jart] llama3 <|eot_id|> → <|end_of_text|>
-    //        https://github.com/ggerganov/llama.cpp/pull/6745#issuecomment-2064950897
-    if (tok == llama_string_to_token(llama_get_model(ctx_main), "<|eot_id|>")) {
-        tok = llama_token_eos(llama_get_model(ctx_main));
-    }
-
-    return tok;
+    return llama_sampling_sample_impl(ctx_sampling, ctx_main, ctx_cfg, idx, false);
 }
 
 llama_token_data_array llama_sampling_prepare(

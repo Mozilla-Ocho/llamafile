@@ -399,11 +399,11 @@ inline FILE *log_handler1_impl(bool change = false, LogTriState append = LogTriS
 
     if (!logfile)
     {
-        //  Verify whether the file was opened, otherwise fallback to stderr
-        logfile = stderr;
-
-        fprintf(stderr, "Failed to open logfile '%s' with error '%s'\n", filename.c_str(), std::strerror(errno));
-        fflush(stderr);
+        // [jart] llama.cpp creates a log file in the current directory
+        //        by default, without the user asking for one. so if it
+        //        fails possibly due to being in a restricted folder on
+        //        windows we shouldnt raise an error fail because of it
+        logfile = fopen("/dev/null", "w");
 
         // At this point we let the init flag be to true below, and let the target fallback to stderr
         //  otherwise we would repeatedly fopen() which was already unsuccessful
