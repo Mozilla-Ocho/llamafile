@@ -99,6 +99,7 @@ static struct Cuda {
     typeof(ggml_backend_cuda_get_device_memory) *GGML_CALL get_device_memory;
     typeof(ggml_backend_cuda_get_device_count) *GGML_CALL get_device_count;
     typeof(ggml_backend_cuda_unregister_host_buffer) *GGML_CALL unreg_host_buf;
+    typeof(ggml_backend_cuda_register_host_buffer) *GGML_CALL register_host_buffer;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -257,10 +258,10 @@ int RemoveDuplicatesFromStringArray(char **strings, int num_strings) {
     return tail + 1;
 }
 
-void FreeStringList(struct StringList* string_list) {
-    struct StringListEntry* current = string_list->head;
+void FreeStringList(struct StringList *string_list) {
+    struct StringListEntry *current = string_list->head;
     while (current != NULL) {
-        struct StringListEntry* next = current->next;
+        struct StringListEntry *next = current->next;
         free(current->string);
         free(current);
         current = next;
@@ -309,7 +310,7 @@ static bool get_amd_offload_arch_flag(char out[static 64]) {
     int rc;
     int t = 0;
     char buf[512];
-    char name[64] = {'g','f','x'};
+    char name[64] = {'g', 'f', 'x'};
     int j = 3;
     struct StringList name_list = {NULL, NULL, 0};
     while ((rc = read(pipefds[0], buf, sizeof(buf))) > 0) {
@@ -368,7 +369,7 @@ static bool get_amd_offload_arch_flag(char out[static 64]) {
         return false;
     }
     char *p = stpcpy(out, "--offload-arch=");
-    char** names = NULL;
+    char **names = NULL;
 
     CopyStringListToStringArray(&name_list, &names);
     int num_names = RemoveDuplicatesFromStringArray(names, name_list.length);
@@ -707,6 +708,7 @@ static bool link_cuda_dso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.get_device_memory = imp(lib, "ggml_backend_cuda_get_device_memory"));
     ok &= !!(ggml_cuda.get_device_count = imp(lib, "ggml_backend_cuda_get_device_count"));
     ok &= !!(ggml_cuda.unreg_host_buf = imp(lib, "ggml_backend_cuda_unregister_host_buffer"));
+    ok &= !!(ggml_cuda.register_host_buffer = imp(lib, "ggml_backend_cuda_register_host_buffer"));
     if (!ok) {
         tinylog(__func__, ": error: not all cuda symbols could be imported\n", NULL);
         cosmo_dlclose(lib);
@@ -972,4 +974,10 @@ GGML_CALL void ggml_backend_cuda_unregister_host_buffer(void *buffer) {
     if (!llamafile_has_cuda())
         return;
     return ggml_cuda.unreg_host_buf(buffer);
+}
+
+GGML_CALL bool ggml_backend_cuda_register_host_buffer(void *buffer, size_t size) {
+    if (!llamafile_has_cuda())
+        return false;
+    return ggml_cuda.register_host_buffer(buffer, size);
 }

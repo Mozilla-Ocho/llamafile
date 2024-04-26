@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, fix ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, fix ]
 jobs:
   Tests:
     timeout-minutes: 60
@@ -11,35 +11,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [  macos-latest ] # ubuntu-latest, windows-latest are currently non-functional, requiring adaptation for proper functionality. 
+        os: [ macos-latest ] # ubuntu-latest, windows-latest are currently non-functional, requiring adaptation for proper functionality. 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Build and Install CosmoCC
+      - name: Build
         shell: bash
         run: |
-          mkdir -p cosmocc
-          cd cosmocc
-          curl -o cosmocc.zip -L  https://cosmo.zip/pub/cosmocc/cosmocc.zip
-          unzip cosmocc.zip
-          cd ..
-          ./cosmocc/bin/make -j8 && ./cosmocc/bin/make install
-      - name: Create LLM Executable
+          curl -L -o make https://cosmo.zip/pub/cosmos/bin/make
+          chmod +x make
+          ./make -j8
+      - name: Make Llamafile
         shell: bash 
         run: |
-          curl -o mistral.gguf -L https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
+          curl -L -o tinyllama.gguf https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v0.3-GGUF/resolve/main/tinyllama-1.1b-chat-v0.3.Q4_0.gguf
           cat << EoF > .args
           -m
-          mistral.gguf
+          tinyllama.gguf
           ...
           EoF
-          cp /usr/local/bin/llamafile llamafile_exe
-          chmod +x llamafile_exe
-          zipalign -j0 \
-            llamafile_exe \
-            mistral.gguf \
+          cp o//llama.cpp/main/main \
+            tinyllama.llamafile
+          o//llamafile/zipalign -j0 \
+            tinyllama.llamafile \
+            tinyllama.gguf \
             .args
-      - name: Execute LLM CLI
+      - name: Execute LLM CLI CPU  # GA doesn't have "support_simdgroup_reduction" for RMS_NORM :'(
         shell: bash
         run: |
-          ./llamafile_exe --temp 0.7 --n-predict 50 -p '[INST]Write a story about llamas[/INST]'
+          ./tinyllama.llamafile -e -p '## Famous Speech\n\nFour score and seven' -n 50 -ngl 0

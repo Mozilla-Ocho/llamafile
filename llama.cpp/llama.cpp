@@ -5673,17 +5673,17 @@ static bool llm_load_tensors(
                 }
                 model.bufs.push_back(buf);
                 bufs.emplace(idx, buf);
-#ifdef GGML_USE_CUDA
-                if (n_layer >= n_gpu_layers) {
+// #ifdef GGML_USE_CUDA
+                if (llamafile_has_cuda() && n_layer >= n_gpu_layers) {
                     ggml_backend_cuda_register_host_buffer(
                         ggml_backend_buffer_get_base(buf),
                         ggml_backend_buffer_get_size(buf));
                 }
-#endif
+// #endif
             }
         }
-#ifdef GGML_USE_METAL
-        else if (ml.use_mmap && use_mmap_buffer && buft == ggml_backend_metal_buffer_type()) {
+// #ifdef GGML_USE_METAL
+        else if (llamafile_has_metal() && ml.use_mmap && use_mmap_buffer && buft == ggml_backend_metal_buffer_type()) {
             for (uint32_t idx = 0; idx < ml.files.size(); idx++) {
                 const size_t max_size = ggml_get_max_tensor_size(ctx);
                 void * addr = nullptr;
@@ -5700,7 +5700,7 @@ static bool llm_load_tensors(
                 bufs.emplace(idx, buf);
             }
         }
-#endif
+// #endif
         else {
             ggml_backend_buffer_t buf = ggml_backend_alloc_ctx_tensors_from_buft(ctx, buft);
             if (buf == nullptr) {
@@ -10880,11 +10880,11 @@ static void llama_graph_compute(
     ggml_mpi_graph_compute_pre(lctx.ctx_mpi, gf, n_layer);
 #endif
 
-#ifdef GGML_USE_METAL
+// #ifdef GGML_USE_METAL
     if (ggml_backend_is_metal(lctx.backend_metal)) {
         ggml_backend_metal_set_n_cb(lctx.backend_metal, n_threads);
     }
-#endif
+// #endif
 
     if (lctx.backend_cpu != nullptr) {
         ggml_backend_cpu_set_n_threads(lctx.backend_cpu, n_threads);
@@ -14884,8 +14884,8 @@ struct llama_model_params llama_model_default_params() {
     };
 
     if (llamafile_has_metal()) {
-    // note: we usually have plenty of VRAM, so by default offload all layers to the GPU
-    result.n_gpu_layers = 999;
+    // // note: we usually have plenty of VRAM, so by default offload all layers to the GPU
+    // result.n_gpu_layers = 999; // [jart] let llamafile/gpu.c handle this
     }
 
     return result;
@@ -15303,11 +15303,13 @@ if (llamafile_has_metal()) {
 
             // enabling pipeline parallelism in the scheduler increases memory usage, so it is only done when necessary
             bool pipeline_parallel = llama_get_device_count() > 1 && model->n_gpu_layers > (int)model->hparams.n_layer && model->split_mode == LLAMA_SPLIT_MODE_LAYER;
-#ifndef GGML_USE_CUDA
+// #ifndef GGML_USE_CUDA
+            if (llamafile_has_cuda()) {
             // pipeline parallelism requires support for async compute and events
             // currently this is only implemented in the CUDA backend
             pipeline_parallel = false;
-#endif
+            }
+// #endif
             ctx->sched = ggml_backend_sched_new(ctx->backends.data(), backend_buft.data(), ctx->backends.size(), LLAMA_MAX_NODES, pipeline_parallel);
 
             if (pipeline_parallel) {

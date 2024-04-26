@@ -21812,11 +21812,7 @@ int ggml_cpu_has_blas(void) {
 }
 
 int ggml_cpu_has_cuda(void) {
-#if defined(GGML_USE_CUDA)
-    return 1;
-#else
-    return 0;
-#endif
+    return llamafile_has_cuda();
 }
 
 int ggml_cpu_has_cublas(void) {
