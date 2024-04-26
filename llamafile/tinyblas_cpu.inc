@@ -41,7 +41,6 @@
 #include "llama.cpp/ggml-impl.h"
 #include "llama.cpp/ggml-quants.h"
 #include "llamafile.h"
-#include <algorithm>
 #include <cosmo.h>
 
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -359,19 +358,20 @@ inline __m512bh load(const ggml_bf16_t *p) {
 template <int CONFIG, int KN, typename D, typename V, typename TA, typename TB, typename TC>
 class tinyBLAS {
   public:
-    tinyBLAS(int k, const TA *A, int lda, const TB *B, int ldb, TC *C, int ldc, int ith, int nth)
+    tinyBLAS(long k, const TA *A, long lda, const TB *B, long ldb, TC *C, long ldc, int ith,
+             int nth)
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(int m, int n, int task) {
+    void matmul(long m, long n, int task) {
         if (task == GGML_TASK_TYPE_COMPUTE)
             mnpack(0, m, 0, n);
     }
 
   private:
-    NOINLINE void mnpack(int m0, int m, int n0, int n) {
-        int mc, nc, mp, np;
-        switch ((std::min(m - m0, 5) << 4) | std::min(n - n0, 5)) {
+    NOINLINE void mnpack(long m0, long m, long n0, long n) {
+        long mc, nc, mp, np;
+        switch ((MIN(m - m0, 5) << 4) | MIN(n - n0, 5)) {
 #if VECTOR_REGISTERS == 32
         case 0x55:
         case 0x54:
@@ -517,21 +517,21 @@ class tinyBLAS {
     }
 
     template <int RM, int RN, int KAHAN>
-    NOINLINE void gemm(int m0, int m, int n0, int n) {
-        int ytiles = RM > 1 ? (m - m0) / RM : 1;
-        int xtiles = RN > 1 ? (n - n0) / RN : 1;
-        int tiles = xtiles * ytiles;
-        int duty = (tiles + nth - 1) / nth;
-        int start = duty * ith;
-        int end = start + duty;
+    NOINLINE void gemm(long m0, long m, long n0, long n) {
+        long ytiles = RM > 1 ? (m - m0) / RM : 1;
+        long xtiles = RN > 1 ? (n - n0) / RN : 1;
+        long tiles = xtiles * ytiles;
+        long duty = (tiles + nth - 1) / nth;
+        long start = duty * ith;
+        long end = start + duty;
         if (end > tiles)
             end = tiles;
-        for (int job = start; job < end; ++job) {
-            int ii = m0 + job / xtiles * RM;
-            int jj = n0 + job % xtiles * RN;
+        for (long job = start; job < end; ++job) {
+            long ii = m0 + job / xtiles * RM;
+            long jj = n0 + job % xtiles * RN;
             D Cv[RN][RM] = {};
             D Ce[RN][RM] = {};
-            for (int l = 0; l < k; l += KN)
+            for (long l = 0; l < k; l += KN)
                 for (int j = 0; j < RN; ++j)
                     for (int i = 0; i < RM; ++i)
                         if (KAHAN)
@@ -551,10 +551,10 @@ class tinyBLAS {
     const TA *const A;
     const TB *const B;
     TC *const C;
-    const int k;
-    const int lda;
-    const int ldb;
-    const int ldc;
+    const long k;
+    const long lda;
+    const long ldb;
+    const long ldc;
     const int ith;
     const int nth;
 };
@@ -566,20 +566,20 @@ class tinyBLAS {
 template <int CONFIG, typename TA, typename TB, typename TC>
 class tinyBLAS_Q0_ARM {
   public:
-    tinyBLAS_Q0_ARM(int k, const TA *A, int lda, const TB *B, int ldb, TC *C, int ldc, int ith,
+    tinyBLAS_Q0_ARM(long k, const TA *A, long lda, const TB *B, long ldb, TC *C, long ldc, int ith,
                     int nth)
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(int m, int n, int task) {
+    void matmul(long m, long n, int task) {
         if (task == GGML_TASK_TYPE_COMPUTE)
             mnpack(0, m, 0, n);
     }
 
   private:
-    NOINLINE void mnpack(int m0, int m, int n0, int n) {
-        int mc, nc, mp, np;
-        switch ((std::min(m - m0, 3) << 4) | std::min(n - n0, 3)) {
+    NOINLINE void mnpack(long m0, long m, long n0, long n) {
+        long mc, nc, mp, np;
+        switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 3)) {
         case 0x33:
             mc = 3;
             nc = 3;
@@ -635,18 +635,18 @@ class tinyBLAS_Q0_ARM {
     }
 
     template <int RM, int RN>
-    NOINLINE void gemm(int m0, int m, int n0, int n) {
-        int ytiles = RM > 1 ? (m - m0) / RM : 1;
-        int xtiles = RN > 1 ? (n - n0) / RN : 1;
-        int tiles = xtiles * ytiles;
-        int duty = (tiles + nth - 1) / nth;
-        int start = duty * ith;
-        int end = start + duty;
+    NOINLINE void gemm(long m0, long m, long n0, long n) {
+        long ytiles = RM > 1 ? (m - m0) / RM : 1;
+        long xtiles = RN > 1 ? (n - n0) / RN : 1;
+        long tiles = xtiles * ytiles;
+        long duty = (tiles + nth - 1) / nth;
+        long start = duty * ith;
+        long end = start + duty;
         if (end > tiles)
             end = tiles;
-        for (int job = start; job < end; ++job) {
-            int ii = m0 + job / xtiles * RM;
-            int jj = n0 + job % xtiles * RN;
+        for (long job = start; job < end; ++job) {
+            long ii = m0 + job / xtiles * RM;
+            long jj = n0 + job % xtiles * RN;
             float32x4_t Cv[RN][RM] = {};
             for (int l = 0; l < k; ++l)
                 for (int j = 0; j < RN; ++j)
@@ -686,10 +686,10 @@ class tinyBLAS_Q0_ARM {
     const TA *const A;
     const TB *const B;
     TC *const C;
-    const int k;
-    const int lda;
-    const int ldb;
-    const int ldc;
+    const long k;
+    const long lda;
+    const long ldb;
+    const long ldc;
     const int ith;
     const int nth;
 };
@@ -699,20 +699,20 @@ class tinyBLAS_Q0_ARM {
 template <int CONFIG, typename TA, typename TB, typename TC>
 class tinyBLAS_Q0_AVX2 {
   public:
-    tinyBLAS_Q0_AVX2(int k, const TA *A, int lda, const TB *B, int ldb, TC *C, int ldc, int ith,
+    tinyBLAS_Q0_AVX2(long k, const TA *A, long lda, const TB *B, long ldb, TC *C, long ldc, int ith,
                      int nth)
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(int m, int n, int task) {
+    void matmul(long m, long n, int task) {
         if (task == GGML_TASK_TYPE_COMPUTE)
             mnpack(0, m, 0, n);
     }
 
   private:
-    void mnpack(int m0, int m, int n0, int n) {
-        int mc, nc, mp, np;
-        switch ((std::min(m - m0, 4) << 4) | std::min(n - n0, 4)) {
+    void mnpack(long m0, long m, long n0, long n) {
+        long mc, nc, mp, np;
+        switch ((MIN(m - m0, 4) << 4) | MIN(n - n0, 4)) {
 #if VECTOR_REGISTERS == 32
         case 0x44:
             mc = 4;
@@ -820,20 +820,20 @@ class tinyBLAS_Q0_AVX2 {
     }
 
     template <int RM, int RN>
-    NOINLINE void gemm(int m0, int m, int n0, int n) {
-        int ytiles = RM > 1 ? (m - m0) / RM : 1;
-        int xtiles = RN > 1 ? (n - n0) / RN : 1;
-        int tiles = xtiles * ytiles;
-        int duty = (tiles + nth - 1) / nth;
-        int start = duty * ith;
-        int end = start + duty;
+    NOINLINE void gemm(long m0, long m, long n0, long n) {
+        long ytiles = RM > 1 ? (m - m0) / RM : 1;
+        long xtiles = RN > 1 ? (n - n0) / RN : 1;
+        long tiles = xtiles * ytiles;
+        long duty = (tiles + nth - 1) / nth;
+        long start = duty * ith;
+        long end = start + duty;
         if (end > tiles)
             end = tiles;
-        for (int job = start; job < end; ++job) {
-            int ii = m0 + job / xtiles * RM;
-            int jj = n0 + job % xtiles * RN;
+        for (long job = start; job < end; ++job) {
+            long ii = m0 + job / xtiles * RM;
+            long jj = n0 + job % xtiles * RN;
             __m256 Cv[RN][RM] = {};
-            for (int l = 0; l < k; ++l)
+            for (long l = 0; l < k; ++l)
                 for (int j = 0; j < RN; ++j)
                     for (int i = 0; i < RM; ++i)
                         Cv[j][i] = madd(_mm256_set1_ps(unhalf(INDEX(A, lda, ii + i, l)->d) *
@@ -854,7 +854,11 @@ class tinyBLAS_Q0_AVX2 {
     }
 
     inline __m256i load(const block_q4_0 *b) {
-        return _mm256_sub_epi8(denibble(b->qs), _mm256_set1_epi8(8));
+        __m128i x = _mm_loadu_si128((const __m128i *)b->qs);
+        return _mm256_sub_epi8(_mm256_and_si256(_mm256_set1_epi8(15),
+                                                _mm256_insertf128_si256(_mm256_castsi128_si256(x),
+                                                                        _mm_srli_epi16(x, 4), 1)),
+                               _mm256_set1_epi8(8));
     }
 
     inline __m256 updot(__m256i u, __m256i s) {
@@ -867,20 +871,13 @@ class tinyBLAS_Q0_AVX2 {
         return _mm256_cvtepi32_ps(res);
     }
 
-    static inline __m256i denibble(const uint8_t *p) {
-        __m128i x = _mm_loadu_si128((const __m128i *)p);
-        return _mm256_and_si256(
-            _mm256_set1_epi8(15),
-            _mm256_insertf128_si256(_mm256_castsi128_si256(x), _mm_srli_epi16(x, 4), 1));
-    }
-
     const TA *const A;
     const TB *const B;
     TC *const C;
-    const int k;
-    const int lda;
-    const int ldb;
-    const int ldc;
+    const long k;
+    const long lda;
+    const long ldb;
+    const long ldc;
     const int ith;
     const int nth;
 };
@@ -919,8 +916,9 @@ class tinyBLAS_Q0_AVX2 {
  * @param Ctype is GGML data type of `C`
  * @return true if this function was able to service the matmul request
  */
-bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B, int ldb, void *C,
-                     int ldc, int ith, int nth, int task, int Atype, int Btype, int Ctype) {
+bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
+                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
+                     int Ctype) {
 
     assert(m >= 0);
     assert(n >= 0);
@@ -930,9 +928,6 @@ bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B,
     assert(ldc >= m);
     assert(nth > 0);
     assert(ith < nth);
-    assert(1ll * lda * m <= 0x7fffffff);
-    assert(1ll * ldb * n <= 0x7fffffff);
-    assert(1ll * ldc * n <= 0x7fffffff);
 
     if (Ctype != GGML_TYPE_F32)
         return false;
@@ -1198,7 +1193,7 @@ class MixMul {
             return false;
         if (!(rowptr_thought_ = allocate<uintptr_t>(ROW_ALIGN, experts * tokens * thinkers)))
             return false;
-        if (!(rowptr_count_ = allocate<int>(sizeof(int), experts)))
+        if (!(rowptr_count_ = allocate<long>(sizeof(long), experts)))
             return false;
         return true;
     }
@@ -1369,7 +1364,7 @@ class MixMul {
             for (int expert = 0; expert < experts; ++expert) {
                 BLAS tb{cols / BS,
                         (const TA *)((const char *)weights->data + expert * weights->nb[2]),
-                        (int)(weights->nb[1] / sizeof(TA)),
+                        (long)(weights->nb[1] / sizeof(TA)),
                         (const TB *)(rowptr_thought_ + expert * tokens * thinkers),
                         0,
                         (TC *)(rowptr_result_ + expert * tokens * thinkers),
@@ -1386,13 +1381,13 @@ class MixMul {
 
     void build_row_pointers(ggml_type vec_dot_type) {
         for (int expert = params->ith; expert < experts; expert += params->nth) {
-            int count = 0;
-            for (int token = 0; token < tokens; ++token)
+            long count = 0;
+            for (long token = 0; token < tokens; ++token)
                 for (int thinker = 0; thinker < thinkers; ++thinker)
-                    if (expert == *(const int *)((const char *)plan->data + token * plan->nb[1] +
-                                                 thinker * plan->nb[0])) {
-                        int row = count++;
-                        int idx = expert * thinkers * tokens + row;
+                    if (expert == *(const int32_t *)((const char *)plan->data +
+                                                     token * plan->nb[1] + thinker * plan->nb[0])) {
+                        long row = count++;
+                        long idx = expert * thinkers * tokens + row;
                         rowptr_result_[idx] =
                             (uintptr_t)((char *)result->data + token * result->nb[2] +
                                         thinker * result->nb[1]);
@@ -1410,8 +1405,8 @@ class MixMul {
     }
 
     void quantize_thought(ggml_type vec_dot_type) {
-        int chore = 0;
-        for (int token = 0; token < tokens; ++token)
+        long chore = 0;
+        for (long token = 0; token < tokens; ++token)
             for (int task = 0; task < tasks; ++task)
                 if (chore++ % params->nth == params->ith)
                     quantize_row(quantized_thought_ + token * tasks * ldq + task * ldq,
@@ -1421,7 +1416,7 @@ class MixMul {
     }
 
     void quantize_row(void *dst, const float *src, ggml_type type) {
-        assert((int)ggml_row_size(type, cols) <= ldq);
+        assert((long)ggml_row_size(type, cols) <= ldq);
         switch (type) {
         case GGML_TYPE_F16:
             ggml_fp32_to_fp16_row(src, (ggml_fp16_t *)dst, cols);
@@ -1438,14 +1433,14 @@ class MixMul {
     }
 
     template <typename T>
-    T *allocate(int align, int elems) {
+    T *allocate(size_t align, size_t elems) {
         T *res = nullptr;
         size_t need = sizeof(T) * elems;
         size_t base = allocated_;
         base += align - 1;
         base &= -align;
         size_t toto = base + need;
-        if (toto >= allocated_ && toto <= params->wsize && elems >= 0) {
+        if (toto >= allocated_ && toto <= params->wsize) {
             res = (T *)(wdata_ + base);
             allocated_ = toto;
         }
@@ -1457,20 +1452,20 @@ class MixMul {
     const ggml_tensor *const thought;
     const ggml_tensor *const plan;
     ggml_tensor *const result;
-    const int rows;
-    const int cols;
+    const long rows;
+    const long cols;
     const int experts;
     const int thinkers;
     const int tasks;
-    const int tokens;
-    const int ldq;
+    const long tokens;
+    const long ldq;
 
     // variables
     char *const wdata_;
     size_t allocated_;
 
     // shared memory
-    int *rowptr_count_ /*[experts]*/;
+    long *rowptr_count_ /*[experts]*/;
     char *quantized_thought_ /*[tokens][tasks][cols][2]*/;
     uintptr_t *rowptr_result_ /*[experts][tokens*thinkers]*/;
     uintptr_t *rowptr_thought_ /*[experts][tokens*thinkers]*/;

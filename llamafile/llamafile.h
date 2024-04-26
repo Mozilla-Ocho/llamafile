@@ -48,8 +48,8 @@ bool llamafile_has_metal(void);
 int llamafile_gpu_parse(const char *);
 const char *llamafile_describe_gpu(void);
 
-bool llamafile_sgemm(int, int, int, const void *, int, const void *, int, void *, int, int, int,
-                     int, int, int, int);
+bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, void *, long, int,
+                     int, int, int, int, int);
 
 struct ggml_tensor;
 struct ggml_compute_params;

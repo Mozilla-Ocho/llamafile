@@ -113,8 +113,9 @@ static const struct GemmFuncs {
  * @param Ctype is GGML data type of `C`
  * @return true if this function was able to service the matmul request
  */
-bool llamafile_sgemm(int m, int n, int k, const void *A, int lda, const void *B, int ldb, void *C,
-                     int ldc, int ith, int nth, int task, int Atype, int Btype, int Ctype) {
+bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
+                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
+                     int Ctype) {
     return funcs.sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype, Ctype);
 }
 
