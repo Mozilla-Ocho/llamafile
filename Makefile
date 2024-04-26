@@ -28,6 +28,7 @@ install:	llamafile/zipalign.1					\
 		llama.cpp/perplexity/perplexity.1			\
 		llama.cpp/llava/llava-quantize.1			\
 		o/$(MODE)/llamafile/zipalign				\
+		o/$(MODE)/llamafile/tokenize				\
 		o/$(MODE)/llama.cpp/main/main				\
 		o/$(MODE)/llama.cpp/imatrix/imatrix			\
 		o/$(MODE)/llama.cpp/quantize/quantize			\
@@ -35,6 +36,7 @@ install:	llamafile/zipalign.1					\
 		o/$(MODE)/llama.cpp/llava/llava-quantize
 	mkdir -p $(PREFIX)/bin
 	$(INSTALL) o/$(MODE)/llamafile/zipalign $(PREFIX)/bin/zipalign
+	$(INSTALL) o/$(MODE)/llamafile/tokenize $(PREFIX)/bin/llamafile-tokenize
 	$(INSTALL) o/$(MODE)/llama.cpp/main/main $(PREFIX)/bin/llamafile
 	$(INSTALL) o/$(MODE)/llama.cpp/imatrix/imatrix $(PREFIX)/bin/llamafile-imatrix
 	$(INSTALL) o/$(MODE)/llama.cpp/quantize/quantize $(PREFIX)/bin/llamafile-quantize
