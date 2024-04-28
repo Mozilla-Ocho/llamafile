@@ -666,16 +666,9 @@ extern "C" {
 
     // compute types
 
-    // NOTE: the INIT or FINALIZE pass is not scheduled unless explicitly enabled.
-    // This behavior was changed since https://github.com/ggerganov/llama.cpp/pull/1995.
-    enum ggml_task_type {
-        GGML_TASK_TYPE_INIT = 0,
-        GGML_TASK_TYPE_COMPUTE,
-        GGML_TASK_TYPE_FINALIZE,
-    };
+    struct ggml_barrier;
 
     struct ggml_compute_params {
-        enum ggml_task_type type;
 
         // ith = thread index, nth = number of threads
         int ith, nth;
@@ -683,7 +676,11 @@ extern "C" {
         // work buffer for all threads
         size_t wsize;
         void * wdata;
+
+        struct ggml_barrier *barrier;
     };
+
+    GGML_API void ggml_syncthreads(struct ggml_barrier *);
 
     // numa strategies
     enum ggml_numa_strategy {

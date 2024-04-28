@@ -107,16 +107,14 @@ static const struct GemmFuncs {
  * @param ldc is row stride of `C`
  * @param ith is thread id (must be less than `nth`)
  * @param nth is number of threads (must be greater than zero)
- * @param task is GGML task type
  * @param Atype is GGML data type of `A`
  * @param Btype is GGML data type of `B`
  * @param Ctype is GGML data type of `C`
  * @return true if this function was able to service the matmul request
  */
 bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
-                     int Ctype) {
-    return funcs.sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype, Ctype);
+                     void *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype) {
+    return funcs.sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, Atype, Btype, Ctype);
 }
 
 /**

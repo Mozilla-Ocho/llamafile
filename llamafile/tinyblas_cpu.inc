@@ -41,6 +41,7 @@
 #include "llama.cpp/ggml-impl.h"
 #include "llama.cpp/ggml-quants.h"
 #include "llamafile.h"
+#include "sgemm.h"
 #include <cosmo.h>
 
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -350,6 +351,10 @@ template <>
 inline __m512bh load(const ggml_bf16_t *p) {
     return (__m512bh)_mm512_loadu_ps((const float *)p);
 }
+template <>
+inline __m512bh load(const float *p) {
+    return _mm512_cvtne2ps_pbh(_mm512_loadu_ps(p + 16), _mm512_loadu_ps(p));
+}
 #endif // __AVX512BF16__
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -363,9 +368,8 @@ class tinyBLAS {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n, int task) {
-        if (task == GGML_TASK_TYPE_COMPUTE)
-            mnpack(0, m, 0, n);
+    void matmul(long m, long n) {
+        mnpack(0, m, 0, n);
     }
 
   private:
@@ -571,9 +575,8 @@ class tinyBLAS_Q0_ARM {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n, int task) {
-        if (task == GGML_TASK_TYPE_COMPUTE)
-            mnpack(0, m, 0, n);
+    void matmul(long m, long n) {
+        mnpack(0, m, 0, n);
     }
 
   private:
@@ -704,9 +707,8 @@ class tinyBLAS_Q0_AVX2 {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n, int task) {
-        if (task == GGML_TASK_TYPE_COMPUTE)
-            mnpack(0, m, 0, n);
+    void matmul(long m, long n) {
+        mnpack(0, m, 0, n);
     }
 
   private:
@@ -895,8 +897,7 @@ class tinyBLAS_Q0_AVX2 {
  *
  * For example, for single-threaded single-precision GEMM you can say
  *
- *     llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc,
- *                     0, 1, GGML_TASK_TYPE_COMPUTE,
+ *     llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1,
  *                     GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32);
  *
  * @param m is rows in `A` and `C`
@@ -910,15 +911,13 @@ class tinyBLAS_Q0_AVX2 {
  * @param ldc is row stride of `C`
  * @param ith is thread id (must be less than `nth`)
  * @param nth is number of threads (must be greater than zero)
- * @param task is GGML task type
  * @param Atype is GGML data type of `A`
  * @param Btype is GGML data type of `B`
  * @param Ctype is GGML data type of `C`
  * @return true if this function was able to service the matmul request
  */
 bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
-                     int Ctype) {
+                     void *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype) {
 
     assert(m >= 0);
     assert(n >= 0);
@@ -942,14 +941,14 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 16, __m512, __m512, float, float, float> tb{
             k, (const float *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__AVX__) || defined(__AVX2__)
         if (k % 8)
             return false;
         tinyBLAS<0, 8, __m256, __m256, float, float, float> tb{
             k, (const float *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_NEON)
         if (n < 4)
@@ -958,7 +957,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, float, float, float> tb{
             k, (const float *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return false;
@@ -969,20 +968,24 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX512BF16__)
         if (k % 32)
             return false;
+        if (Btype == GGML_TYPE_F32 && m * n < 500000) {
+            tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, float, float> tb{
+                k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
+            tb.matmul(m, n);
+            return true;
+        }
         if (Btype != GGML_TYPE_BF16)
             return false;
         tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, ggml_bf16_t, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const ggml_bf16_t *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__AVX512F__)
         if (k % 16)
             return false;
-        if (Btype != GGML_TYPE_F32)
-            return false;
         tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, float, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__AVX2__)
         if (k % 8)
@@ -991,7 +994,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 8, __m256, __m256, ggml_bf16_t, float, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
         if (k % 4)
@@ -1000,7 +1003,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_bf16_t, float, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return false;
@@ -1011,27 +1014,41 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX512F__)
         if (k % 16)
             return false;
-        if (Btype != GGML_TYPE_F32)
+        if (Btype == GGML_TYPE_F32 && m * n < 500000) {
+            tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, float, float> tb{
+                k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
+            tb.matmul(m, n);
+            return true;
+        }
+        if (Btype != GGML_TYPE_F16)
             return false;
-        tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, float, float> tb{
-            k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, ggml_fp16_t, float> tb{
+            k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, (float *)C, ldc, ith, nth};
+        tb.matmul(m, n);
         return true;
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
         if (X86_HAVE(F16C)) {
             if (k % 8)
                 return false;
-            if (Btype != GGML_TYPE_F32)
+            if (0 && Btype == GGML_TYPE_F32 && m * n < 500000) {
+                tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, float> tb{
+                    k,  (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith,
+                    nth};
+                tb.matmul(m, n);
+                return true;
+            }
+            if (Btype != GGML_TYPE_F16)
                 return false;
-            tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, float> tb{
-                k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, ggml_fp16_t, float> tb{
+                k,  (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, (float *)C, ldc, ith,
+                nth};
+            tb.matmul(m, n);
             return true;
         } else {
             return false;
         }
 #elif defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER)
-        if (n < 8)
+        if (n < 2)
             return false;
         if (k % 8)
             return false;
@@ -1039,7 +1056,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 8, float16x8_t, float16x8_t, ggml_fp16_t, ggml_fp16_t, float> tb{
             k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
         if (k % 4)
@@ -1048,7 +1065,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_fp16_t, float, float> tb{
             k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return false;
@@ -1061,12 +1078,12 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX2__) || defined(__AVX512F__)
         tinyBLAS_Q0_AVX2<0, block_q8_0, block_q8_0, float> tb{
             k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
         tinyBLAS_Q0_ARM<0, block_q8_0, block_q8_0, float> tb{
             k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return false;
@@ -1079,12 +1096,12 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX2__) || defined(__AVX512F__)
         tinyBLAS_Q0_AVX2<0, block_q4_0, block_q8_0, float> tb{
             k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
         tinyBLAS_Q0_ARM<0, block_q4_0, block_q8_0, float> tb{
             k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return false;
@@ -1106,7 +1123,6 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     (void)ldc;
     (void)ith;
     (void)nth;
-    (void)task;
     (void)Atype;
     (void)Btype;
     (void)Ctype;
@@ -1352,31 +1368,25 @@ class MixMul {
     bool mixmat() {
         if (cols % KN)
             return false;
-        switch (params->type) {
-        case GGML_TASK_TYPE_INIT:
-            if (thought->type != ggml_type_trait<TB>::id)
-                quantize_thought(ggml_type_trait<TB>::id);
-            build_row_pointers(ggml_type_trait<TB>::id);
-            return true;
-        case GGML_TASK_TYPE_COMPUTE:
-            assert(!(cols % BS));
-            assert(!(weights->nb[1] % sizeof(TA)));
-            for (int expert = 0; expert < experts; ++expert) {
-                BLAS tb{cols / BS,
-                        (const TA *)((const char *)weights->data + expert * weights->nb[2]),
-                        (long)(weights->nb[1] / sizeof(TA)),
-                        (const TB *)(rowptr_thought_ + expert * tokens * thinkers),
-                        0,
-                        (TC *)(rowptr_result_ + expert * tokens * thinkers),
-                        0,
-                        params->ith,
-                        params->nth};
-                tb.matmul(rows, rowptr_count_[expert], GGML_TASK_TYPE_COMPUTE);
-            }
-            return true;
-        default:
-            return true;
+        if (thought->type != ggml_type_trait<TB>::id)
+            quantize_thought(ggml_type_trait<TB>::id);
+        build_row_pointers(ggml_type_trait<TB>::id);
+        ggml_syncthreads(params->barrier);
+        assert(!(cols % BS));
+        assert(!(weights->nb[1] % sizeof(TA)));
+        for (int expert = 0; expert < experts; ++expert) {
+            BLAS tb{cols / BS,
+                    (const TA *)((const char *)weights->data + expert * weights->nb[2]),
+                    (long)(weights->nb[1] / sizeof(TA)),
+                    (const TB *)(rowptr_thought_ + expert * tokens * thinkers),
+                    0,
+                    (TC *)(rowptr_result_ + expert * tokens * thinkers),
+                    0,
+                    params->ith,
+                    params->nth};
+            tb.matmul(rows, rowptr_count_[expert]);
         }
+        return true;
     }
 
     void build_row_pointers(ggml_type vec_dot_type) {
