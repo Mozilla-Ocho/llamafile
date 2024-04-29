@@ -68,6 +68,9 @@ namespace {
 inline float unhalf(ggml_fp16_t d) {
     return GGML_FP16_TO_FP32(d);
 }
+inline float unhalf(ggml_bf16_t d) {
+    return GGML_BF16_TO_FP32(d);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // MATRIX MEMORY INDEXING
@@ -279,6 +282,19 @@ inline float hsum(__m512 x) {
 
 template <typename T, typename U>
 T load(const U *);
+
+template <>
+inline float load(const float *p) {
+    return *p;
+}
+template <>
+inline float load(const ggml_fp16_t *p) {
+    return unhalf(*p);
+}
+template <>
+inline float load(const ggml_bf16_t *p) {
+    return unhalf(*p);
+}
 
 #if defined(__ARM_NEON)
 template <>
@@ -968,7 +984,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX512BF16__)
         if (k % 32)
             return false;
-        if (Btype == GGML_TYPE_F32 && m * n < 500000) {
+        if (Btype == GGML_TYPE_F32 && n < 2) {
             tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, float, float> tb{
                 k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
             tb.matmul(m, n);
@@ -1014,7 +1030,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX512F__)
         if (k % 16)
             return false;
-        if (Btype == GGML_TYPE_F32 && m * n < 500000) {
+        if (Btype == GGML_TYPE_F32 && n < 2) {
             tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, float, float> tb{
                 k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
             tb.matmul(m, n);
@@ -1030,7 +1046,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
         if (X86_HAVE(F16C)) {
             if (k % 8)
                 return false;
-            if (0 && Btype == GGML_TYPE_F32 && m * n < 500000) {
+            if (Btype == GGML_TYPE_F32 && n < 2) {
                 tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, float> tb{
                     k,  (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith,
                     nth};
@@ -1184,8 +1200,8 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 namespace {
 class MixMul {
   public:
-    MixMul(const ggml_compute_params *params, const ggml_tensor *weights,
-           const ggml_tensor *thought, const ggml_tensor *plan, ggml_tensor *result)
+    MixMul(ggml_compute_params *params, const ggml_tensor *weights, const ggml_tensor *thought,
+           const ggml_tensor *plan, ggml_tensor *result)
         : params(params),
           weights(weights),
           thought(thought),
@@ -1368,10 +1384,11 @@ class MixMul {
     bool mixmat() {
         if (cols % KN)
             return false;
+        ggml_acquire_wdata(params);
         if (thought->type != ggml_type_trait<TB>::id)
             quantize_thought(ggml_type_trait<TB>::id);
         build_row_pointers(ggml_type_trait<TB>::id);
-        ggml_syncthreads(params->barrier);
+        ggml_release_wdata(params);
         assert(!(cols % BS));
         assert(!(weights->nb[1] % sizeof(TA)));
         for (int expert = 0; expert < experts; ++expert) {
@@ -1457,7 +1474,7 @@ class MixMul {
         return res;
     }
 
-    const ggml_compute_params *const params;
+    ggml_compute_params *const params;
     const ggml_tensor *const weights;
     const ggml_tensor *const thought;
     const ggml_tensor *const plan;
@@ -1485,7 +1502,7 @@ class MixMul {
 /**
  * Performs "mixture of experts" tensor multiplication on CPU.
  */
-bool llamafile_mixmul(const ggml_compute_params *params, const ggml_tensor *weights,
+bool llamafile_mixmul(ggml_compute_params *params, const ggml_tensor *weights,
                       const ggml_tensor *thought, const ggml_tensor *plan, ggml_tensor *result) {
     MixMul mm{params, weights, thought, plan, result};
     return mm.allocate_shared_memory() && mm.mixmul();

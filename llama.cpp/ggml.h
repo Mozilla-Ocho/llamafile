@@ -677,10 +677,13 @@ extern "C" {
         size_t wsize;
         void * wdata;
 
-        struct ggml_barrier *barrier;
+        struct ggml_barrier * barrier;
+        bool limbo;
     };
 
-    GGML_API void ggml_syncthreads(struct ggml_barrier *);
+    GGML_API void   ggml_syncthreads  (struct ggml_compute_params *);
+    GGML_API void * ggml_acquire_wdata(struct ggml_compute_params *);
+    GGML_API void   ggml_release_wdata(struct ggml_compute_params *);
 
     // numa strategies
     enum ggml_numa_strategy {

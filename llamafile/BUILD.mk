@@ -34,7 +34,6 @@ o/$(MODE)/llamafile/simple:				\
 
 o/$(MODE)/llamafile/tokenize:				\
 		o/$(MODE)/llamafile/tokenize.o		\
-		o/$(MODE)/llama.cpp/llava/llava.a	\
 		o/$(MODE)/llama.cpp/llama.cpp.a
 
 .PHONY: o/$(MODE)/llamafile

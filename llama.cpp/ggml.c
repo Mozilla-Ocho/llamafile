@@ -2195,42 +2195,6 @@ static_assert(GGML_UNARY_OP_COUNT == 12, "GGML_UNARY_OP_COUNT != 12");
 static_assert(sizeof(struct ggml_object)%GGML_MEM_ALIGN == 0, "ggml_object size must be a multiple of GGML_MEM_ALIGN");
 static_assert(sizeof(struct ggml_tensor)%GGML_MEM_ALIGN == 0, "ggml_tensor size must be a multiple of GGML_MEM_ALIGN");
 
-// WARN:
-// Mis-configuration can lead to problem that's hard to reason about:
-// * At best  it crash or talks nosense.
-// * At worst it talks slightly difference but hard to perceive.
-//
-// An op has to enable INIT or FINALIZE when any of it's branch needs that pass.
-// Take care about compile options (e.g., GGML_USE_xxx).
-static bool GGML_OP_HAS_INIT    [GGML_OP_COUNT] = { 0 };
-static bool GGML_OP_HAS_FINALIZE[GGML_OP_COUNT] = { 0 };
-
-static void ggml_setup_op_has_task_pass(void) {
-    {   // INIT
-        bool * p = GGML_OP_HAS_INIT;
-
-        p[GGML_OP_ACC                    ] = true;
-        p[GGML_OP_MUL_MAT                ] = true;
-        p[GGML_OP_MUL_MAT_ID             ] = true;
-        p[GGML_OP_OUT_PROD               ] = true;
-        p[GGML_OP_SET                    ] = true;
-        p[GGML_OP_GET_ROWS_BACK          ] = true;
-        p[GGML_OP_DIAG_MASK_INF          ] = true;
-        p[GGML_OP_DIAG_MASK_ZERO         ] = true;
-        p[GGML_OP_CONV_TRANSPOSE_1D      ] = true;
-        p[GGML_OP_CONV_TRANSPOSE_2D      ] = true;
-        p[GGML_OP_FLASH_ATTN_BACK        ] = true;
-        p[GGML_OP_CROSS_ENTROPY_LOSS     ] = true;
-        p[GGML_OP_ADD_REL_POS            ] = true;
-    }
-
-    {   // FINALIZE
-        bool * p = GGML_OP_HAS_FINALIZE;
-
-        p[GGML_OP_CROSS_ENTROPY_LOSS     ] = true;
-    }
-}
-
 //
 // ggml context
 //
@@ -2766,8 +2730,6 @@ struct ggml_context * ggml_init(struct ggml_init_params params) {
 #if defined(GGML_USE_CLBLAST)
         ggml_cl_init();
 #endif
-
-        ggml_setup_op_has_task_pass();
 
         is_first_call = false;
     }
@@ -7106,6 +7068,7 @@ struct ggml_tensor * ggml_cross_entropy_loss_back(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// ggml synchronization primitives
 
 struct ggml_barrier {
     int nth;
@@ -7125,7 +7088,9 @@ int ggml_delay(int backoff) {
     return backoff;
 }
 
-void ggml_syncthreads(struct ggml_barrier *b) {
+// creates barrier and blocks until all threads call this
+void ggml_syncthreads(struct ggml_compute_params * params) {
+    struct ggml_barrier * b = params->barrier;
     unsigned phase = atomic_load_explicit(&b->phase, memory_order_relaxed);
     if (atomic_fetch_add_explicit(&b->count, 1, memory_order_acq_rel) + 1 == b->nth) {
         atomic_store_explicit(&b->count, 0, memory_order_relaxed);
@@ -7136,6 +7101,26 @@ void ggml_syncthreads(struct ggml_barrier *b) {
             backoff = ggml_delay(backoff);
     }
 }
+
+// ops must call this before accessing wdata
+// otherwise overlapping threads on previous op might clobber
+void *ggml_acquire_wdata(struct ggml_compute_params * params) {
+    if (params->limbo) {
+        ggml_syncthreads(params);
+    }
+    params->limbo = true;
+    return params->wdata;
+}
+
+// ops should call this after writing to wdata before reading
+void ggml_release_wdata(struct ggml_compute_params * params) {
+    if (params->limbo) {
+        ggml_syncthreads(params);
+        params->limbo = false;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 void ggml_set_param(
         struct ggml_context * ctx,
@@ -7262,7 +7247,7 @@ static void ggml_compute_forward_dup_f16(
                 }
             } else if (type_traits[dst->type].from_float) {
                 ggml_from_float_t const quantize_row_q = type_traits[dst->type].from_float;
-                float * src0_f32 = (float *) params->wdata + (ne00 + CACHE_LINE_SIZE_F32) * ith;
+                float * src0_f32 = (float *) ggml_acquire_wdata(params) + (ne00 + CACHE_LINE_SIZE_F32) * ith;
 
                 size_t id = 0;
                 size_t rs = nb0 * (ne00 / ggml_blck_size(dst->type));
@@ -8125,7 +8110,7 @@ static void ggml_compute_forward_add_q_f32(
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
 
-    float * wdata = (float *) params->wdata + (ne00 + CACHE_LINE_SIZE_F32) * ith;
+    float * wdata = (float *) ggml_acquire_wdata(params) + (ne00 + CACHE_LINE_SIZE_F32) * ith;
 
     for (int ir = ir0; ir < ir1; ++ir) {
         // src0 indices
@@ -8410,7 +8395,7 @@ static void ggml_compute_forward_add1_q_f32(
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
 
-    float * wdata = (float *) params->wdata + (ne0 + CACHE_LINE_SIZE_F32) * ith;
+    float * wdata = (float *) ggml_acquire_wdata(params) + (ne0 + CACHE_LINE_SIZE_F32) * ith;
 
     for (int ir = ir0; ir < ir1; ++ir) {
         // src0 and dst are same shape => same indices
@@ -8515,7 +8500,7 @@ static void ggml_compute_forward_acc_f32(
                 ((char *) src0->data),
                 ggml_nbytes(dst));
         }
-        ggml_syncthreads(params->barrier);
+        ggml_syncthreads(params);
     }
 
     const int ith = params->ith;
@@ -10704,7 +10689,7 @@ static void ggml_compute_forward_mul_mat(
 #if defined(GGML_USE_CLBLAST)
     if (ggml_cl_can_mul_mat(src0, src1, dst)) {
         if (!ith) {
-            ggml_cl_mul_mat(src0, src1, dst, params->wdata, params->wsize);
+            ggml_cl_mul_mat(src0, src1, dst, ggml_acquire_wdata(params), params->wsize);
         }
         return;
     }
@@ -10716,7 +10701,9 @@ static void ggml_compute_forward_mul_mat(
         const size_t  desired_wsize = ne13*ne12*ne_plane*sizeof(float);
         UNUSED(desired_wsize);
 
+        void * wdata_ptr = 0;
         if (type != GGML_TYPE_F32) {
+            wdata_ptr = ggml_acquire_wdata(params);
             assert(params->wsize >= desired_wsize);
             // parallelize by src0 rows
             for (int64_t i13 = 0; i13 < ne13; i13++) {
@@ -10726,7 +10713,7 @@ static void ggml_compute_forward_mul_mat(
                     const int64_t i02 = i12/r2;
 
                     const void           *       x        = (char *)  src0->data    + i02*nb02          + i03*nb03;
-                    float          * const wdata    = (float *) params->wdata + i13*ne12*ne_plane + i12*ne_plane;
+                    float          * const wdata    = (float *) wdata_ptr + i13*ne12*ne_plane + i12*ne_plane;
                     ggml_to_float_t  const to_float = type_traits[type].to_float;
 
                     for (int64_t i01 = ith; i01 < ne01; i01 += nth) {
@@ -10734,7 +10721,7 @@ static void ggml_compute_forward_mul_mat(
                     }
                 }
             }
-            ggml_syncthreads(params->barrier);
+            ggml_release_wdata(params);
         }
 
         // perform sgemm, parallelization controlled by blas lib
@@ -10753,7 +10740,7 @@ static void ggml_compute_forward_mul_mat(
                       float * d = (float *) ((char *)  dst->data + i12*nb2  + i13*nb3);
 
                 if (type != GGML_TYPE_F32) {
-                    x = (float *) params->wdata + i13*ne12*ne_plane + i12*ne_plane;
+                    x = (float *) wdata_ptr + i13*ne12*ne_plane + i12*ne_plane;
                 }
 
                 cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
@@ -10792,8 +10779,9 @@ static void ggml_compute_forward_mul_mat(
 UseGgmlGemm1:;
 #endif
 
+    void * wdata_ptr = 0;
     if (src1->type != vec_dot_type) {
-        char * wdata = params->wdata;
+        char * wdata = wdata_ptr = ggml_acquire_wdata(params);
         const size_t row_size = ggml_row_size(vec_dot_type, ne10);
 
         assert(params->wsize >= ne11*ne12*ne13*row_size);
@@ -10810,10 +10798,10 @@ UseGgmlGemm1:;
             }
         }
 
-        ggml_syncthreads(params->barrier);
+        ggml_release_wdata(params);
     }
 
-    const void * wdata    = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+    const void * wdata    = wdata_ptr ? wdata_ptr : src1->data;
     const size_t row_size = ggml_row_size(vec_dot_type, ne10);
 
 #if GGML_USE_LLAMAFILE
@@ -10863,9 +10851,8 @@ UseGgmlGemm2:;
 
     //printf("ir010 = %6lld, ir011 = %6lld, ir110 = %6lld, ir111 = %6lld\n", ir010, ir011, ir110, ir111);
 
-    // threads with no work simply yield (not sure if it helps)
+    // threads with no work drop out
     if (ir010 >= ir011 || ir110 >= ir111) {
-        sched_yield();
         return;
     }
 
@@ -10981,9 +10968,10 @@ static void ggml_compute_forward_mul_mat_id(
     const int n_ids = ids->ne[0]; // n_expert_used
     const int n_as  = ne02;       // n_expert
 
+    char * wdata_base = ggml_acquire_wdata(params);
     char * wdata_src1_end = (src1->type == vec_dot_type) ?
-            (char *) params->wdata :
-            (char *) params->wdata + GGML_PAD(ggml_row_size(vec_dot_type, ggml_nelements(src1)), sizeof(int64_t));
+            wdata_base :
+            wdata_base + GGML_PAD(ggml_row_size(vec_dot_type, ggml_nelements(src1)), sizeof(int64_t));
 
     struct mmid_row_mapping {
         int32_t i1;
@@ -10994,7 +10982,7 @@ static void ggml_compute_forward_mul_mat_id(
     struct mmid_row_mapping * matrix_rows = (struct mmid_row_mapping *)(matrix_row_counts + n_as); // [n_as][ne11]
 
     if (!ith) {
-        char * wdata = params->wdata;
+        char * wdata = wdata_base;
         if (src1->type != vec_dot_type) {
             const size_t row_size = ggml_row_size(vec_dot_type, ne10);
 
@@ -11027,8 +11015,8 @@ static void ggml_compute_forward_mul_mat_id(
                 matrix_row_counts[i02] += 1;
             }
         }
-   }
-   ggml_syncthreads(params->barrier);
+    }
+    ggml_release_wdata(params);
 
     // compute each matrix multiplication in sequence
     for (int cur_a = 0; cur_a < n_as; ++cur_a) {
@@ -11040,7 +11028,7 @@ static void ggml_compute_forward_mul_mat_id(
 
         const char * src0_cur = (const char *) src0->data + cur_a*nb02;
 
-        const void * wdata    = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+        const void * wdata    = (src1->type == vec_dot_type) ? src1->data : wdata_base;
         const size_t row_size = ggml_row_size(vec_dot_type, ne10);
 
         const int64_t nr0 = ne01; // src0 rows
@@ -11065,7 +11053,6 @@ static void ggml_compute_forward_mul_mat_id(
 
         // threads with no work simply yield (not sure if it helps)
         //if (ir010 >= ir011 || ir110 >= ir111) {
-        //    sched_yield();
         //    continue;
         //}
 
@@ -11171,7 +11158,7 @@ static void ggml_compute_forward_out_prod_f32(
 #endif
         ggml_vec_set_f32(ne0*ne1*ne2*ne3, dst->data, 0);
     }
-    ggml_syncthreads(params->barrier);
+    ggml_syncthreads(params);
 
 #if defined(GGML_USE_ACCELERATE) || defined(GGML_USE_OPENBLAS)
     if (use_blas) {
@@ -11352,7 +11339,7 @@ static void ggml_compute_forward_out_prod_q_f32(
         ggml_vec_set_f32(ne0*ne1*ne2*ne3, dst->data, 0);
         return;
     }
-    ggml_syncthreads(params->barrier);
+    ggml_syncthreads(params);
 
     // parallelize by last three dimensions
 
@@ -11373,7 +11360,7 @@ static void ggml_compute_forward_out_prod_q_f32(
     //       for i0:
     //         dst[i0,i1,i2,i3] += src0[i0,i01,i2,i3] * src1[i1,i01,i2,i3]
 
-    float * wdata = (float *) params->wdata + (ne0 + CACHE_LINE_SIZE_F32) * ith;
+    float * wdata = (float *) ggml_acquire_wdata(params) + (ne0 + CACHE_LINE_SIZE_F32) * ith;
 
     for (int64_t ir = ir0; ir < ir1; ++ir) {
         // dst indices
@@ -11551,7 +11538,7 @@ static void ggml_compute_forward_set_f32(
                 ((char *) src0->data),
                 ggml_nbytes(dst));
         }
-        ggml_syncthreads(params->barrier);
+        ggml_syncthreads(params);
     }
 
     const int ith = params->ith;
@@ -11944,7 +11931,7 @@ static void ggml_compute_forward_get_rows_back_f32_f16(
     if (!params->ith) {
         memset(dst->data, 0, ggml_nbytes(dst));
     }
-    ggml_syncthreads(params->barrier);
+    ggml_syncthreads(params);
 
     const int nc = src0->ne[0];
     const int nr = ggml_nelements(src1);
@@ -12126,7 +12113,7 @@ static void ggml_compute_forward_diag_mask_f32(
                 ((char *) src0->data),
                 ggml_nbytes(dst));
         }
-        ggml_syncthreads(params->barrier);
+        ggml_syncthreads(params);
     }
 
     // TODO: handle transposed/permuted matrices
@@ -12232,7 +12219,7 @@ static void ggml_compute_forward_soft_max_f32(
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
 
-    float * wp = (float *) params->wdata + (nc + CACHE_LINE_SIZE_F32) * ith;
+    float * wp = (float *) ggml_acquire_wdata(params) + (nc + CACHE_LINE_SIZE_F32) * ith;
 
     // when max_bias <= 0.0f, src2 is not used and we default it to src0 to avoid branching
     float * pos = src2 ? (float *) src2->data : src0->data;
@@ -12795,12 +12782,13 @@ static void ggml_compute_forward_rope_f32(
     const float sin_sign = forward ? 1.0f : -1.0f;
 
     const int32_t * pos = (const int32_t *) src1->data;
+    void * wdata_base = ggml_acquire_wdata(params);
 
     for (int64_t i3 = 0; i3 < ne3; i3++) {
         for (int64_t i2 = 0; i2 < ne2; i2++) {
             const int64_t p = pos[i2];
 
-            float * cache = (float *) params->wdata + (ne0 + CACHE_LINE_SIZE_F32)*ith;
+            float * cache = (float *) wdata_base + (ne0 + CACHE_LINE_SIZE_F32)*ith;
             if (!is_glm && !is_neox) { // TODO: cache sin/cos for glm, neox
                 ggml_rope_cache_init(p, freq_scale, corr_dims, ne0, ext_factor, attn_factor, cache, sin_sign, theta_scale);
             }
@@ -12962,12 +12950,13 @@ static void ggml_compute_forward_rope_f16(
     const float sin_sign = forward ? 1.0f : -1.0f;
 
     const int32_t * pos = (const int32_t *) src1->data;
+    void * wdata_base = ggml_acquire_wdata(params);
 
     for (int64_t i3 = 0; i3 < ne3; i3++) {
         for (int64_t i2 = 0; i2 < ne2; i2++) {
             const int64_t p = pos[i2];
 
-            float * cache = (float *) params->wdata + (ne0 + CACHE_LINE_SIZE_F32)*ith;
+            float * cache = (float *) wdata_base + (ne0 + CACHE_LINE_SIZE_F32)*ith;
             if (!is_glm && !is_neox) { // TODO: cache sin/cos for glm, neox
                 ggml_rope_cache_init(p, freq_scale, corr_dims, ne0, ext_factor, attn_factor, cache, sin_sign, theta_scale);
             }
@@ -13133,15 +13122,17 @@ static void ggml_compute_forward_conv_transpose_1d_f16_f32(
 
     const int nk = ne00*ne01*ne02;
 
+    void * wdata_base = ggml_acquire_wdata(params);
+
     GGML_ASSERT(nb00 == sizeof(ggml_fp16_t));
     GGML_ASSERT(nb10 == sizeof(float));
 
     if (!ith) {
-        memset(params->wdata, 0, params->wsize);
+        memset(wdata_base, 0, params->wsize);
 
         // permute kernel data (src0) from (K x Cout x Cin) to (Cin x K x Cout)
         {
-            ggml_fp16_t * const wdata = (ggml_fp16_t *) params->wdata + 0;
+            ggml_fp16_t * const wdata = (ggml_fp16_t *) wdata_base + 0;
 
             for (int64_t i02 = 0; i02 < ne02; i02++) {
                 for (int64_t i01 = 0; i01 < ne01; i01++) {
@@ -13156,7 +13147,7 @@ static void ggml_compute_forward_conv_transpose_1d_f16_f32(
 
         // permute source data (src1) from (L x Cin) to (Cin x L)
         {
-            ggml_fp16_t * const wdata = (ggml_fp16_t *) params->wdata + nk;
+            ggml_fp16_t * const wdata = (ggml_fp16_t *) wdata_base + nk;
             ggml_fp16_t * dst_data = wdata;
 
             for (int64_t i11 = 0; i11 < ne11; i11++) {
@@ -13170,7 +13161,7 @@ static void ggml_compute_forward_conv_transpose_1d_f16_f32(
         // need to zero dst since we are accumulating into it
         memset(dst->data, 0, ggml_nbytes(dst));
     }
-    ggml_syncthreads(params->barrier);
+    ggml_release_wdata(params);
 
     const int32_t s0 = ((const int32_t*)(dst->op_params))[0];
 
@@ -13184,7 +13175,7 @@ static void ggml_compute_forward_conv_transpose_1d_f16_f32(
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
 
-    ggml_fp16_t * const wdata     = (ggml_fp16_t *) params->wdata + 0;
+    ggml_fp16_t * const wdata     = (ggml_fp16_t *) wdata_base + 0;
     ggml_fp16_t * const wdata_src = wdata + nk;
 
     for (int i1 = ir0; i1 < ir1; i1++) {
@@ -13224,15 +13215,17 @@ static void ggml_compute_forward_conv_transpose_1d_f32(
 
     const int nk = ne00*ne01*ne02;
 
+    void * wdata_base = ggml_acquire_wdata(params);
+
     GGML_ASSERT(nb00 == sizeof(float));
     GGML_ASSERT(nb10 == sizeof(float));
 
     if (!ith) {
-        memset(params->wdata, 0, params->wsize);
+        memset(wdata_base, 0, params->wsize);
 
         // prepare kernel data (src0) from (K x Cout x Cin) to (Cin x K x Cout)
         {
-            float * const wdata = (float *) params->wdata + 0;
+            float * const wdata = (float *) wdata_base + 0;
 
             for (int64_t i02 = 0; i02 < ne02; i02++) {
                 for (int64_t i01 = 0; i01 < ne01; i01++) {
@@ -13247,7 +13240,7 @@ static void ggml_compute_forward_conv_transpose_1d_f32(
 
         // prepare source data (src1)
         {
-            float * const wdata = (float *) params->wdata + nk;
+            float * const wdata = (float *) wdata_base + nk;
             float * dst_data = wdata;
 
             for (int64_t i11 = 0; i11 < ne11; i11++) {
@@ -13261,7 +13254,7 @@ static void ggml_compute_forward_conv_transpose_1d_f32(
         // need to zero dst since we are accumulating into it
         memset(dst->data, 0, ggml_nbytes(dst));
     }
-    ggml_syncthreads(params->barrier);
+    ggml_release_wdata(params);
 
     const int32_t s0 = ((const int32_t*)(dst->op_params))[0];
 
@@ -13275,7 +13268,7 @@ static void ggml_compute_forward_conv_transpose_1d_f32(
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
 
-    float * const wdata     = (float *) params->wdata + 0;
+    float * const wdata     = (float *) wdata_base + 0;
     float * const wdata_src = wdata + nk;
 
     for (int i1 = ir0; i1 < ir1; i1++) {
@@ -13518,15 +13511,17 @@ static void ggml_compute_forward_conv_transpose_2d(
 
     const int nk = ne00*ne01*ne02*ne03;
 
+    void * wdata_base = ggml_acquire_wdata(params);
+
     GGML_ASSERT(nb00 == sizeof(ggml_fp16_t));
     GGML_ASSERT(nb10 == sizeof(float));
 
     if (!ith) {
-        memset(params->wdata, 0, params->wsize);
+        memset(wdata_base, 0, params->wsize);
 
         // permute kernel data (src0) from (Kw x Kh x Cout x Cin) to (Cin x Kw x Kh x Cout)
         {
-            ggml_fp16_t * const wdata = (ggml_fp16_t *) params->wdata + 0;
+            ggml_fp16_t * const wdata = (ggml_fp16_t *) wdata_base + 0;
 
             for (int64_t i03 = 0; i03 < ne03; i03++) {
                 for (int64_t i02 = 0; i02 < ne02; i02++) {
@@ -13543,7 +13538,7 @@ static void ggml_compute_forward_conv_transpose_2d(
 
         // permute source data (src1) from (Sw x Sh x Cin) to (Cin x Sw x Sh)
         {
-            ggml_fp16_t * const wdata = (ggml_fp16_t *) params->wdata + nk;
+            ggml_fp16_t * const wdata = (ggml_fp16_t *) wdata_base + nk;
             for (int i12 = 0; i12 < ne12; i12++) {
                 for (int i11 = 0; i11 < ne11; i11++) {
                     const float * const src = (float *)((char *) src1->data + i12*nb12 + i11*nb11);
@@ -13557,7 +13552,7 @@ static void ggml_compute_forward_conv_transpose_2d(
 
         memset(dst->data, 0, ggml_nbytes(dst));
     }
-    ggml_syncthreads(params->barrier);
+    ggml_release_wdata(params);
 
     const int32_t stride = ggml_get_op_params_i32(dst, 0);
 
@@ -13571,7 +13566,7 @@ static void ggml_compute_forward_conv_transpose_2d(
     const int ip0 = dp*ith;
     const int ip1 = MIN(ip0 + dp, np);
 
-    ggml_fp16_t * const wdata = (ggml_fp16_t *) params->wdata + 0;
+    ggml_fp16_t * const wdata = (ggml_fp16_t *) wdata_base + 0;
     ggml_fp16_t * const wdata_src = wdata + nk;
 
     for (int i2 = ip0; i2 < ip1; i2++) { // Cout
@@ -14072,6 +14067,8 @@ static void ggml_compute_forward_flash_attn_f32(
 
     const float scale = 1.0f/sqrtf(D);
 
+    void * wdata_base = ggml_acquire_wdata(params);
+
     //printf("P=%d N=%d D=%d ir0=%d ir1=%d scale = %f\n", P, N, D, ir0, ir1, scale);
 
     for (int ir = ir0; ir < ir1; ++ir) {
@@ -14080,7 +14077,7 @@ static void ggml_compute_forward_flash_attn_f32(
         const int iq2 = (ir - iq3*neq2*neq1)/neq1;
         const int iq1 = (ir - iq3*neq2*neq1 - iq2*neq1);
 
-        float * S = (float *) params->wdata + ith*(Mup + CACHE_LINE_SIZE_F32);
+        float * S = (float *) wdata_base + ith*(Mup + CACHE_LINE_SIZE_F32);
 
         for (int i = M; i < Mup; ++i) {
             S[i] = -INFINITY;
@@ -14256,6 +14253,8 @@ static void ggml_compute_forward_flash_attn_f16(
 
     const float scale = 1.0f/sqrtf(D);
 
+    void * wdata_base = ggml_acquire_wdata(params);
+
     //printf("P=%d N=%d D=%d ir0=%d ir1=%d scale = %f\n", P, N, D, ir0, ir1, scale);
 
     for (int ir = ir0; ir < ir1; ++ir) {
@@ -14264,7 +14263,7 @@ static void ggml_compute_forward_flash_attn_f16(
         const int iq2 = (ir - iq3*neq2*neq1)/neq1;
         const int iq1 = (ir - iq3*neq2*neq1 - iq2*neq1);
 
-        float * S = (float *) params->wdata + ith*(2*Mup + CACHE_LINE_SIZE_F32);
+        float * S = (float *) wdata_base + ith*(2*Mup + CACHE_LINE_SIZE_F32);
 
         for (int i = M; i < Mup; ++i) {
             S[i] = -INFINITY;
@@ -14366,7 +14365,7 @@ static void ggml_compute_forward_flash_attn_f16(
 #endif
         }
 
-        ggml_fp16_t * S16 = (ggml_fp16_t *) ((float *) params->wdata + ith*(2*Mup + CACHE_LINE_SIZE_F32) + Mup);
+        ggml_fp16_t * S16 = (ggml_fp16_t *) ((float *) wdata_base + ith*(2*Mup + CACHE_LINE_SIZE_F32) + Mup);
 
         for (int64_t i = 0; i < M; i++) {
             S16[i] = GGML_FP32_TO_FP16(S[i]);
@@ -14505,13 +14504,15 @@ static void ggml_compute_forward_flash_ff_f16(
     const int ir0 = dr*ith;
     const int ir1 = MIN(ir0 + dr, nr);
 
+    void * wdata_base = ggml_acquire_wdata(params);
+
     for (int ir = ir0; ir < ir1; ++ir) {
         // a indices
         const int ia3 = ir/(nea2*nea1);
         const int ia2 = (ir - ia3*nea2*nea1)/nea1;
         const int ia1 = (ir - ia3*nea2*nea1 - ia2*nea1);
 
-        float * S = (float *) params->wdata + ith*(2*M + CACHE_LINE_SIZE_F32);
+        float * S = (float *) wdata_base + ith*(2*M + CACHE_LINE_SIZE_F32);
 
         for (int64_t ic = 0; ic < neb01; ++ic) {
             // b0 indices
@@ -14531,7 +14532,7 @@ static void ggml_compute_forward_flash_ff_f16(
         ggml_vec_add_f32(neb01, S, S, (float *) b1->data);
         //ggml_vec_gelu_f32(neb01, S, S);
 
-        ggml_fp16_t * S16 = (ggml_fp16_t *) ((float *) params->wdata + ith*(2*M + CACHE_LINE_SIZE_F32) + M);
+        ggml_fp16_t * S16 = (ggml_fp16_t *) ((float *) wdata_base + ith*(2*M + CACHE_LINE_SIZE_F32) + M);
 
         for (int64_t i = 0; i < M; i++) {
             S16[i] = GGML_FP32_TO_FP16(S[i]);
@@ -14647,7 +14648,7 @@ static void ggml_compute_forward_flash_attn_back_f32(
     if (!ith) {
         memset(dst->data, 0, nb0*ne0*ne1*ne2*ne3);
     }
-    ggml_syncthreads(params->barrier);
+    ggml_syncthreads(params);
 
     const int64_t elem_q = ggml_nelements(q);
     const int64_t elem_k = ggml_nelements(k);
@@ -14695,6 +14696,8 @@ static void ggml_compute_forward_flash_attn_back_f32(
     // how often k2 (and v2) is repeated in q2
     int nrep = neq2/nek2;
 
+    void * wdata_base = ggml_acquire_wdata(params);
+
     for (int ir = ir0; ir < ir1; ++ir) {
         // q indices
         const int ik3 = ir/(nek2);
@@ -14715,8 +14718,8 @@ static void ggml_compute_forward_flash_attn_back_f32(
 
                 // not sure about CACHE_LINE_SIZE_F32..
                 // - maybe it must not be multiplied by 2 and excluded from .. in SM 1*(..) offset?
-                float * S  = (float *) params->wdata + ith*2*(mxDM + CACHE_LINE_SIZE_F32) + 0*(mxDM+CACHE_LINE_SIZE_F32);
-                float * SM = (float *) params->wdata + ith*2*(mxDM + CACHE_LINE_SIZE_F32) + 1*(mxDM+CACHE_LINE_SIZE_F32);
+                float * S  = (float *) wdata_base + ith*2*(mxDM + CACHE_LINE_SIZE_F32) + 0*(mxDM+CACHE_LINE_SIZE_F32);
+                float * SM = (float *) wdata_base + ith*2*(mxDM + CACHE_LINE_SIZE_F32) + 1*(mxDM+CACHE_LINE_SIZE_F32);
 
                 for (int i = M; i < Mup; ++i) {
                     S[i] = -INFINITY;
@@ -15451,7 +15454,7 @@ static void ggml_compute_forward_add_rel_pos_f32(
         if (!params->ith) {
             memcpy((char *) dst->data, (char *) src0->data, ggml_nbytes(dst));
         }
-        ggml_syncthreads(params->barrier);
+        ggml_syncthreads(params);
     }
     int64_t t0 = ggml_perf_time_us();
     UNUSED(t0);
@@ -15747,7 +15750,8 @@ static void ggml_compute_forward_cross_entropy_loss_f32(
     const int ith = params->ith;
     const int nth = params->nth;
 
-    float * sums = (float *) params->wdata;
+    void * wdata_base = ggml_acquire_wdata(params);
+    float * sums = (float *) wdata_base;
 
     // TODO: handle transposed/permuted matrices
     const int nc = src0->ne[0];
@@ -15758,7 +15762,7 @@ static void ggml_compute_forward_cross_entropy_loss_f32(
     if (!ith) {
         memset(sums, 0, sizeof(float) * (nth + nth * nc));
     }
-    ggml_syncthreads(params->barrier);
+    ggml_syncthreads(params);
 
     const double eps = 1e-9;
 
@@ -15772,7 +15776,7 @@ static void ggml_compute_forward_cross_entropy_loss_f32(
     for (int i1 = ir0; i1 < ir1; i1++) {
         float * s0 = (float *)((char *) src0->data + i1*src0->nb[1]);
         float * s1 = (float *)((char *) src1->data + i1*src1->nb[1]);
-        float * st = ((float *) params->wdata) + nth + ith*nc;
+        float * st = ((float *) wdata_base) + nth + ith*nc;
 
 #ifndef NDEBUG
         for (int i = 0; i < nc; ++i) {
@@ -15826,7 +15830,7 @@ static void ggml_compute_forward_cross_entropy_loss_f32(
         }
 #endif
     }
-    ggml_syncthreads(params->barrier);
+    ggml_release_wdata(params);
 
     if (!ith) {
         float * dp = (float *) dst->data;
@@ -17650,64 +17654,15 @@ void ggml_graph_clear(struct ggml_cgraph * cgraph) {
 //
 // thread data
 //
-// synchronization is done via busy loops
-// I tried using spin locks, but not sure how to use them correctly - the things I tried were slower than busy loops
-//
 
 #ifdef __APPLE__
-
-//#include <os/lock.h>
-//
-//typedef os_unfair_lock ggml_lock_t;
-//
-//#define ggml_lock_init(x)    UNUSED(x)
-//#define ggml_lock_destroy(x) UNUSED(x)
-//#define ggml_lock_lock       os_unfair_lock_lock
-//#define ggml_lock_unlock     os_unfair_lock_unlock
-//
-//#define GGML_LOCK_INITIALIZER OS_UNFAIR_LOCK_INIT
-
-typedef int ggml_lock_t;
-
-#define ggml_lock_init(x)    UNUSED(x)
-#define ggml_lock_destroy(x) UNUSED(x)
-#define ggml_lock_lock(x)    UNUSED(x)
-#define ggml_lock_unlock(x)  UNUSED(x)
-
-#define GGML_LOCK_INITIALIZER 0
-
 typedef pthread_t ggml_thread_t;
-
 #define ggml_thread_create pthread_create
 #define ggml_thread_join   pthread_join
-
 #else
-
-//typedef pthread_spinlock_t ggml_lock_t;
-
-//#define ggml_lock_init(x) pthread_spin_init(x, PTHREAD_PROCESS_PRIVATE)
-//#define ggml_lock_destroy pthread_spin_destroy
-//#define ggml_lock_lock    pthread_spin_lock
-//#define ggml_lock_unlock  pthread_spin_unlock
-
-typedef int ggml_lock_t;
-
-#define ggml_lock_init(x)    UNUSED(x)
-#define ggml_lock_destroy(x) UNUSED(x)
-#if defined(__x86_64__) || (defined(_MSC_VER) && defined(_M_AMD64))
-#define ggml_lock_lock(x)    _mm_pause()
-#else
-#define ggml_lock_lock(x)    UNUSED(x)
-#endif
-#define ggml_lock_unlock(x)  UNUSED(x)
-
-#define GGML_LOCK_INITIALIZER 0
-
 typedef pthread_t ggml_thread_t;
-
 #define ggml_thread_create pthread_create
 #define ggml_thread_join   pthread_join
-
 #endif
 
 // Android's libc implementation "bionic" does not support setting affinity
@@ -17788,9 +17743,6 @@ struct ggml_compute_state_shared {
     const struct ggml_cgraph * cgraph;
     const struct ggml_cplan  * cplan;
 
-    int64_t perf_node_start_cycles;
-    int64_t perf_node_start_time_us;
-
     const int n_threads;
 
     // synchronization primitives
@@ -17807,39 +17759,92 @@ struct ggml_compute_state {
     enum ggml_status ec;
 };
 
-static void ggml_graph_compute_perf_stats_node(struct ggml_tensor * node, const struct ggml_compute_state_shared * st) {
-    int64_t cycles_cur  = ggml_perf_cycles()  - st->perf_node_start_cycles;
-    int64_t time_us_cur = ggml_perf_time_us() - st->perf_node_start_time_us;
+// returns true if `src` is direct dependency of `node`
+static bool ggml_has_src(const struct ggml_tensor * node,
+                         const struct ggml_tensor * src) {
+    for (int i = 0; i < GGML_MAX_SRC; ++i) {
+        if (node->src[i] == src) {
+            return true;
+        }
+    }
+    return false;
+}
 
-    node->perf_runs++;
-    node->perf_cycles  += cycles_cur;
-    node->perf_time_us += time_us_cur;
+// returns true if `dest` depends on any outputs since `mark`
+//
+//   - cgraph->nodes[dest] is about to be executed
+//   - syncthreads() last happened right before cgraph->nodes[mark] executed
+//   - syncthreads() has 1.8 µs overhead minimum on Apple M2 when nth == 12
+//
+static bool ggml_needs_barrier(const struct ggml_cgraph * cgraph, int mark, int dest) {
+    assert(mark >= 0);
+    assert(mark <= dest);
+    assert(dest < cgraph->n_nodes);
+    for (; mark < dest; ++mark) {
+        if (ggml_has_src(cgraph->nodes[dest], cgraph->nodes[mark])) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static thread_ret_t ggml_graph_compute_thread(void * data) {
-    struct ggml_compute_state * state = (struct ggml_compute_state *) data;
+    struct ggml_compute_state * state  = (struct ggml_compute_state *) data;
+    const struct ggml_cgraph  * cgraph = state->shared->cgraph;
+    const struct ggml_cplan   * cplan  = state->shared->cplan;
 
-    const struct ggml_cgraph * cgraph = state->shared->cgraph;
-    const struct ggml_cplan  * cplan  = state->shared->cplan;
-    struct ggml_barrier      * b      = &state->shared->barrier;
+    struct ggml_compute_params params = {
+        /*.ith     =*/ state->ith,
+        /*.nth     =*/ state->shared->n_threads,
+        /*.wsize   =*/ cplan->work_size,
+        /*.wdata   =*/ cplan->work_data,
+        /*.barrier =*/ &state->shared->barrier,
+        /*.limbo   =*/ false,
+    };
 
     set_numa_thread_affinity(state->ith);
 
+#ifdef GGML_PERF
+    int64_t start_cycles, start_time_us;
+    if (!state->ith) {
+        start_cycles  = ggml_perf_cycles();
+        start_time_us = ggml_perf_time_us();
+    }
+#endif
+
+    int mark = 0;
     for (int node_n = 0; node_n < cgraph->n_nodes; ++node_n) {
         if (cplan->abort_callback && cplan->abort_callback(cplan->abort_callback_data)) {
             state->ec = GGML_STATUS_ABORTED;
             return 0;
         }
-        struct ggml_compute_params params = {
-            /*.ith     =*/ state->ith,
-            /*.nth     =*/ state->shared->n_threads,
-            /*.wsize   =*/ cplan->work_size,
-            /*.wdata   =*/ cplan->work_data,
-            /*.barrier =*/ &state->shared->barrier,
-        };
-        ggml_compute_forward(&params, cgraph->nodes[node_n]);
+
+        if (ggml_needs_barrier(cgraph, mark, node_n)) {
+            ggml_syncthreads(&params);
+            mark = node_n;
+        }
+
+        struct ggml_tensor *node = cgraph->nodes[node_n];
+        params.nth = state->shared->n_threads;
+        ggml_compute_forward(&params, node);
+
+#if GGML_PERF
         ggml_syncthreads(&state->shared->barrier);
+        if (!state->ith) {
+            int64_t end_cycles  = ggml_perf_cycles();
+            int64_t end_time_us = ggml_perf_time_us();
+            int64_t cycles_cur  = end_cycles - start_cycles;
+            int64_t time_us_cur = end_time_us - start_time_us;
+            start_cycles = end_cycles;
+            start_time_us = end_time_us;
+            node->perf_runs++;
+            node->perf_cycles  += cycles_cur;
+            node->perf_time_us += time_us_cur;
+        }
+#endif
     }
+
+    ggml_syncthreads(&params);
 
     return 0;
 }
@@ -18063,8 +18068,6 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     struct ggml_compute_state_shared state_shared = {
         /*.cgraph                  =*/ cgraph,
         /*.cgraph_plan             =*/ cplan,
-        /*.perf_node_start_cycles  =*/ 0,
-        /*.perf_node_start_time_us =*/ 0,
         /*.n_threads               =*/ n_threads,
         /*.barrier                 =*/ { n_threads },
         /*.abort_callback          =*/ NULL,
@@ -18128,6 +18131,8 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
                 (double) perf_time_us_cur     / 1000.0,
                 (double) cgraph->perf_time_us / 1000.0 / cgraph->perf_runs);
     }
+
+    // fprintf(stderr, "%6d barriers %6d ops\n", state_shared.barrier.phase, cgraph->n_nodes);
 
     return compute_status;
 }
