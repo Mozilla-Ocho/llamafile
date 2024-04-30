@@ -376,6 +376,11 @@ inline __m512bh load(const float *p) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // FLOATING POINT MATRIX MULTIPLICATION
 
+float id(float x) {
+    return x;
+}
+float (*veil)(float) = id;
+
 template <int CONFIG, int KN, typename D, typename V, typename TA, typename TB, typename TC>
 class tinyBLAS {
   public:
@@ -384,8 +389,9 @@ class tinyBLAS {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n) {
-        mnpack(0, m, 0, n);
+    void matmul(long m, long n, int task) {
+        if (task == GGML_TASK_TYPE_COMPUTE)
+            mnpack(0, m, 0, n);
     }
 
   private:
@@ -564,7 +570,7 @@ class tinyBLAS {
                                             Cv[j][i]);
             for (int j = 0; j < RN; ++j)
                 for (int i = 0; i < RM; ++i)
-                    *INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
+                    *INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]); // + logf(veil(-1));
         }
     }
 
@@ -591,8 +597,9 @@ class tinyBLAS_Q0_ARM {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n) {
-        mnpack(0, m, 0, n);
+    void matmul(long m, long n, int task) {
+        if (task == GGML_TASK_TYPE_COMPUTE)
+            mnpack(0, m, 0, n);
     }
 
   private:
@@ -723,8 +730,9 @@ class tinyBLAS_Q0_AVX2 {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n) {
-        mnpack(0, m, 0, n);
+    void matmul(long m, long n, int task) {
+        if (task == GGML_TASK_TYPE_COMPUTE)
+            mnpack(0, m, 0, n);
     }
 
   private:
@@ -735,32 +743,32 @@ class tinyBLAS_Q0_AVX2 {
         case 0x44:
             mc = 4;
             nc = 4;
-            gemm<4, 4>(m0, m, n0, n);
+            gemm<4, 4, false>(m0, m, n0, n);
             break;
         case 0x43:
             mc = 4;
             nc = 3;
-            gemm<4, 3>(m0, m, n0, n);
+            gemm<4, 3, false>(m0, m, n0, n);
             break;
         case 0x34:
             mc = 3;
             nc = 4;
-            gemm<3, 4>(m0, m, n0, n);
+            gemm<3, 4, false>(m0, m, n0, n);
             break;
         case 0x33:
             mc = 3;
             nc = 3;
-            gemm<3, 3>(m0, m, n0, n);
+            gemm<3, 3, false>(m0, m, n0, n);
             break;
         case 0x42:
             mc = 4;
             nc = 2;
-            gemm<4, 2>(m0, m, n0, n);
+            gemm<4, 2, false>(m0, m, n0, n);
             break;
         case 0x24:
             mc = 2;
             nc = 4;
-            gemm<2, 4>(m0, m, n0, n);
+            gemm<2, 4, false>(m0, m, n0, n);
             break;
 #else
         case 0x44:
@@ -768,65 +776,65 @@ class tinyBLAS_Q0_AVX2 {
         case 0x42:
             mc = 4;
             nc = 2;
-            gemm<4, 2>(m0, m, n0, n);
+            gemm<4, 2, false>(m0, m, n0, n);
             break;
         case 0x34:
         case 0x24:
             mc = 2;
             nc = 4;
-            gemm<2, 4>(m0, m, n0, n);
+            gemm<2, 4, false>(m0, m, n0, n);
             break;
         case 0x33:
 #endif
         case 0x32:
             mc = 3;
             nc = 2;
-            gemm<3, 2>(m0, m, n0, n);
+            gemm<3, 2, false>(m0, m, n0, n);
             break;
         case 0x23:
             mc = 2;
             nc = 3;
-            gemm<2, 3>(m0, m, n0, n);
+            gemm<2, 3, false>(m0, m, n0, n);
             break;
         case 0x41:
             mc = 4;
             nc = 1;
-            gemm<4, 1>(m0, m, n0, n);
+            gemm<4, 1, true>(m0, m, n0, n);
             break;
         case 0x22:
             mc = 2;
             nc = 2;
-            gemm<2, 2>(m0, m, n0, n);
+            gemm<2, 2, true>(m0, m, n0, n);
             break;
         case 0x14:
             mc = 1;
             nc = 4;
-            gemm<1, 4>(m0, m, n0, n);
+            gemm<1, 4, true>(m0, m, n0, n);
             break;
         case 0x31:
             mc = 3;
             nc = 1;
-            gemm<3, 1>(m0, m, n0, n);
+            gemm<3, 1, true>(m0, m, n0, n);
             break;
         case 0x13:
             mc = 1;
             nc = 3;
-            gemm<1, 3>(m0, m, n0, n);
+            gemm<1, 3, true>(m0, m, n0, n);
             break;
         case 0x21:
             mc = 2;
             nc = 1;
-            gemm<2, 1>(m0, m, n0, n);
+            gemm<2, 1, true>(m0, m, n0, n);
             break;
         case 0x12:
             mc = 1;
             nc = 2;
-            gemm<1, 2>(m0, m, n0, n);
+            gemm<1, 2, true>(m0, m, n0, n);
             break;
         case 0x11:
             mc = 1;
             nc = 1;
-            gemm<1, 1>(m0, m, n0, n);
+            gemm<1, 1, true>(m0, m, n0, n);
             break;
         default:
             return;
@@ -837,7 +845,7 @@ class tinyBLAS_Q0_AVX2 {
         mnpack(m0, m, np, n);
     }
 
-    template <int RM, int RN>
+    template <int RM, int RN, int KAHAN>
     NOINLINE void gemm(long m0, long m, long n0, long n) {
         long ytiles = RM > 1 ? (m - m0) / RM : 1;
         long xtiles = RN > 1 ? (n - n0) / RN : 1;
@@ -851,16 +859,21 @@ class tinyBLAS_Q0_AVX2 {
             long ii = m0 + job / xtiles * RM;
             long jj = n0 + job % xtiles * RN;
             __m256 Cv[RN][RM] = {};
+            __m256 Ce[RN][RM] = {};
             for (long l = 0; l < k; ++l)
                 for (int j = 0; j < RN; ++j)
-                    for (int i = 0; i < RM; ++i)
-                        Cv[j][i] = madd(_mm256_set1_ps(unhalf(INDEX(A, lda, ii + i, l)->d) *
-                                                       unhalf(INDEX(B, ldb, jj + j, l)->d)),
-                                        updot(_mm256_sign_epi8(load(INDEX(A, lda, ii + i, l)),
-                                                               load(INDEX(A, lda, ii + i, l))),
-                                              _mm256_sign_epi8(load(INDEX(B, ldb, jj + j, l)),
-                                                               load(INDEX(A, lda, ii + i, l)))),
-                                        Cv[j][i]);
+                    for (int i = 0; i < RM; ++i) {
+                        __m256 a = _mm256_set1_ps(unhalf(INDEX(A, lda, ii + i, l)->d) *
+                                                  unhalf(INDEX(B, ldb, jj + j, l)->d));
+                        __m256 b = updot(_mm256_sign_epi8(load(INDEX(A, lda, ii + i, l)),
+                                                          load(INDEX(A, lda, ii + i, l))),
+                                         _mm256_sign_epi8(load(INDEX(B, ldb, jj + j, l)),
+                                                          load(INDEX(A, lda, ii + i, l))));
+                        if (KAHAN)
+                            Cv[j][i] = madder(a, b, Cv[j][i], &Ce[j][i]);
+                        else
+                            Cv[j][i] = madd(a, b, Cv[j][i]);
+                    }
             for (int j = 0; j < RN; ++j)
                 for (int i = 0; i < RM; ++i)
                     *INDEX(C, ldc, jj + j, ii + i) = hsum(Cv[j][i]);
@@ -933,7 +946,8 @@ class tinyBLAS_Q0_AVX2 {
  * @return true if this function was able to service the matmul request
  */
 bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                     void *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype) {
+                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
+                     int Ctype) {
 
     assert(m >= 0);
     assert(n >= 0);
@@ -957,14 +971,14 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 16, __m512, __m512, float, float, float> tb{
             k, (const float *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__AVX__) || defined(__AVX2__)
         if (k % 8)
             return false;
         tinyBLAS<0, 8, __m256, __m256, float, float, float> tb{
             k, (const float *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_NEON)
         if (n < 4)
@@ -973,7 +987,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, float, float, float> tb{
             k, (const float *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #else
         return false;
@@ -987,21 +1001,21 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
         if (Btype == GGML_TYPE_F32 && n < 2) {
             tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, float, float> tb{
                 k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-            tb.matmul(m, n);
+            tb.matmul(m, n, task);
             return true;
         }
         if (Btype != GGML_TYPE_BF16)
             return false;
         tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, ggml_bf16_t, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const ggml_bf16_t *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__AVX512F__)
         if (k % 16)
             return false;
         tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, float, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__AVX2__)
         if (k % 8)
@@ -1010,7 +1024,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 8, __m256, __m256, ggml_bf16_t, float, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
         if (k % 4)
@@ -1019,7 +1033,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_bf16_t, float, float> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #else
         return false;
@@ -1033,14 +1047,14 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
         if (Btype == GGML_TYPE_F32 && n < 2) {
             tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, float, float> tb{
                 k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-            tb.matmul(m, n);
+            tb.matmul(m, n, task);
             return true;
         }
         if (Btype != GGML_TYPE_F16)
             return false;
         tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, ggml_fp16_t, float> tb{
             k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
         if (X86_HAVE(F16C)) {
@@ -1050,7 +1064,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
                 tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, float> tb{
                     k,  (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith,
                     nth};
-                tb.matmul(m, n);
+                tb.matmul(m, n, task);
                 return true;
             }
             if (Btype != GGML_TYPE_F16)
@@ -1058,7 +1072,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, ggml_fp16_t, float> tb{
                 k,  (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, (float *)C, ldc, ith,
                 nth};
-            tb.matmul(m, n);
+            tb.matmul(m, n, task);
             return true;
         } else {
             return false;
@@ -1072,7 +1086,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 8, float16x8_t, float16x8_t, ggml_fp16_t, ggml_fp16_t, float> tb{
             k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
         if (k % 4)
@@ -1081,7 +1095,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_fp16_t, float, float> tb{
             k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #else
         return false;
@@ -1094,12 +1108,12 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX2__) || defined(__AVX512F__)
         tinyBLAS_Q0_AVX2<0, block_q8_0, block_q8_0, float> tb{
             k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
         tinyBLAS_Q0_ARM<0, block_q8_0, block_q8_0, float> tb{
             k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #else
         return false;
@@ -1112,12 +1126,12 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__AVX2__) || defined(__AVX512F__)
         tinyBLAS_Q0_AVX2<0, block_q4_0, block_q8_0, float> tb{
             k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
         tinyBLAS_Q0_ARM<0, block_q4_0, block_q8_0, float> tb{
             k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, (float *)C, ldc, ith, nth};
-        tb.matmul(m, n);
+        tb.matmul(m, n, task);
         return true;
 #else
         return false;
@@ -1384,26 +1398,31 @@ class MixMul {
     bool mixmat() {
         if (cols % KN)
             return false;
-        ggml_acquire_wdata(params);
-        if (thought->type != ggml_type_trait<TB>::id)
-            quantize_thought(ggml_type_trait<TB>::id);
-        build_row_pointers(ggml_type_trait<TB>::id);
-        ggml_release_wdata(params);
-        assert(!(cols % BS));
-        assert(!(weights->nb[1] % sizeof(TA)));
-        for (int expert = 0; expert < experts; ++expert) {
-            BLAS tb{cols / BS,
-                    (const TA *)((const char *)weights->data + expert * weights->nb[2]),
-                    (long)(weights->nb[1] / sizeof(TA)),
-                    (const TB *)(rowptr_thought_ + expert * tokens * thinkers),
-                    0,
-                    (TC *)(rowptr_result_ + expert * tokens * thinkers),
-                    0,
-                    params->ith,
-                    params->nth};
-            tb.matmul(rows, rowptr_count_[expert]);
+        switch (params->type) {
+        case GGML_TASK_TYPE_INIT:
+            if (thought->type != ggml_type_trait<TB>::id)
+                quantize_thought(ggml_type_trait<TB>::id);
+            build_row_pointers(ggml_type_trait<TB>::id);
+            return true;
+        case GGML_TASK_TYPE_COMPUTE:
+            assert(!(cols % BS));
+            assert(!(weights->nb[1] % sizeof(TA)));
+            for (int expert = 0; expert < experts; ++expert) {
+                BLAS tb{cols / BS,
+                        (const TA *)((const char *)weights->data + expert * weights->nb[2]),
+                        (long)(weights->nb[1] / sizeof(TA)),
+                        (const TB *)(rowptr_thought_ + expert * tokens * thinkers),
+                        0,
+                        (TC *)(rowptr_result_ + expert * tokens * thinkers),
+                        0,
+                        params->ith,
+                        params->nth};
+                tb.matmul(rows, rowptr_count_[expert], GGML_TASK_TYPE_COMPUTE);
+            }
+            return true;
+        default:
+            return true;
         }
-        return true;
     }
 
     void build_row_pointers(ggml_type vec_dot_type) {

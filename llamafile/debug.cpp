@@ -19,14 +19,22 @@
 
 #include <cosmo.h>
 #include <fenv.h>
+#include <libc/calls/struct/ucontext.internal.h>
 #include <signal.h>
 #include <stdatomic.h>
 #include <termios.h>
+#include <ucontext.h>
 #include <unistd.h>
 
 #include "llama.cpp/ggml.h"
 
-#define CONFIG FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW // | FE_UNDERFLOW
+static int get_config(void) {
+    int config = FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW;
+    // TODO(jart): enable if quantization isn't being used
+    //             or possibly suppress exceptions in quants
+    // config |= FE_UNDERFLOW;
+    return config;
+}
 
 bool FLAG_trap;
 thread_local int llamafile_debug_op_index;
@@ -66,59 +74,26 @@ static void print_graph(FILE *f, const struct ggml_cgraph *g) {
     }
 }
 
-// TODO: put this in cosmo libc
 int feenableexcept(int excepts) {
     excepts &= FE_ALL_EXCEPT;
 #ifdef __x86_64__
-    unsigned short neux;
-    asm("fstcw\t%0" : "=m"(neux));
-    unsigned short res = ~neux & FE_ALL_EXCEPT;
-    neux &= ~excepts;
-    asm("fldcw\t%0" : /* no inputs */ : "m"(neux));
-    unsigned neu;
-    asm("stmxcsr\t%0" : "=m"(neu));
-    neu &= ~(excepts << 7);
-    asm("ldmxcsr\t%0" : /* no inputs */ : "m"(neu));
-    return res;
-#else
-    unsigned fpcr;
-    unsigned fpcr2;
-    unsigned updated_fpcr;
-    fpcr = __builtin_aarch64_get_fpcr();
-    fpcr2 = fpcr | (excepts << 8);
-    if (fpcr != fpcr2) {
-        __builtin_aarch64_set_fpcr(fpcr2);
-        // floating point exception trapping is optional in aarch64
-        updated_fpcr = __builtin_aarch64_get_fpsr();
-        if (fpcr2 & ~updated_fpcr)
-            return -1;
-    }
-    return (fpcr >> 8) & FE_ALL_EXCEPT;
+    unsigned mxcsr;
+    asm("stmxcsr\t%0" : "=m"(mxcsr));
+    mxcsr &= ~(excepts << 7);
+    asm("ldmxcsr\t%0" : /* no inputs */ : "m"(mxcsr));
 #endif
+    return 0;
 }
 
 int fedisableexcept(int excepts) {
     excepts &= FE_ALL_EXCEPT;
 #ifdef __x86_64__
-    unsigned neu;
-    unsigned short neux;
-    asm("fstcw\t%0" : "=m"(neux));
-    unsigned short res = ~neux & FE_ALL_EXCEPT;
-    neux |= excepts;
-    asm("fldcw\t%0" : /* no inputs */ : "m"(neux));
-    asm("stmxcsr\t%0" : "=m"(neu));
-    neu |= excepts << 7;
-    asm("ldmxcsr\t%0" : /* no inputs */ : "m"(neu));
-    return res;
-#else
-    unsigned fpcr;
-    unsigned fpcr2;
-    fpcr = __builtin_aarch64_get_fpcr();
-    fpcr2 = fpcr & ~(excepts << 8);
-    if (fpcr != fpcr2)
-        __builtin_aarch64_set_fpcr(fpcr2);
-    return (fpcr >> 8) & FE_ALL_EXCEPT;
+    unsigned mxcsr;
+    asm("stmxcsr\t%0" : "=m"(mxcsr));
+    mxcsr |= excepts << 7;
+    asm("ldmxcsr\t%0" : /* no inputs */ : "m"(mxcsr));
 #endif
+    return 0;
 }
 
 static inline void spinlock(atomic_uint *lock) {
@@ -130,7 +105,8 @@ static inline void spinlock(atomic_uint *lock) {
     }
 }
 
-static void on_sigfpe(int sig, siginfo_t *si, void *ctx) {
+static void on_sigfpe(int sig, siginfo_t *si, void *arg) {
+    ucontext_t *ctx = (ucontext_t *)arg;
     static atomic_uint lock;
     spinlock(&lock); // first thread to crash wins
     g_terminal_buddy.restore();
@@ -153,7 +129,9 @@ static void on_sigfpe(int sig, siginfo_t *si, void *ctx) {
         tinyprint(2, s, "subscript out of range\n", NULL);
     else
         tinyprint(2, s, "caught sigfpe\n", NULL);
-    ShowBacktrace(2, 0);
+    struct StackFrame sf = {.next = (struct StackFrame *)ctx->uc_mcontext.BP,
+                            .addr = ctx->uc_mcontext.PC};
+    ShowBacktrace(2, &sf);
 #ifdef LLAMAFILE_DEBUG
     const struct ggml_cgraph *g;
     if ((g = llamafile_debug_graph)) {
@@ -185,13 +163,14 @@ int llamafile_trapping_enabled(int delta) {
     static thread_local int g_enabled;
     bool was_enabled = g_enabled > 0;
     bool is_enabled = (g_enabled += delta) > 0;
+    int config = get_config();
     feclearexcept(FE_ALL_EXCEPT);
     if (is_enabled && !was_enabled) {
         cosmo_once(&once, setup_sigfpe);
-        feenableexcept(CONFIG);
+        feenableexcept(config);
     }
     if (!is_enabled && was_enabled) {
-        fedisableexcept(CONFIG);
+        fedisableexcept(config);
     }
     return g_enabled;
 }

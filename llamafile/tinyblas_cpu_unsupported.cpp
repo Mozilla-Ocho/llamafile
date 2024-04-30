@@ -23,7 +23,7 @@ bool llamafile_sgemm_unsupported(int m, int n, int k, const void *A, int lda, co
     return false;
 }
 
-bool llamafile_mixmul_unsupported(const struct ggml_compute_params *params,
+bool llamafile_mixmul_unsupported(struct ggml_compute_params *params,
                                   const struct ggml_tensor *weights,
                                   const struct ggml_tensor *thought, const struct ggml_tensor *plan,
                                   struct ggml_tensor *result) {
