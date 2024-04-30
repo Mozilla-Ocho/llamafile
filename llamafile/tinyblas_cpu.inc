@@ -1088,6 +1088,9 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             return false;
         }
 #elif defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER)
+        if (n < 2)
+            // TODO(jart): Why is ggml_vec_dot_f16_unroll() so fast at matvec?
+            return false;
         if (k % 8)
             return false;
         if (Btype != GGML_TYPE_F16)
@@ -1097,6 +1100,9 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
         tb.matmul(m, n, task);
         return true;
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
+        if (n < 2)
+            // TODO(jart): Why is ggml_vec_dot_f16_unroll() so fast at matvec?
+            return false;
         if (k % 4)
             return false;
         if (Btype != GGML_TYPE_F32)
