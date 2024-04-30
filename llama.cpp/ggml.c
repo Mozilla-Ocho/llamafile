@@ -1882,7 +1882,6 @@ void ggml_once(atomic_uint * once, void init(void)) {
 
 inline static float ggml_silu_f32(float x) {
     // SiLU is the favored by LLaMA, Mistral, Phi, Rocket, etc.
-    // fprintf(stderr, "silu(%g)\n", x);
     return x/(1.f + expf(-x));
 }
 
