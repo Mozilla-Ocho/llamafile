@@ -233,6 +233,12 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     if (arg == "--cli") {
         return true;
     }
+    if (arg == "--trap") {
+        FLAG_trap = true;
+        FLAG_unsecure = true; // for better backtraces
+        llamafile_trapping_enabled(+1);
+        return true;
+    }
     if (arg == "--unsecure") {
         FLAG_unsecure = true;
         return true;

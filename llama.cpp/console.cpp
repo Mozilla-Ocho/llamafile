@@ -1,13 +1,15 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #include "console.h"
+
 #include <vector>
 #include <iostream>
-
 #include <climits>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <wchar.h>
+#include <cosmo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -30,6 +32,7 @@ namespace console {
 
 static bool      advanced_display = false;
 static bool      simple_io        = true;
+static bool      should_close_tty = false;
 static display_t current_display  = reset;
 static FILE*     out              = stdout;
 static FILE*     tty              = nullptr;
@@ -40,19 +43,32 @@ static termios   initial_state;
 //
 
 void init(bool use_simple_io, bool use_advanced_display) {
-    advanced_display = use_advanced_display;
+    should_close_tty = false;
     simple_io = use_simple_io;
+    advanced_display = use_advanced_display;
     if (!simple_io) {
-        struct termios new_termios;
-        tcgetattr(STDIN_FILENO, &initial_state);
-        new_termios = initial_state;
-        new_termios.c_lflag &= ~(ICANON | ECHO);
-        new_termios.c_cc[VMIN] = 1;
-        new_termios.c_cc[VTIME] = 0;
-        tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
         tty = fopen("/dev/tty", "w+e");
+        if (tty) {
+            should_close_tty = true;
+        } else if (IsLinux() || IsOpenbsd()) {
+            // this could happen because pledge() blocked us
+            tty = fdopen(0, "w+e");
+        }
         if (tty != nullptr) {
-            out = tty;
+            if (!tcgetattr(fileno(tty), &initial_state)) {
+                out = tty;
+                struct termios new_termios = initial_state;
+                new_termios.c_lflag &= ~(ICANON | ECHO);
+                new_termios.c_cc[VMIN] = 1;
+                new_termios.c_cc[VTIME] = 0;
+                tcsetattr(fileno(tty), TCSANOW, &new_termios);
+            } else {
+                simple_io = true;
+                fclose(tty);
+                tty = 0;
+            }
+        } else {
+            simple_io = true;
         }
     }
     setlocale(LC_ALL, "");
@@ -64,11 +80,14 @@ void cleanup() {
     // Restore settings
     if (!simple_io) {
         if (tty != nullptr) {
-            out = stdout;
-            fclose(tty);
+            fflush(tty);
+            tcsetattr(fileno(tty), TCSANOW, &initial_state);
+            if (should_close_tty) {
+                fclose(tty);
+            }
             tty = nullptr;
+            out = stdout;
         }
-        tcsetattr(STDIN_FILENO, TCSANOW, &initial_state);
     }
 }
 

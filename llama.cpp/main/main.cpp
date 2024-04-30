@@ -184,20 +184,6 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
-    if (!params.mmproj.empty() &&
-        (!params.image.empty() ||
-         params.prompt.find("<img src=\"") != std::string::npos)) {
-        return llava_cli(argc, argv, &params);
-    }
-
-    // TODO: Dump params ?
-    //LOG("Params perplexity: %s\n", LOG_TOSTR(params.perplexity));
-
-    // save choice to use color for later
-    // (note for later: this is a slightly awkward choice)
-    console::init(params.simple_io, params.use_color);
-    atexit([]() { console::cleanup(); });
-
     if (!FLAG_unsecure && !llamafile_has_gpu()) {
         // Enable pledge() security on Linux and OpenBSD.
         // - We do this *after* opening the log file for writing.
@@ -213,6 +199,7 @@ int main(int argc, char ** argv) {
         } else {
             promises = "stdio rpath tty";
         }
+        __pledge_mode = PLEDGE_PENALTY_RETURN_EPERM;
         if (pledge(0, 0)) {
             LOG_TEE("warning: this OS doesn't support pledge() security\n");
         } else if (pledge(promises, 0)) {
@@ -220,6 +207,20 @@ int main(int argc, char ** argv) {
             exit(1);
         }
     }
+
+    if (!params.mmproj.empty() &&
+        (!params.image.empty() ||
+         params.prompt.find("<img src=\"") != std::string::npos)) {
+        return llava_cli(argc, argv, &params);
+    }
+
+    // TODO: Dump params ?
+    //LOG("Params perplexity: %s\n", LOG_TOSTR(params.perplexity));
+
+    // save choice to use color for later
+    // (note for later: this is a slightly awkward choice)
+    console::init(!params.interactive || params.simple_io, params.use_color);
+    atexit([]() { console::cleanup(); });
 
     if (params.logits_all) {
         printf("\n************\n");

@@ -13,8 +13,8 @@ MKDEPS = $(COSMOCC)/bin/mkdeps
 INSTALL = install
 
 ARFLAGS = rcsD
-CCFLAGS = -g -O3 -fexceptions
-CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM -Wno-attributes
+CCFLAGS = -g -O3 -fexceptions -fsignaling-nans
+CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM -Wno-attributes -DLLAMAFILE_DEBUG
 TARGET_ARCH = -Xx86_64-mavx -Xx86_64-mtune=znver4
 
 TMPDIR = o//tmp

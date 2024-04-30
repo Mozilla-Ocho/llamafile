@@ -117,9 +117,9 @@ void ggml_print_backtrace(void) {
 
 /*#define GGML_PERF*/
 #define GGML_DEBUG 0
-#define GGML_GELU_FP16
-#define GGML_GELU_QUICK_FP16
-#define GGML_SILU_FP16
+// #define GGML_GELU_FP16
+// #define GGML_GELU_QUICK_FP16
+// #define GGML_SILU_FP16
 // #define GGML_CROSS_ENTROPY_EXP_FP16
 // #define GGML_FLASH_ATTN_EXP_FP16
 
@@ -2679,6 +2679,7 @@ static inline int ggml_up(int n, int m) {
 struct ggml_context * ggml_init(struct ggml_init_params params) {
     // make this function thread safe
     ggml_critical_section_start();
+    llamafile_trapping_enabled(-1);
 
     static bool is_first_call = true;
 
@@ -2750,6 +2751,7 @@ struct ggml_context * ggml_init(struct ggml_init_params params) {
     if (ctx == NULL) {
         GGML_PRINT_DEBUG("%s: no unused context found\n", __func__);
 
+        llamafile_trapping_enabled(+1);
         ggml_critical_section_end();
 
         return NULL;
@@ -2781,6 +2783,7 @@ struct ggml_context * ggml_init(struct ggml_init_params params) {
 
     GGML_PRINT_DEBUG("%s: context initialized\n", __func__);
 
+    llamafile_trapping_enabled(+1);
     ggml_critical_section_end();
 
     return ctx;
@@ -7105,19 +7108,12 @@ void ggml_syncthreads(struct ggml_compute_params * params) {
 // ops must call this before accessing wdata
 // otherwise overlapping threads on previous op might clobber
 void *ggml_acquire_wdata(struct ggml_compute_params * params) {
-    if (params->limbo) {
-        ggml_syncthreads(params);
-    }
-    params->limbo = true;
     return params->wdata;
 }
 
 // ops should call this after writing to wdata before reading
 void ggml_release_wdata(struct ggml_compute_params * params) {
-    if (params->limbo) {
-        ggml_syncthreads(params);
-        params->limbo = false;
-    }
+    ggml_syncthreads(params);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -11531,12 +11527,9 @@ static void ggml_compute_forward_set_f32(
 
     if (!inplace) {
         if (!params->ith) {
-            // memcpy needs to be synchronized across threads to avoid race conditions.
-            // => do it in INIT phase
-            memcpy(
-                ((char *)  dst->data),
-                ((char *) src0->data),
-                ggml_nbytes(dst));
+            memcpy(((char *)  dst->data),
+                   ((char *) src0->data),
+                   ggml_nbytes(dst));
         }
         ggml_syncthreads(params);
     }
@@ -17759,35 +17752,6 @@ struct ggml_compute_state {
     enum ggml_status ec;
 };
 
-// returns true if `src` is direct dependency of `node`
-static bool ggml_has_src(const struct ggml_tensor * node,
-                         const struct ggml_tensor * src) {
-    for (int i = 0; i < GGML_MAX_SRC; ++i) {
-        if (node->src[i] == src) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// returns true if `dest` depends on any outputs since `mark`
-//
-//   - cgraph->nodes[dest] is about to be executed
-//   - syncthreads() last happened right before cgraph->nodes[mark] executed
-//   - syncthreads() has 1.8 µs overhead minimum on Apple M2 when nth == 12
-//
-static bool ggml_needs_barrier(const struct ggml_cgraph * cgraph, int mark, int dest) {
-    assert(mark >= 0);
-    assert(mark <= dest);
-    assert(dest < cgraph->n_nodes);
-    for (; mark < dest; ++mark) {
-        if (ggml_has_src(cgraph->nodes[dest], cgraph->nodes[mark])) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static thread_ret_t ggml_graph_compute_thread(void * data) {
     struct ggml_compute_state * state  = (struct ggml_compute_state *) data;
     const struct ggml_cgraph  * cgraph = state->shared->cgraph;
@@ -17799,10 +17763,15 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
         /*.wsize   =*/ cplan->work_size,
         /*.wdata   =*/ cplan->work_data,
         /*.barrier =*/ &state->shared->barrier,
-        /*.limbo   =*/ false,
     };
 
     set_numa_thread_affinity(state->ith);
+
+#ifdef LLAMAFILE_DEBUG
+    if (FLAG_trap) {
+        llamafile_trapping_enabled(+1);
+    }
+#endif
 
 #ifdef GGML_PERF
     int64_t start_cycles, start_time_us;
@@ -17819,17 +17788,19 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
             return 0;
         }
 
-        if (ggml_needs_barrier(cgraph, mark, node_n)) {
-            ggml_syncthreads(&params);
-            mark = node_n;
-        }
+#ifdef LLAMAFILE_DEBUG
+        llamafile_debug_op_index = node_n;
+#endif
 
         struct ggml_tensor *node = cgraph->nodes[node_n];
         params.nth = state->shared->n_threads;
         ggml_compute_forward(&params, node);
 
+        // this barrier could potentially be eliminated in 15%+ of cases
+        // however, it would give rise to ghoulish errors w/ little gain
+        ggml_syncthreads(&params);
+
 #if GGML_PERF
-        ggml_syncthreads(&state->shared->barrier);
         if (!state->ith) {
             int64_t end_cycles  = ggml_perf_cycles();
             int64_t end_time_us = ggml_perf_time_us();
@@ -17843,8 +17814,6 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
         }
 #endif
     }
-
-    ggml_syncthreads(&params);
 
     return 0;
 }
@@ -18075,6 +18044,10 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     };
     struct ggml_compute_state * workers = alloca(sizeof(struct ggml_compute_state)*n_threads);
 
+#ifdef LLAMAFILE_DEBUG
+    llamafile_debug_graph = cgraph;
+#endif
+
     // create thread pool
     if (n_threads > 1) {
         for (int j = 1; j < n_threads; ++j) {
@@ -18133,6 +18106,10 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     }
 
     // fprintf(stderr, "%6d barriers %6d ops\n", state_shared.barrier.phase, cgraph->n_nodes);
+
+#ifdef LLAMAFILE_DEBUG
+    llamafile_debug_graph = 0;
+#endif
 
     return compute_status;
 }

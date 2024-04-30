@@ -678,7 +678,6 @@ extern "C" {
         void * wdata;
 
         struct ggml_barrier * barrier;
-        bool limbo;
     };
 
     GGML_API void   ggml_syncthreads  (struct ggml_compute_params *);

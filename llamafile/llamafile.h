@@ -6,6 +6,11 @@
 extern "C" {
 #endif
 
+// TODO(jart): remove in favor of c11 threads.h
+#if !defined(__cplusplus) && !defined(thread_local)
+#define thread_local _Thread_local
+#endif
+
 struct llamafile;
 struct llamafile *llamafile_open_gguf(const char *, const char *);
 void llamafile_close(struct llamafile *);
@@ -17,7 +22,6 @@ size_t llamafile_tell(struct llamafile *);
 size_t llamafile_size(struct llamafile *);
 FILE *llamafile_fp(struct llamafile *);
 
-void llamafile_init(void);
 void llamafile_check_cpu(void);
 void llamafile_help(const char *);
 void llamafile_log_command(char *[]);
@@ -29,6 +33,7 @@ void llamafile_schlep(const void *, size_t);
 void llamafile_get_app_dir(char *, size_t);
 void llamafile_launch_browser(const char *);
 
+extern bool FLAG_trap;
 extern bool FLAG_unsecure;
 
 #define LLAMAFILE_GPU_ERROR -2
@@ -57,6 +62,15 @@ bool llamafile_mixmul(struct ggml_compute_params *, const struct ggml_tensor *,
                       const struct ggml_tensor *, const struct ggml_tensor *, struct ggml_tensor *);
 size_t llamafile_mixmul_needs(const struct ggml_tensor *, const struct ggml_tensor *,
                               const struct ggml_tensor *);
+
+struct StackFrame;
+struct ggml_cgraph;
+int feenableexcept(int);
+int fedisableexcept(int);
+int llamafile_trapping_enabled(int);
+void ShowBacktrace(int, const struct StackFrame *);
+extern const struct ggml_cgraph *llamafile_debug_graph;
+extern thread_local int llamafile_debug_op_index;
 
 #ifdef __cplusplus
 }
