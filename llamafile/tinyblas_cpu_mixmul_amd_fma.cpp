@@ -1,5 +1,4 @@
 #ifdef __x86_64__
-#define llamafile_sgemm llamafile_sgemm_amd_fma
 #define llamafile_mixmul llamafile_mixmul_amd_fma
-#include "tinyblas_cpu.inc"
+#include "tinyblas_cpu_mixmul.inc"
 #endif // __x86_64__

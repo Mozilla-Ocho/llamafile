@@ -42,6 +42,7 @@ o/$(MODE)/llamafile:					\
 		o/$(MODE)/llamafile/simple		\
 		o/$(MODE)/llamafile/zipalign		\
 		o/$(MODE)/llamafile/zipcheck		\
+		o/$(MODE)/llamafile/tokenize		\
 		o/$(MODE)/llamafile/addnl
 
 ################################################################################

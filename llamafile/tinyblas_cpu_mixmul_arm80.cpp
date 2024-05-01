@@ -1,7 +1,6 @@
 #ifdef __aarch64__
-#define llamafile_sgemm llamafile_sgemm_arm80
 #define llamafile_mixmul llamafile_mixmul_arm80
-#include "tinyblas_cpu.inc"
+#include "tinyblas_cpu_mixmul.inc"
 
 /**
  * Returns number of shared memory bytes llamafile_mixmul() needs.

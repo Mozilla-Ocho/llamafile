@@ -1,7 +1,6 @@
 #ifdef __x86_64__
-#define llamafile_sgemm llamafile_sgemm_amd_avx
 #define llamafile_mixmul llamafile_mixmul_amd_avx
-#include "tinyblas_cpu.inc"
+#include "tinyblas_cpu_mixmul.inc"
 
 /**
  * Returns number of shared memory bytes llamafile_mixmul() needs.

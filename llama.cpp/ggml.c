@@ -1954,15 +1954,8 @@ inline static float ggml_silu_f32(float x) {
 }
 
 inline static float ggml_gelu_f32(float x) {
-    // GeLU w/ 29.245772 bits of precision, and 2.3x better performance
-    //
-    // "I used the tanh approximation simply because the error function
-    //  erf was slow in tensorflow some years ago. If the exact version
-    //  is fast enough now and does not have numerical issues, I do not
-    //  see a reason to use an inexact version." -Dan Hendrycks @GitHub
-    //
-    // https://github.com/pytorch/pytorch/issues/39853
-    return .5f * x * (1.f + erff(x / sqrtf(2)));
+    // GeLU approximation that goes slower and we seem to be stuck with.
+    return .5f * x * (1.f + tanhf(sqrtf(M_2_PI) * (x + .044715f * x * x * x)));
 }
 
 inline static float ggml_gelu_quick_f32(float x) {
