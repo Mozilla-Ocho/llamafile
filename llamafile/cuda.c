@@ -89,6 +89,7 @@ GGML_CALL int ggml_backend_cuda_reg_devices(void);
 
 static struct Cuda {
     bool supported;
+    bool has_amd_gpu;
     atomic_uint once;
     typeof(ggml_cuda_link) *GGML_CALL link;
     typeof(ggml_backend_cuda_buffer_type) *GGML_CALL buffer_type;
@@ -217,11 +218,12 @@ struct StringList {
     size_t length;
 };
 
-static int StringCompare(const void* a, const void* b) {
-    return strcmp(*(const char**)a, *(const char**)b);
+static int StringCompare(const void *a, const void *b) {
+    return strcmp(*(const char **)a, *(const char **)b);
 }
 
-static void AddStringToStringList(struct StringList *string_list, char *string, size_t string_length) {
+static void AddStringToStringList(struct StringList *string_list, char *string,
+                                  size_t string_length) {
     struct StringListEntry *new_entry = malloc(sizeof(struct StringListEntry));
     new_entry->string = malloc(sizeof(char) * (string_length + 1));
     strncpy(new_entry->string, string, string_length);
@@ -376,7 +378,7 @@ static bool get_amd_offload_arch_flag(char out[static 64]) {
     char **names = NULL;
 
     CopyStringListToStringArray(&name_list, &names);
-    qsort(names, name_list.length, sizeof(char*), StringCompare);
+    qsort(names, name_list.length, sizeof(char *), StringCompare);
 
     int num_names = RemoveDuplicatesFromSortedStringArray(names, name_list.length);
 
@@ -808,6 +810,7 @@ static bool import_cuda_impl(void) {
         if (FLAG_nocompile) {
             if ((FileExists(dso) || extract_cuda_dso(dso, "ggml-rocm")) &&
                 link_cuda_dso(dso, library_path)) {
+                ggml_cuda.has_amd_gpu = true;
                 return true;
             } else {
                 goto TryNvidia;
@@ -820,10 +823,12 @@ static bool import_cuda_impl(void) {
             case -1:
                 return false;
             case false:
-                if (link_cuda_dso(dso, library_path))
+                if (link_cuda_dso(dso, library_path)) {
+                    ggml_cuda.has_amd_gpu = true;
                     return true;
-                else
+                } else {
                     goto TryNvidia;
+                }
             case true:
                 break;
             default:
@@ -834,10 +839,12 @@ static bool import_cuda_impl(void) {
         // Try building CUDA with ROCm SDK.
         if (compiler_path) {
             if (compile_amd(compiler_path, dso, src)) {
-                if (link_cuda_dso(dso, library_path))
+                if (link_cuda_dso(dso, library_path)) {
+                    ggml_cuda.has_amd_gpu = true;
                     return true;
-                else
+                } else {
                     goto TryNvidia;
+                }
             }
         } else {
             tinylog(__func__,
@@ -848,10 +855,12 @@ static bool import_cuda_impl(void) {
 
         // Try extracting prebuilt tinyBLAS DSO from PKZIP.
         if (extract_cuda_dso(dso, "ggml-rocm")) {
-            if (link_cuda_dso(dso, library_path))
+            if (link_cuda_dso(dso, library_path)) {
+                ggml_cuda.has_amd_gpu = true;
                 return true;
-            else
+            } else {
                 goto TryNvidia;
+            }
         }
 
         break;
@@ -932,6 +941,11 @@ static void import_cuda(void) {
 bool llamafile_has_cuda(void) {
     cosmo_once(&ggml_cuda.once, import_cuda);
     return ggml_cuda.supported;
+}
+
+bool llamafile_has_amd_gpu(void) {
+    cosmo_once(&ggml_cuda.once, import_cuda);
+    return ggml_cuda.has_amd_gpu;
 }
 
 GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_buffer_type(int device) {

@@ -211,7 +211,7 @@ int main(int argc, char ** argv) {
     if (!params.mmproj.empty() &&
         (!params.image.empty() ||
          params.prompt.find("<img src=\"") != std::string::npos)) {
-        return llava_cli(argc, argv, &params);
+        return llava_cli(argc, argv, params);
     }
 
     // TODO: Dump params ?
@@ -404,7 +404,7 @@ int main(int argc, char ** argv) {
             log_tostr(embd_inp.empty()), n_matching_session_tokens, embd_inp.size(), session_tokens.size(), embd_inp.size());
 
     // if we will use the cache for the full prompt without reaching the end of the cache, force
-    // reevaluation of the last token token to recalculate the cached logits
+    // reevaluation of the last token to recalculate the cached logits
     if (!embd_inp.empty() && n_matching_session_tokens == embd_inp.size() && session_tokens.size() > embd_inp.size()) {
         LOGLN("recalculate the cached logits (do): session_tokens.resize( %zu )", embd_inp.size() - 1);
 
@@ -590,7 +590,6 @@ int main(int argc, char ** argv) {
     }
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(sparams);
-    bool should_show_special_tokens = sparams.grammar.empty();
 
     while ((n_remain != 0 && !is_antiprompt) || params.interactive) {
         // predict
@@ -804,8 +803,7 @@ int main(int argc, char ** argv) {
         // display text
         if (input_echo && display) {
             for (auto id : embd) {
-                const std::string token_str =
-                        llama_token_to_piece(ctx, id, should_show_special_tokens);
+                const std::string token_str = llama_token_to_piece(ctx, id);
                 printf("%s", token_str.c_str());
 
                 if (embd.size() > 1) {
@@ -971,7 +969,7 @@ int main(int argc, char ** argv) {
                     for (size_t i = original_size; i < embd_inp.size(); ++i) {
                         const llama_token token = embd_inp[i];
                         output_tokens.push_back(token);
-                        output_ss << llama_token_to_piece(ctx, token, should_show_special_tokens);
+                        output_ss << llama_token_to_piece(ctx, token);
                     }
 
                     n_remain -= line_inp.size();

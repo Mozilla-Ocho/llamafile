@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
     BENCH(gemm(true, false, m, n, k, 1., A, lda, B, ldb, 0., G, ldc));
     BENCH(llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
-                          GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32));
+                          GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
 
     double err_sum = 0;
     long long err_worst = 0;

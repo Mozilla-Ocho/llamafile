@@ -9,8 +9,8 @@ LICENSE
 ORIGIN
 
   https://github.com/ggerganov/llama.cpp/pull/4406/
-  46e12c4692a37bdd31a0432fc5153d7d22bc7f72
-  2024-04-25
+  a8f9b076316e16aadd0791015b3bfd446fe1e904
+  2024-04-30
 
 LOCAL MODIFICATIONS
 
@@ -21,9 +21,9 @@ LOCAL MODIFICATIONS
   - Add support to main() programs for Cosmo /zip/.args files
   - Introduce pledge() SECCOMP sandboxing to improve security
   - Call exit() rather than abort() when GGML_ASSERT() fails
+  - Clamp bf16/f32 values before passing to K quantizers
   - Make GPU logger callback API safer and less generic
   - Write log to /dev/null when main.log fails to open
-  - Use _rand64() rather than time() as default seed
   - Make main and llava-cli print timings on ctrl-c
   - Avoid bind() conflicts on port 8080 w/ server
   - Use runtime dispatching for matmul quants

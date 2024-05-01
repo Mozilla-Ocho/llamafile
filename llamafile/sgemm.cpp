@@ -111,12 +111,14 @@ static const struct GemmFuncs {
  * @param Atype is GGML data type of `A`
  * @param Btype is GGML data type of `B`
  * @param Ctype is GGML data type of `C`
+ * @param precision may be used to control the internal compute type
  * @return true if this function was able to service the matmul request
  */
 bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
-                     int Ctype) {
-    return funcs.sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype, Ctype);
+                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype, int Ctype,
+                     int precision) {
+    return funcs.sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype, Ctype,
+                       precision);
 }
 
 /**

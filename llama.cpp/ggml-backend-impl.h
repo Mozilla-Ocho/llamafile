@@ -180,6 +180,7 @@ extern "C" {
         bool (*GGML_CALL ggml_backend_buffer_is_host)(ggml_backend_buffer_t);
         bool (*GGML_CALL ggml_guid_matches)(ggml_guid_t, ggml_guid_t);
         bool (*GGML_CALL ggml_is_empty)(const struct ggml_tensor *);
+        bool (*GGML_CALL ggml_are_same_shape)(const struct ggml_tensor *, const struct ggml_tensor *);
     };
 
 #ifdef  __cplusplus

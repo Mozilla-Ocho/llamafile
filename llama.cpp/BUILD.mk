@@ -43,6 +43,11 @@ o/$(MODE)/llama.cpp/ggml-alloc.o			\
 o/$(MODE)/llama.cpp/common.o: private			\
 		CCFLAGS += -Os
 
+o/$(MODE)/llama.cpp/ggml-quants.o: private CXXFLAGS += -Os
+o/$(MODE)/llama.cpp/ggml-quants-amd-avx.o: private TARGET_ARCH += -Xx86_64-mtune=sandybridge
+o/$(MODE)/llama.cpp/ggml-quants-amd-avx2.o: private TARGET_ARCH += -Xx86_64-mtune=skylake -Xx86_64-mf16c -Xx86_64-mfma -Xx86_64-mavx2
+o/$(MODE)/llama.cpp/ggml-quants-amd-avx512.o: private TARGET_ARCH += -Xx86_64-mtune=cannonlake -Xx86_64-mf16c -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavx512f
+
 $(LLAMA_CPP_OBJS): llama.cpp/BUILD.mk
 
 .PHONY: o/$(MODE)/llama.cpp

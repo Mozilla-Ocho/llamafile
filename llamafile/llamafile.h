@@ -50,11 +50,12 @@ bool llamafile_has_gpu(void);
 int llamafile_gpu_layers(int);
 bool llamafile_has_cuda(void);
 bool llamafile_has_metal(void);
+bool llamafile_has_amd_gpu(void);
 int llamafile_gpu_parse(const char *);
 const char *llamafile_describe_gpu(void);
 
 bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, void *, long, int,
-                     int, int, int, int, int);
+                     int, int, int, int, int, int);
 
 struct ggml_tensor;
 struct ggml_compute_params;
