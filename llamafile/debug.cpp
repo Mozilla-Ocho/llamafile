@@ -16,9 +16,11 @@
 // limitations under the License.
 
 #include "llamafile.h"
+#include "log.h"
 
 #include <cosmo.h>
 #include <fenv.h>
+#include <libc/calls/struct/aarch64.internal.h>
 #include <libc/calls/struct/ucontext.internal.h>
 #include <signal.h>
 #include <stdatomic.h>
@@ -37,6 +39,7 @@ static int get_config(void) {
 }
 
 bool FLAG_trap;
+static thread_local int g_enabled;
 thread_local int llamafile_debug_op_index;
 const struct ggml_cgraph *llamafile_debug_graph;
 
@@ -105,45 +108,89 @@ static inline void spinlock(atomic_uint *lock) {
     }
 }
 
+static inline void spunlock(atomic_uint *lock) {
+    atomic_store_explicit(lock, 0, memory_order_release);
+}
+
 static void on_sigfpe(int sig, siginfo_t *si, void *arg) {
-    ucontext_t *ctx = (ucontext_t *)arg;
+
     static atomic_uint lock;
-    spinlock(&lock); // first thread to crash wins
-    g_terminal_buddy.restore();
-    const char *s = "\nerror: ";
+    spinlock(&lock);
+
+    const char *issue;
+    ucontext_t *ctx = (ucontext_t *)arg;
     if (si->si_code == FPE_INTDIV)
-        tinyprint(2, s, "integer divide by zero\n", NULL);
+        issue = "integer divide by zero";
     else if (si->si_code == FPE_INTOVF)
-        tinyprint(2, s, "integer overflow\n", NULL);
+        issue = "integer overflow";
     else if (si->si_code == FPE_FLTDIV)
-        tinyprint(2, s, "floating point divide by zero\n", NULL);
+        issue = "floating point divide by zero";
     else if (si->si_code == FPE_FLTOVF)
-        tinyprint(2, s, "floating point overflow\n", NULL);
+        issue = "floating point overflow";
     else if (si->si_code == FPE_FLTUND)
-        tinyprint(2, s, "floating point underflow\n", NULL);
+        issue = "floating point underflow";
     else if (si->si_code == FPE_FLTRES)
-        tinyprint(2, s, "floating point inexact\n", NULL);
+        issue = "floating point inexact";
     else if (si->si_code == FPE_FLTINV)
-        tinyprint(2, s, "invalid floating point operation\n", NULL);
+        issue = "invalid floating point operation";
     else if (si->si_code == FPE_FLTSUB)
-        tinyprint(2, s, "subscript out of range\n", NULL);
+        issue = "subscript out of range";
     else
-        tinyprint(2, s, "caught sigfpe\n", NULL);
-    struct StackFrame sf = {.next = (struct StackFrame *)ctx->uc_mcontext.BP,
-                            .addr = ctx->uc_mcontext.PC};
-    ShowBacktrace(2, &sf);
-#ifdef LLAMAFILE_DEBUG
+        issue = "sigfpe";
+
+    // show detailed information
+    static bool once;
+    char location[21];
+    const char *path = "/tmp/cgraph.txt";
+    int idx = llamafile_debug_op_index;
     const struct ggml_cgraph *g;
     if ((g = llamafile_debug_graph)) {
-        int idx = llamafile_debug_op_index;
-        const char *path = "/tmp/cgraph.txt";
-        fprintf(stderr, "while executing %s at index #%d of %s\n", //
-                ggml_op_name(g->nodes[idx]->op), idx, path);
-        FILE *f = fopen(path, "w");
-        print_graph(f, g);
-        fclose(f);
+        FormatInt32(location, idx);
+        tinyprint(2, "error: ", issue, " at ", ggml_op_name(g->nodes[idx]->op), " operation in ",
+                  path, " at index #", location, "\n", NULL);
+    } else {
+        FormatHex64(location, ctx->uc_mcontext.PC, 2);
+        tinyprint(2, "error: ", issue, " at pc ", location, "\n", NULL);
+    }
+    if (!once) {
+        struct StackFrame sf = {.next = (struct StackFrame *)ctx->uc_mcontext.BP,
+                                .addr = ctx->uc_mcontext.PC};
+        ShowBacktrace(2, &sf);
+        const struct ggml_cgraph *g;
+        if ((g = llamafile_debug_graph)) {
+            FILE *f = fopen(path, "w");
+            print_graph(f, g);
+            fclose(f);
+        }
+        once = true;
+    }
+
+    // recover from trap so that execution may resume
+    // without this the same signal will just keep getting raised
+    int traps = get_config();
+#ifdef __x86_64__
+    if (ctx->uc_mcontext.fpregs) {
+        ctx->uc_mcontext.fpregs->mxcsr |= traps << 7; // disable traps
+        ctx->uc_mcontext.fpregs->mxcsr &= ~traps; // clear cages
+        spunlock(&lock);
+        return;
+    }
+#elif defined(__aarch64__)
+    struct _aarch64_ctx *ac;
+    for (ac = (struct _aarch64_ctx *)ctx->uc_mcontext.__reserved; ac->magic;
+         ac = (struct _aarch64_ctx *)((char *)ac + ac->size)) {
+        if (ac->magic == FPSIMD_MAGIC) {
+            struct fpsimd_context *sm = (struct fpsimd_context *)ac;
+            sm->fpcr &= ~(traps << 8); // disable traps
+            sm->fpsr &= ~traps; // clear cages
+            spunlock(&lock);
+            return;
+        }
     }
 #endif
+
+    // time to die
+    g_terminal_buddy.restore();
     _exit(128 + SIGFPE);
 }
 
@@ -160,7 +207,6 @@ static void setup_sigfpe(void) {
 
 int llamafile_trapping_enabled(int delta) {
     static atomic_uint once;
-    static thread_local int g_enabled;
     bool was_enabled = g_enabled > 0;
     bool is_enabled = (g_enabled += delta) > 0;
     int config = get_config();
@@ -173,4 +219,11 @@ int llamafile_trapping_enabled(int delta) {
         fedisableexcept(config);
     }
     return g_enabled;
+}
+
+void llamafile_trapping_restore(void) {
+    if (g_enabled > 0) {
+        feclearexcept(FE_ALL_EXCEPT);
+        feenableexcept(get_config());
+    }
 }

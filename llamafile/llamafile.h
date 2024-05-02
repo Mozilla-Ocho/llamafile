@@ -69,6 +69,7 @@ struct ggml_cgraph;
 int feenableexcept(int);
 int fedisableexcept(int);
 int llamafile_trapping_enabled(int);
+void llamafile_trapping_restore(void);
 void ShowBacktrace(int, const struct StackFrame *);
 extern const struct ggml_cgraph *llamafile_debug_graph;
 extern thread_local int llamafile_debug_op_index;

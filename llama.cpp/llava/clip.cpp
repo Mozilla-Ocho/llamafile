@@ -908,7 +908,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         LOG_TEE("%s: n_tensors:    %d\n", __func__, n_tensors);
         LOG_TEE("%s: n_kv:         %d\n", __func__, n_kv);
         LOG_TEE("%s: ftype:        %s\n", __func__, ftype_str.c_str());
-        LOG_TEE("\n");
+        // LOG_TEE("\n"); // [jart] do not want
     }
     const int n_tensors = gguf_get_n_tensors(ctx);
 
@@ -1157,7 +1157,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             for (int i = 0; i < 32 && (hparams.image_grid_pinpoints[i] != 0); ++i) {
                 LOG_TEE("%d ", hparams.image_grid_pinpoints[i]);
             }
-            LOG_TEE("\n");
+            // LOG_TEE("\n"); // [jart] do not want
             LOG_TEE("v_mm_patch_merge_type: %s\n", hparams.mm_patch_merge_type);
 
         }

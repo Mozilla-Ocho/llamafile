@@ -43,6 +43,7 @@
 #include "llama.cpp/ggml-impl.h"
 #include "llama.cpp/ggml-quants.h"
 #include "llamafile.h"
+#include "log.h"
 #include "sgemm.h"
 #include <cosmo.h>
 
@@ -65,7 +66,19 @@
 #define VECTOR_REGISTERS 16
 #endif
 
+#if 0
+#define NOT_SUPPORTED tinyBLAS_not_supported(__FILE__, __LINE__)
+#else
+#define NOT_SUPPORTED false
+#endif
+#define WANT_QUANTIZATION false
+
 namespace {
+
+bool tinyBLAS_not_supported(const char *file, int line) {
+    tinylogf("%s:%d: tinyBLAS not supported\n", file, line);
+    return false;
+}
 
 inline float unhalf(ggml_fp16_t d) {
     return GGML_FP16_TO_FP32(d);

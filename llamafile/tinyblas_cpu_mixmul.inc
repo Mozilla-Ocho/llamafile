@@ -148,6 +148,8 @@ class MixMul {
         switch (result->type) {
         case GGML_TYPE_F32:
             return mixmuler<float>();
+        case GGML_TYPE_BF16:
+            return mixmuler<ggml_bf16_t>();
         case GGML_TYPE_F16:
             return mixmuler<ggml_fp16_t>();
         default:

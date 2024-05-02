@@ -1,4 +1,6 @@
 #pragma once
+#define LOG_NO_TIMESTAMPS
+#define LOG_NO_FILE_LINE_FUNCTION
 
 #include <chrono>
 #include <cstring>
