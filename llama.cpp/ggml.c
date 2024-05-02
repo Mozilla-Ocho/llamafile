@@ -11867,14 +11867,7 @@ static void ggml_compute_forward_soft_max_f32(
         float max = -INFINITY;
         ggml_vec_max_f32(nc, &max, wp);
 
-        ggml_float sum = 0.0;
-
-        for (int i = 0; i < nc; i++) {
-            const float val = expf(wp[i] - max);
-            sum += (ggml_float)val;
-            dp[i] = val;
-        }
-
+        float sum = ggml_vec_soft_max_f32(nc, dp, wp, max);
         assert(sum > 0.0);
 
         sum = 1.0/sum;

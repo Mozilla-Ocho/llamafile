@@ -52,6 +52,7 @@
 #define ggml_vec_max_f32 ggml_vec_max_f32_amd_avx
 #define ggml_vec_norm_inv_f32 ggml_vec_norm_inv_f32_amd_avx
 #define ggml_vec_argmax_f32 ggml_vec_argmax_f32_amd_avx
+#define ggml_vec_soft_max_f32 ggml_vec_soft_max_f32_amd_avx
 #define GGML_VECTOR
 #include "ggml-vector.inc"
 #endif // __x86_64__

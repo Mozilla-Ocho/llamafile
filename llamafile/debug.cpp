@@ -30,15 +30,13 @@
 
 #include "llama.cpp/ggml.h"
 
-static int get_config(void) {
-    int config = FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW;
-    // TODO(jart): enable if quantization isn't being used
-    //             or possibly suppress exceptions in quants
-    // config |= FE_UNDERFLOW;
-    return config;
-}
+#define TRAPS (FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW)
+#define UNDERFLOW_ALARM "\e[s\e[H\e[7;1;49;31mUNDERFLOW\e[0m\e[u"
+#define UNDERFLOW_RESET "\e[s\e[H         \e[u"
+#define UNDERFLOW_DELAY 2
 
 bool FLAG_trap;
+static atomic_llong g_underflowed;
 static thread_local int g_enabled;
 thread_local int llamafile_debug_op_index;
 const struct ggml_cgraph *llamafile_debug_graph;
@@ -46,14 +44,33 @@ const struct ggml_cgraph *llamafile_debug_graph;
 static struct TerminalBuddy {
     TerminalBuddy() {
         active = !tcgetattr(0, &state);
+        is_terminal = active && isatty(2);
     }
     void restore() {
         if (active)
             tcsetattr(0, TCSANOW, &state);
     }
     bool active;
+    bool is_terminal;
     struct termios state;
 } g_terminal_buddy;
+
+static long long millis(void) {
+    return timespec_tomillis(timespec_real());
+}
+
+static inline void spinlock(atomic_uint *lock) {
+    int x;
+    for (;;) {
+        x = atomic_exchange_explicit(lock, 1, memory_order_acquire);
+        if (!x)
+            break;
+    }
+}
+
+static inline void spunlock(atomic_uint *lock) {
+    atomic_store_explicit(lock, 0, memory_order_release);
+}
 
 static const char *describe_vertex(struct ggml_tensor *t) {
     if (t->op == GGML_OP_UNARY)
@@ -99,41 +116,70 @@ int fedisableexcept(int excepts) {
     return 0;
 }
 
-static inline void spinlock(atomic_uint *lock) {
-    int x;
-    for (;;) {
-        x = atomic_exchange_explicit(lock, 1, memory_order_acquire);
-        if (!x)
-            break;
+// recover from trap so that execution may resume
+// without this the same signal will just keep getting raised
+static void recover(ucontext_t *ctx, int traps) {
+#ifdef __x86_64__
+    if (ctx->uc_mcontext.fpregs) {
+        ctx->uc_mcontext.fpregs->mxcsr |= traps << 7; // disable traps
+        ctx->uc_mcontext.fpregs->mxcsr &= ~traps; // clear cages
+        return;
     }
-}
-
-static inline void spunlock(atomic_uint *lock) {
-    atomic_store_explicit(lock, 0, memory_order_release);
+#elif defined(__aarch64__)
+    struct _aarch64_ctx *ac;
+    for (ac = (struct _aarch64_ctx *)ctx->uc_mcontext.__reserved; ac->magic;
+         ac = (struct _aarch64_ctx *)((char *)ac + ac->size)) {
+        if (ac->magic == FPSIMD_MAGIC) {
+            struct fpsimd_context *sm = (struct fpsimd_context *)ac;
+            sm->fpcr &= ~(traps << 8); // disable traps
+            sm->fpsr &= ~traps; // clear cages
+            return;
+        }
+    }
+#endif
+    // time to die
+    g_terminal_buddy.restore();
+    _exit(128 + SIGFPE);
 }
 
 static void on_sigfpe(int sig, siginfo_t *si, void *arg) {
+    ucontext_t *ctx = (ucontext_t *)arg;
+    int reason = si->si_code;
+
+    // underflows are something we expect to happen, particularly with
+    // quantization, so we'll display a check engine light whenever it
+    // happens, provided we're in teletypewriter mode.
+    if (reason == FPE_FLTUND) {
+        if (g_terminal_buddy.is_terminal) {
+            long long now = millis();
+            if ((now - atomic_exchange_explicit(&g_underflowed, now, memory_order_relaxed)) >
+                UNDERFLOW_DELAY) {
+                write(2, UNDERFLOW_ALARM, strlen(UNDERFLOW_ALARM));
+            }
+        }
+        recover(ctx, FE_UNDERFLOW);
+        return;
+    }
 
     static atomic_uint lock;
     spinlock(&lock);
 
     const char *issue;
-    ucontext_t *ctx = (ucontext_t *)arg;
-    if (si->si_code == FPE_INTDIV)
+    if (reason == FPE_INTDIV)
         issue = "integer divide by zero";
-    else if (si->si_code == FPE_INTOVF)
+    else if (reason == FPE_INTOVF)
         issue = "integer overflow";
-    else if (si->si_code == FPE_FLTDIV)
+    else if (reason == FPE_FLTDIV)
         issue = "floating point divide by zero";
-    else if (si->si_code == FPE_FLTOVF)
+    else if (reason == FPE_FLTOVF)
         issue = "floating point overflow";
-    else if (si->si_code == FPE_FLTUND)
+    else if (reason == FPE_FLTUND)
         issue = "floating point underflow";
-    else if (si->si_code == FPE_FLTRES)
+    else if (reason == FPE_FLTRES)
         issue = "floating point inexact";
-    else if (si->si_code == FPE_FLTINV)
+    else if (reason == FPE_FLTINV)
         issue = "invalid floating point operation";
-    else if (si->si_code == FPE_FLTSUB)
+    else if (reason == FPE_FLTSUB)
         issue = "subscript out of range";
     else
         issue = "sigfpe";
@@ -165,33 +211,8 @@ static void on_sigfpe(int sig, siginfo_t *si, void *arg) {
         once = true;
     }
 
-    // recover from trap so that execution may resume
-    // without this the same signal will just keep getting raised
-    int traps = get_config();
-#ifdef __x86_64__
-    if (ctx->uc_mcontext.fpregs) {
-        ctx->uc_mcontext.fpregs->mxcsr |= traps << 7; // disable traps
-        ctx->uc_mcontext.fpregs->mxcsr &= ~traps; // clear cages
-        spunlock(&lock);
-        return;
-    }
-#elif defined(__aarch64__)
-    struct _aarch64_ctx *ac;
-    for (ac = (struct _aarch64_ctx *)ctx->uc_mcontext.__reserved; ac->magic;
-         ac = (struct _aarch64_ctx *)((char *)ac + ac->size)) {
-        if (ac->magic == FPSIMD_MAGIC) {
-            struct fpsimd_context *sm = (struct fpsimd_context *)ac;
-            sm->fpcr &= ~(traps << 8); // disable traps
-            sm->fpsr &= ~traps; // clear cages
-            spunlock(&lock);
-            return;
-        }
-    }
-#endif
-
-    // time to die
-    g_terminal_buddy.restore();
-    _exit(128 + SIGFPE);
+    recover(ctx, TRAPS);
+    spunlock(&lock);
 }
 
 static void setup_sigfpe(void) {
@@ -209,14 +230,13 @@ int llamafile_trapping_enabled(int delta) {
     static atomic_uint once;
     bool was_enabled = g_enabled > 0;
     bool is_enabled = (g_enabled += delta) > 0;
-    int config = get_config();
     feclearexcept(FE_ALL_EXCEPT);
     if (is_enabled && !was_enabled) {
         cosmo_once(&once, setup_sigfpe);
-        feenableexcept(config);
+        feenableexcept(TRAPS);
     }
     if (!is_enabled && was_enabled) {
-        fedisableexcept(config);
+        fedisableexcept(TRAPS);
     }
     return g_enabled;
 }
@@ -224,6 +244,16 @@ int llamafile_trapping_enabled(int delta) {
 void llamafile_trapping_restore(void) {
     if (g_enabled > 0) {
         feclearexcept(FE_ALL_EXCEPT);
-        feenableexcept(get_config());
+        feenableexcept(TRAPS);
+        long long last;
+        if (g_terminal_buddy.is_terminal &&
+            (last = atomic_load_explicit(&g_underflowed, memory_order_relaxed))) {
+            long long now = millis();
+            if (now - last > UNDERFLOW_DELAY &&
+                now - atomic_exchange_explicit(&g_underflowed, 0, memory_order_relaxed) >
+                    UNDERFLOW_DELAY) {
+                write(2, UNDERFLOW_RESET, strlen(UNDERFLOW_RESET));
+            }
+        }
     }
 }

@@ -61,6 +61,7 @@ void ggml_vec_sum_f16_ggf(const int n, float * s, const ggml_fp16_t * x);
 void ggml_vec_max_f32(const int n, float * s, const float * x);
 void ggml_vec_norm_inv_f32(const int n, float * s, const float * x);
 void ggml_vec_argmax_f32(const int n, int * s, const float * x);
+float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max);
 
 #ifdef __cplusplus
 }

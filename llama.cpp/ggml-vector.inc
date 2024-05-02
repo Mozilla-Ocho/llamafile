@@ -3,6 +3,8 @@
 
 #include "ggml-vector.h"
 #include "ggml-impl.h"
+#include "llamafile/expf.h"
+#include "llamafile/llamafile.h"
 #include <stdatomic.h>
 
 void ggml_once(atomic_uint *, void (*)(void));
@@ -1184,7 +1186,33 @@ void ggml_vec_gelu_quick_f32(const int n, float * y, const float * x) {
 }
 
 void ggml_vec_silu_f32(const int n, float * y, const float * x) {
-    for (int i = 0; i < n; ++i) {
+    int i = 0;
+
+#if defined(__AVX512F__)
+    if (!FLAG_trap) {
+        for (; i + 15 < n; i += 16) {
+            _mm512_storeu_ps(y + i, llamafile_silu_avx512(_mm512_loadu_ps(x + i)));
+        }
+    }
+#endif
+
+#if defined(__AVX2__) && defined(__FMA__)
+    if (!FLAG_trap) {
+        for (; i + 7 < n; i += 8) {
+            _mm256_storeu_ps(y + i, llamafile_silu_avx2fma(_mm256_loadu_ps(x + i)));
+        }
+    }
+#endif
+
+#if defined(__ARM_NEON)
+    if (!FLAG_trap) {
+        for (; i + 3 < n; i += 4) {
+            vst1q_f32(y + i, llamafile_silu_neon(vld1q_f32(x + i)));
+        }
+    }
+#endif
+
+    for (; i < n; ++i) {
         y[i] = ggml_silu_f32(x[i]);
     }
 }
@@ -1253,4 +1281,50 @@ void ggml_vec_argmax_f32(const int n, int * s, const float * x) {
         if (max == x[i]) { idx = i; }
     }
     *s = idx;
+}
+
+float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) {
+    int i = 0;
+    ggml_float sum = 0;
+
+#if defined(__AVX512F__)
+    if (!FLAG_trap) {
+        for (; i + 15 < n; i += 16) {
+            __m512 val = llamafile_expf_avx512(_mm512_sub_ps(_mm512_loadu_ps(x + i),
+                                                             _mm512_set1_ps(max)));
+            _mm512_storeu_ps(y + i, val);
+            sum += _mm512_reduce_add_ps(val);
+        }
+    }
+#endif
+
+#if defined(__AVX2__) && defined(__FMA__)
+    if (!FLAG_trap) {
+        for (; i + 7 < n; i += 8) {
+            __m256 val = llamafile_expf_avx2fma(_mm256_sub_ps(_mm256_loadu_ps(x + i),
+                                                              _mm256_set1_ps(max)));
+            _mm256_storeu_ps(y + i, val);
+            __m128 v2 = _mm_add_ps(_mm256_extractf128_ps(val, 1),
+                                   _mm256_castps256_ps128(val));
+            v2 = _mm_add_ps(v2, _mm_movehl_ps(v2, v2));
+            v2 = _mm_add_ss(v2, _mm_movehdup_ps(v2));
+            sum += _mm_cvtss_f32(v2);
+        }
+    }
+#endif
+
+#ifdef __ARM_NEON
+    for (; i + 3 < n; i += 4) {
+        float32x4_t val = llamafile_expf_neon(vsubq_f32(vld1q_f32(x + i), vdupq_n_f32(max)));
+        vst1q_f32(y + i, val);
+        sum += vaddvq_f32(val);
+    }
+#endif
+
+    for (; i < n; ++i) {
+        float val = expf(x[i] - max);
+        sum += (ggml_float)val;
+        y[i] = val;
+    }
+    return sum;
 }

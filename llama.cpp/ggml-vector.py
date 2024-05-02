@@ -3,7 +3,7 @@ import re
 with open('llama.cpp/ggml-vector.h') as f:
   prototypes = f.read()
 prototypes = [line.replace(';', '') for line in prototypes.split('\n')
-              if line.endswith(';') and not line.startswith('//')]
+              if line.endswith(';') and not line.startswith('//') and '(' in line]
 FUNCS = [(re.search(r'(?<= )\w+', proto).group(0), proto)
          for proto in prototypes]
 

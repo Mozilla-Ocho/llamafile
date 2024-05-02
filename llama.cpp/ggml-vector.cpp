@@ -480,6 +480,15 @@ extern "C" void ggml_vec_argmax_f32_amd_avx(const int n, int * s, const float * 
 extern "C" void ggml_vec_argmax_f32_arm82(const int n, int * s, const float * x);
 extern "C" void ggml_vec_argmax_f32_arm80(const int n, int * s, const float * x);
 
+extern "C" float ggml_vec_soft_max_f32_amd_avx512bf16(const int n, float * y, const float * x, float max);
+extern "C" float ggml_vec_soft_max_f32_amd_avx512(const int n, float * y, const float * x, float max);
+extern "C" float ggml_vec_soft_max_f32_amd_avx2(const int n, float * y, const float * x, float max);
+extern "C" float ggml_vec_soft_max_f32_amd_f16c(const int n, float * y, const float * x, float max);
+extern "C" float ggml_vec_soft_max_f32_amd_fma(const int n, float * y, const float * x, float max);
+extern "C" float ggml_vec_soft_max_f32_amd_avx(const int n, float * y, const float * x, float max);
+extern "C" float ggml_vec_soft_max_f32_arm82(const int n, float * y, const float * x, float max);
+extern "C" float ggml_vec_soft_max_f32_arm80(const int n, float * y, const float * x, float max);
+
 static const struct VectorFuncs {
     typeof(ggml_fp16_to_fp32_row) *ptr_ggml_fp16_to_fp32_row;
     typeof(ggml_fp32_to_fp16_row) *ptr_ggml_fp32_to_fp16_row;
@@ -534,6 +543,7 @@ static const struct VectorFuncs {
     typeof(ggml_vec_max_f32) *ptr_ggml_vec_max_f32;
     typeof(ggml_vec_norm_inv_f32) *ptr_ggml_vec_norm_inv_f32;
     typeof(ggml_vec_argmax_f32) *ptr_ggml_vec_argmax_f32;
+    typeof(ggml_vec_soft_max_f32) *ptr_ggml_vec_soft_max_f32;
 
     VectorFuncs() {
 #ifdef __x86_64__
@@ -591,6 +601,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx512bf16;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx512bf16;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx512bf16;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx512bf16;
             return;
         }
 #endif
@@ -649,6 +660,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx512;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx512;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx512;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx512;
             return;
         }
 #endif
@@ -707,6 +719,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx2;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx2;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx2;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx2;
             return;
         }
 #endif
@@ -765,6 +778,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_f16c;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_f16c;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_f16c;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_f16c;
             return;
         }
 #endif
@@ -823,6 +837,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_fma;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_fma;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_fma;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_fma;
             return;
         }
 #endif
@@ -881,6 +896,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx;
             return;
         }
 #endif
@@ -939,6 +955,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_arm82;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_arm82;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_arm82;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_arm82;
             return;
         }
 #endif
@@ -997,6 +1014,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_arm80;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_arm80;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_arm80;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_arm80;
             return;
         }
 #endif
@@ -1213,5 +1231,9 @@ void ggml_vec_norm_inv_f32(const int n, float * s, const float * x) {
 
 void ggml_vec_argmax_f32(const int n, int * s, const float * x) {
   return funcs.ptr_ggml_vec_argmax_f32(n, s, x);
+}
+
+float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) {
+  return funcs.ptr_ggml_vec_soft_max_f32(n, y, x, max);
 }
 
