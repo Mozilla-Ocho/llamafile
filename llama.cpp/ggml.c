@@ -18135,7 +18135,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
             ggml_graph_compute_thread_sync_task(&task_phase, state, false);
         }
 
-#if 1
+#if 0
         // expensive integrity check
         // not useful to test mt-safety
         if (!state->ith) {
