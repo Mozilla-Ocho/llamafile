@@ -23,8 +23,9 @@
 #include "macros.h"
 #include "numba.h"
 #include <cassert>
+#include <cstdlib>
 
-#define ITERATIONS 5
+#define ITERATIONS 30
 #define ALLOC(n) (float *)memalign(4096, sizeof(float) * (n))
 
 void llamafile_sgemm_openmp(long m, long n, long k, const void *A, long lda, const void *B,
@@ -40,10 +41,9 @@ void llamafile_sgemm_openmp(long m, long n, long k, const void *A, long lda, con
 }
 
 int test(void) {
-    float tolerance = 2e-5;
-    int m = 510;
-    int n = 513;
-    int k = 512 * 8;
+    int m = 256;
+    int n = 500;
+    int k = 32768 * 2;
     int lda = ROUNDUP(k, 16);
     int ldb = ROUNDUP(k, 16);
     int ldc = ROUNDUP(m, 16);
@@ -59,8 +59,8 @@ int test(void) {
     randomize(k, n, B, ldb);
 
     BENCH(ansiBLAS::sgemm(m, n, k, A, lda, B, ldb, G, ldc));
-    BENCH(llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
-                          GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
+    BENCH(llamafile_sgemm_openmp(m, n, k, A, lda, B, ldb, C, ldc, GGML_TASK_TYPE_COMPUTE,
+                                 GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
 
     double err_sum = 0;
     long long err_worst = 0;
@@ -89,8 +89,29 @@ int test(void) {
         }
 
     double err_avg = err_sum / (m * n);
-    fprintf(stderr, "%12g ulp average\n", err_avg);
-    fprintf(stderr, "%12lld ulp worst\n", err_worst);
+    fprintf(stderr, "%9g ulp average\n", err_avg);
+    fprintf(stderr, "%9lld ulp worst\n", err_worst);
+
+    // using one accumulator
+    //    87015 us gemm
+    //     1859 us llamafile_sgemm
+    //  94.7872 ulp average
+    // 27610661 ulp worst
+
+    // using three accumulators
+    //   22.291 average ulp
+    //   1566 worst ulp
+
+    // using kahan summation
+    //    40190 us gemm
+    //     3028 us llamafile_sgemm
+    //  2.14244 ulp average
+    //      134 ulp worst
+
+    // if (err_avg > 2.15)
+    //     return 5;
+    // if (err_worst > 134)
+    //     return 6;
 
     free(G);
     free(C);

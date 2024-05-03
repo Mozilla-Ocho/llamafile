@@ -431,152 +431,182 @@ class tinyBLAS {
   private:
     NOINLINE void mnpack(long m0, long m, long n0, long n) {
         long mc, nc, mp, np;
-        switch ((MIN(m - m0, 5) << 4) | MIN(n - n0, 5)) {
+
 #if VECTOR_REGISTERS == 32
-        case 0x55:
-        case 0x54:
-            mc = 5;
-            nc = 4;
-            gemm<5, 4, false>(m0, m, n0, n);
-            break;
-        case 0x45:
-            mc = 4;
-            nc = 5;
-            gemm<4, 5, false>(m0, m, n0, n);
-            break;
-        case 0x44:
-            mc = 4;
-            nc = 4;
-            gemm<4, 4, false>(m0, m, n0, n);
-            break;
-        case 0x53:
-            mc = 5;
-            nc = 3;
-            gemm<5, 3, false>(m0, m, n0, n);
-            break;
-        case 0x35:
-            mc = 3;
-            nc = 5;
-            gemm<3, 5, false>(m0, m, n0, n);
-            break;
-        case 0x43:
-            mc = 4;
-            nc = 3;
-            gemm<4, 3, false>(m0, m, n0, n);
-            break;
-#else
-        case 0x55:
-        case 0x54:
-        case 0x53:
-        case 0x45:
-        case 0x44:
-        case 0x43:
-            mc = 4;
-            nc = 3;
-            gemm<4, 3, false>(m0, m, n0, n);
-            break;
-        case 0x35:
-#endif
-        case 0x34:
-            mc = 3;
-            nc = 4;
-            gemm<3, 4, false>(m0, m, n0, n);
-            break;
-        case 0x52:
-            mc = 5;
-            nc = 2;
-            gemm<5, 2, false>(m0, m, n0, n);
-            break;
-        case 0x33:
-            mc = 3;
-            nc = 3;
-            gemm<3, 3, false>(m0, m, n0, n);
-            break;
-        case 0x25:
-            mc = 2;
-            nc = 5;
-            gemm<2, 5, false>(m0, m, n0, n);
-            break;
-        case 0x42:
-            mc = 4;
-            nc = 2;
-            gemm<4, 2, false>(m0, m, n0, n);
-            break;
-        case 0x24:
-            mc = 2;
-            nc = 4;
-            gemm<2, 4, false>(m0, m, n0, n);
-            break;
-        case 0x32:
-            mc = 3;
-            nc = 2;
-            gemm<3, 2, true>(m0, m, n0, n);
-            break;
-        case 0x23:
-            mc = 2;
-            nc = 3;
-            gemm<2, 3, true>(m0, m, n0, n);
-            break;
-        case 0x51:
-            mc = 5;
-            nc = 1;
-            gemm<5, 1, true>(m0, m, n0, n);
-            break;
-        case 0x41:
-            mc = 4;
-            nc = 1;
-            gemm<4, 1, true>(m0, m, n0, n);
-            break;
-        case 0x22:
-            mc = 2;
-            nc = 2;
-            gemm<2, 2, true>(m0, m, n0, n);
-            break;
-        case 0x15:
-            mc = 1;
-            nc = 5;
-            gemm<1, 5, true>(m0, m, n0, n);
-            break;
-        case 0x14:
-            mc = 1;
-            nc = 4;
-            gemm<1, 4, true>(m0, m, n0, n);
-            break;
-        case 0x31:
-            mc = 3;
-            nc = 1;
-            gemm<3, 1, true>(m0, m, n0, n);
-            break;
-        case 0x13:
-            mc = 1;
-            nc = 3;
-            gemm<1, 3, true>(m0, m, n0, n);
-            break;
-        case 0x21:
-            mc = 2;
-            nc = 1;
-            gemm<2, 1, true>(m0, m, n0, n);
-            break;
-        case 0x12:
-            mc = 1;
-            nc = 2;
-            gemm<1, 2, true>(m0, m, n0, n);
-            break;
-        case 0x11:
-            mc = 1;
-            nc = 1;
-            gemm<1, 1, true>(m0, m, n0, n);
-            break;
-        default:
-            return;
+        if (!FLAG_precise) {
+            switch ((MIN(m - m0, 5) << 4) | MIN(n - n0, 5)) {
+            case 0x55:
+                mc = 5;
+                nc = 5;
+                gemm<5, 5, false>(m0, m, n0, n);
+                break;
+            case 0x54:
+            case 0x53:
+            case 0x52:
+            case 0x45:
+            case 0x44:
+            case 0x43:
+            case 0x42:
+            case 0x35:
+            case 0x34:
+            case 0x33:
+            case 0x32:
+            case 0x25:
+            case 0x24:
+            case 0x23:
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, true>(m0, m, n0, n);
+                break;
+            case 0x51:
+            case 0x41:
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x15:
+            case 0x14:
+            case 0x13:
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
+        } else {
+            switch ((MIN(m - m0, 4) << 4) | MIN(n - n0, 3)) {
+            case 0x43:
+                mc = 4;
+                nc = 3;
+                gemm<4, 3, true>(m0, m, n0, n);
+                break;
+            case 0x42:
+            case 0x33:
+            case 0x32:
+            case 0x23:
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, true>(m0, m, n0, n);
+                break;
+            case 0x41:
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x13:
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
         }
+#endif
+
+#if VECTOR_REGISTERS == 16
+        if (!FLAG_precise) {
+            switch ((MIN(m - m0, 4) << 4) | MIN(n - n0, 3)) {
+            case 0x43:
+                mc = 4;
+                nc = 3;
+                gemm<4, 3, false>(m0, m, n0, n);
+                break;
+            case 0x42:
+            case 0x33:
+            case 0x32:
+            case 0x23:
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, true>(m0, m, n0, n);
+                break;
+            case 0x41:
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x13:
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
+        } else {
+            switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 2)) {
+            case 0x32:
+                mc = 3;
+                nc = 2;
+                gemm<3, 2, true>(m0, m, n0, n);
+                break;
+            case 0x23:
+                mc = 2;
+                nc = 3;
+                gemm<2, 3, true>(m0, m, n0, n);
+                break;
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, true>(m0, m, n0, n);
+                break;
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
+        }
+#endif
+
         mp = m0 + (m - m0) / mc * mc;
         np = n0 + (n - n0) / nc * nc;
         mnpack(mp, m, n0, np);
         mnpack(m0, m, np, n);
     }
 
-    template <int RM, int RN, int KAHAN>
+    template <int RM, int RN, int PRECISE>
     NOINLINE void gemm(long m0, long m, long n0, long n) {
         long ytiles = RM > 1 ? (m - m0) / RM : 1;
         long xtiles = RN > 1 ? (n - n0) / RN : 1;
@@ -594,7 +624,7 @@ class tinyBLAS {
             for (long l = 0; l < k; l += KN)
                 for (int j = 0; j < RN; ++j)
                     for (int i = 0; i < RM; ++i)
-                        if (KAHAN)
+                        if (PRECISE)
                             Cv[j][i] = madder(load<V>(INDEX(A, lda, ii + i, l)), //
                                               load<V>(INDEX(B, ldb, jj + j, l)), //
                                               Cv[j][i], &Ce[j][i]);
@@ -639,62 +669,84 @@ class tinyBLAS_Q0_ARM {
   private:
     NOINLINE void mnpack(long m0, long m, long n0, long n) {
         long mc, nc, mp, np;
-        switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 3)) {
-        case 0x33:
-            mc = 3;
-            nc = 3;
-            gemm<3, 3, false>(m0, m, n0, n);
-            break;
-        case 0x32:
-            mc = 3;
-            nc = 2;
-            gemm<3, 2, false>(m0, m, n0, n);
-            break;
-        case 0x23:
-            mc = 2;
-            nc = 3;
-            gemm<2, 3, false>(m0, m, n0, n);
-            break;
-        case 0x22:
-            mc = 2;
-            nc = 2;
-            gemm<2, 2, true>(m0, m, n0, n);
-            break;
-        case 0x31:
-            mc = 3;
-            nc = 1;
-            gemm<3, 1, true>(m0, m, n0, n);
-            break;
-        case 0x13:
-            mc = 1;
-            nc = 3;
-            gemm<1, 3, true>(m0, m, n0, n);
-            break;
-        case 0x21:
-            mc = 2;
-            nc = 1;
-            gemm<2, 1, true>(m0, m, n0, n);
-            break;
-        case 0x12:
-            mc = 1;
-            nc = 2;
-            gemm<1, 2, true>(m0, m, n0, n);
-            break;
-        case 0x11:
-            mc = 1;
-            nc = 1;
-            gemm<1, 1, true>(m0, m, n0, n);
-            break;
-        default:
-            return;
+
+        if (!FLAG_precise || (!FLAG_precision_specified && sizeof(TB) == sizeof(block_q4_0))) {
+            switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 3)) {
+            case 0x33:
+                mc = 3;
+                nc = 3;
+                gemm<3, 3, false>(m0, m, n0, n);
+                break;
+            case 0x32:
+            case 0x23:
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, false>(m0, m, n0, n);
+                break;
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x13:
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
+        } else {
+            switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 3)) {
+            case 0x33:
+                mc = 3;
+                nc = 3;
+                gemm<3, 3, true>(m0, m, n0, n);
+                break;
+            case 0x32:
+            case 0x23:
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, true>(m0, m, n0, n);
+                break;
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x13:
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
         }
+
         mp = m0 + (m - m0) / mc * mc;
         np = n0 + (n - n0) / nc * nc;
         mnpack(mp, m, n0, np);
         mnpack(m0, m, np, n);
     }
 
-    template <int RM, int RN, int KAHAN>
+    template <int RM, int RN, int PRECISE>
     NOINLINE void gemm(long m0, long m, long n0, long n) {
         long ytiles = RM > 1 ? (m - m0) / RM : 1;
         long xtiles = RN > 1 ? (n - n0) / RN : 1;
@@ -718,7 +770,7 @@ class tinyBLAS_Q0_ARM {
                             load_hi(INDEX(A, lda, ii + i, l)), load_hi(INDEX(B, ldb, jj + j, l))));
                         float b = unhalf(INDEX(A, lda, ii + i, l)->d) *
                                   unhalf(INDEX(B, ldb, jj + j, l)->d);
-                        if (KAHAN)
+                        if (PRECISE)
                             Cv[j][i] = badder(a, b, Cv[j][i], &Ce[j][i]);
                         else
                             Cv[j][i] = vmlaq_n_f32(Cv[j][i], a, b);
@@ -775,114 +827,146 @@ class tinyBLAS_Q0_AVX2 {
   private:
     void mnpack(long m0, long m, long n0, long n) {
         long mc, nc, mp, np;
-        switch ((MIN(m - m0, 4) << 4) | MIN(n - n0, 4)) {
+
 #if VECTOR_REGISTERS == 32
-        case 0x44:
-            mc = 4;
-            nc = 4;
-            gemm<4, 4, false>(m0, m, n0, n);
-            break;
-        case 0x43:
-            mc = 4;
-            nc = 3;
-            gemm<4, 3, false>(m0, m, n0, n);
-            break;
-        case 0x34:
-            mc = 3;
-            nc = 4;
-            gemm<3, 4, false>(m0, m, n0, n);
-            break;
-        case 0x33:
-            mc = 3;
-            nc = 3;
-            gemm<3, 3, false>(m0, m, n0, n);
-            break;
-        case 0x42:
-            mc = 4;
-            nc = 2;
-            gemm<4, 2, false>(m0, m, n0, n);
-            break;
-        case 0x24:
-            mc = 2;
-            nc = 4;
-            gemm<2, 4, false>(m0, m, n0, n);
-            break;
-#else
-        case 0x44:
-        case 0x43:
-        case 0x42:
-            mc = 4;
-            nc = 2;
-            gemm<4, 2, false>(m0, m, n0, n);
-            break;
-        case 0x34:
-        case 0x24:
-            mc = 2;
-            nc = 4;
-            gemm<2, 4, false>(m0, m, n0, n);
-            break;
-        case 0x33:
-#endif
-        case 0x32:
-            mc = 3;
-            nc = 2;
-            gemm<3, 2, false>(m0, m, n0, n);
-            break;
-        case 0x23:
-            mc = 2;
-            nc = 3;
-            gemm<2, 3, false>(m0, m, n0, n);
-            break;
-        case 0x41:
-            mc = 4;
-            nc = 1;
-            gemm<4, 1, true>(m0, m, n0, n);
-            break;
-        case 0x22:
-            mc = 2;
-            nc = 2;
-            gemm<2, 2, true>(m0, m, n0, n);
-            break;
-        case 0x14:
-            mc = 1;
-            nc = 4;
-            gemm<1, 4, true>(m0, m, n0, n);
-            break;
-        case 0x31:
-            mc = 3;
-            nc = 1;
-            gemm<3, 1, true>(m0, m, n0, n);
-            break;
-        case 0x13:
-            mc = 1;
-            nc = 3;
-            gemm<1, 3, true>(m0, m, n0, n);
-            break;
-        case 0x21:
-            mc = 2;
-            nc = 1;
-            gemm<2, 1, true>(m0, m, n0, n);
-            break;
-        case 0x12:
-            mc = 1;
-            nc = 2;
-            gemm<1, 2, true>(m0, m, n0, n);
-            break;
-        case 0x11:
-            mc = 1;
-            nc = 1;
-            gemm<1, 1, true>(m0, m, n0, n);
-            break;
-        default:
-            return;
+        if (!FLAG_precise || (!FLAG_precision_specified && sizeof(TB) == sizeof(block_q4_0))) {
+            switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 3)) {
+            case 0x33:
+                mc = 3;
+                nc = 3;
+                gemm<3, 3, false>(m0, m, n0, n);
+                break;
+            case 0x32:
+            case 0x23:
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, false>(m0, m, n0, n);
+                break;
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x13:
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
+        } else {
+            switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 3)) {
+            case 0x33:
+                mc = 3;
+                nc = 3;
+                gemm<3, 3, true>(m0, m, n0, n);
+                break;
+            case 0x32:
+            case 0x23:
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, true>(m0, m, n0, n);
+                break;
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x13:
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
         }
+#endif
+
+#if VECTOR_REGISTERS == 16
+        if (!FLAG_precise || (!FLAG_precision_specified && sizeof(TB) == sizeof(block_q4_0))) {
+            switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 2)) {
+            case 0x32:
+                mc = 3;
+                nc = 2;
+                gemm<3, 2, false>(m0, m, n0, n);
+                break;
+            case 0x23:
+                mc = 2;
+                nc = 3;
+                gemm<2, 3, false>(m0, m, n0, n);
+                break;
+            case 0x22:
+                mc = 2;
+                nc = 2;
+                gemm<2, 2, false>(m0, m, n0, n);
+                break;
+            case 0x31:
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
+        } else {
+            switch ((MIN(m - m0, 2) << 4) | MIN(n - n0, 1)) {
+            case 0x21:
+                mc = 2;
+                nc = 1;
+                gemm<2, 1, true>(m0, m, n0, n);
+                break;
+            case 0x12:
+                mc = 1;
+                nc = 2;
+                gemm<1, 2, true>(m0, m, n0, n);
+                break;
+            case 0x11:
+                mc = 1;
+                nc = 1;
+                gemm<1, 1, true>(m0, m, n0, n);
+                break;
+            default:
+                return;
+            }
+        }
+#endif
+
         mp = m0 + (m - m0) / mc * mc;
         np = n0 + (n - n0) / nc * nc;
         mnpack(mp, m, n0, np);
         mnpack(m0, m, np, n);
     }
 
-    template <int RM, int RN, int KAHAN>
+    template <int RM, int RN, int PRECISE>
     NOINLINE void gemm(long m0, long m, long n0, long n) {
         long ytiles = RM > 1 ? (m - m0) / RM : 1;
         long xtiles = RN > 1 ? (n - n0) / RN : 1;
@@ -906,7 +990,7 @@ class tinyBLAS_Q0_AVX2 {
                                                           load(INDEX(A, lda, ii + i, l))),
                                          _mm256_sign_epi8(load(INDEX(B, ldb, jj + j, l)),
                                                           load(INDEX(A, lda, ii + i, l))));
-                        if (KAHAN)
+                        if (PRECISE)
                             Cv[j][i] = madder(a, b, Cv[j][i], &Ce[j][i]);
                         else
                             Cv[j][i] = madd(a, b, Cv[j][i]);

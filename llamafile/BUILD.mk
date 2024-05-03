@@ -107,8 +107,17 @@ o/$(MODE)/llamafile/tinyblas_cpu_mixmul_arm82.o: private TARGET_ARCH += -Xaarch6
 ################################################################################
 # testing
 
+o/$(MODE)/llamafile/sgemm_sss_test: private LDFLAGS += -fopenmp
+o/$(MODE)/llamafile/sgemm_sss_test.o: private CCFLAGS += -fopenmp
+o/$(MODE)/llamafile/sgemm_matmul_test: private LDFLAGS += -fopenmp
+o/$(MODE)/llamafile/sgemm_matmul_test.o: private CCFLAGS += -fopenmp
+
 o/$(MODE)/llamafile/sgemm_sss_test:			\
 		o/$(MODE)/llamafile/sgemm_sss_test.o	\
+		o/$(MODE)/llama.cpp/llama.cpp.a
+
+o/$(MODE)/llamafile/sgemm_matmul_test:			\
+		o/$(MODE)/llamafile/sgemm_matmul_test.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a
 
 o/$(MODE)/llamafile/sgemm_vecdot_test:			\

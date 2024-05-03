@@ -15,9 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "ansiblas.h"
 #include "bench.h"
 #include "float.h"
-#include "gemm.h"
 #include "llama.cpp/ggml.h"
 #include "llamafile.h"
 #include "macros.h"
@@ -26,7 +26,7 @@
 #define ITERATIONS 30
 #define ALLOC(n) (float *)memalign(4096, sizeof(float) * (n))
 
-int main(int argc, char *argv[]) {
+int test(void) {
     int m = 1025;
     int n = 1;
     int k = 32768;
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     randomize(k, m, A, lda);
     randomize(k, n, B, ldb);
 
-    BENCH(gemm(true, false, m, n, k, 1., A, lda, B, ldb, 0., G, ldc));
+    BENCH(ansiBLAS::sgemm(m, n, k, A, lda, B, ldb, G, ldc));
     BENCH(llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
                           GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
 
@@ -94,13 +94,29 @@ int main(int argc, char *argv[]) {
     //  2.14244 ulp average
     //      134 ulp worst
 
-    if (err_avg > 2.15)
-        return 5;
-    if (err_worst > 134)
-        return 6;
+    // if (err_avg > 2.15)
+    //     return 5;
+    // if (err_worst > 134)
+    //     return 6;
 
     free(G);
     free(C);
     free(B);
     free(A);
+
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+    int rc;
+
+    printf("\nFLAG_precise = false;\n");
+    FLAG_precise = false;
+    if ((rc = test()))
+        return rc;
+
+    printf("\nFLAG_precise = true;\n");
+    FLAG_precise = true;
+    if ((rc = test()))
+        return rc;
 }

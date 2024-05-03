@@ -1189,7 +1189,7 @@ void ggml_vec_silu_f32(const int n, float * y, const float * x) {
     int i = 0;
 
 #if defined(__AVX512F__)
-    if (!FLAG_trap) {
+    if (!FLAG_trap && !FLAG_precise) {
         for (; i + 15 < n; i += 16) {
             _mm512_storeu_ps(y + i, llamafile_silu_avx512(_mm512_loadu_ps(x + i)));
         }
@@ -1197,7 +1197,7 @@ void ggml_vec_silu_f32(const int n, float * y, const float * x) {
 #endif
 
 #if defined(__AVX2__) && defined(__FMA__)
-    if (!FLAG_trap) {
+    if (!FLAG_trap && !FLAG_precise) {
         for (; i + 7 < n; i += 8) {
             _mm256_storeu_ps(y + i, llamafile_silu_avx2fma(_mm256_loadu_ps(x + i)));
         }
@@ -1288,7 +1288,7 @@ float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) 
     ggml_float sum = 0;
 
 #if defined(__AVX512F__)
-    if (!FLAG_trap) {
+    if (!FLAG_trap && !FLAG_precise) {
         for (; i + 15 < n; i += 16) {
             __m512 val = llamafile_expf_avx512(_mm512_sub_ps(_mm512_loadu_ps(x + i),
                                                              _mm512_set1_ps(max)));
@@ -1299,7 +1299,7 @@ float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) 
 #endif
 
 #if defined(__AVX2__) && defined(__FMA__)
-    if (!FLAG_trap) {
+    if (!FLAG_trap && !FLAG_precise) {
         for (; i + 7 < n; i += 8) {
             __m256 val = llamafile_expf_avx2fma(_mm256_sub_ps(_mm256_loadu_ps(x + i),
                                                               _mm256_set1_ps(max)));
@@ -1314,10 +1314,12 @@ float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) 
 #endif
 
 #ifdef __ARM_NEON
-    for (; i + 3 < n; i += 4) {
-        float32x4_t val = llamafile_expf_neon(vsubq_f32(vld1q_f32(x + i), vdupq_n_f32(max)));
-        vst1q_f32(y + i, val);
-        sum += vaddvq_f32(val);
+    if (!FLAG_trap) {
+        for (; i + 3 < n; i += 4) {
+            float32x4_t val = llamafile_expf_neon(vsubq_f32(vld1q_f32(x + i), vdupq_n_f32(max)));
+            vst1q_f32(y + i, val);
+            sum += vaddvq_f32(val);
+        }
     }
 #endif
 

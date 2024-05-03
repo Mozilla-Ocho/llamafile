@@ -279,6 +279,16 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     if (arg == "--cli") {
         return true;
     }
+    if (arg == "--fast") {
+        FLAG_precise = false;
+        FLAG_precision_specified = true;
+        return true;
+    }
+    if (arg == "--precise") {
+        FLAG_precise = true;
+        FLAG_precision_specified = true;
+        return true;
+    }
     if (arg == "--trap") {
         FLAG_trap = true;
         FLAG_unsecure = true; // for better backtraces

@@ -600,10 +600,36 @@ useful for shell scripts when the
 flag is also supplied.
 .It Fl Fl grammar-file Ar FNAME
 File to read grammar from.
+.It Fl Fl fast
+Put llamafile into fast math mode. This disables algorithms that reduce
+floating point rounding, e.g. Kahan summation, and certain functions
+like expf() will be vectorized but handle underflows less gracefully.
+It's unspecified whether llamafile runs in fast or precise math mode
+when neither flag is specified.
+.It Fl Fl precise
+Put llamafile into precise math mode. This enables algorithms that
+reduce floating point rounding, e.g. Kahan summation, and certain
+functions like expf() will always handle subnormals correctly. It's
+unspecified whether llamafile runs in fast or precise math mode when
+neither flag is specified.
+.It Fl Fl trap
+Put llamafile into math trapping mode. When floating point exceptions
+occur, such as NaNs, overflow, and divide by zero, llamafile will print
+a warning to the console. This warning will include a C++ backtrace the
+first time an exception is trapped. The op graph will also be dumped to
+a file, and llamafile will report the specific op where the exception
+occurred. This is useful for troubleshooting when reporting issues.
+USing this feature will disable sandboxing. Math trapping is only
+possible if your CPU supports it. That is generally the case on AMD64,
+however it's less common on ARM64.
 .It Fl Fl prompt-cache Ar FNAME
 File to cache prompt state for faster startup.
 .Pp
 Default: none
+.It Fl fa Ar FNAME , Fl Fl flash-attn
+Enable Flash Attention. This is a mathematical shortcut that can speed
+up inference for certain models. This feature is still under active
+development.
 .It Fl Fl prompt-cache-all
 If specified, saves user input and generations to cache as well. Not supported with
 .Fl Fl interactive
@@ -653,8 +679,14 @@ Enable colorized output to differentiate visually distinguishing between
 prompts, user input, and generated text.
 .It Fl Fl no-display-prompt , Fl Fl silent-prompt
 Don't echo the prompt itself to standard output.
+.It Fl Fl keep Ar N
+Specifies number of tokens to keep from the initial prompt. The default
+is -1 which means all tokens.
 .It Fl Fl multiline-input
 Allows you to write or paste multiple lines without ending each in '\[rs]'.
+.It Fl Fl cont-batching
+Enables continuous batching, a.k.a. dynamic batching.
+is -1 which means all tokens.
 .El
 .Sh SERVER OPTIONS
 The following options may be specified when

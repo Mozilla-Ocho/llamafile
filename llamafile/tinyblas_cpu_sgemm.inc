@@ -45,7 +45,7 @@ namespace {
 template <typename TC>
 bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
                           TC *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
-                          int precision) {
+                          int Ctype, int precision) {
 
     switch (Atype) {
 
@@ -316,13 +316,13 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     switch (Ctype) {
     case GGML_TYPE_F32:
         return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (float *)C, ldc, ith, nth, task, Atype,
-                                    Btype, precision);
+                                    Btype, Ctype, precision);
     case GGML_TYPE_BF16:
         return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (ggml_bf16_t *)C, ldc, ith, nth, task,
-                                    Atype, Btype, precision);
+                                    Atype, Btype, Ctype, precision);
     case GGML_TYPE_F16:
         return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (ggml_fp16_t *)C, ldc, ith, nth, task,
-                                    Atype, Btype, precision);
+                                    Atype, Btype, Ctype, precision);
     default:
         return NOT_SUPPORTED;
     }
