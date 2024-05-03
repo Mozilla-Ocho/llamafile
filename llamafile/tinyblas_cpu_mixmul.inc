@@ -74,8 +74,8 @@ namespace {
 
 class MixMul {
   public:
-    MixMul(ggml_compute_params *params, const ggml_tensor *weights, const ggml_tensor *thought,
-           const ggml_tensor *plan, ggml_tensor *result)
+    MixMul(const ggml_compute_params *params, const ggml_tensor *weights,
+           const ggml_tensor *thought, const ggml_tensor *plan, ggml_tensor *result)
         : params(params),
           weights(weights),
           thought(thought),
@@ -371,7 +371,7 @@ class MixMul {
         return res;
     }
 
-    ggml_compute_params *const params;
+    const ggml_compute_params *const params;
     const ggml_tensor *const weights;
     const ggml_tensor *const thought;
     const ggml_tensor *const plan;
@@ -400,7 +400,7 @@ class MixMul {
 /**
  * Performs "mixture of experts" tensor multiplication on CPU.
  */
-bool llamafile_mixmul(ggml_compute_params *params, const ggml_tensor *weights,
+bool llamafile_mixmul(const ggml_compute_params *params, const ggml_tensor *weights,
                       const ggml_tensor *thought, const ggml_tensor *plan, ggml_tensor *result) {
     MixMul mm{params, weights, thought, plan, result};
     return mm.allocate_shared_memory() && mm.mixmul();

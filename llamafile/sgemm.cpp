@@ -124,7 +124,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 /**
  * Performs "mixture of experts" tensor multiplication on CPU.
  */
-bool llamafile_mixmul(ggml_compute_params *params, const ggml_tensor *weights,
+bool llamafile_mixmul(const ggml_compute_params *params, const ggml_tensor *weights,
                       const ggml_tensor *thought, const ggml_tensor *plan, ggml_tensor *result) {
     return funcs.mixmul(params, weights, thought, plan, result);
 }

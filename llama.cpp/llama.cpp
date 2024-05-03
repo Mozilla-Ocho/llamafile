@@ -11306,6 +11306,14 @@ static int llama_decode_internal(
             n_threads = std::min(4, n_threads);
         }
 
+        // [jart] On CPUs with many cores (e.g. EPYC, Threadripper)
+        //        using more than twenty threads for token prediction
+        //        never helps. This number appears to be optimal for all
+        //        models ranging from TinyLLaMA 1.1B to mighty Mixtral 8x22B.
+        if (n_tokens <= 2) {
+            n_threads = std::min(20, n_threads);
+        }
+
         ggml_backend_sched_alloc_graph(lctx.sched, gf);
 
         llama_set_inputs(lctx, u_batch);

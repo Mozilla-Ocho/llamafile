@@ -681,6 +681,8 @@ extern "C" {
         GGML_TASK_TYPE_FINALIZE,
     };
 
+    struct ggml_barrier;
+
     struct ggml_compute_params {
         enum ggml_task_type type;
 
@@ -690,6 +692,8 @@ extern "C" {
         // work buffer for all threads
         size_t wsize;
         void * wdata;
+
+        struct ggml_barrier *barrier;
     };
 
     // numa strategies

@@ -59,7 +59,7 @@ bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, v
 
 struct ggml_tensor;
 struct ggml_compute_params;
-bool llamafile_mixmul(struct ggml_compute_params *, const struct ggml_tensor *,
+bool llamafile_mixmul(const struct ggml_compute_params *, const struct ggml_tensor *,
                       const struct ggml_tensor *, const struct ggml_tensor *, struct ggml_tensor *);
 size_t llamafile_mixmul_needs(const struct ggml_tensor *, const struct ggml_tensor *,
                               const struct ggml_tensor *);
