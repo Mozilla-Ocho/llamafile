@@ -95,6 +95,16 @@ int32_t get_num_physical_cores() {
         return static_cast<int32_t>(siblings.size());
     }
     }
+    int32_t num_physical_cores;
+    size_t len = sizeof(num_physical_cores);
+    int result = sysctlbyname("hw.perflevel0.physicalcpu", &num_physical_cores, &len, NULL, 0);
+    if (result == 0) {
+        return num_physical_cores;
+    }
+    result = sysctlbyname("hw.physicalcpu", &num_physical_cores, &len, NULL, 0);
+    if (result == 0) {
+        return num_physical_cores;
+    }
     unsigned int n_threads = std::thread::hardware_concurrency();
     return n_threads > 0 ? (n_threads <= 4 ? n_threads : n_threads / 2) : 4;
 }

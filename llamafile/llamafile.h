@@ -2,13 +2,9 @@
 #define LLAMAFILE_H_
 #include <stdbool.h>
 #include <stdio.h>
+#include <threads.h>
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-// TODO(jart): remove in favor of c11 threads.h
-#if !defined(__cplusplus) && !defined(thread_local)
-#define thread_local _Thread_local
 #endif
 
 struct llamafile;

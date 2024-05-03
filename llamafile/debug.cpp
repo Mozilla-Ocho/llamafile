@@ -94,28 +94,6 @@ static void print_graph(FILE *f, const struct ggml_cgraph *g) {
     }
 }
 
-int feenableexcept(int excepts) {
-    excepts &= FE_ALL_EXCEPT;
-#ifdef __x86_64__
-    unsigned mxcsr;
-    asm("stmxcsr\t%0" : "=m"(mxcsr));
-    mxcsr &= ~(excepts << 7);
-    asm("ldmxcsr\t%0" : /* no inputs */ : "m"(mxcsr));
-#endif
-    return 0;
-}
-
-int fedisableexcept(int excepts) {
-    excepts &= FE_ALL_EXCEPT;
-#ifdef __x86_64__
-    unsigned mxcsr;
-    asm("stmxcsr\t%0" : "=m"(mxcsr));
-    mxcsr |= excepts << 7;
-    asm("ldmxcsr\t%0" : /* no inputs */ : "m"(mxcsr));
-#endif
-    return 0;
-}
-
 // recover from trap so that execution may resume
 // without this the same signal will just keep getting raised
 static void recover(ucontext_t *ctx, int traps) {
