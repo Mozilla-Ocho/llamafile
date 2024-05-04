@@ -559,6 +559,19 @@ Print token count every
 tokens.
 .Pp
 Default: -1
+.It Fl Fl pooling Ar KIND
+Specifies pooling type for embeddings. This may be one of:
+.Pp
+.Bl -dash -compact
+.It
+none
+.It
+mean
+.It
+cls
+.El
+.Pp
+The model default is used if unspecified.
 .El
 .Sh CLI OPTIONS
 The following options may be specified when
@@ -741,10 +754,6 @@ Path from which to serve static files.
 .Pp
 Default:
 .Pa /zip/llama.cpp/server/public
-.It Fl Fl embedding
-Enable embedding vector output.
-.Pp
-Default: disabled
 .It Fl Fl nobrowser
 Do not attempt to open a web browser tab at startup.
 .It Fl gan Ar N , Fl Fl grp-attn-n Ar N
