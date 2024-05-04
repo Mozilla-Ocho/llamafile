@@ -136,7 +136,6 @@ class MixMul {
             return false;
 
         // no support for column strides
-
         if (result->nb[0] != ggml_type_size(result->type))
             return false;
         if (thought->nb[0] != ggml_type_size(thought->type))

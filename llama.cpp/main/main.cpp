@@ -164,6 +164,11 @@ int main(int argc, char ** argv) {
         return server_cli(argc, argv);
     }
 
+    if (llamafile_has(argv, "--embedding")) {
+        int embedding_cli(int, char **);
+        return embedding_cli(argc, argv);
+    }
+
     gpt_params params;
     g_params = &params;
 

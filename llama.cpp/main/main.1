@@ -687,6 +687,20 @@ Allows you to write or paste multiple lines without ending each in '\[rs]'.
 .It Fl Fl cont-batching
 Enables continuous batching, a.k.a. dynamic batching.
 is -1 which means all tokens.
+.It Fl Fl embedding
+In CLI mode, the embedding flag may be use to print embeddings to
+standard output. By default, embeddings are computed over a whole
+prompt. However the
+.Fl Fl multiline
+flag may be passed, to have a separate embeddings array computed for
+each line of text in the prompt. In multiline mode, each embedding array
+will be printed on its own line to standard output, where individual
+floats are separated by space. If both the
+.Fl Fl multiline-input
+and
+.Fl Fl interactive
+flags are passed, then a pretty-printed summary of embeddings along with
+a cosine similarity matrix will be printed to the terminal.
 .El
 .Sh SERVER OPTIONS
 The following options may be specified when

@@ -25,6 +25,7 @@ LOCAL MODIFICATIONS
   - Make GPU logger callback API safer and less generic
   - Write log to /dev/null when main.log fails to open
   - Make main and llava-cli print timings on ctrl-c
+  - Make emebeddings CLI program shell scriptable
   - Avoid bind() conflicts on port 8080 w/ server
   - Use runtime dispatching for matmul quants
   - Remove operating system #ifdef statements

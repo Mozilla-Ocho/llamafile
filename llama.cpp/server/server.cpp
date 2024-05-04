@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "oai.h"
 #include "llamafile/micros.h"
+#include "llamafile/llamafile.h"
 #include "macsandbox.h"
 
 // increase max payload length to allow use of larger context size
@@ -2520,6 +2521,22 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         }
         else if (arg == "--server")
         {
+        }
+        else if (arg == "--fast")
+        {
+            FLAG_precise = false;
+            FLAG_precision_specified = true;
+        }
+        else if (arg == "--precise")
+        {
+            FLAG_precise = true;
+            FLAG_precision_specified = true;
+        }
+        else if (arg == "--trap")
+        {
+            FLAG_trap = true;
+            FLAG_unsecure = true; // for better backtraces
+            llamafile_trapping_enabled(+1);
         }
         else if (arg == "--nocompile")
         {
