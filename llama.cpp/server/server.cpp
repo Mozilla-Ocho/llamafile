@@ -2525,12 +2525,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         else if (arg == "--fast")
         {
             FLAG_precise = false;
-            FLAG_precision_specified = true;
         }
         else if (arg == "--precise")
         {
             FLAG_precise = true;
-            FLAG_precision_specified = true;
         }
         else if (arg == "--trap")
         {

@@ -32,7 +32,6 @@ void llamafile_launch_browser(const char *);
 extern bool FLAG_trap;
 extern bool FLAG_precise;
 extern bool FLAG_unsecure;
-extern bool FLAG_precision_specified;
 
 #define LLAMAFILE_GPU_ERROR -2
 #define LLAMAFILE_GPU_DISABLE -1

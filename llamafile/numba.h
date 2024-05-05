@@ -23,27 +23,31 @@ inline float float01(unsigned x) { // (0,1)
     return 1.f / 8388608 * ((x >> 9) + .5f);
 }
 
-inline float numba(void) { // (-1,1)
-    return float01(rand32()) * 2 - 1;
+inline float numba(void) { // (-10,10)
+    return float01(rand32()) * 2.f - 1.f;
 }
 
-template <typename T> void randomize(T *A, int n) {
+template <typename T>
+void randomize(T *A, int n) {
     for (int i = 0; i < n; ++i)
         A[i] = numba();
 }
 
-template <typename T> void randomize(int m, int n, T *A, int lda) {
+template <typename T>
+void randomize(int m, int n, T *A, int lda) {
     for (int j = 0; j < n; ++j)
         for (int i = 0; i < m; ++i)
             A[lda * j + i] = numba();
 }
 
-template <typename T, typename U> void broadcast(T *A, int n, U x) {
+template <typename T, typename U>
+void broadcast(T *A, int n, U x) {
     for (int i = 0; i < n; ++i)
         A[i] = x;
 }
 
-template <typename T, typename U> void broadcast(int m, int n, T *A, int lda, U x) {
+template <typename T, typename U>
+void broadcast(int m, int n, T *A, int lda, U x) {
     for (int j = 0; j < n; ++j)
         for (int i = 0; i < m; ++i)
             A[lda * j + i] = x;

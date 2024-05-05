@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# # tinyBLAS
-# MAX_M = 5
-# MAX_N = 5
-# EDGE_M = 2
-# EDGE_N = 2
-# OVERHEAD = 1
-
-# tinyBLAS_Q0
-MAX_M = 3
-MAX_N = 3
+# tinyBLAS
+MAX_M = 5
+MAX_N = 5
 EDGE_M = 2
 EDGE_N = 2
-OVERHEAD = 8
+OVERHEAD = 1
+
+# # tinyBLAS_Q0
+# MAX_M = 3
+# MAX_N = 3
+# EDGE_M = 2
+# EDGE_N = 2
+# OVERHEAD = 8
 
 def doit(VECTOR_REGISTERS, PRECISE):
   # choose tile size that exploits all vector registers

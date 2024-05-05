@@ -17,5 +17,4 @@
 
 #include "llamafile.h"
 
-bool FLAG_precise = true;
-bool FLAG_precision_specified;
+bool FLAG_precise;
