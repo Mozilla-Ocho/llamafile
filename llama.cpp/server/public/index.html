@@ -1125,8 +1125,8 @@
 
         // Headlines, emphasis and line breaks
         .replace(/^#{1,6} (.*)$/gim, '<h3>$1</h3>')
-        .replace(/(__|\*\*)(.*?)\1/g, '<strong>$2</strong>')
-        .replace(/(_|\*)(.*?)\1/g, '<em>$2</em>')
+        .replace(/(^|\s)(__|\*\*)(.*?)\2($|\s|[.?!])/g, '$1<strong>$3</strong>$4')
+        .replace(/(^|\s)(_|\*)(.*?)\2($|\s|[.?!])/g, '$1<em>$3</em>$4')
         .replace(/\n/gim, '<br />')
 
         // Paste the extracted blocks back in again
