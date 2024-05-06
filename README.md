@@ -374,7 +374,7 @@ Offloading to GPU is enabled by default when a Metal GPU is present.
 This can be disabled by passing `-ngl 0` or `--gpu disable` to force
 llamafile to perform CPU inference.
 
-Owners of NVIDIA and AMD graphics cards need to pass the `-ngl 999` flag
+Owners of NVIDIA and AMD graphics cards need to pass the `-ngl 9999` flag
 to enable maximum offloading. If multiple GPUs are present then the work
 will be divided evenly among them by default, so you can load larger
 models. Multiple GPU support may be broken on AMD Radeon systems. If
