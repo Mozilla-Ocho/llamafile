@@ -1,5 +1,6 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
 #include "llama.cpp/grammar-parser.h"
@@ -9,6 +10,7 @@
 #include "oai.h"
 #include "llamafile/micros.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/debug.h"
 #include "macsandbox.h"
 
 // increase max payload length to allow use of larger context size

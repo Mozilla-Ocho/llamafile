@@ -2,7 +2,6 @@
 #define LLAMAFILE_H_
 #include <stdbool.h>
 #include <stdio.h>
-#include <threads.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,26 +49,6 @@ bool llamafile_has_metal(void);
 bool llamafile_has_amd_gpu(void);
 int llamafile_gpu_parse(const char *);
 const char *llamafile_describe_gpu(void);
-
-bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, void *, long, int,
-                     int, int, int, int, int, int);
-
-struct ggml_tensor;
-struct ggml_compute_params;
-bool llamafile_mixmul(const struct ggml_compute_params *, const struct ggml_tensor *,
-                      const struct ggml_tensor *, const struct ggml_tensor *, struct ggml_tensor *);
-size_t llamafile_mixmul_needs(const struct ggml_tensor *, const struct ggml_tensor *,
-                              const struct ggml_tensor *);
-
-struct StackFrame;
-struct ggml_cgraph;
-int feenableexcept(int);
-int fedisableexcept(int);
-int llamafile_trapping_enabled(int);
-void llamafile_trapping_restore(void);
-void ShowBacktrace(int, const struct StackFrame *);
-extern const struct ggml_cgraph *llamafile_debug_graph;
-extern thread_local int llamafile_debug_op_index;
 
 #ifdef __cplusplus
 }

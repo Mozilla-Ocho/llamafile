@@ -42,7 +42,6 @@
 
 #include "llama.cpp/ggml-impl.h"
 #include "llama.cpp/ggml-quants.h"
-#include "llamafile.h"
 #include "log.h"
 #include "sgemm.h"
 #include <cosmo.h>

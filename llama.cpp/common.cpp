@@ -4,6 +4,7 @@
 #include "common.h"
 #include "json.h"
 #include "json-schema-to-grammar.h"
+#include "llamafile/debug.h"
 #include "llama.h"
 
 #include <algorithm>

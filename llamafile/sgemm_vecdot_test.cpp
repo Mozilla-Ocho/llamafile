@@ -19,9 +19,9 @@
 #include "bench.h"
 #include "float.h"
 #include "llama.cpp/ggml.h"
-#include "llamafile.h"
 #include "macros.h"
 #include "numba.h"
+#include "sgemm.h"
 
 #define ITERATIONS 30
 #define ALLOC(n) (float *)memalign(4096, sizeof(float) * (n))

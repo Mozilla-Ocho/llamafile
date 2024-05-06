@@ -2,6 +2,7 @@
 // vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
 #define GGML_USE_LLAMAFILE 1
+// #define LLAMAFILE_SYNC_REPORT
 
 __notice(ggml_notice, "\
 llama.cpp (MIT License)\n\
@@ -38,6 +39,8 @@ SOFTWARE.");
 #include "ggml-vector.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/log.h"
+#include "llamafile/debug.h"
+#include "llamafile/sgemm.h"
 
 #include <alloca.h>
 #include <assert.h>
@@ -55,6 +58,8 @@ SOFTWARE.");
 #include <signal.h>
 #include <unistd.h>
 #include <cosmo.h>
+#include <threads.h>
+#include <sys/auxv.h>
 #include <libc/log/backtrace.internal.h>
 
 #include <pthread.h>
@@ -1325,6 +1330,35 @@ static inline void __sse_f16x4_store(ggml_fp16_t *x, __m128 y) {
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
+// SYNCHRONIZATION MEASUREMENTS
+
+int cycles[5000][100];
+_Atomic(unsigned long) opstart[5000];
+_Atomic(unsigned long) absolute_start;
+
+static thread_local struct {
+    unsigned long work_cycles;
+    unsigned long wait_cycles;
+    unsigned long stamp;
+} g_sync;
+
+static void sync_wait_start(void) {
+#ifdef LLAMAFILE_SYNC_REPORT
+    unsigned long now = rdtsc();
+    g_sync.work_cycles += now - g_sync.stamp;
+    g_sync.stamp = now;
+#endif
+}
+
+static void sync_wait_end(void) {
+#ifdef LLAMAFILE_SYNC_REPORT
+    unsigned long now = rdtsc();
+    g_sync.wait_cycles += now - g_sync.stamp;
+    g_sync.stamp = now;
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SYNCHRONIZATION PRIMITIVES
 
 struct ggml_barrier {
@@ -1360,6 +1394,7 @@ int ggml_delay(int backoff) {
 
 // creates barrier and blocks until all threads call this
 void ggml_syncthreads(struct ggml_barrier * b, int nth) {
+    sync_wait_start();
     unsigned phase = atomic_load_explicit(&b->phase, memory_order_relaxed);
     if (atomic_fetch_add_explicit(&b->count, 1, memory_order_acq_rel) + 1 == nth) {
         atomic_store_explicit(&b->count, 0, memory_order_relaxed);
@@ -1370,6 +1405,7 @@ void ggml_syncthreads(struct ggml_barrier * b, int nth) {
             backoff = ggml_delay(backoff);
         }
     }
+    sync_wait_end();
 }
 
 //
@@ -15862,6 +15898,15 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
         return;
     }
 
+#ifdef LLAMAFILE_SYNC_REPORT
+    long start = rdtsc();
+    unsigned long old = 0;
+    atomic_compare_exchange_strong_explicit(&opstart[llamafile_debug_op_index],
+                                            &old, start,
+                                            memory_order_relaxed,
+                                            memory_order_relaxed);
+#endif
+
     switch (tensor->op) {
         case GGML_OP_DUP:
             {
@@ -16202,6 +16247,11 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
                 GGML_ASSERT(false);
             } break;
     }
+
+#ifdef LLAMAFILE_SYNC_REPORT
+    long end = rdtsc();
+    cycles[llamafile_debug_op_index][params->ith] += end - start;
+#endif
 
 #ifdef LLAMAFILE_DEBUG
     llamafile_trapping_restore();
@@ -17692,6 +17742,7 @@ struct ggml_compute_state_shared {
     const int n_threads;
 
     // synchronization primitives
+    atomic_int n_alive;   // num threads alive
     atomic_int n_active;  // num active threads
     atomic_int node_n;    // active graph node
     atomic_int node_task; // active graph node task phase
@@ -17977,11 +18028,13 @@ static void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_comput
     const int last_node_n = * node_n;
     int backoff = 0;
 
+    sync_wait_start();
     while (true) {
         * node_n = atomic_load_explicit(&state->shared->node_n, memory_order_acquire);
         if (* node_n != last_node_n) break;
         backoff = ggml_delay(backoff);
     }
+    sync_wait_end();
 }
 
 static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_compute_state * state, const bool do_yield) {
@@ -17989,11 +18042,13 @@ static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_co
     const int last_task_phase = * task_phase;
     int backoff = 0;
 
+    sync_wait_start();
     while (true) {
         * task_phase = atomic_load_explicit(&state->shared->node_task, memory_order_acquire);
         if (* task_phase != last_task_phase) break;
         backoff = ggml_delay(backoff);
     }
+    sync_wait_end();
 }
 
 static thread_ret_t ggml_graph_compute_thread(void * data) {
@@ -18015,10 +18070,20 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
     }
 #endif
 
+#ifdef LLAMAFILE_SYNC_REPORT
+    g_sync.stamp = rdtsc();
+    unsigned long old = 0;
+    atomic_compare_exchange_strong_explicit(&absolute_start,
+                                            &old, g_sync.stamp,
+                                            memory_order_relaxed,
+                                            memory_order_relaxed);
+#endif
+
     while (true) {
         if (cplan->abort_callback && cplan->abort_callback(cplan->abort_callback_data)) {
             state->shared->node_n += 1;
             state->ec = GGML_STATUS_ABORTED;
+            atomic_fetch_sub_explicit(&state->shared->n_alive, 1, memory_order_release);
             return 0;
         }
 
@@ -18033,6 +18098,10 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
                 /*.wdata   =*/ cplan->work_data,
                 /*.barrier =*/ &state->shared->barrier,
             };
+
+#ifdef LLAMAFILE_DEBUG
+        llamafile_debug_op_index = node_n;
+#endif
 
             if (node_n != -1) {
                 /* FINALIZE */
@@ -18217,6 +18286,14 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
 
     }
 
+#ifdef LLAMAFILE_SYNC_REPORT
+    g_sync.work_cycles += rdtsc() - g_sync.stamp;
+    double total = g_sync.work_cycles + g_sync.wait_cycles;
+    int workpercent = g_sync.work_cycles / total * 100.5;
+    fprintf(stderr, "SYNC %03d %3d%% working\n", state->ith, workpercent);
+#endif
+
+    atomic_fetch_sub_explicit(&state->shared->n_alive, 1, memory_order_release);
     return 0;
 }
 
@@ -18432,6 +18509,45 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph * cgraph, int n_threa
     return cplan;
 }
 
+static const char *describe_shape(char buf[100], struct ggml_tensor *t) {
+    char *p = buf;
+    *p++ = '[';
+    for (int i = 0; i < GGML_MAX_DIMS && t->ne[i] != 1; ++i) {
+        if (i) p += sprintf(p, ", ");
+        p += sprintf(p, "%d", t->ne[i]);
+    }
+    *p++ = ']';
+    *p = 0;
+    return buf;
+}
+
+static const char *describe_vertex(struct ggml_tensor *t) {
+    if (t->op == GGML_OP_UNARY)
+        return ggml_unary_op_name((enum ggml_unary_op)t->op_params[0]);
+    if (t->op)
+        return ggml_op_name(t->op);
+    return t->name;
+}
+
+static void print_graph(FILE *f, const struct ggml_cgraph *g, int n_threads) {
+    char shape[100];
+    for (int i = 0; i < g->n_nodes; ++i) {
+        int n_tasks = ggml_get_n_tasks(g->nodes[i], 8, 4);
+        fprintf(f, "%5d %p %s:%s%s(", i, g->nodes[i], ggml_type_name(g->nodes[i]->type),
+                describe_vertex(g->nodes[i]),
+                describe_shape(shape, g->nodes[i]));
+        for (int j = 0; j < GGML_MAX_SRC && g->nodes[i]->src[j]; ++j) {
+            if (j)
+                fprintf(f, ", ");
+            fprintf(f, "%s:%s%s[%p]", ggml_type_name(g->nodes[i]->src[j]->type),
+                    describe_vertex(g->nodes[i]->src[j]),
+                    describe_shape(shape, g->nodes[i]->src[j]),
+                    g->nodes[i]->src[j]);
+        }
+        fprintf(f, ") n_tasks=%d\n", n_tasks);
+    }
+}
+
 enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cplan * cplan) {
     {
         GGML_ASSERT(cplan);
@@ -18442,6 +18558,10 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
         }
     }
 
+#ifdef LLAMAFILE_SYNC_REPORT
+    fprintf(stderr, "\n");
+#endif
+
     const int n_threads = cplan->n_threads;
 
     struct ggml_compute_state_shared state_shared = {
@@ -18450,6 +18570,7 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
         /*.perf_node_start_cycles  =*/ 0,
         /*.perf_node_start_time_us =*/ 0,
         /*.n_threads               =*/ n_threads,
+        /*.n_alive                 =*/ n_threads,
         /*.n_active                =*/ n_threads,
         /*.node_n                  =*/ -1,
         /*.node_task               =*/ GGML_TASK_TYPE_FINALIZE,
@@ -18502,6 +18623,37 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
                 compute_status = workers[j].ec;
         }
     }
+
+#ifdef LLAMAFILE_SYNC_REPORT
+    opstart[cgraph->n_nodes] = rdtsc();
+    static int lol;
+    if (++lol == 2) {
+        const char *path = "/tmp/cgraph.txt";
+        FILE *f = fopen(path, "w");
+        if (!f) {
+            const char *help;
+            if (errno == EPERM) {
+                help = " (you need to pass the --unsecure flag)";
+            } else {
+                help = "";
+            }
+            fprintf(stderr, "%s: %s%s\n", path, strerror(errno), help);
+            exit(1);
+        }
+        print_graph(f, cgraph, cplan->n_threads);
+        fclose(f);
+        fprintf(stderr, "\n");
+    }
+    for (int i = 0; i < cgraph->n_nodes; ++i) {
+        fprintf(stderr, "OP %-11s %12ld %4d", describe_vertex(cgraph->nodes[i]), opstart[i + 1] - opstart[i], i);
+        for (int j = 0; j < n_threads; ++j) {
+            fprintf(stderr, " %10d", cycles[i][j]);
+        }
+        fprintf(stderr, "\n");
+    }
+    memset(opstart, 0, sizeof(opstart));
+    memset(cycles, 0, sizeof(cycles));
+#endif
 
     // performance stats (graph)
     {
