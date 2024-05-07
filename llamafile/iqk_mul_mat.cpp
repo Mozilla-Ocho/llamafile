@@ -971,34 +971,40 @@ struct Q4_1_Dequantizer {
     }
 };
 
-// Copy-pasted from ggml. I guess, I did not want to include
-// everything but the kitchen sink for this one function.
-static inline __m256i bytes_from_bits_32(const uint8_t * x) {
-    uint32_t x32;
-    memcpy(&x32, x, sizeof(uint32_t));
-    const __m256i shuf_mask = _mm256_set_epi64x(
-            0x0303030303030303, 0x0202020202020202,
-            0x0101010101010101, 0x0000000000000000);
-    __m256i bytes = _mm256_shuffle_epi8(_mm256_set1_epi32(x32), shuf_mask);
-    const __m256i bit_mask = _mm256_set1_epi64x(0x7fbfdfeff7fbfdfe);
-    bytes = _mm256_or_si256(bytes, bit_mask);
-    return _mm256_cmpeq_epi8(bytes, _mm256_set1_epi64x(-1));
-}
+struct HBitDequantizer {
+    const __m256i shuffle = _mm256_set_epi64x(0x0303030303030303, 0x0202020202020202, 0x0101010101010101, 0x0000000000000000);
+    const __m256i mask = _mm256_set1_epi64x(0x7fbfdfeff7fbfdfe);
+    const __m256i minus1 = _mm256_set1_epi64x(-1);
+    inline __m256i to_bytes(const uint8_t * bits) const {
+        // Note: Data in all ggml quants is at least 2-byte aligned.
+        // => we can cast to uint16_t and use or on two consecutive entries
+        // which is faster than memcpy
+        const uint16_t * aux16 = (const uint16_t *)bits;
+        const uint32_t aux32 = aux16[0] | (aux16[1] << 16);
+        //uint32_t aux32; memcpy(&aux32, bits, sizeof(uint32_t));
+        __m256i bytes = _mm256_shuffle_epi8(_mm256_set1_epi32(aux32), shuffle);
+        bytes = _mm256_or_si256(bytes, mask);
+        return _mm256_cmpeq_epi8(bytes, minus1);
+    }
+};
+
 
 struct Q5_0_Dequantizer {
     Dequantizer4bit b4;
+    HBitDequantizer hbit;
     const __m256i mh = _mm256_set1_epi8((char)0xF0);
     inline __m256i dequant(const block_q5_0 * x) const {
-        const __m256i vqh = _mm256_andnot_si256(bytes_from_bits_32(x->qh), mh);
+        const __m256i vqh = _mm256_andnot_si256(hbit.to_bytes(x->qh), mh);
         return _mm256_or_si256(b4.dequant(x->qs), vqh);
     }
 };
 
 struct Q5_1_Dequantizer {
     Dequantizer4bit b4;
+    HBitDequantizer hbit;
     const __m256i mh = _mm256_set1_epi8(0x10);
     inline __m256i dequant(const block_q5_1 * x) const {
-        const __m256i vqh = _mm256_and_si256(bytes_from_bits_32(x->qh), mh);
+        const __m256i vqh = _mm256_and_si256(hbit.to_bytes(x->qh), mh);
         return _mm256_or_si256(b4.dequant(x->qs), vqh);
     }
 };
