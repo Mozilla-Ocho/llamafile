@@ -269,6 +269,10 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 
 } // namespace
 
+#if defined __AVX2__ && QK_K == 256
+#include "iqk_mul_mat.inc"
+#endif
+
 /**
  * Performs optimized matrix multiplication on CPU.
  *
@@ -312,6 +316,14 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     assert(ldc >= m);
     assert(nth > 0);
     assert(ith < nth);
+
+#if defined __AVX2__ && QK_K == 256
+    if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
+        if (iqk_mul_mat(m, n, k*QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
+            return true;
+        }
+    }
+#endif
 
     switch (Ctype) {
     case GGML_TYPE_F32:
