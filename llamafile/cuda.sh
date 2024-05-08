@@ -23,15 +23,9 @@ cd "$TMP"
 
 /usr/local/cuda/bin/nvcc \
   --shared \
-  -gencode=arch=compute_50,code=sm_50 \
-  -gencode=arch=compute_60,code=sm_60 \
-  -gencode=arch=compute_70,code=sm_70 \
-  -gencode=arch=compute_75,code=sm_75 \
-  -gencode=arch=compute_80,code=sm_80 \
-  -gencode=arch=compute_90,code=sm_90 \
+  -arch=all-major \
   --forward-unknown-to-host-compiler \
-  --compiler-options \
-  "-fPIC -O3 -march=native -mtune=native" \
+  --compiler-options "-fPIC -O2" \
   -DNDEBUG \
   -DGGML_BUILD=1 \
   -DGGML_SHARED=1 \
@@ -40,6 +34,7 @@ cd "$TMP"
   -DGGML_CUDA_DMMV_X=32 \
   -DK_QUANTS_PER_ITERATION=2 \
   -DGGML_CUDA_PEER_MAX_BATCH_SIZE=128 \
+  -DGGML_MINIMIZE_CODE_SIZE \
   -DGGML_USE_TINYBLAS \
   -o ~/ggml-cuda.so \
   ggml-cuda.cu \

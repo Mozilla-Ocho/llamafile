@@ -78,7 +78,6 @@ int embedding_cli(int argc, char ** argv) {
 
 #ifndef LOG_DISABLE_LOGS
     log_set_target(stderr);
-    LOG_TEE("Log start\n");
     log_dump_cmdline(argc, argv);
     llama_log_set(llama_log_callback_logTee, nullptr);
 #endif // LOG_DISABLE_LOGS

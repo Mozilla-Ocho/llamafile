@@ -269,10 +269,6 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 
 } // namespace
 
-#if defined __AVX2__ && QK_K == 256
-#include "iqk_mul_mat.inc"
-#endif
-
 /**
  * Performs optimized matrix multiplication on CPU.
  *
@@ -317,10 +313,12 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     assert(nth > 0);
     assert(ith < nth);
 
-#if defined __AVX2__ && QK_K == 256
-    if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
-        if (iqk_mul_mat(m, n, k*QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
-            return true;
+#if defined(__x86_64__) && QK_K == 256
+    if (X86_HAVE(AVX2) && X86_HAVE(FMA)) {
+        if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
+            if (iqk_mul_mat(m, n, k * QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
+                return true;
+            }
         }
     }
 #endif
@@ -329,12 +327,6 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     case GGML_TYPE_F32:
         return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (float *)C, ldc, ith, nth, task, Atype,
                                     Btype, Ctype, precision);
-    case GGML_TYPE_BF16:
-        return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (ggml_bf16_t *)C, ldc, ith, nth, task,
-                                    Atype, Btype, Ctype, precision);
-    case GGML_TYPE_F16:
-        return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (ggml_fp16_t *)C, ldc, ith, nth, task,
-                                    Atype, Btype, Ctype, precision);
     default:
         return NOT_SUPPORTED;
     }

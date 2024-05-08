@@ -296,14 +296,13 @@ int llava_cli(int argc, char ** argv, gpt_params & params) {
 
 #ifndef LOG_DISABLE_LOGS
     log_set_target(log_filename_generator("llava", "log"));
-    LOG_TEE("Log start\n");
     log_dump_cmdline(argc, argv);
     llama_log_set(llama_log_callback_logTee, nullptr);
 #endif // LOG_DISABLE_LOGS
 
     if (params.mmproj.empty() || (params.image.empty() && !prompt_contains_image(params.prompt))) {
         gpt_print_usage(argc, argv, params);
-        show_additional_info(argc, argv);
+        // show_additional_info(argc, argv); // [jart] no help unless we ask for it
         return 1;
     }
     auto model = llava_init(&params);

@@ -42,7 +42,7 @@ chmod +x llava-v1.5-7b-q4.llamafile
 5. Run the llamafile. e.g.:
 
 ```sh
-./llava-v1.5-7b-q4.llamafile -ngl 9999
+./llava-v1.5-7b-q4.llamafile
 ```
 
 6. Your browser should open automatically and display a chat interface. 
@@ -184,19 +184,19 @@ try out llamafile with different kinds of LLMs.
 Here is an example for the Mistral command-line llamafile:
 
 ```sh
-./mistral-7b-instruct-v0.2.Q5_K_M.llamafile -ngl 9999 --temp 0.7 -p '[INST]Write a story about llamas[/INST]'
+./mistral-7b-instruct-v0.2.Q5_K_M.llamafile --temp 0.7 -p '[INST]Write a story about llamas[/INST]'
 ```
 
 And here is an example for WizardCoder-Python command-line llamafile:
 
 ```sh
-./wizardcoder-python-13b.llamafile -ngl 9999 --temp 0 -e -r '```\n' -p '```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
+./wizardcoder-python-13b.llamafile --temp 0 -e -r '```\n' -p '```c\nvoid *memcpy_sse2(char *dst, const char *src, size_t size) {\n'
 ```
 
 And here's an example for the LLaVA command-line llamafile:
 
 ```sh
-./llava-v1.5-7b-q4.llamafile -ngl 9999 --temp 0.2 --image lemurs.jpg -e -p '### User: What do you see?\n### Assistant:'
+./llava-v1.5-7b-q4.llamafile --temp 0.2 --image lemurs.jpg -e -p '### User: What do you see?\n### Assistant:'
 ```
 
 As before, macOS, Linux, and BSD users will need to use the "chmod"
@@ -266,7 +266,7 @@ For Windows users, here's an example for the Mistral LLM:
 ```sh
 curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.6/llamafile-0.6
 curl -L -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
-./llamafile.exe -m mistral.gguf -ngl 9999
+./llamafile.exe -m mistral.gguf
 ```
 
 Windows users may need to change `./llamafile.exe` to `.\llamafile.exe`
@@ -423,7 +423,7 @@ llama.cpp command line interface, utilizing WizardCoder-Python-13B
 weights:
 
 ```sh
-llamafile -ngl 9999 \
+llamafile \
   -m wizardcoder-python-13b-v1.0.Q8_0.gguf \
   --temp 0 -r '}\n' -r '```\n' \
   -e -p '```c\nvoid *memcpy(void *dst, const void *src, size_t size) {\n'

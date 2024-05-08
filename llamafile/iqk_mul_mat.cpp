@@ -14,7 +14,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
+#ifdef __x86_64__
+
+#include "llama.cpp/ggml-impl.h"
+#include "llama.cpp/ggml-quants.h"
+#include "sgemm.h"
+
+// clang-format off
+
 // This matrix - vector and matrix - matrix multiplication implementation
 // for k-quants and IQ4_XS makes prompt processing 150-200% faster
 // compared to mainline llama.cpp (and llamafile).
@@ -26,7 +34,6 @@
 // multiplication (as needed for prompt processing), we can get
 // a significant speedup by reusing the unpacked QX quants and scales
 // for multiplication with several Q8_K columns.
-//
 
 namespace {
 
@@ -710,6 +717,8 @@ static void mul_mat_iq4_xs_q8_K_T(int n, float * s, size_t bs, const void * vx, 
 
 }
 
+} // namespace
+
 //
 // ============================== Matrix multiplications
 //
@@ -777,4 +786,4 @@ bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const v
     return true;
 }
 
-}
+#endif // __x86_64__

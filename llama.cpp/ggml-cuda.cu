@@ -212,7 +212,6 @@
 #include "ggml-backend-impl.h"
 
 static const struct ggml_backend_api *g_backend;
-#define exit g_backend->exit
 #define getenv g_backend->getenv
 #define FLAG_log_disable (*g_backend->FLAG_log_disable)
 #define ggml_backend_register g_backend->ggml_backend_register
@@ -241,6 +240,18 @@ static const struct ggml_backend_api *g_backend;
 #define ggml_guid_matches g_backend->ggml_guid_matches
 #define ggml_is_empty g_backend->ggml_is_empty
 #define ggml_op_desc g_backend->ggml_op_desc
+
+[[noreturn]]
+static void exit_(int rc) {
+    g_backend->exit(rc);
+#define exit exit_
+#if defined(__GNUC__) || defined(__llvm__)
+    __builtin_unreachable();
+#elif defined(_MSC_VER)
+    __assume(0);
+#endif
+    for (;;);
+}
 
 // printf() and fprintf() runtime bridge
 // this is needed so text gets printed on windows
@@ -484,6 +495,14 @@ static __device__ __forceinline__ half2 ggml_cuda_hmax2(const half2 a, const hal
 #endif // !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)) && CUDART_VERSION < CUDART_HMAX
 }
 
+#define FP16_AVAILABLE (defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__) ? \
+                        defined(RDNA1) || defined(RDNA2) || defined(RDNA3) : __CUDA_ARCH__ >= CC_PASCAL)
+#define FP16_MMA_AVAILABLE (!(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)) && __CUDA_ARCH__ >= CC_VOLTA)
+#if FP16_MMA_AVAILABLE
+#include <mma.h>
+#endif
+
+#if defined(GGML_MINIMIZE_CODE_SIZE) && FP16_AVAILABLE // [jart]
 static __device__ __forceinline__ half2 warp_reduce_max(half2 x) {
 #if !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)) && __CUDA_ARCH__ >= CC_PASCAL
 #pragma unroll
@@ -496,6 +515,7 @@ static __device__ __forceinline__ half2 warp_reduce_max(half2 x) {
    NO_DEVICE_CODE;
 #endif // !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)) && __CUDA_ARCH__ >= CC_PASCAL
 }
+#endif // [jart]
 
 #if CUDART_VERSION < CUDART_HMASK
 static __device__ __forceinline__ uint32_t __hgt2_mask(const half2 a, const half2 b) {
@@ -587,15 +607,6 @@ static __device__ __forceinline__ int __dp4a(const int a, const int b, int c) {
     return c;
 }
 #endif // defined(GGML_USE_HIPBLAS)
-
-#define FP16_AVAILABLE     defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__) ? \
-    defined(RDNA1) || defined(RDNA2) || defined(RDNA3) : __CUDA_ARCH__ >= CC_PASCAL
-
-#define FP16_MMA_AVAILABLE !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)) && __CUDA_ARCH__ >= CC_VOLTA
-
-#if FP16_MMA_AVAILABLE
-#include <mma.h>
-#endif
 
 // TODO: move to ggml-common.h
 static const __device__ int8_t kvalues_iq4nl[16] = {-127, -104, -83, -65, -49, -35, -22, -10, 1, 13, 25, 38, 53, 69, 89, 113};
@@ -823,7 +834,9 @@ void ggml_cuda_op_dequantize_mul_mat_vec(
     const char * src1_ddq_i, float * dst_dd_i, const int64_t row_low, const int64_t row_high, const int64_t src1_ncols,
     const int64_t src1_padded_row_size, cudaStream_t stream);
 
+#ifndef GGML_MINIMIZE_CODE_SIZE // [jart]
 void ggml_cuda_flash_attn_ext(ggml_backend_cuda_context & ctx, ggml_tensor * dst);
+#endif
 
 #define CUDA_GET_ROWS_BLOCK_SIZE 256
 
@@ -5785,6 +5798,7 @@ template <int D, int cols_per_block, int nwarps, typename KQ_acc_t> void launch_
     launch_fattn_f16_impl<D, cols_per_block, nwarps, 1, KQ_acc_t>(Q, K, V, KQV, mask, pool, main_stream);
 }
 
+#ifndef GGML_MINIMIZE_CODE_SIZE // [jart]
 void ggml_cuda_flash_attn_ext(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
     const ggml_tensor * Q = dst->src[0];
     const ggml_tensor * K = dst->src[1];
@@ -5966,6 +5980,7 @@ void ggml_cuda_flash_attn_ext(ggml_backend_cuda_context & ctx, ggml_tensor * dst
     }
     return;
 }
+#endif // GGML_MINIMIZE_CODE_SIZE [jart]
 
 template<int qk, int qr, dequantize_kernel_t dequantize_kernel, typename dst_t>
 static __global__ void k_get_rows(
@@ -12501,9 +12516,11 @@ static bool ggml_cuda_compute_forward(ggml_backend_cuda_context & ctx, struct gg
         case GGML_OP_ARGSORT:
             ggml_cuda_op_argsort(ctx, dst);
             break;
+#ifndef GGML_MINIMIZE_CODE_SIZE // [jart]
         case GGML_OP_FLASH_ATTN_EXT:
             ggml_cuda_flash_attn_ext(ctx, dst);
             break;
+#endif
         default:
             return false;
     }
@@ -12778,7 +12795,9 @@ GGML_CALL static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, cons
         case GGML_OP_ARANGE:
         case GGML_OP_TIMESTEP_EMBEDDING:
         case GGML_OP_LEAKY_RELU:
+#ifndef GGML_MINIMIZE_CODE_SIZE // [jart]
         case GGML_OP_FLASH_ATTN_EXT:
+#endif
             return true;
         default:
             return false;

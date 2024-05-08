@@ -2,6 +2,7 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #define LLAMA_API_INTERNAL
 #include "llamafile/log.h"
+#include "llamafile/debug.h"
 #include "llama.h"
 
 #include "unicode.h"
@@ -17661,6 +17662,7 @@ struct llama_timings llama_get_timings(struct llama_context * ctx) {
 
 void llama_print_timings(struct llama_context * ctx) {
     const llama_timings timings = llama_get_timings(ctx);
+    llamafile_trapping_enabled(-1);  // [jart]
 
     LLAMA_LOG_INFO("\n");
     LLAMA_LOG_INFO("%s:        load time = %10.2f ms\n", __func__, timings.t_load_ms);
@@ -17671,6 +17673,8 @@ void llama_print_timings(struct llama_context * ctx) {
     LLAMA_LOG_INFO("%s:        eval time = %10.2f ms / %5d runs   (%8.2f ms per token, %8.2f tokens per second)\n",
             __func__, timings.t_eval_ms, timings.n_eval, timings.t_eval_ms / timings.n_eval, 1e3 / timings.t_eval_ms * timings.n_eval);
     LLAMA_LOG_INFO("%s:       total time = %10.2f ms / %5d tokens\n", __func__, (timings.t_end_ms - timings.t_start_ms), (timings.n_p_eval + timings.n_eval));
+
+    llamafile_trapping_enabled(+1);  // [jart]
 }
 
 void llama_reset_timings(struct llama_context * ctx) {

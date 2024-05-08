@@ -17756,6 +17756,7 @@ struct ggml_compute_state {
     int ith;
     struct ggml_compute_state_shared * shared;
     enum ggml_status ec;
+    bool is_main_thread; // [jart]
 };
 
 static void ggml_graph_compute_perf_stats_node(struct ggml_tensor * node, const struct ggml_compute_state_shared * st) {
@@ -18064,7 +18065,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
     int task_phase = GGML_TASK_TYPE_FINALIZE;
 
 #ifdef LLAMAFILE_DEBUG
-    if (FLAG_trap) {
+    if (FLAG_trap && !state->is_main_thread) {
         llamafile_trapping_enabled(+1);
     }
 #endif
@@ -18522,6 +18523,7 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
                 .ith = j,
                 .shared = &state_shared,
                 .ec = GGML_STATUS_SUCCESS,
+                .is_main_thread = false, // [jart]
             };
 
             const int rc = ggml_thread_create(&workers[j].thrd, NULL, ggml_graph_compute_thread, &workers[j]);
@@ -18533,6 +18535,7 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     workers[0].ith = 0;
     workers[0].shared = &state_shared;
     workers[0].ec = GGML_STATUS_SUCCESS;
+    workers[0].is_main_thread = true; // [jart]
 
     const int64_t perf_start_cycles  = ggml_perf_cycles();
     const int64_t perf_start_time_us = ggml_perf_time_us();

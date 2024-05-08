@@ -179,7 +179,6 @@ int main(int argc, char ** argv) {
 
 #ifndef LOG_DISABLE_LOGS
     log_set_target(log_filename_generator("main", "log"));
-    LOG_TEE("Log start\n");
     log_dump_cmdline(argc, argv);
     llama_log_set(llama_log_callback_logTee, nullptr);
 #endif // LOG_DISABLE_LOGS
@@ -206,7 +205,7 @@ int main(int argc, char ** argv) {
         }
         __pledge_mode = PLEDGE_PENALTY_RETURN_EPERM;
         if (pledge(0, 0)) {
-            LOG_TEE("warning: this OS doesn't support pledge() security\n");
+            LOG("warning: this OS doesn't support pledge() security\n");
         } else if (pledge(promises, 0)) {
             perror("pledge");
             exit(1);
@@ -594,6 +593,7 @@ int main(int argc, char ** argv) {
         antiprompt_ids.emplace_back(::llama_tokenize(ctx, antiprompt, false, true));
     }
 
+    bool should_show_special_tokens = sparams.grammar.empty(); // [jart] for shell scriptability
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(sparams);
     if (!ctx_sampling) { // [jart] fixes crash
         fprintf(stderr, "%s: failed to initialize sampling subsystem\n", __func__);
@@ -812,7 +812,12 @@ int main(int argc, char ** argv) {
         // display text
         if (input_echo && display) {
             for (auto id : embd) {
-                const std::string token_str = llama_token_to_piece(ctx, id);
+
+                // [jart] shell scriptability
+                const std::string token_str =
+                        llama_token_to_piece(
+                            ctx, id, should_show_special_tokens);
+
                 printf("%s", token_str.c_str());
 
                 if (embd.size() > 1) {

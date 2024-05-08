@@ -139,7 +139,8 @@ static std::map<projector_type, std::string> PROJECTOR_TYPE_NAMES = {
 static int get_key_idx(const gguf_context * ctx, const char * key) {
     int i = gguf_find_key(ctx, key);
     if (i == -1) {
-        LOG_TEE("key %s not found in file\n", key);
+        // [jart] don't log to console errors that aren't errors
+        LOG("%s: note: key %s not found in file\n", __func__, key);
         throw std::runtime_error(format("Missing required key: %s", key));
     }
 
