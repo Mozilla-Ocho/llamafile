@@ -267,7 +267,7 @@ struct llama_server_queue {
     }
 
     // Add a new task, but defer until one slot is available
-    void defer(task_server task) {
+    void defer_(task_server task) {
         std::unique_lock<std::mutex> lock(mutex_tasks);
         queue_tasks_deferred.push_back(std::move(task));
     }

@@ -17130,43 +17130,41 @@ float * llama_get_embeddings(struct llama_context * ctx) {
     return ctx->embd;
 }
 
+static float * llama_get_embeddings_ith_fail(int i, std::string reason) {
+    LLAMA_LOG_ERROR("%s: invalid embeddings id %d, reason: %s\n", __func__, i, reason);
+    return nullptr;
+}
+
 float * llama_get_embeddings_ith(struct llama_context * ctx, int32_t i) {
     int32_t j = -1;
-
     llama_synchronize(ctx);
-
-    try {
-        if (ctx->embd == nullptr) {
-            throw std::runtime_error("no embeddings");
-        }
-
-        if (i < 0) {
-            j = ctx->n_outputs + i;
-            if (j < 0) {
-                throw std::runtime_error(format("negative index out of range [0, %d)", ctx->n_outputs));
-            }
-        } else if ((size_t) i >= ctx->output_ids.size()) {
-            throw std::runtime_error(format("out of range [0, %lu)", ctx->output_ids.size()));
-        } else {
-            j = ctx->output_ids[i];
-        }
-
-        if (j < 0) {
-            throw std::runtime_error(format("batch.logits[%d] != true", i));
-        }
-        if (j >= ctx->n_outputs) {
-            // This should not happen
-            throw std::runtime_error(format("corrupt output buffer (j=%d, n_outputs=%d)", j, ctx->n_outputs));
-        }
-
-        return ctx->embd + j*ctx->model.hparams.n_embd;
-    } catch (const std::exception & err) {
-        LLAMA_LOG_ERROR("%s: invalid embeddings id %d, reason: %s\n", __func__, i, err.what());
-#ifndef NDEBUG
-        GGML_ASSERT(false);
-#endif
-        return nullptr;
+    // [jart] DO NOT SYNC this function
+    if (ctx->embd == nullptr) {
+        return llama_get_embeddings_ith_fail(i, "no embeddings");
     }
+    if (i < 0) {
+        j = ctx->n_outputs + i;
+        if (j < 0) {
+            return llama_get_embeddings_ith_fail(
+                i, format("negative index out of range [0, %d)", ctx->n_outputs));
+        }
+    } else if ((size_t) i >= ctx->output_ids.size()) {
+        return llama_get_embeddings_ith_fail(
+            i, format("out of range [0, %lu)", ctx->output_ids.size()));
+    } else {
+        j = ctx->output_ids[i];
+    }
+    if (j < 0) {
+        return llama_get_embeddings_ith_fail(
+            i, format("batch.logits[%d] != true", i));
+    }
+    if (j >= ctx->n_outputs) {
+        // This should not happen
+        return llama_get_embeddings_ith_fail(
+            i, format("corrupt output buffer (j=%d, n_outputs=%d)",
+                      j, ctx->n_outputs));
+    }
+    return ctx->embd + j*ctx->model.hparams.n_embd;
 }
 
 float * llama_get_embeddings_seq(struct llama_context * ctx, llama_seq_id seq_id) {
