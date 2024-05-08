@@ -1017,9 +1017,7 @@ void dequantize_row_q8_0(const block_q8_0 * restrict x, float * restrict y, int6
 // ===================== Helper functions
 //
 static inline int nearest_int(float fval) {
-    // [jart] https://github.com/ggerganov/llama.cpp/issues/2982
-    // assert(fval <= 4194303.f);
-    fval = fminf(fval, 4194303.f);
+    assert(fval <= 4194303.f);
     float val = fval + 12582912.f;
     int i; memcpy(&i, &val, sizeof(int));
     return (i & 0x007fffff) - 0x00400000;
@@ -3779,7 +3777,7 @@ void ggml_vec_dot_q4_0_q8_0(int n, float * restrict s, size_t bs, const void * r
         vint32m1_t vs1 = __riscv_vwredsum_vs_i16m1_i32m1(vec_mul1, vec_zero, vl);
         vint32m1_t vs2 = __riscv_vwredsum_vs_i16m1_i32m1(vec_mul2, vs1, vl);
 
-        int sumi = __riscv_vmv_x_s_i32m1_i32(vs2)mul_sum_us8_pairs_float;
+        int sumi = __riscv_vmv_x_s_i32m1_i32(vs2);
 
         sumf += sumi*GGML_FP16_TO_FP32(x[i].d)*GGML_FP16_TO_FP32(y[i].d);
     }

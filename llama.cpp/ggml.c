@@ -17742,7 +17742,6 @@ struct ggml_compute_state_shared {
     const int n_threads;
 
     // synchronization primitives
-    atomic_int n_alive;   // num threads alive
     atomic_int n_active;  // num active threads
     atomic_int node_n;    // active graph node
     atomic_int node_task; // active graph node task phase
@@ -18083,7 +18082,6 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
         if (cplan->abort_callback && cplan->abort_callback(cplan->abort_callback_data)) {
             state->shared->node_n += 1;
             state->ec = GGML_STATUS_ABORTED;
-            atomic_fetch_sub_explicit(&state->shared->n_alive, 1, memory_order_release);
             return 0;
         }
 
@@ -18218,72 +18216,6 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
         else {
             ggml_graph_compute_thread_sync_task(&task_phase, state, false);
         }
-
-#if 0
-        // expensive integrity check
-        // not useful to test mt-safety
-        if (!state->ith) {
-            int64_t nans = 0;
-            int64_t infs = 0;
-            if (node->type == GGML_TYPE_F32)
-                for (int i3 = 0; i3 < node->ne[3]; ++i3)
-                    for (int i2 = 0; i2 < node->ne[2]; ++i2)
-                        for (int i1 = 0; i1 < node->ne[1]; ++i1)
-                            for (int i0 = 0; i0 < node->ne[0]; ++i0) {
-                                float x = *(const float *)((const char *)node->data +
-                                                           i3 * node->nb[3] +
-                                                           i2 * node->nb[2] +
-                                                           i1 * node->nb[1] +
-                                                           i0 * node->nb[0]);
-                                if (isnan(x))
-                                    ++nans;
-                                if (isinf(x))
-                                    ++infs;
-                            }
-            else if (node->type == GGML_TYPE_F16)
-                for (int i3 = 0; i3 < node->ne[3]; ++i3)
-                    for (int i2 = 0; i2 < node->ne[2]; ++i2)
-                        for (int i1 = 0; i1 < node->ne[1]; ++i1)
-                            for (int i0 = 0; i0 < node->ne[0]; ++i0) {
-                                float x = GGML_FP16_TO_FP32(*(const ggml_fp16_t *)((const char *)node->data +
-                                                                                   i3 * node->nb[3] +
-                                                                                   i2 * node->nb[2] +
-                                                                                   i1 * node->nb[1] +
-                                                                                   i0 * node->nb[0]));
-                                if (isnan(x))
-                                    ++nans;
-                                if (isinf(x))
-                                    ++infs;
-                            }
-            else if (node->type == GGML_TYPE_BF16)
-                for (int i3 = 0; i3 < node->ne[3]; ++i3)
-                    for (int i2 = 0; i2 < node->ne[2]; ++i2)
-                        for (int i1 = 0; i1 < node->ne[1]; ++i1)
-                            for (int i0 = 0; i0 < node->ne[0]; ++i0) {
-                                float x = GGML_BF16_TO_FP32(*(const ggml_bf16_t *)((const char *)node->data +
-                                                                                   i3 * node->nb[3] +
-                                                                                   i2 * node->nb[2] +
-                                                                                   i1 * node->nb[1] +
-                                                                                   i0 * node->nb[0]));
-                                if (isnan(x))
-                                    ++nans;
-                                if (isinf(x))
-                                    ++infs;
-                            }
-            else
-                continue;
-            if (nans || infs) {
-                flockfile(stderr);
-                fprintf(stderr, "ERROR: node #%d produced %" PRId64 " NaNs and %" PRId64 " infinities in sequence %s -> %s\n",
-                        node_n, nans, infs, node_n ? ggml_op_name(cgraph->nodes[node_n - 1]->op) : "n/a",
-                        ggml_op_name(node->op));
-                for (int i = 0; i < GGML_MAX_SRC && node->src[i]; ++i)
-                    fprintf(stderr, "\t- src[%d] is %s\n", i, ggml_op_name(node->src[i]->op));
-                exit(1);
-            }
-        }
-#endif
-
     }
 
 #ifdef LLAMAFILE_SYNC_REPORT
@@ -18293,7 +18225,6 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
     fprintf(stderr, "SYNC %03d %3d%% working\n", state->ith, workpercent);
 #endif
 
-    atomic_fetch_sub_explicit(&state->shared->n_alive, 1, memory_order_release);
     return 0;
 }
 
@@ -18570,7 +18501,6 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
         /*.perf_node_start_cycles  =*/ 0,
         /*.perf_node_start_time_us =*/ 0,
         /*.n_threads               =*/ n_threads,
-        /*.n_alive                 =*/ n_threads,
         /*.n_active                =*/ n_threads,
         /*.node_n                  =*/ -1,
         /*.node_task               =*/ GGML_TASK_TYPE_FINALIZE,
@@ -21748,4 +21678,3 @@ int ggml_cpu_has_matmul_int8(void) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-

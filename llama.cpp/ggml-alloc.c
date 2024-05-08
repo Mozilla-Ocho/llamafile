@@ -11,10 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef NDEBUG
-#define NDEBUG // [jart] delete printf debugging
-#endif
-
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MAX_FREE_BLOCKS 256
 
