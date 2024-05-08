@@ -871,6 +871,11 @@ struct llama_server_context
             llama_sampling_free(slot->ctx_sampling);
         }
         slot->ctx_sampling = llama_sampling_init(slot->sparams);
+        if (!slot->ctx_sampling) { // [jart] fixes crash
+            LOG_TEE("%s: failed to initialize sampling subsystem\n", __func__);
+            return false;
+        }
+
         llama_set_rng_seed(ctx, slot->params.seed);
         slot->command = LOAD_PROMPT;
 
