@@ -71,7 +71,7 @@ README](llama.cpp/server/README.md#api-endpoints).
 <summary>Curl API Client Example</summary>
 
 The simplest way to get started using the API is to copy and paste the
-following curl comd into your terminal.
+following curl command into your terminal.
 
 ```shell
 curl http://localhost:8080/v1/chat/completions \
