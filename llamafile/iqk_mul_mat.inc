@@ -35,6 +35,8 @@
 // a significant speedup by reusing the unpacked QX quants and scales
 // for multiplication with several Q8_K columns.
 
+#include <utility>
+
 namespace {
 
 inline void make_q4_scales(const uint8_t * scales8, uint32_t * aux32) {
@@ -716,6 +718,342 @@ static void mul_mat_iq4_xs_q8_K_T(int n, float * s, size_t bs, const void * vx, 
     }
 
 }
+//
+// ============================== Legacy quants
+//
+
+// Vector dot products
+struct DotHelper {
+    const __m256i m1 = _mm256_set1_epi16(1);
+#if defined(__AVX512VNNI__) && defined(__AVX512VL__)
+    inline __m256i dot(__m256i x, __m256i y) const {
+        return _mm256_dpbusd_epi32(_mm256_setzero_si256(), x, y);
+    }
+#else
+    inline __m256i dot(__m256i x, __m256i y) const {
+        return _mm256_madd_epi16(m1, _mm256_maddubs_epi16(x, y));
+    }
+#endif
+};
+
+struct SignedDot {
+    DotHelper helper;
+    inline __m256i compute(__m256i x, __m256i y) const {
+        return helper.dot(_mm256_sign_epi8(x, x), _mm256_sign_epi8(y, x));
+    }
+};
+struct UnsignedDot {
+    DotHelper helper;
+    inline __m256i compute(__m256i x, __m256i y) const {
+        return helper.dot(x, y);
+    }
+};
+
+// Compute the dot product of 4 blocks.
+// Somewhat surprisingly (at least to me), the fastest way to do this
+// is to narrow the 32-bit dot products twice by using _mm256_packs_epi32()
+// followed by 16-bit multiply-adds, to end up with a single
+// 256-bit result (containing 8 32-bit integers) per 128 quants.
+template <typename Q8, typename Dot> struct Sum4 {
+    Dot dot;
+    inline __m256i compute(const __m256i * qx, const Q8 * y) const {
+        const __m256i p0 = dot.compute(qx[0], _mm256_loadu_si256((const __m256i *)y[0].qs));
+        const __m256i p1 = dot.compute(qx[1], _mm256_loadu_si256((const __m256i *)y[1].qs));
+        const __m256i p2 = dot.compute(qx[2], _mm256_loadu_si256((const __m256i *)y[2].qs));
+        const __m256i p3 = dot.compute(qx[3], _mm256_loadu_si256((const __m256i *)y[3].qs));
+        const __m256i p01 = _mm256_madd_epi16(dot.helper.m1, _mm256_packs_epi32(p0, p1));    // 0,0, 1,1, 0,0, 1,1
+        const __m256i p23 = _mm256_madd_epi16(dot.helper.m1, _mm256_packs_epi32(p2, p3));    // 2,2, 3,3, 2,2, 3,3
+        return _mm256_madd_epi16(dot.helper.m1, _mm256_packs_epi32(p01, p23)); // 0,1,2,3, 0,1,2,3
+    }
+};
+
+// Sum4 specializations for type-0 and type-1 quants
+using Sum4Type0 = Sum4<block_q8_0, SignedDot>;
+using Sum4Type1 = Sum4<block_q8_1, UnsignedDot>;
+
+// Handle block scales of type-0 quants (Q4_0, Q5_0).
+// I'm finding a significant speedup from converting the 4 fp16 scales
+// of 4 blocks with one vector instruction (instead of having 4 separate fp16->fp32 conversions)
+struct ScaleHelperQ_0 {
+    ggml_half scales8[4];
+    template <typename Q>
+    inline __m128 prepare4(const Q * y) {
+        for (int j = 0; j < 4; ++j) scales8[j] = y[j].d;
+        return _mm_cvtph_ps(_mm_loadl_epi64((const __m128i *)scales8));
+    }
+    template <typename Q>
+    inline __m128 prepare4(__m128 other_scales, const Q * y) {
+        return _mm_mul_ps(other_scales, prepare4<Q>(y));
+    }
+    template <typename Q> inline float prepare1(const Q * y) const { return GGML_FP16_TO_FP32(y->d); }
+    template <typename Q> inline float prepare1(float d, const Q * y) const { return d*prepare1(y); }
+};
+
+// Handle block scales of type-1 quants (Q4_0, Q5_0).
+// I'm finding a significant speedup from converting the 8 fp16 scales and offsets
+// of 4 blocks with one vector instruction (instead of having 8 separate fp16->fp32 conversions)
+struct ScaleHelperQ_1 {
+    uint32_t scales8[4];
+    const __m128i shuffle = _mm_set_epi16(0x0f0e, 0x0b0a, 0x0706, 0x0302, 0x0d0c, 0x0908, 0x0504, 0x0100);
+
+    template <typename Q>
+    inline __m256 prepare4(const Q * y) {
+        for (int j = 0; j < 4; ++j) {
+            // it is slightly faster to directly dereference (const uint32 *)&y[j].d, but some compilers
+            // complain that this breaks strict-aliasing rules.
+            memcpy(scales8 + j, &y[j].d, sizeof(uint32_t));
+        }
+        return _mm256_cvtph_ps(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i *)scales8), shuffle));
+    }
+
+    template <typename Q>
+    inline __m256 prepare4(__m256 other_scales, const Q * y) {
+        return _mm256_mul_ps(other_scales, prepare4<Q>(y));
+    }
+
+    template <typename Q> inline std::pair<float, float> prepare1(const Q * y) const {
+        return std::make_pair(GGML_FP16_TO_FP32(y->d), GGML_FP16_TO_FP32(y->m));
+    }
+    template <typename Q> inline std::pair<float, float> prepare1(const std::pair<float, float>& dm, const Q * y) const {
+        return std::make_pair(dm.first*GGML_FP16_TO_FP32(y->d), dm.second*GGML_FP16_TO_FP32(y->m));
+    }
+    std::pair<float, float> inline prepare1(const std::pair<float, float>& dm, const block_q8_1 * y) const {
+        return std::make_pair(dm.first*GGML_FP16_TO_FP32(y->d), dm.second*GGML_FP16_TO_FP32(y->s));
+    }
+};
+
+// These two are useful for the templated implementation below.
+// There is not much to do for type-0 quants.
+struct MinusType0 {
+    inline __m256 compute(__m128 d, int) const { return _mm256_set_m128(d, d); }
+    inline float compute(float d, int) const { return d; }
+    inline float result(__m256 acc, int) const { return hsum_float_8(acc); }
+};
+
+// For type-1 quants, we need to accumulate the produts of the quant offsets
+// with the Q8_0 block sums (provided by block_q8_1 used for type-1 quants).
+template <int nrc_y> struct MinusType1 {
+    __m128 accm[nrc_y];
+    MinusType1() { for (int iy = 0; iy < nrc_y; ++iy) accm[iy] = _mm_setzero_ps(); }
+    inline __m256 compute(__m256 dm, int iy) {
+        const __m128 d = _mm256_castps256_ps128(dm);
+        const __m128 m = _mm256_extractf128_ps(dm, 1);
+        accm[iy] = _mm_add_ps(accm[iy], m);
+        return _mm256_set_m128(d, d);
+    }
+    inline float compute(const std::pair<float, float>& dm, int iy) {
+        accm[iy] = _mm_add_ps(accm[iy], _mm_set1_ps(dm.second*0.25f));
+        return dm.first;
+    }
+    inline float result(__m256 acc, int iy) const {
+        const __m128 sum = _mm_add_ps(_mm256_castps256_ps128(acc), _mm256_extractf128_ps(acc, 1));
+        return hsum_float_4(_mm_add_ps(sum, accm[iy]));
+    }
+};
+
+// The accumulator.
+template <typename Minus, int nrc_y, bool is_multiple_of_4> struct AccumT {
+    __m256 acc[nrc_y];
+    Minus accm;
+    AccumT() {  for (int iy = 0; iy < nrc_y; ++iy) acc[iy] = _mm256_setzero_ps(); }
+    template <typename Unpacker, typename Scales, typename Sum, typename Q8>
+    inline void compute(int nb, Unpacker& unp, Scales& scales, Sum& sum, const Q8 ** y, float * s, size_t bs) {
+        auto qx = unp.quants();
+        __m256 dall[nrc_y];
+        for (int i = 0; i < nb/4; ++i) {
+            auto other_scales = unp.set_block_4(i);
+            for (int iy = 0; iy < nrc_y; ++iy) {
+                auto s12 = scales.prepare4(other_scales, y[iy] + 4*i);
+                dall[iy] = accm.compute(s12, iy);
+            }
+            for (int iy = 0; iy < nrc_y; ++iy) {
+                auto pall = sum.compute(qx, y[iy] + 4*i);
+                acc[iy] = _mm256_fmadd_ps(dall[iy], _mm256_cvtepi32_ps(pall), acc[iy]);
+            }
+        }
+        if (!is_multiple_of_4) {
+            for (int i = 4*(nb/4); i < nb; ++i) {
+                auto other_scales = unp.set_block(i);
+                for (int iy = 0; iy < nrc_y; ++iy) {
+                    auto s12 = scales.prepare1(other_scales, y[iy] + i);
+                    auto d = accm.compute(s12, iy);
+                    const __m256i p0 = sum.dot.compute(qx[0], _mm256_loadu_si256((const __m256i *)y[iy][i].qs));
+                    acc[iy] = _mm256_fmadd_ps(_mm256_set1_ps(d), _mm256_cvtepi32_ps(p0), acc[iy]);
+                }
+            }
+        }
+        for (int iy = 0; iy < nrc_y; ++iy) {
+            s[iy*bs] = accm.result(acc[iy], iy);
+        }
+    }
+};
+
+// Accumulator specializations for type-0 and type-1 quants
+template <int nrc_y, bool is_multiple_of_4>
+using AccumType0 = AccumT<MinusType0, nrc_y, is_multiple_of_4>;
+
+template <int nrc_y, bool is_multiple_of_4>
+using AccumType1 = AccumT<MinusType1<nrc_y>, nrc_y, is_multiple_of_4>;
+
+// Templated matrix multiplication
+template <typename Unpacker, typename Sum4Type, typename AccumType, typename Scales, typename Q8, int nrc_y>
+void mul_mat_qX_q8_Helper(int nb, float * s, size_t bs, const void * vx, size_t bx, const Q8 ** y, int nrc_x) {
+    Unpacker unp(vx, bx);
+    Sum4Type sum4;
+    Scales scales;
+    for (int ix = 0; ix < nrc_x; ++ix) {
+        unp.set_row(ix);
+        AccumType accum;
+        accum.compute(nb, unp, scales, sum4, y, s+ix, bs);
+    }
+}
+
+// Type-0 - Q4_0 and Q5_0
+template <typename Unpacker, int nrc_y>
+void mul_mat_qX_0_q8_0_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+    assert(n%Unpacker::block_size() == 0);
+    const block_q8_0 * y[nrc_y];
+    for (int iy = 0; iy < nrc_y; ++iy) y[iy] = (const block_q8_0 *)((const char *)vy + iy*by);
+    int nb = n/Unpacker::block_size();
+    if (nb%4 == 0) {
+        mul_mat_qX_q8_Helper<Unpacker, Sum4Type0, AccumType0<nrc_y, true>, ScaleHelperQ_0, block_q8_0, nrc_y>(
+                nb, s, bs, vx, bx, y, nrc_x
+        );
+    } else {
+        mul_mat_qX_q8_Helper<Unpacker, Sum4Type0, AccumType0<nrc_y, false>, ScaleHelperQ_0, block_q8_0, nrc_y>(
+                nb, s, bs, vx, bx, y, nrc_x
+        );
+    }
+}
+
+// Type-1 - Q4_1 and Q5_1
+template <typename Unpacker, int nrc_y>
+void mul_mat_qX_1_q8_1_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+    assert(n%Unpacker::block_size() == 0);
+    const block_q8_1 * y[nrc_y];
+    for (int iy = 0; iy < nrc_y; ++iy) y[iy] = (const block_q8_1 *)((const char *)vy + iy*by);
+    int nb = n/Unpacker::block_size();
+    if (nb%4 == 0) {
+        mul_mat_qX_q8_Helper<Unpacker, Sum4Type1, AccumType1<nrc_y, true>, ScaleHelperQ_1, block_q8_1, nrc_y>(
+                nb, s, bs, vx, bx, y, nrc_x
+        );
+    } else {
+        mul_mat_qX_q8_Helper<Unpacker, Sum4Type1, AccumType1<nrc_y, false>, ScaleHelperQ_1, block_q8_1, nrc_y>(
+                nb, s, bs, vx, bx, y, nrc_x
+        );
+    }
+}
+
+// And now we need the quant "unpackers" that will unpack the quants into
+// 32-element vectors containing 8-bit values ready for dot products with the
+// Q8 quants.
+
+struct Dequantizer4bit {
+    const __m256i m4 = _mm256_set1_epi8(0xf);
+    inline __m256i dequant(const uint8_t * qs) const {
+        const __m128i aux128 = _mm_loadu_si128((const __m128i *)qs);
+        return _mm256_and_si256(MM256_SET_M128I(_mm_srli_epi16(aux128, 4), aux128), m4);
+    }
+};
+
+struct Q4_0_Dequantizer {
+    Dequantizer4bit b4;
+    const __m256i m8 = _mm256_set1_epi8(-8);
+    inline __m256i dequant(const block_q4_0 * x) const {
+        return _mm256_add_epi8(b4.dequant(x->qs), m8);
+    }
+};
+
+struct Q4_1_Dequantizer {
+    Dequantizer4bit b4;
+    inline __m256i dequant(const block_q4_1 * x) const {
+        return b4.dequant(x->qs);
+    }
+};
+
+struct HBitDequantizer {
+    const __m256i shuffle = _mm256_set_epi64x(0x0303030303030303, 0x0202020202020202, 0x0101010101010101, 0x0000000000000000);
+    const __m256i mask = _mm256_set1_epi64x(0x7fbfdfeff7fbfdfe);
+    const __m256i minus1 = _mm256_set1_epi64x(-1);
+    inline __m256i to_bytes(const uint8_t * bits) const {
+        // Note: Data in all ggml quants is at least 2-byte aligned.
+        // => we can cast to uint16_t and use or on two consecutive entries
+        // which is faster than memcpy
+        const uint16_t * aux16 = (const uint16_t *)bits;
+        const uint32_t aux32 = aux16[0] | (aux16[1] << 16);
+        //uint32_t aux32; memcpy(&aux32, bits, sizeof(uint32_t));
+        __m256i bytes = _mm256_shuffle_epi8(_mm256_set1_epi32(aux32), shuffle);
+        bytes = _mm256_or_si256(bytes, mask);
+        return _mm256_cmpeq_epi8(bytes, minus1);
+    }
+};
+
+
+struct Q5_0_Dequantizer {
+    Dequantizer4bit b4;
+    HBitDequantizer hbit;
+    const __m256i mh = _mm256_set1_epi8((char)0xF0);
+    inline __m256i dequant(const block_q5_0 * x) const {
+        const __m256i vqh = _mm256_andnot_si256(hbit.to_bytes(x->qh), mh);
+        return _mm256_or_si256(b4.dequant(x->qs), vqh);
+    }
+};
+
+struct Q5_1_Dequantizer {
+    Dequantizer4bit b4;
+    HBitDequantizer hbit;
+    const __m256i mh = _mm256_set1_epi8(0x10);
+    inline __m256i dequant(const block_q5_1 * x) const {
+        const __m256i vqh = _mm256_and_si256(hbit.to_bytes(x->qh), mh);
+        return _mm256_or_si256(b4.dequant(x->qs), vqh);
+    }
+};
+
+template <typename Q, typename Scales, typename Dequantizer>
+struct Q_Unpacker {
+    Q_Unpacker(const void * vx, size_t bx) : cx_0((const char *)vx), x((const Q*)cx_0), bx(bx) {}
+
+    const char * cx_0;
+    const Q    * x;
+    size_t       bx;
+
+    Scales scales;
+    Dequantizer deq;
+
+    __m256i qx[4];
+
+    inline const __m256i* quants() const { return qx; }
+
+    inline void set_row(int ix) { x = (const Q*)(cx_0 + ix*bx); }
+
+    inline auto set_block_4(int i) {
+        for (int j = 0; j < 4; ++j) {
+            qx[j] = deq.dequant(x + 4*i + j);
+        }
+        return scales.prepare4(x + 4*i);
+    }
+    inline auto set_block(int i) {
+        qx[0] = deq.dequant(x + i);
+        return scales.prepare1(x + i);
+    }
+};
+
+struct Q4_0_Unpacker final : public Q_Unpacker<block_q4_0, ScaleHelperQ_0, Q4_0_Dequantizer> {
+    Q4_0_Unpacker(const void * vx, size_t bx) : Q_Unpacker(vx, bx) {}
+    inline static int block_size() { return QK4_0; }
+};
+struct Q5_0_Unpacker final : public Q_Unpacker<block_q5_0, ScaleHelperQ_0, Q5_0_Dequantizer> {
+    Q5_0_Unpacker(const void * vx, size_t bx) : Q_Unpacker(vx, bx) {}
+    inline static int block_size() { return QK5_0; }
+};
+struct Q4_1_Unpacker final : public Q_Unpacker<block_q4_1, ScaleHelperQ_1, Q4_1_Dequantizer> {
+    Q4_1_Unpacker(const void * vx, size_t bx) : Q_Unpacker(vx, bx) {}
+    inline static int block_size() { return QK4_1; }
+};
+struct Q5_1_Unpacker final : public Q_Unpacker<block_q5_1, ScaleHelperQ_1, Q5_1_Dequantizer> {
+    Q5_1_Unpacker(const void * vx, size_t bx) : Q_Unpacker(vx, bx) {}
+    inline static int block_size() { return QK4_1; }
+};
 
 } // namespace
 
@@ -726,52 +1064,91 @@ static void mul_mat_iq4_xs_q8_K_T(int n, float * s, size_t bs, const void * vx, 
 bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const void * B,
         float * C, long stride_C, int ith, int nth) {
 
-    assert (ne00 % QK_K == 0);
+
+    auto row_size_q8 = ggml_row_size(GGML_TYPE_Q8_K, ne00);
 
     mul_mat_t mm_nx1, mm_nx2, mm_nx4, mm_nx8;
     switch (typeA) {
         case GGML_TYPE_Q2_K:
+            assert (ne00 % QK_K == 0);
             mm_nx1 = mul_mat_q2_K_q8_K_T<1>;
             mm_nx2 = mul_mat_q2_K_q8_K_T<2>;
             mm_nx4 = mul_mat_q2_K_q8_K_T<4>;
             mm_nx8 = mul_mat_q2_K_q8_K_T<8>;
             break;
         case GGML_TYPE_Q3_K:
+            assert (ne00 % QK_K == 0);
             mm_nx1 = mul_mat_q3_K_q8_K_T<1>;
             mm_nx2 = mul_mat_q3_K_q8_K_T<2>;
             mm_nx4 = mul_mat_q3_K_q8_K_T<4>;
             mm_nx8 = mul_mat_q3_K_q8_K_T<8>;
             break;
         case GGML_TYPE_Q4_K:
+            assert (ne00 % QK_K == 0);
             mm_nx1 = mul_mat_q4_K_q8_K_T<1>;
             mm_nx2 = mul_mat_q4_K_q8_K_T<2>;
             mm_nx4 = mul_mat_q4_K_q8_K_T<4>;
             mm_nx8 = mul_mat_q4_K_q8_K_T<8>;
             break;
         case GGML_TYPE_Q5_K:
+            assert (ne00 % QK_K == 0);
             mm_nx1 = mul_mat_q5_K_q8_K_T<1>;
             mm_nx2 = mul_mat_q5_K_q8_K_T<2>;
             mm_nx4 = mul_mat_q5_K_q8_K_T<4>;
             mm_nx8 = mul_mat_q5_K_q8_K_T<8>;
             break;
         case GGML_TYPE_Q6_K:
+            assert (ne00 % QK_K == 0);
             mm_nx1 = mul_mat_q6_K_q8_K_T<1>;
             mm_nx2 = mul_mat_q6_K_q8_K_T<2>;
             mm_nx4 = mul_mat_q6_K_q8_K_T<4>;
             mm_nx8 = mul_mat_q6_K_q8_K_T<8>;
             break;
         case GGML_TYPE_IQ4_XS:
+            assert (ne00 % QK_K == 0);
             mm_nx1 = mul_mat_iq4_xs_q8_K_T<1>;
             mm_nx2 = mul_mat_iq4_xs_q8_K_T<2>;
             mm_nx4 = mul_mat_iq4_xs_q8_K_T<4>;
             mm_nx8 = mul_mat_iq4_xs_q8_K_T<8>;
             break;
+        case GGML_TYPE_Q4_0:
+            assert (ne00 % Q4K_0 == 0);
+            mm_nx1 = mul_mat_qX_0_q8_0_T<Q4_0_Unpacker, 1>;
+            mm_nx2 = mul_mat_qX_0_q8_0_T<Q4_0_Unpacker, 2>;
+            mm_nx4 = mul_mat_qX_0_q8_0_T<Q4_0_Unpacker, 4>;
+            mm_nx8 = mul_mat_qX_0_q8_0_T<Q4_0_Unpacker, 8>;
+            row_size_q8 = ggml_row_size(GGML_TYPE_Q8_0, ne00);
+            break;
+        case GGML_TYPE_Q4_1:
+            assert (ne00 % Q4K_1 == 0);
+            mm_nx1 = mul_mat_qX_1_q8_1_T<Q4_1_Unpacker, 1>;
+            mm_nx2 = mul_mat_qX_1_q8_1_T<Q4_1_Unpacker, 2>;
+            mm_nx4 = mul_mat_qX_1_q8_1_T<Q4_1_Unpacker, 4>;
+            mm_nx8 = mul_mat_qX_1_q8_1_T<Q4_1_Unpacker, 8>;
+            row_size_q8 = ggml_row_size(GGML_TYPE_Q8_1, ne00);
+            break;
+        case GGML_TYPE_Q5_0:
+            assert (ne00 % Q5K_0 == 0);
+            mm_nx1 = mul_mat_qX_0_q8_0_T<Q5_0_Unpacker, 1>;
+            mm_nx2 = mul_mat_qX_0_q8_0_T<Q5_0_Unpacker, 2>;
+            mm_nx4 = mul_mat_qX_0_q8_0_T<Q5_0_Unpacker, 4>;
+            mm_nx8 = mul_mat_qX_0_q8_0_T<Q5_0_Unpacker, 8>;
+            row_size_q8 = ggml_row_size(GGML_TYPE_Q8_0, ne00);
+            break;
+        case GGML_TYPE_Q5_1:
+            assert (ne00 % Q0K_1 == 0);
+            mm_nx1 = mul_mat_qX_1_q8_1_T<Q5_1_Unpacker, 1>;
+            mm_nx2 = mul_mat_qX_1_q8_1_T<Q5_1_Unpacker, 2>;
+            mm_nx4 = mul_mat_qX_1_q8_1_T<Q5_1_Unpacker, 4>;
+            mm_nx8 = mul_mat_qX_1_q8_1_T<Q5_1_Unpacker, 8>;
+            row_size_q8 = ggml_row_size(GGML_TYPE_Q8_1, ne00);
+            break;
+
         default:
             return false;
     }
 
     auto row_size_qx = ggml_row_size((ggml_type)typeA, ne00);
-    auto row_size_q8 = ggml_row_size(GGML_TYPE_Q8_K, ne00);
 
     auto nrc_x = (Nx + nth - 1)/nth;
     auto first_x = ith*nrc_x;
