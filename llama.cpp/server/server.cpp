@@ -866,12 +866,12 @@ struct llama_server_context
             }
         }
 
-        if (slot->ctx_sampling != nullptr)
-        {
+        if (slot->ctx_sampling != nullptr) {
             llama_sampling_free(slot->ctx_sampling);
         }
         slot->ctx_sampling = llama_sampling_init(slot->sparams);
-        if (!slot->ctx_sampling) { // [jart] fixes crash
+        if (slot->ctx_sampling == nullptr) {
+            // for now, the only error that may happen here is invalid grammar
             LOG_TEE("%s: failed to initialize sampling subsystem\n", __func__);
             return false;
         }
