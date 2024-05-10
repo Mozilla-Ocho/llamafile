@@ -1187,7 +1187,6 @@ void ggml_vec_gelu_quick_f32(const int n, float * y, const float * x) {
 #if defined(__ARM_NEON)
 
 // adapted from arm limited optimized routine
-// by justine tunney on the llamafile project
 // the maximum error is 1.45358 plus 0.5 ulps
 // numbers above 88.38 will flush to infinity
 // numbers beneath -103.97 will flush to zero
@@ -1195,17 +1194,16 @@ inline static float32x4_t ggml_v_expf(float32x4_t x) {
     const float32x4_t r = vdupq_n_f32(0x1.8p23f);
     const float32x4_t z = vfmaq_f32(r, x, vdupq_n_f32(0x1.715476p+0f));
     const float32x4_t n = vsubq_f32(z, r);
-    const float32x4_t b =
-        vfmsq_f32(vfmsq_f32(x, n, vdupq_n_f32(0x1.62e4p-1f)), n, vdupq_n_f32(0x1.7f7d1cp-20f));
+    const float32x4_t b = vfmsq_f32(vfmsq_f32(x, n, vdupq_n_f32(0x1.62e4p-1f)), n,
+                                    vdupq_n_f32(0x1.7f7d1cp-20f));
     const uint32x4_t e = vshlq_n_u32(vreinterpretq_u32_f32(z), 23);
-    const float32x4_t k = vreinterpretq_f32_u32(vaddq_u32(e, vdupq_n_u32(0x3f800000)));
+    const float32x4_t k = vreinterpretq_f32_u32(vaddq_u32(e, vreinterpretq_u32_f32(vdupq_n_f32(1))));
     const uint32x4_t c = vcagtq_f32(n, vdupq_n_f32(126));
     const float32x4_t u = vmulq_f32(b, b);
     const float32x4_t j = vfmaq_f32(
         vmulq_f32(vdupq_n_f32(0x1.ffffecp-1f), b),
         vfmaq_f32(vfmaq_f32(vdupq_n_f32(0x1.fffdb6p-2f), vdupq_n_f32(0x1.555e66p-3f), b),
-                  vfmaq_f32(vdupq_n_f32(0x1.573e2ep-5f), vdupq_n_f32(0x1.0e4020p-7f), b), u),
-        u);
+                  vfmaq_f32(vdupq_n_f32(0x1.573e2ep-5f), vdupq_n_f32(0x1.0e4020p-7f), b), u), u);
     if (!vpaddd_u64(vreinterpretq_u64_u32(c)))
         return vfmaq_f32(k, j, k);
     const uint32x4_t d = vandq_u32(vclezq_f32(n), vdupq_n_u32(0x82000000));
@@ -1225,7 +1223,110 @@ inline static float32x4_t ggml_v_silu(float32x4_t x) {
     return vdivq_f32(x, one_plus_exp_neg_x);
 }
 
-#elif defined(__SSE2__) // __ARM_NEON
+#elif defined(__AVX512F__) && defined(__AVX512DQ__)
+
+// adapted from arm limited optimized routine
+// the maximum error is 1.45358 plus 0.5 ulps
+// numbers above 88.38 will flush to infinity
+// numbers beneath -103.97 will flush to zero
+inline static __m512 ggml_v_expf(__m512 x) {
+  const __m512 r = _mm512_set1_ps(0x1.8p23f);
+  const __m512 z = _mm512_fmadd_ps(x, _mm512_set1_ps(0x1.715476p+0f), r);
+  const __m512 n = _mm512_sub_ps(z, r);
+  const __m512 b = _mm512_fnmadd_ps(n, _mm512_set1_ps(0x1.7f7d1cp-20f),
+                                    _mm512_fnmadd_ps(n, _mm512_set1_ps(0x1.62e4p-1f), x));
+  const __m512i e = _mm512_slli_epi32(_mm512_castps_si512(z), 23);
+  const __m512 k = _mm512_castsi512_ps(_mm512_add_epi32(e, _mm512_castps_si512(_mm512_set1_ps(1))));
+  const __mmask16 c = _mm512_cmp_ps_mask(_mm512_abs_ps(n), _mm512_set1_ps(126), _CMP_GT_OQ);
+  const __m512 u = _mm512_mul_ps(b, b);
+  const __m512 j = _mm512_fmadd_ps(_mm512_fmadd_ps(_mm512_fmadd_ps(_mm512_set1_ps(0x1.0e4020p-7f), b,
+                                                                   _mm512_set1_ps(0x1.573e2ep-5f)), u,
+                                                   _mm512_fmadd_ps(_mm512_set1_ps(0x1.555e66p-3f), b,
+                                                                   _mm512_set1_ps(0x1.fffdb6p-2f))),
+                                   u, _mm512_mul_ps(_mm512_set1_ps(0x1.ffffecp-1f), b));
+  if (_mm512_kortestz(c, c))
+    return _mm512_fmadd_ps(j, k, k);
+  const __m512i g = _mm512_and_si512(
+      _mm512_movm_epi32(_mm512_cmp_ps_mask(n, _mm512_setzero_ps(), _CMP_LE_OQ)),
+      _mm512_set1_epi32(0x82000000u));
+  const __m512 s1 =
+      _mm512_castsi512_ps(_mm512_add_epi32(g, _mm512_set1_epi32(0x7f000000u)));
+  const __m512 s2 = _mm512_castsi512_ps(_mm512_sub_epi32(e, g));
+  const __mmask16 d =
+      _mm512_cmp_ps_mask(_mm512_abs_ps(n), _mm512_set1_ps(192), _CMP_GT_OQ);
+  return _mm512_mask_blend_ps(
+      d, _mm512_mask_blend_ps(
+          c, _mm512_fmadd_ps(k, j, k),
+          _mm512_mul_ps(_mm512_fmadd_ps(s2, j, s2), s1)),
+      _mm512_mul_ps(s1, s1));
+}
+
+// computes silu x/(1+exp(-x)) in single precision vector
+inline static __m512 ggml_v_silu(__m512 x) {
+    const __m512 one = _mm512_set1_ps(1);
+    const __m512 zero = _mm512_setzero_ps();
+    const __m512 neg_x = _mm512_sub_ps(zero, x);
+    const __m512 exp_neg_x = ggml_v_expf(neg_x);
+    const __m512 one_plus_exp_neg_x = _mm512_add_ps(one, exp_neg_x);
+    return _mm512_div_ps(x, one_plus_exp_neg_x);
+}
+
+#elif defined(__AVX2__) && defined(__FMA__)
+
+// adapted from arm limited optimized routine
+// the maximum error is 1.45358 plus 0.5 ulps
+// numbers above 88.38 will flush to infinity
+// numbers beneath -103.97 will flush to zero
+inline static __m256 ggml_v_expf(__m256 x) {
+  const __m256 r = _mm256_set1_ps(0x1.8p23f);
+  const __m256 z = _mm256_fmadd_ps(x, _mm256_set1_ps(0x1.715476p+0f), r);
+  const __m256 n = _mm256_sub_ps(z, r);
+  const __m256 b = _mm256_fnmadd_ps(n, _mm256_set1_ps(0x1.7f7d1cp-20f),
+                                    _mm256_fnmadd_ps(n, _mm256_set1_ps(0x1.62e4p-1f), x));
+  const __m256i e = _mm256_slli_epi32(_mm256_castps_si256(z), 23);
+  const __m256 k = _mm256_castsi256_ps(
+      _mm256_add_epi32(e, _mm256_castps_si256(_mm256_set1_ps(1))));
+  const __m256i c = _mm256_castps_si256(
+      _mm256_cmp_ps(_mm256_andnot_ps(_mm256_set1_ps(-0.f), n),
+                    _mm256_set1_ps(126), _CMP_GT_OQ));
+  const __m256 u = _mm256_mul_ps(b, b);
+  const __m256 j = _mm256_fmadd_ps(_mm256_fmadd_ps(_mm256_fmadd_ps(_mm256_set1_ps(0x1.0e4020p-7f), b,
+                                                                   _mm256_set1_ps(0x1.573e2ep-5f)), u,
+                                                   _mm256_fmadd_ps(_mm256_set1_ps(0x1.555e66p-3f), b,
+                                                                   _mm256_set1_ps(0x1.fffdb6p-2f))),
+                                   u, _mm256_mul_ps(_mm256_set1_ps(0x1.ffffecp-1f), b));
+  if (!_mm256_movemask_ps(_mm256_castsi256_ps(c)))
+    return _mm256_fmadd_ps(j, k, k);
+  const __m256i g = _mm256_and_si256(
+      _mm256_castps_si256(_mm256_cmp_ps(n, _mm256_setzero_ps(), _CMP_LE_OQ)),
+      _mm256_set1_epi32(0x82000000u));
+  const __m256 s1 =
+      _mm256_castsi256_ps(_mm256_add_epi32(g, _mm256_set1_epi32(0x7f000000u)));
+  const __m256 s2 = _mm256_castsi256_ps(_mm256_sub_epi32(e, g));
+  const __m256i d = _mm256_castps_si256(
+      _mm256_cmp_ps(_mm256_andnot_ps(_mm256_set1_ps(-0.f), n),
+                    _mm256_set1_ps(192), _CMP_GT_OQ));
+  return _mm256_or_ps(
+      _mm256_and_ps(_mm256_castsi256_ps(d), _mm256_mul_ps(s1, s1)),
+      _mm256_andnot_ps(
+          _mm256_castsi256_ps(d),
+          _mm256_or_ps(
+              _mm256_and_ps(_mm256_castsi256_ps(c),
+                            _mm256_mul_ps(_mm256_fmadd_ps(s2, j, s2), s1)),
+              _mm256_andnot_ps(_mm256_castsi256_ps(c), _mm256_fmadd_ps(k, j, k)))));
+}
+
+// computes silu x/(1+exp(-x)) in single precision vector
+inline static __m256 ggml_v_silu(__m256 x) {
+    const __m256 one = _mm256_set1_ps(1);
+    const __m256 zero = _mm256_setzero_ps();
+    const __m256 neg_x = _mm256_sub_ps(zero, x);
+    const __m256 exp_neg_x = ggml_v_expf(neg_x);
+    const __m256 one_plus_exp_neg_x = _mm256_add_ps(one, exp_neg_x);
+    return _mm256_div_ps(x, one_plus_exp_neg_x);
+}
+
+#elif defined(__SSE2__) // __AVX2__ / __ARM_NEON
 
 #if defined(__FMA__)
 #define MADD128(x, y, z) _mm_fmadd_ps(x, y, z)
@@ -1236,7 +1337,6 @@ inline static float32x4_t ggml_v_silu(float32x4_t x) {
 #endif
 
 // adapted from arm limited optimized routine
-// by justine tunney on the llamafile project
 // the maximum error is 1.45358 plus 0.5 ulps
 // numbers above 88.38 will flush to infinity
 // numbers beneath -103.97 will flush to zero
@@ -1280,12 +1380,20 @@ inline static __m128 ggml_v_silu(__m128 x) {
     return _mm_div_ps(x, one_plus_exp_neg_x);
 }
 
-#endif // __ARM_NEON / __SSE2__
+#endif // __ARM_NEON / __AVX2__ / __SSE2__
 
 void ggml_vec_silu_f32(const int n, float * y, const float * x) {
     int i = 0;
-    if (!FLAG_trap) {
-#if defined(__SSE2__)
+    if (!FLAG_trap) { // [jart] preserve this line
+#if defined(__AVX512F__) && defined(__AVX512DQ__)
+    for (; i + 15 < n; i += 16) {
+        _mm512_storeu_ps(y + i, ggml_v_silu(_mm512_loadu_ps(x + i)));
+    }
+#elif defined(__AVX2__) && defined(__FMA__)
+    for (; i + 7 < n; i += 8) {
+        _mm256_storeu_ps(y + i, ggml_v_silu(_mm256_loadu_ps(x + i)));
+    }
+#elif defined(__SSE2__)
     for (; i + 3 < n; i += 4) {
         _mm_storeu_ps(y + i, ggml_v_silu(_mm_loadu_ps(x + i)));
     }
@@ -1294,7 +1402,7 @@ void ggml_vec_silu_f32(const int n, float * y, const float * x) {
         vst1q_f32(y + i, ggml_v_silu(vld1q_f32(x + i)));
     }
 #endif
-    }
+    } // [jart] preserve this line
     for (; i < n; ++i) {
         y[i] = ggml_silu_f32(x[i]);
     }
@@ -1303,8 +1411,26 @@ void ggml_vec_silu_f32(const int n, float * y, const float * x) {
 float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) {
     int i = 0;
     ggml_float sum = 0;
-    if (!FLAG_trap) {
-#if defined(__SSE2__)
+    if (!FLAG_trap) { // [jart] preserve this line
+#if defined(__AVX512F__) && defined(__AVX512DQ__)
+    for (; i + 15 < n; i += 16) {
+        __m512 val = ggml_v_expf(_mm512_sub_ps(_mm512_loadu_ps(x + i),
+                                               _mm512_set1_ps(max)));
+        _mm512_storeu_ps(y + i, val);
+        sum += (ggml_float)_mm512_reduce_add_ps(val);
+    }
+#elif defined(__AVX2__) && defined(__FMA__)
+    for (; i + 7 < n; i += 8) {
+        __m256 val = ggml_v_expf(_mm256_sub_ps(_mm256_loadu_ps(x + i),
+                                               _mm256_set1_ps(max)));
+        _mm256_storeu_ps(y + i, val);
+        __m128 val2 = _mm_add_ps(_mm256_extractf128_ps(val, 1),
+                                 _mm256_castps256_ps128(val));
+        val2 = _mm_add_ps(val2, _mm_movehl_ps(val2, val2));
+        val2 = _mm_add_ss(val2, _mm_movehdup_ps(val2));
+        sum += (ggml_float)_mm_cvtss_f32(val2);
+    }
+#elif defined(__SSE2__)
     for (; i + 3 < n; i += 4) {
         __m128 val = ggml_v_expf(_mm_sub_ps(_mm_loadu_ps(x + i),
                                             _mm_set1_ps(max)));
@@ -1325,10 +1451,10 @@ float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) 
         float32x4_t val = ggml_v_expf(vsubq_f32(vld1q_f32(x + i),
                                                 vdupq_n_f32(max)));
         vst1q_f32(y + i, val);
-        sum += vaddvq_f32(val);
+        sum += (ggml_float)vaddvq_f32(val);
     }
 #endif
-    }
+    } // [jart] preserve this line
     for (; i < n; ++i) {
         float val = expf(x[i] - max);
         sum += (ggml_float)val;
