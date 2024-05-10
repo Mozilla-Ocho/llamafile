@@ -8,6 +8,7 @@ struct ggml_tensor;
 struct ggml_compute_params;
 
 bool iqk_mul_mat(long, long, long, int, const void *, const void *, float *, long, int, int);
+bool iqk_mul_mat_zen4(long, long, long, int, const void *, const void *, float *, long, int, int);
 
 bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, void *, long, int,
                      int, int, int, int, int, int);
