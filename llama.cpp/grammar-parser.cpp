@@ -173,7 +173,7 @@ namespace grammar_parser {
 
                     out_elements.push_back({type, char_pair.first});
                     if (pos[0] == '-' && pos[1] != ']') {
-                        if (pos[1]) {  // [jart] don't sync until upstream fixes bug
+                        if (!pos[1]) {  // [jart] don't sync until upstream fixes bug
                             throw std::runtime_error("unexpected end of input");
                         }
                         auto endchar_pair = parse_char(pos + 1);
