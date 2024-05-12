@@ -18,13 +18,15 @@
 #include "tinyblas_cpu.h"
 
 //
-//                   _   _          ___ _      _   ___
-//                  | |_(_)_ _ _  _| _ ) |    /_\ / __|
-//                  |  _| | ' \ || | _ \ |__ / _ \\__ \.
-//                   \__|_|_||_\_, |___/____/_/ \_\___/
-//                             |__/
 //
-//                    BASIC LINEAR ALGEBRA SUBPROGRAMS
+//                                ██████╗ ██╗   █████╗ ██████╗
+//         ██████╗██╗██╗ ██╗██═██╗██╔══██╗██║  ██╔══██╗██╔═══╝
+//         ╚═██╔═╝██║███▄██║██ ██║██████╔╝██║  ███████║██████╗
+//           ██║  ██║██▀███║╚███╔╝██╔══██╗██║  ██╔══██║╔═══██║
+//           ██║  ██║██║ ██║ ███║ ██████╔╝████╗██║  ██║██████║
+//           ╚═╝  ╚═╝╚═╝ ╚═╝ ╚══╝ ╚═════╝ ╚═══╝╚═╝  ╚═╝╚═════╝
+//
+//                   BASIC LINEAR ALGEBRA SUBPROGRAMS
 //
 //
 // This file implements multithreaded CPU matrix multiplication for the
@@ -321,7 +323,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             }
         }
         if ((Btype == GGML_TYPE_Q8_0 || Btype == GGML_TYPE_Q8_1) && Ctype == GGML_TYPE_F32) {
-            assert (QK8_0 == QK8_1 == QK4_0 == QK4_1 == QK5_0 == QK5_1 == 32);
+            assert(QK8_0 == QK8_1 == QK4_0 == QK4_1 == QK5_0 == QK5_1 == 32);
             if (iqk_mul_mat(m, n, k * QK8_0, Atype, A, B, (float *)C, ldc, ith, nth)) {
                 return true;
             }
