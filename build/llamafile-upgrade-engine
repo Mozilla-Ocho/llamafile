@@ -82,19 +82,20 @@ done
 shift $((OPTIND - 1))
 
 # Remove .llamafile extension from arguments if present
-old_llamafile="${1%.llamafile}"
+if [ -z "${1}" ]; then
+  abort "Missing path to old llamafile archive to be upgraded"
+else
+  old_llamafile="${1%.llamafile}"
+fi
+
 if [ -z "$2" ]; then
-  new_llamafile="${1%.llamafile}.updated"
+  new_llamafile="${old_llamafile}.updated"
 else
   new_llamafile="${2%.llamafile}"
 fi
 
-if [ -z "$old_llamafile" ]; then
-  abort "Missing path to old llamafile archive to be upgraded"
-fi
-
 # Obtain versions of old and new llamafiles
-old_llamafile_engine_version="$("$old_llamafile.llamafile" --version)" || abort "Failed to get version of old llamafile"
+old_llamafile_engine_version="$("./$old_llamafile".llamafile --version)" || abort "Failed to get version of old llamafile"
 new_llamafile_engine_version="$("$LLAMAFILE" --version)" || abort "Failed to get version of new llamafile"
 
 # Check if llamafile has been upgraded
@@ -122,3 +123,5 @@ cp "$LLAMAFILE" "${new_llamafile}.llamafile" || abort "Failed to copy new llamaf
 "$ZIPALIGN" -j0 "${new_llamafile}.llamafile" "$tempdir"/*.gguf "$tempdir"/.args || abort "Failed to repackaging"
 
 echo "== Completed ==" >&2
+echo "Original File: ${old_llamafile}.llamafile" >&2
+echo "Upgraded File: ${new_llamafile}.llamafile" >&2
