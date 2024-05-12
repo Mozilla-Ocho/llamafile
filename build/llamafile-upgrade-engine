@@ -48,7 +48,7 @@ fi
 # find paths of golden llamafile binaries
 #
 # 1. if user downloaded `llamafile-VERSION.zip`, extracted it, and ran
-#    `./llamafile-VERSION/bin/llamafile-convert` directly, then we can
+#    `./llamafile-VERSION/bin/llamafile-upgrade-engine` directly, then we can
 #    support that by looking for a `llamafile` in the same bin folder.
 #
 # 2. otherwise, perform a $PATH lookup for llamafile
