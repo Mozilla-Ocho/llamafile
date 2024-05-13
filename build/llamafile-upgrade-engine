@@ -1,0 +1,127 @@
+#!/bin/sh
+BIN="${0%/*}"
+PROG="${0##*/}"
+
+print_full_help() {
+  cat << EOF
+Usage: $PROG [OPTION]... <old> (new)
+Upgrade llamafile archives.
+
+Options:
+  -h, --help            display this help and exit
+  -f, --force           skip version check
+  -v, --verbose         verbose mode
+
+Arguments:
+  <old>                 the name of the old llamafile archive to be upgraded
+  (new)                 the name of the new llamafile archive to be created
+                        if not defined output will be <old>.updated.llamafile
+
+Example:
+  $PROG old.llamafile new.llamafile
+  This command will upgrade the old_llamafile to a new llamafile named new_llamafile.
+
+When you run this program, it's recommended that you've
+downloaded or installed an official llamafile-VERSION.zip
+from https://github.com/Mozilla-Ocho/llamafile/releases
+because they include prebuilt DLLs for CUDA and ROCm.
+You can verify your llamafile has them w/ unzip -vl
+EOF
+}
+
+abort() {
+  echo "Error: $1" >&2
+  cat << EOF >&2
+Usage: $PROG [OPTION]... <old> (new)
+Upgrade llamafile archives.
+Refer to --help for full instructions.
+EOF
+  exit 1
+}
+
+if [ x"$1" = x"-h" ] || [ x"$1" = x"--help" ]; then
+  print_full_help >&2
+  exit 0
+fi
+
+
+# find paths of golden llamafile binaries
+#
+# 1. if user downloaded `llamafile-VERSION.zip`, extracted it, and ran
+#    `./llamafile-VERSION/bin/llamafile-upgrade-engine` directly, then we can
+#    support that by looking for a `llamafile` in the same bin folder.
+#
+# 2. otherwise, perform a $PATH lookup for llamafile
+#
+LLAMAFILE="$BIN/llamafile"
+if [ ! -x "$LLAMAFILE" ]; then
+  LLAMAFILE="$(command -v llamafile)" || abort "llamafile not found in PATH"
+fi
+ZIPALIGN="$BIN/zipalign"
+if [ ! -x "$ZIPALIGN" ]; then
+  ZIPALIGN="$(command -v zipalign)" || abort "zipalign not found in PATH"
+fi
+
+# Parse command-line options
+force_upgrade=false
+verbose=false
+while getopts "fv" opt; do
+    case $opt in
+        f)
+            force_upgrade=true
+            echo "Skipping version check."
+            ;;
+        v)
+            verbose=true
+            echo "Verbose Output Mode."
+            ;;
+    esac
+done
+
+# Shift the option parameters
+shift $((OPTIND - 1))
+
+# Remove .llamafile extension from arguments if present
+if [ -z "${1}" ]; then
+  abort "Missing path to old llamafile archive to be upgraded"
+else
+  old_llamafile="${1%.llamafile}"
+fi
+
+if [ -z "$2" ]; then
+  new_llamafile="${old_llamafile}.updated"
+else
+  new_llamafile="${2%.llamafile}"
+fi
+
+# Obtain versions of old and new llamafiles
+old_llamafile_engine_version="$("./$old_llamafile".llamafile --version)" || abort "Failed to get version of old llamafile"
+new_llamafile_engine_version="$("$LLAMAFILE" --version)" || abort "Failed to get version of new llamafile"
+
+# Check if llamafile has been upgraded
+echo "== Engine Version Check ==" >&2
+echo "Engine version from $old_llamafile: $old_llamafile_engine_version" >&2
+echo "Engine version from $LLAMAFILE: $new_llamafile_engine_version" >&2
+if [ "$old_llamafile_engine_version" = "$new_llamafile_engine_version" ] && [ "$force_upgrade" != "true" ]; then
+  echo "Upgrade not required. Exiting..." >&2
+  exit 0
+fi
+
+if [ "$verbose" = "true" ]; then
+  echo "== Current Content ==" >&2
+  zipinfo "${old_llamafile}.llamafile" || abort "Failed to get current content of old llamafile"
+fi
+
+tempdir="$(mktemp -d)" || abort "Failed to create temporary directory"
+trap 'rm -rf "$tempdir"' EXIT
+
+echo "== Repackaging / Upgrading ==" >&2
+echo "extracting..." >&2
+unzip "${old_llamafile}.llamafile" -d "$tempdir" || abort "Failed to extract old llamafile"
+echo "repackaging..." >&2
+cp "$LLAMAFILE" "${new_llamafile}.llamafile" || abort "Failed to copy new llamafile"
+"$ZIPALIGN" -j0 "${new_llamafile}.llamafile" "$tempdir"/*.gguf "$tempdir"/.args || abort "Failed to repackaging"
+
+echo "== Completed ==" >&2
+echo "Original File: ${old_llamafile}.llamafile" >&2
+echo "Upgraded File: ${new_llamafile}.llamafile" >&2
