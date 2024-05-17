@@ -560,6 +560,25 @@ zipalign -j0 \
 Congratulations. You've just made your own LLM executable that's easy to
 share with your friends.
 
+## Distribution
+
+One good way to share a llamafile with your friends is by posting it on
+Hugging Face. If you do that, then it's recommended that you mention in
+your Hugging Face commit message what git revision or released version
+of llamafile you used when building your llamafile. That way everyone
+online will be able verify the provenance of its executable content. If
+you've made changes to the llama.cpp or cosmopolitan source code, then
+the Apache 2.0 license requires you to explain what changed. One way you
+can do that is by embedding a notice in your llamafile using `zipalign`
+that describes the changes, and mention it in your Hugging Face commit.
+
+## Documentation
+
+There's a manual page for each of the llamafile programs installed when you
+run `sudo make install`. The command manuals are also typeset as PDF
+files that you can download from our GitHub releases page. Lastly, most
+commands will display that information when passing the `--help` flag.
+
 ## Running llamafile with models downloaded by third-party applications
 
 This section answers the question *"I already have a model downloaded locally by application X, can I use it with llamafile?"*. The general answer is "yes, as long as those models are locally stored in GGUF format" but its implementation can be more or less hacky depending on the application. A few examples (tested on a Mac) follow.
@@ -586,25 +605,6 @@ Each sha256 digest is also used as a filename in the `~/.ollama/models/blobs` di
 cd ~/.ollama/models/blobs
 llamafile -m sha256-00e1317cbf74d901080d7100f57580ba8dd8de57203072dc6f668324ba545f29
 ```
-
-## Distribution
-
-One good way to share a llamafile with your friends is by posting it on
-Hugging Face. If you do that, then it's recommended that you mention in
-your Hugging Face commit message what git revision or released version
-of llamafile you used when building your llamafile. That way everyone
-online will be able verify the provenance of its executable content. If
-you've made changes to the llama.cpp or cosmopolitan source code, then
-the Apache 2.0 license requires you to explain what changed. One way you
-can do that is by embedding a notice in your llamafile using `zipalign`
-that describes the changes, and mention it in your Hugging Face commit.
-
-## Documentation
-
-There's a manual page for each of the llamafile programs installed when you
-run `sudo make install`. The command manuals are also typeset as PDF
-files that you can download from our GitHub releases page. Lastly, most
-commands will display that information when passing the `--help` flag.
 
 ## Technical details
 
