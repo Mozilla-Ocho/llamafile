@@ -1220,16 +1220,19 @@ bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const v
     return true;
 }
 
-bool iqk_mul_mat_moe(int Nx, int Ny, int ne00, int ne11, int typeA, const void * A, const void * B,
-        float * C, size_t nb1, size_t nb2, const void * vrow_mapping, int ith, int nth) {
+bool iqk_mul_mat_moe(long Nx, long Ny, long ne00, int ne11, int typeA, const void * A, const void * B,
+        float * C, long nb1, long nb2, const void * vrow_mapping, int ith, int nth) {
     const mmid_row_mapping * row_mapping = (const mmid_row_mapping *)vrow_mapping;
     assert(row_mapping != nullptr);
 
+    //printf("============= %s...", __func__);
     mul_mat_t mm_nx1, mm_nx2, mm_nx4, mm_nx8;
     int row_size_q8;
     if (!set_mul_mat(typeA, ne00, mm_nx1, mm_nx2, mm_nx4, mm_nx8, row_size_q8)) {
+        //printf("not available\n");
         return false;
     }
+    //printf("computing\n");
     int row_size_qx = ggml_row_size((ggml_type)typeA, ne00);
     int nrc_x = (Nx + nth - 1)/nth;
     int first_x = ith*nrc_x;
