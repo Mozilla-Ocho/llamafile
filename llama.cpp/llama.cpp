@@ -4315,6 +4315,7 @@ static void llm_load_vocab(
                         (t.first == "<|eot_id|>" ||
                          t.first == "<|im_end|>" ||
                          t.first == "<|end|>" ||
+                         t.first == "<|end_of_text|>" ||
                          t.first == "<end_of_turn>"
                         )
                    ) {
