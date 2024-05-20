@@ -39,6 +39,41 @@
 
 namespace {
 
+typedef struct {
+    int32_t i1;
+    int32_t i2;
+} mmid_row_mapping;
+
+struct DataInfo {
+    float       * s;
+    const char  * cy;
+    size_t        bs;
+    size_t        by;
+    int           cur_y = 0;
+    int           ne11;
+    const mmid_row_mapping * row_mapping = nullptr;
+    size_t        bs2 = 0;
+
+    inline const char * src1_row(int iy) const {
+        if (!row_mapping) return cy + (cur_y + iy)*by;
+        int i11 = row_mapping[cur_y + iy].i1 % ne11;
+        int i12 = row_mapping[cur_y + iy].i2;
+        return cy + (i11 + i12*ne11)*by;
+    }
+
+    inline void store(int ix, int iy, float result) const {
+        *(dst_row(iy) + ix) = result;
+        //dst_row(iy)[ix] = result;
+    }
+    inline float * dst_row(int iy) const {
+        if (!row_mapping) return s + (cur_y + iy)*bs;
+        int i12 = row_mapping[cur_y + iy].i2;
+        int i1  = row_mapping[cur_y + iy].i1;
+        int i2  = i12;
+        return s + i1*bs + i2*bs2;
+    }
+};
+
 inline void make_q4_scales(const uint8_t * scales8, uint32_t * aux32) {
     const uint16_t * scales = (const uint16_t *)scales8;
     const uint32_t a0 = scales[0] | (scales[1] << 16);
@@ -75,37 +110,33 @@ static inline float hsum_float_8(__m256 x) {
 
 #define MM256_SET_M128I(a, b) _mm256_insertf128_si256(_mm256_castsi128_si256(b), (a), 1)
 
-typedef void (*mul_mat_t)(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x);
+typedef void (*mul_mat_t)(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x);
 
-inline void mul_mat_NxM(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x, int nrc_y,
-        mul_mat_t mm_nx1, mul_mat_t mm_nx2, mul_mat_t mm_nx4, mul_mat_t mm_nx8) {
-    const char * char_y = (const char *)vy;
-    auto process = [n, &s, bs, &char_y, by, vx, bx, nrc_x, &nrc_y] (mul_mat_t mul_mat, int step) {
-        if (!mul_mat || nrc_y < step) return true;
-        int n_step = nrc_y/step;
+inline void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y,
+        mul_mat_t mm_nx1, mul_mat_t mm_nx2, mul_mat_t mm_nx4, mul_mat_t mm_nx8 = nullptr) {
+    auto process = [n, &info, vx, bx, nrc_x, nrc_y] (mul_mat_t mul_mat, int step) {
+        if (!mul_mat) return true;
+        int n_step = (nrc_y - info.cur_y)/step;
         for (int iy = 0; iy < n_step; ++iy) {
-            mul_mat(n, s + step*iy*bs, bs, vx, bx, char_y + step*iy*by, by, nrc_x);
+            mul_mat(n, vx, bx, info, nrc_x);
+            info.cur_y += step;
         }
-        nrc_y -= step*n_step;
-        if (nrc_y == 0) return false;
-        char_y += step*n_step*by;
-        s += step*n_step*bs;
-        return true;
+        return info.cur_y < nrc_y;
     };
     process(mm_nx8, 8) && process(mm_nx4, 4) && process(mm_nx2, 2) && process(mm_nx1, 1);
 }
 
-template <int nrc_y> struct Q8 {
+template <int nrc_y, typename block_q8 = block_q8_K> struct Q8 {
 
-    Q8(const void * vy, int by) {
-        for (int iy = 0; iy < nrc_y; ++iy) y[iy] = (const block_q8_K *)((const char *)vy + iy*by);
+    Q8(const DataInfo& info) {
+        for (int iy = 0; iy < nrc_y; ++iy) y[iy] = (const block_q8 *)info.src1_row(iy);
     }
 
     inline __m256i load_quants(int iy, int i, int j) const { return _mm256_loadu_si256((const __m256i*)y[iy][i].qs + j); }
     inline __m256i load_bsums(int iy, int i) const { return _mm256_loadu_si256((const __m256i*)y[iy][i].bsums); }
     inline float scale(int iy, int i) const { return y[iy][i].d; }
 
-    const block_q8_K * y[nrc_y];
+    const block_q8 * y[nrc_y];
 };
 
 }
@@ -115,7 +146,7 @@ template <int nrc_y> struct Q8 {
 //
 namespace {
 template <int nrc_y>
-static void mul_mat_q2_K_q8_K_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+static void mul_mat_q2_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n%QK_K == 0);
     const int nb = n/QK_K;
 
@@ -125,7 +156,7 @@ static void mul_mat_q2_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
     const __m256i mc = _mm256_set1_epi8(12);
     const __m128i m4 = _mm_set1_epi8(0xF);
 
-    Q8<nrc_y> q8(vy, by);
+    Q8<nrc_y> q8(info);
 
     __m256i scales[2];
     __m256i sumi[k_nrc];
@@ -214,9 +245,9 @@ static void mul_mat_q2_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 
         for (int iy = 0; iy < nrc_y; ++iy) {
             if (nrc_y <= 2) {
-                s[ix+iy*bs] = hsum_float_8(accd[2*iy+0]) + 0.25f*hsum_float_8(accd[2*iy+1]);
+                info.store(ix, iy, hsum_float_8(accd[2*iy+0]) + 0.25f*hsum_float_8(accd[2*iy+1]));
             } else {
-                s[ix+iy*bs] = hsum_float_8(accd[iy]);
+                info.store(ix, iy, hsum_float_8(accd[iy]));
             }
         }
 
@@ -227,11 +258,11 @@ static void mul_mat_q2_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 // ================================== q3_K =============================================
 //
 template <int nrc_y>
-static void mul_mat_q3_K_q8_K_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+static void mul_mat_q3_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n%QK_K == 0);
     const int nb = n/QK_K;
 
-    Q8<nrc_y> q8(vy, by);
+    Q8<nrc_y> q8(info);
 
     const __m256i m3l = _mm256_set1_epi8(0x03);
     const __m128i m32 = _mm_set1_epi8(32);
@@ -335,7 +366,7 @@ static void mul_mat_q3_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
         }
 
         for (int iy = 0; iy < nrc_y; ++iy) {
-            s[ix + iy*bs] = hsum_float_8(accd[iy]) - 4.f*hsum_float_8(accm[iy]);
+            info.store(ix, iy, hsum_float_8(accd[iy]) - 4.f*hsum_float_8(accm[iy]));
         }
 
     }
@@ -347,13 +378,13 @@ static void mul_mat_q3_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 //
 
 template <int nrc_y>
-static void mul_mat_q4_K_q8_K_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+static void mul_mat_q4_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n % QK_K == 0);
     const int nb = n / QK_K;
 
     constexpr int k_nrc = nrc_y <= 2 ? 2*nrc_y : nrc_y;
 
-    Q8<nrc_y> q8(vy, by);
+    Q8<nrc_y> q8(info);
 
     uint32_t utmp[4];
 
@@ -439,10 +470,10 @@ static void mul_mat_q4_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 
         for (int iy = 0; iy < nrc_y; ++iy) {
             if (nrc_y <= 2) {
-                s[ix+iy*bs] = hsum_float_8(accd[2*iy+0]) + 0.0625f*hsum_float_8(accd[2*iy+1]) + hsum_float_4(accm[iy]);
+                info.store(ix, iy, hsum_float_8(accd[2*iy+0]) + 0.0625f*hsum_float_8(accd[2*iy+1]) + hsum_float_4(accm[iy]));
             } else {
                 const __m128 d = _mm_add_ps(_mm256_castps256_ps128(accd[iy]), _mm256_extractf128_ps(accd[iy], 1));
-                s[ix+iy*bs] = hsum_float_4(_mm_add_ps(d, accm[iy]));
+                info.store(ix, iy, hsum_float_4(_mm_add_ps(d, accm[iy])));
             }
         }
 
@@ -453,11 +484,11 @@ static void mul_mat_q4_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 // ========================================= q5_K ========================================================
 //
 template <int nrc_y>
-static void mul_mat_q5_K_q8_K_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+static void mul_mat_q5_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n % QK_K == 0);
     const int nb = n / QK_K;
 
-    Q8<nrc_y> q8(vy, by);
+    Q8<nrc_y> q8(info);
 
     uint32_t utmp[4];
 
@@ -537,7 +568,7 @@ static void mul_mat_q5_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 
         for (int iy = 0; iy < nrc_y; ++iy) {
             const __m128 d = _mm_add_ps(_mm256_castps256_ps128(accd[iy]), _mm256_extractf128_ps(accd[iy], 1));
-            s[ix+iy*bs] = hsum_float_4(_mm_add_ps(d, accm[iy]));
+            info.store(ix, iy, hsum_float_4(_mm_add_ps(d, accm[iy])));
         }
 
     }
@@ -549,14 +580,14 @@ static void mul_mat_q5_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 //
 
 template <int nrc_y>
-static void mul_mat_q6_K_q8_K_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+static void mul_mat_q6_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n % QK_K == 0);
     const int nb = n / QK_K;
 
     const __m256i m4 = _mm256_set1_epi8(0xF);
     const __m256i mh = _mm256_set1_epi8(0x30);
 
-    Q8<nrc_y> q8(vy, by);
+    Q8<nrc_y> q8(info);
 
     __m256i scales[2];
     __m256  vd[nrc_y];
@@ -634,7 +665,7 @@ static void mul_mat_q6_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
         }
 
         for (int iy = 0; iy < nrc_y; ++iy) {
-            s[ix+iy*bs] = hsum_float_8(accd[iy]) - 32.f*hsum_float_8(accm[iy]);
+            info.store(ix, iy, hsum_float_8(accd[iy]) - 32.f*hsum_float_8(accm[iy]));
         }
 
     }
@@ -645,7 +676,7 @@ static void mul_mat_q6_K_q8_K_T(int n, float * s, size_t bs, const void * vx, si
 //
 
 template <int nrc_y>
-static void mul_mat_iq4_xs_q8_K_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+static void mul_mat_iq4_xs_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n % QK_K == 0);
     const int nb = n / QK_K;
 
@@ -674,7 +705,7 @@ static void mul_mat_iq4_xs_q8_K_T(int n, float * s, size_t bs, const void * vx, 
         return _mm256_maddubs_epi16(ux, sy);
     };
 
-    Q8<nrc_y> q8(vy, by);
+    Q8<nrc_y> q8(info);
 
     for (int ix = 0; ix < nrc_x; ++ix) {
 
@@ -712,17 +743,17 @@ static void mul_mat_iq4_xs_q8_K_T(int n, float * s, size_t bs, const void * vx, 
         }
 
         for (int iy = 0; iy < nrc_y; ++iy) {
-            s[ix+iy*bs] = hsum_float_8(accum[iy]);
+            info.store(ix, iy, hsum_float_8(accum[iy]));
         }
 
     }
 
 }
+
 //
 // ============================== Legacy quants
 //
 
-// Vector dot products
 struct DotHelper {
     const __m256i m1 = _mm256_set1_epi16(1);
 #if defined(__AVX512VNNI__) && defined(__AVX512VL__)
@@ -748,12 +779,6 @@ struct UnsignedDot {
         return helper.dot(x, y);
     }
 };
-
-// Compute the dot product of 4 blocks.
-// Somewhat surprisingly (at least to me), the fastest way to do this
-// is to narrow the 32-bit dot products twice by using _mm256_packs_epi32()
-// followed by 16-bit multiply-adds, to end up with a single
-// 256-bit result (containing 8 32-bit integers) per 128 quants.
 template <typename Q8, typename Dot> struct Sum4 {
     Dot dot;
     inline __m256i compute(const __m256i * qx, const Q8 * y) const {
@@ -767,13 +792,25 @@ template <typename Q8, typename Dot> struct Sum4 {
     }
 };
 
-// Sum4 specializations for type-0 and type-1 quants
-using Sum4Type0 = Sum4<block_q8_0, SignedDot>;
-using Sum4Type1 = Sum4<block_q8_1, UnsignedDot>;
+struct Sum4_Q8 {
+    SignedDot dot;
+    static inline __m256i add1(__m256i a, __m256i b) {
+        return _mm256_add_epi32(_mm256_unpacklo_epi32(a, b), _mm256_unpackhi_epi32(a, b));
+    }
+    static inline __m256i add2(__m256i a, __m256i b) {
+        return _mm256_add_epi32(_mm256_unpacklo_epi64(a, b), _mm256_unpackhi_epi64(a, b));
+    }
+    inline __m256i compute(const __m256i * qx, const block_q8_0 * y) const {
+        const __m256i p0 = dot.compute(qx[0], _mm256_loadu_si256((const __m256i *)y[0].qs));
+        const __m256i p1 = dot.compute(qx[1], _mm256_loadu_si256((const __m256i *)y[1].qs));
+        const __m256i p2 = dot.compute(qx[2], _mm256_loadu_si256((const __m256i *)y[2].qs));
+        const __m256i p3 = dot.compute(qx[3], _mm256_loadu_si256((const __m256i *)y[3].qs));
+        const __m256i p01 = add1(p0, p1);  // 0,1, 0,1, 0,1, 0,1
+        const __m256i p23 = add1(p2, p3);  // 2,3, 2,3, 2,3, 2,3
+        return add2(p01, p23); // returns 0,1,2,3, 0,1,2,3
+    }
+};
 
-// Handle block scales of type-0 quants (Q4_0, Q5_0).
-// I'm finding a significant speedup from converting the 4 fp16 scales
-// of 4 blocks with one vector instruction (instead of having 4 separate fp16->fp32 conversions)
 struct ScaleHelperQ_0 {
     ggml_half scales8[4];
     template <typename Q>
@@ -789,9 +826,6 @@ struct ScaleHelperQ_0 {
     template <typename Q> inline float prepare1(float d, const Q * y) const { return d*prepare1(y); }
 };
 
-// Handle block scales of type-1 quants (Q4_0, Q5_0).
-// I'm finding a significant speedup from converting the 8 fp16 scales and offsets
-// of 4 blocks with one vector instruction (instead of having 8 separate fp16->fp32 conversions)
 struct ScaleHelperQ_1 {
     uint32_t scales8[4];
     const __m128i shuffle = _mm_set_epi16(0x0f0e, 0x0b0a, 0x0706, 0x0302, 0x0d0c, 0x0908, 0x0504, 0x0100);
@@ -822,16 +856,12 @@ struct ScaleHelperQ_1 {
     }
 };
 
-// These two are useful for the templated implementation below.
-// There is not much to do for type-0 quants.
 struct MinusType0 {
     inline __m256 compute(__m128 d, int) const { return _mm256_set_m128(d, d); }
     inline float compute(float d, int) const { return d; }
     inline float result(__m256 acc, int) const { return hsum_float_8(acc); }
 };
 
-// For type-1 quants, we need to accumulate the produts of the quant offsets
-// with the Q8_0 block sums (provided by block_q8_1 used for type-1 quants).
 template <int nrc_y> struct MinusType1 {
     __m128 accm[nrc_y];
     MinusType1() { for (int iy = 0; iy < nrc_y; ++iy) accm[iy] = _mm_setzero_ps(); }
@@ -851,13 +881,12 @@ template <int nrc_y> struct MinusType1 {
     }
 };
 
-// The accumulator.
 template <typename Minus, int nrc_y, bool is_multiple_of_4> struct AccumT {
     __m256 acc[nrc_y];
     Minus accm;
     AccumT() {  for (int iy = 0; iy < nrc_y; ++iy) acc[iy] = _mm256_setzero_ps(); }
     template <typename Unpacker, typename Scales, typename Sum, typename Q8>
-    inline void compute(int nb, Unpacker& unp, Scales& scales, Sum& sum, const Q8 ** y, float * s, size_t bs) {
+    inline void compute(int nb, Unpacker& unp, Scales& scales, Sum& sum, const Q8 ** y, const DataInfo& info, int ix) {
         auto qx = unp.quants();
         __m256 dall[nrc_y];
         for (int i = 0; i < nb/4; ++i) {
@@ -883,76 +912,76 @@ template <typename Minus, int nrc_y, bool is_multiple_of_4> struct AccumT {
             }
         }
         for (int iy = 0; iy < nrc_y; ++iy) {
-            s[iy*bs] = accm.result(acc[iy], iy);
+            info.store(ix, iy, accm.result(acc[iy], iy));
+            //s[iy*bs] = accm.result(acc[iy], iy);
         }
     }
 };
 
-// Accumulator specializations for type-0 and type-1 quants
 template <int nrc_y, bool is_multiple_of_4>
 using AccumType0 = AccumT<MinusType0, nrc_y, is_multiple_of_4>;
 
 template <int nrc_y, bool is_multiple_of_4>
 using AccumType1 = AccumT<MinusType1<nrc_y>, nrc_y, is_multiple_of_4>;
 
-// Templated matrix multiplication
+using Sum4Type0 = Sum4<block_q8_0, SignedDot>;
+using Sum4Type1 = Sum4<block_q8_1, UnsignedDot>;
+
 template <typename Unpacker, typename Sum4Type, typename AccumType, typename Scales, typename Q8, int nrc_y>
-void mul_mat_qX_q8_Helper(int nb, float * s, size_t bs, const void * vx, size_t bx, const Q8 ** y, int nrc_x) {
+void mul_mat_qX_q8_Helper(int nb, const void * vx, size_t bx, const DataInfo& info, const Q8 ** y, int nrc_x) {
     Unpacker unp(vx, bx);
     Sum4Type sum4;
     Scales scales;
     for (int ix = 0; ix < nrc_x; ++ix) {
         unp.set_row(ix);
         AccumType accum;
-        accum.compute(nb, unp, scales, sum4, y, s+ix, bs);
+        accum.compute(nb, unp, scales, sum4, y, info, ix);
     }
 }
 
-// Type-0 - Q4_0 and Q5_0
 template <typename Unpacker, int nrc_y>
-void mul_mat_qX_0_q8_0_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+void mul_mat_qX_0_q8_0_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n%Unpacker::block_size() == 0);
-    const block_q8_0 * y[nrc_y];
-    for (int iy = 0; iy < nrc_y; ++iy) y[iy] = (const block_q8_0 *)((const char *)vy + iy*by);
+    Q8<nrc_y, block_q8_0> q8(info);
     int nb = n/Unpacker::block_size();
     if (nb%4 == 0) {
         mul_mat_qX_q8_Helper<Unpacker, Sum4Type0, AccumType0<nrc_y, true>, ScaleHelperQ_0, block_q8_0, nrc_y>(
-                nb, s, bs, vx, bx, y, nrc_x
+                nb, vx, bx, info, q8.y, nrc_x
         );
     } else {
         mul_mat_qX_q8_Helper<Unpacker, Sum4Type0, AccumType0<nrc_y, false>, ScaleHelperQ_0, block_q8_0, nrc_y>(
-                nb, s, bs, vx, bx, y, nrc_x
+                nb, vx, bx, info, q8.y, nrc_x
         );
     }
 }
 
-// Type-1 - Q4_1 and Q5_1
 template <typename Unpacker, int nrc_y>
-void mul_mat_qX_1_q8_1_T(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc_x) {
+void mul_mat_qX_1_q8_1_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n%Unpacker::block_size() == 0);
-    const block_q8_1 * y[nrc_y];
-    for (int iy = 0; iy < nrc_y; ++iy) y[iy] = (const block_q8_1 *)((const char *)vy + iy*by);
+    Q8<nrc_y, block_q8_1> q8(info);
     int nb = n/Unpacker::block_size();
     if (nb%4 == 0) {
         mul_mat_qX_q8_Helper<Unpacker, Sum4Type1, AccumType1<nrc_y, true>, ScaleHelperQ_1, block_q8_1, nrc_y>(
-                nb, s, bs, vx, bx, y, nrc_x
+                nb, vx, bx, info, q8.y, nrc_x
         );
     } else {
         mul_mat_qX_q8_Helper<Unpacker, Sum4Type1, AccumType1<nrc_y, false>, ScaleHelperQ_1, block_q8_1, nrc_y>(
-                nb, s, bs, vx, bx, y, nrc_x
+                nb, vx, bx, info, q8.y, nrc_x
         );
     }
 }
-
-// And now we need the quant "unpackers" that will unpack the quants into
-// 32-element vectors containing 8-bit values ready for dot products with the
-// Q8 quants.
 
 struct Dequantizer4bit {
     const __m256i m4 = _mm256_set1_epi8(0xf);
     inline __m256i dequant(const uint8_t * qs) const {
         const __m128i aux128 = _mm_loadu_si128((const __m128i *)qs);
         return _mm256_and_si256(MM256_SET_M128I(_mm_srli_epi16(aux128, 4), aux128), m4);
+    }
+};
+
+struct Q8_0_Dequantizer {
+    inline __m256i dequant(const block_q8_0 * x) const {
+        return _mm256_loadu_si256((const __m256i *)x->qs);
     }
 };
 
@@ -987,7 +1016,6 @@ struct HBitDequantizer {
         return _mm256_cmpeq_epi8(bytes, minus1);
     }
 };
-
 
 struct Q5_0_Dequantizer {
     Dequantizer4bit b4;
@@ -1038,6 +1066,10 @@ struct Q_Unpacker {
     }
 };
 
+struct Q8_0_Unpacker final : public Q_Unpacker<block_q8_0, ScaleHelperQ_0, Q8_0_Dequantizer> {
+    Q8_0_Unpacker(const void * vx, size_t bx) : Q_Unpacker(vx, bx) {}
+    inline static int block_size() { return QK4_0; }
+};
 struct Q4_0_Unpacker final : public Q_Unpacker<block_q4_0, ScaleHelperQ_0, Q4_0_Dequantizer> {
     Q4_0_Unpacker(const void * vx, size_t bx) : Q_Unpacker(vx, bx) {}
     inline static int block_size() { return QK4_0; }
@@ -1055,19 +1087,27 @@ struct Q5_1_Unpacker final : public Q_Unpacker<block_q5_1, ScaleHelperQ_1, Q5_1_
     inline static int block_size() { return QK4_1; }
 };
 
-} // namespace
+template <int nrc_y>
+void mul_mat_q8_0_q8_0_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+    assert(n%Q8_0_Unpacker::block_size() == 0);
+    Q8<nrc_y, block_q8_0> q8(info);
+    int nb = n/Q8_0_Unpacker::block_size();
+    if (nb%4 == 0) {
+        mul_mat_qX_q8_Helper<Q8_0_Unpacker, Sum4_Q8, AccumType0<nrc_y, true>, ScaleHelperQ_0, block_q8_0, nrc_y>(
+                nb, vx, bx, info, q8.y, nrc_x
+        );
+    } else {
+        mul_mat_qX_q8_Helper<Q8_0_Unpacker, Sum4_Q8, AccumType0<nrc_y, false>, ScaleHelperQ_0, block_q8_0, nrc_y>(
+                nb, vx, bx, info, q8.y, nrc_x
+        );
+    }
+}
 
-//
-// ============================== Matrix multiplications
-//
+bool set_mul_mat(int typeA, int ne00, mul_mat_t& mm_nx1, mul_mat_t& mm_nx2, mul_mat_t& mm_nx4, mul_mat_t& mm_nx8, int& row_size_q8) {
 
-bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const void * B,
-        float * C, long stride_C, int ith, int nth) {
+    row_size_q8 = ggml_row_size(GGML_TYPE_Q8_K, ne00);
+    mm_nx1 = mm_nx2 = mm_nx4 = mm_nx8 = nullptr;
 
-
-    auto row_size_q8 = ggml_row_size(GGML_TYPE_Q8_K, ne00);
-
-    mul_mat_t mm_nx1, mm_nx2, mm_nx4, mm_nx8;
     switch (typeA) {
         case GGML_TYPE_Q2_K:
             assert (ne00 % QK_K == 0);
@@ -1148,18 +1188,55 @@ bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const v
             return false;
     }
 
+    return true;
+}
+
+} // namespace
+
+//
+// ============================== Matrix multiplications
+//
+
+bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const void * B,
+        float * C, long stride_C, int ith, int nth) {
+
+    mul_mat_t mm_nx1, mm_nx2, mm_nx4, mm_nx8;
+    int row_size_q8;
+    if (!set_mul_mat(typeA, ne00, mm_nx1, mm_nx2, mm_nx4, mm_nx8, row_size_q8)) {
+        return false;
+    }
+
     auto row_size_qx = ggml_row_size((ggml_type)typeA, ne00);
 
     auto nrc_x = (Nx + nth - 1)/nth;
     auto first_x = ith*nrc_x;
     if (first_x + nrc_x > Nx) nrc_x = Nx - first_x;
 
-    mul_mat_NxM(ne00, C + first_x, stride_C,
-                (const char *)A + row_size_qx*first_x, row_size_qx,
-                (const char *)B, row_size_q8,
-                nrc_x, Ny,
-                mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+    DataInfo info{C + first_x, (const char *)B, (size_t)stride_C, (size_t)row_size_q8, 0, 1, nullptr, 0};
 
+    mul_mat_NxM(ne00, (const char *)A + row_size_qx*first_x, row_size_qx, info,
+                nrc_x, Ny, mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+
+    return true;
+}
+
+bool iqk_mul_mat_moe(int Nx, int Ny, int ne00, int ne11, int typeA, const void * A, const void * B,
+        float * C, size_t nb1, size_t nb2, const void * vrow_mapping, int ith, int nth) {
+    const mmid_row_mapping * row_mapping = (const mmid_row_mapping *)vrow_mapping;
+    assert(row_mapping != nullptr);
+
+    mul_mat_t mm_nx1, mm_nx2, mm_nx4, mm_nx8;
+    int row_size_q8;
+    if (!set_mul_mat(typeA, ne00, mm_nx1, mm_nx2, mm_nx4, mm_nx8, row_size_q8)) {
+        return false;
+    }
+    int row_size_qx = ggml_row_size((ggml_type)typeA, ne00);
+    int nrc_x = (Nx + nth - 1)/nth;
+    int first_x = ith*nrc_x;
+    if (first_x + nrc_x > Nx) nrc_x = Nx - first_x;
+    DataInfo info{C + first_x, (const char *)B, nb1/sizeof(float), (size_t)row_size_q8, 0, ne11, row_mapping, nb2/sizeof(float)};
+    mul_mat_NxM(ne00, (const char *)A + row_size_qx*first_x, row_size_qx, info,
+                nrc_x, Ny, mm_nx1, mm_nx2, mm_nx4, mm_nx8);
     return true;
 }
 

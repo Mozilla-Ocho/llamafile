@@ -10,6 +10,11 @@ struct ggml_compute_params;
 bool iqk_mul_mat(long, long, long, int, const void *, const void *, float *, long, int, int);
 bool iqk_mul_mat_zen4(long, long, long, int, const void *, const void *, float *, long, int, int);
 
+bool iqk_mul_mat_moe(int Nx, int Ny, int ne00, int ne11, int typeA, const void * A, const void * B,
+        float * C, size_t nb1, size_t nb2, const void * vrow_mapping, int ith, int nth);
+bool iqk_mul_mat_moe_zen4(int Nx, int Ny, int ne00, int ne11, int typeA, const void * A, const void * B,
+        float * C, size_t nb1, size_t nb2, const void * vrow_mapping, int ith, int nth);
+
 bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, void *, long, int,
                      int, int, int, int, int, int);
 bool llamafile_mixmul(const struct ggml_compute_params *, const struct ggml_tensor *,
