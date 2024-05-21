@@ -10642,6 +10642,20 @@ static void ggml_compute_forward_mul_mat_id(
         const int64_t nr0 = ne01; // src0 rows
         const int64_t nr1 = cne1; // src1 rows
 
+        if ((vec_dot_type == GGML_TYPE_Q8_K || vec_dot_type == GGML_TYPE_Q8_0 ||
+             vec_dot_type == GGML_TYPE_Q8_1) && dst->type == GGML_TYPE_F32) {
+            if (ne13 == 1) {
+                if (!llamafile_mixmul_iqk(nr0, nr1, ne00, ne11, src0->type,
+                             (const char *)src0_cur,
+                             (const char *)wdata,
+                             (float *)dst->data, nb1, nb2,
+                             matrix_rows + cur_a*ne12,
+                             ith, nth)) goto IQK_MulMat_Not_Available;
+                continue;
+            }
+        }
+IQK_MulMat_Not_Available:;
+
         // distribute the thread work across the inner or outer loop based on which one is larger
 
         const int64_t nth0 = nr0 > nr1 ? nth : 1; // parallelize by src0 rows

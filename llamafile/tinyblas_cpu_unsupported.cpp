@@ -29,3 +29,8 @@ bool llamafile_mixmul_unsupported(const struct ggml_compute_params *params,
                                   struct ggml_tensor *result) {
     return false;
 }
+
+bool iqk_mul_mat_moe_unsupported(long, long, long, int, int, const void *, const void *,
+        float *, long, long, const void *, int, int) {
+    return false;
+}
