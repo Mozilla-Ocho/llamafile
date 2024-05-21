@@ -210,7 +210,7 @@ class MixMul {
                           tinyBLAS<NCB | NCC, 16, __m512, __m512, ggml_fp16_t, ggml_fp16_t, TC>,
                           ggml_fp16_t, ggml_fp16_t, TC>();
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
-            if (X86_HAVE(F16C)) {
+            if (X86_CHECK(F16C)) {
                 return mixmat<8, 1,
                               tinyBLAS<NCB | NCC, 8, __m256, __m256, ggml_fp16_t, ggml_fp16_t, TC>,
                               ggml_fp16_t, ggml_fp16_t, TC>();

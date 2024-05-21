@@ -147,7 +147,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         tb.matmul(m, n, task);
         return true;
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
-        if (X86_HAVE(F16C)) {
+        if (X86_CHECK(F16C)) {
             if (k % 8)
                 return NOT_SUPPORTED;
             if (Btype == GGML_TYPE_F32 && n < 2) {
@@ -316,7 +316,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     assert(ith < nth);
 
 #if defined(__x86_64__) && QK_K == 256
-    if (X86_HAVE(AVX2) && X86_HAVE(FMA)) {
+    if (X86_CHECK(AVX2) && X86_CHECK(FMA)) {
         if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
             if (iqk_mul_mat(m, n, k * QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
                 return true;
