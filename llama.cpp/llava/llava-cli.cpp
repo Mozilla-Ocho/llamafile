@@ -261,6 +261,7 @@ static struct llava_context * llava_init_context(gpt_params * params, llama_mode
     }
 
     auto ctx_llava = (struct llava_context *)malloc(sizeof(llava_context));
+    g_ctx = ctx_llava; // [jart] nosync
 
     ctx_llava->ctx_llama = ctx_llama;
     ctx_llava->ctx_clip = ctx_clip;
