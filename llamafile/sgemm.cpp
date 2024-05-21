@@ -26,7 +26,7 @@
 static const struct GemmFuncs {
     typeof(llamafile_sgemm) *sgemm;
     typeof(llamafile_mixmul) *mixmul;
-    typeof(llamafile_mixmul_iqk) *iqk_mixmul = nullptr;
+    typeof(llamafile_mixmul_iqk) *iqk_mixmul = iqk_mul_mat_moe_unsupported;
     GemmFuncs() {
 #ifdef __x86_64__
         if (X86_HAVE(AVX)) {
@@ -137,5 +137,5 @@ bool llamafile_mixmul(const ggml_compute_params *params, const ggml_tensor *weig
 
 bool llamafile_mixmul_iqk(long Nx, long Ny, long ne00, int ne11, int typeA, const void * A, const void * B,
         float * C, long nb1, long nb2, const void * vrow_mapping, int ith, int nth) {
-    return funcs.iqk_mixmul ? funcs.iqk_mixmul(Nx, Ny, ne00, ne11, typeA, A, B, C, nb1, nb2, vrow_mapping, ith, nth) : false;
+    return funcs.iqk_mixmul(Nx, Ny, ne00, ne11, typeA, A, B, C, nb1, nb2, vrow_mapping, ith, nth);
 }
