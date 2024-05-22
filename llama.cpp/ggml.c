@@ -11691,9 +11691,6 @@ static void ggml_compute_forward_mul_mat_id(
     struct mmid_row_mapping * matrix_rows = (struct mmid_row_mapping *)(matrix_row_counts + n_as); // [n_as][ne11]
 
    if (params->type == GGML_TASK_TYPE_INIT) {
-        if (ith != 0) {
-            return;
-        }
         char * wdata = params->wdata;
         if (src1->type != vec_dot_type) {
             const size_t row_size = ggml_row_size(vec_dot_type, ne10);
@@ -11701,14 +11698,22 @@ static void ggml_compute_forward_mul_mat_id(
             assert(params->wsize >= ne11*ne12*ne13*row_size);
             assert(src1->type == GGML_TYPE_F32);
 
+            unsigned chore = 0; // [jart] need for speed
             for (int64_t i13 = 0; i13 < ne13; ++i13) {
                 for (int64_t i12 = 0; i12 < ne12; ++i12) {
                     for (int64_t i11 = 0; i11 < ne11; ++i11) {
-                        from_float_to_vec_dot((float *)((char *) src1->data + i13*nb13 + i12*nb12 + i11*nb11), (void *) wdata, ne10);
+                        if (chore++ % nth == ith) { // [jart] need for speed
+                             from_float_to_vec_dot((float *)((char *) src1->data + i13*nb13 + i12*nb12 + i11*nb11), (void *) wdata, ne10);
+                        }
                         wdata += row_size;
                     }
                 }
             }
+            ggml_syncthreads(params->barrier, params->nth);
+        }
+
+        if (ith != 0) {
+            return;
         }
 
         // initialize matrix_row_counts
