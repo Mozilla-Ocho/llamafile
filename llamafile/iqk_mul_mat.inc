@@ -36,6 +36,7 @@
 // for multiplication with several Q8_K columns.
 
 #include <utility>
+#include <array>
 
 #if defined HAVE_FANCY_SIMD
     #undef HAVE_FANCY_SIMD
@@ -105,19 +106,6 @@ static inline float hsum_float_8(__m256 x) {
 
 typedef void (*mul_mat_t)(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x);
 
-inline void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y,
-        mul_mat_t mm_nx1, mul_mat_t mm_nx2, mul_mat_t mm_nx4, mul_mat_t mm_nx8 = nullptr) {
-    auto process = [n, &info, vx, bx, nrc_x, nrc_y] (mul_mat_t mul_mat, int step) {
-        if (!mul_mat) return true;
-        int n_step = (nrc_y - info.cur_y)/step;
-        for (int iy = 0; iy < n_step; ++iy) {
-            mul_mat(n, vx, bx, info, nrc_x);
-            info.cur_y += step;
-        }
-        return info.cur_y < nrc_y;
-    };
-    process(mm_nx8, 8) && process(mm_nx4, 4) && process(mm_nx2, 2) && process(mm_nx1, 1);
-}
 
 template <int nrc, typename block_q8 = block_q8_K> struct Q8 {
 
@@ -1224,92 +1212,133 @@ void mul_mat_q8_0_q8_0_T(int n, const void * vx, size_t bx, const DataInfo& info
     }
 }
 
-template <typename Dequantizer>
-inline void set_mul_mat_funcs(mul_mat_t& mm_nx1, mul_mat_t& mm_nx2, mul_mat_t& mm_nx4, mul_mat_t& mm_nx8) {
-    if constexpr (std::is_same_v<Dequantizer, Q4_0_Unpacker> || std::is_same_v<Dequantizer, Q5_0_Unpacker>) {
-        mm_nx1 = mul_mat_qX_0_q8_0_T<Dequantizer, 1>;
-        mm_nx2 = mul_mat_qX_0_q8_0_T<Dequantizer, 2>;
-        mm_nx4 = mul_mat_qX_0_q8_0_T<Dequantizer, 4>;
-        mm_nx8 = mul_mat_qX_0_q8_0_T<Dequantizer, 8>;
-    }
-    else if constexpr (std::is_same_v<Dequantizer, Q4_1_Unpacker> || std::is_same_v<Dequantizer, Q5_1_Unpacker>) {
-        mm_nx1 = mul_mat_qX_1_q8_1_T<Dequantizer, 1>;
-        mm_nx2 = mul_mat_qX_1_q8_1_T<Dequantizer, 2>;
-        mm_nx4 = mul_mat_qX_1_q8_1_T<Dequantizer, 4>;
-        mm_nx8 = mul_mat_qX_1_q8_1_T<Dequantizer, 8>;
-    }
-    else {
-#ifdef HAVE_FANCY_SIMD
-        mm_nx1 = mul_mat_qX_K_q8_K_T<Dequantizer, 1>;
-        mm_nx2 = mul_mat_qX_K_q8_K_T<Dequantizer, 2>;
-        mm_nx4 = mul_mat_qX_K_q8_K_T<Dequantizer, 4>;
-        mm_nx8 = mul_mat_qX_K_q8_K_T<Dequantizer, 8>;
-#else
-        if constexpr (std::is_same_v<Dequantizer, DequantizerQ2K> ||
-                      std::is_same_v<Dequantizer, DequantizerQ3K> ||
-                      std::is_same_v<Dequantizer, DequantizerQ6K>) {
-            mm_nx1 = mul_mat_qY_K_q8_K_T<Dequantizer, 1>;
-            mm_nx2 = mul_mat_qY_K_q8_K_T<Dequantizer, 2>;
-            mm_nx4 = mul_mat_qY_K_q8_K_T<Dequantizer, 4>;
-            mm_nx8 = mul_mat_qY_K_q8_K_T<Dequantizer, 8>;
-        } else {
-            mm_nx1 = mul_mat_qX_K_q8_K_T<Dequantizer, 1>;
-            mm_nx2 = mul_mat_qX_K_q8_K_T<Dequantizer, 2>;
-            mm_nx4 = mul_mat_qX_K_q8_K_T<Dequantizer, 4>;
-            mm_nx8 = mul_mat_qX_K_q8_K_T<Dequantizer, 8>;
+struct MulMat {
+    std::array<mul_mat_t, 8> funcs = {};
+    inline void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y) {
+        constexpr int k_x_step = 64; // This works best on my Ryzen-7950X (but differences to other tile size are small)
+        int n_step = (nrc_y - info.cur_y)/funcs.size();
+        if (n_step > 0) {
+            for (int ix = 0; ix < nrc_x; ix += k_x_step) {
+                auto this_info = info;
+                this_info.s += ix;
+                int this_nrc_x = ix + k_x_step <= nrc_x ? k_x_step : nrc_x - ix;
+                for (int iy = 0; iy < n_step; ++iy) {
+                    funcs.back()(n, (const void *)((const char *)vx + ix*bx), bx, this_info, this_nrc_x);
+                    this_info.cur_y += funcs.size();
+                }
+            }
+            info.cur_y += funcs.size() * n_step;
         }
-#endif
+        int n_left = nrc_y - info.cur_y;
+        if (n_left > 0) {
+            funcs[n_left-1](n, vx, bx, info, nrc_x);
+        }
     }
-}
+    template <typename Dequantizer> static void set_functions(MulMat& m) {
+        if constexpr (std::is_same_v<Dequantizer, Q4_0_Unpacker> || std::is_same_v<Dequantizer, Q5_0_Unpacker>) {
+            m.funcs[0] = mul_mat_qX_0_q8_0_T<Dequantizer, 1>;
+            m.funcs[1] = mul_mat_qX_0_q8_0_T<Dequantizer, 2>;
+            m.funcs[2] = mul_mat_qX_0_q8_0_T<Dequantizer, 3>;
+            m.funcs[3] = mul_mat_qX_0_q8_0_T<Dequantizer, 4>;
+            m.funcs[4] = mul_mat_qX_0_q8_0_T<Dequantizer, 5>;
+            m.funcs[5] = mul_mat_qX_0_q8_0_T<Dequantizer, 6>;
+            m.funcs[6] = mul_mat_qX_0_q8_0_T<Dequantizer, 7>;
+            m.funcs[7] = mul_mat_qX_0_q8_0_T<Dequantizer, 8>;
+        }
+        else if constexpr (std::is_same_v<Dequantizer, Q4_1_Unpacker> || std::is_same_v<Dequantizer, Q5_1_Unpacker>) {
+            m.funcs[0] = mul_mat_qX_1_q8_1_T<Dequantizer, 1>;
+            m.funcs[1] = mul_mat_qX_1_q8_1_T<Dequantizer, 2>;
+            m.funcs[2] = mul_mat_qX_1_q8_1_T<Dequantizer, 3>;
+            m.funcs[3] = mul_mat_qX_1_q8_1_T<Dequantizer, 4>;
+            m.funcs[4] = mul_mat_qX_1_q8_1_T<Dequantizer, 5>;
+            m.funcs[5] = mul_mat_qX_1_q8_1_T<Dequantizer, 6>;
+            m.funcs[6] = mul_mat_qX_1_q8_1_T<Dequantizer, 7>;
+            m.funcs[7] = mul_mat_qX_1_q8_1_T<Dequantizer, 8>;
+        }
+        else {
+#ifdef HAVE_FANCY_SIMD
+            m.funcs[0] = mul_mat_qX_K_q8_K_T<Dequantizer, 1>;
+            m.funcs[1] = mul_mat_qX_K_q8_K_T<Dequantizer, 2>;
+            m.funcs[2] = mul_mat_qX_K_q8_K_T<Dequantizer, 3>;
+            m.funcs[3] = mul_mat_qX_K_q8_K_T<Dequantizer, 4>;
+            m.funcs[4] = mul_mat_qX_K_q8_K_T<Dequantizer, 5>;
+            m.funcs[5] = mul_mat_qX_K_q8_K_T<Dequantizer, 6>;
+            m.funcs[6] = mul_mat_qX_K_q8_K_T<Dequantizer, 7>;
+            m.funcs[7] = mul_mat_qX_K_q8_K_T<Dequantizer, 8>;
+#else
+            if constexpr (std::is_same_v<Dequantizer, DequantizerQ2K> ||
+                          std::is_same_v<Dequantizer, DequantizerQ3K> ||
+                          std::is_same_v<Dequantizer, DequantizerQ6K>) {
+                m.funcs[0] = mul_mat_qY_K_q8_K_T<Dequantizer, 1>;
+                m.funcs[1] = mul_mat_qY_K_q8_K_T<Dequantizer, 2>;
+                m.funcs[2] = mul_mat_qY_K_q8_K_T<Dequantizer, 3>;
+                m.funcs[3] = mul_mat_qY_K_q8_K_T<Dequantizer, 4>;
+                m.funcs[4] = mul_mat_qY_K_q8_K_T<Dequantizer, 5>;
+                m.funcs[5] = mul_mat_qY_K_q8_K_T<Dequantizer, 6>;
+                m.funcs[6] = mul_mat_qY_K_q8_K_T<Dequantizer, 7>;
+                m.funcs[7] = mul_mat_qY_K_q8_K_T<Dequantizer, 8>;
+            } else {
+                m.funcs[0] = mul_mat_qX_K_q8_K_T<Dequantizer, 1>;
+                m.funcs[1] = mul_mat_qX_K_q8_K_T<Dequantizer, 2>;
+                m.funcs[2] = mul_mat_qX_K_q8_K_T<Dequantizer, 3>;
+                m.funcs[3] = mul_mat_qX_K_q8_K_T<Dequantizer, 4>;
+                m.funcs[4] = mul_mat_qX_K_q8_K_T<Dequantizer, 5>;
+                m.funcs[5] = mul_mat_qX_K_q8_K_T<Dequantizer, 6>;
+                m.funcs[6] = mul_mat_qX_K_q8_K_T<Dequantizer, 7>;
+                m.funcs[7] = mul_mat_qX_K_q8_K_T<Dequantizer, 8>;
+            }
+#endif
+        }
+    }
+};
 
-bool set_mul_mat(int typeA, int ne00, mul_mat_t& mm_nx1, mul_mat_t& mm_nx2, mul_mat_t& mm_nx4, mul_mat_t& mm_nx8, int& row_size_q8) {
+bool set_mul_mat(int typeA, int ne00, MulMat& mm, int& row_size_q8) {
 
     row_size_q8 = ggml_row_size(GGML_TYPE_Q8_K, ne00);
-    mm_nx1 = mm_nx2 = mm_nx4 = mm_nx8 = nullptr;
 
     switch (typeA) {
         case GGML_TYPE_Q2_K:
             assert (ne00 % QK_K == 0);
-            set_mul_mat_funcs<DequantizerQ2K>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<DequantizerQ2K>(mm);
             break;
         case GGML_TYPE_Q3_K:
             assert (ne00 % QK_K == 0);
-            set_mul_mat_funcs<DequantizerQ3K>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<DequantizerQ3K>(mm);
             break;
         case GGML_TYPE_Q4_K:
             assert (ne00 % QK_K == 0);
-            set_mul_mat_funcs<DequantizerQ4K>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<DequantizerQ4K>(mm);
             break;
         case GGML_TYPE_Q5_K:
             assert (ne00 % QK_K == 0);
-            set_mul_mat_funcs<DequantizerQ5K>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<DequantizerQ5K>(mm);
             break;
         case GGML_TYPE_Q6_K:
             assert (ne00 % QK_K == 0);
-            set_mul_mat_funcs<DequantizerQ6K>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<DequantizerQ6K>(mm);
             break;
         case GGML_TYPE_IQ4_XS:
             assert (ne00 % QK_K == 0);
-            set_mul_mat_funcs<DequantizerIQ4XS>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<DequantizerIQ4XS>(mm);
             break;
         case GGML_TYPE_Q4_0:
             assert (ne00 % Q4K_0 == 0);
-            set_mul_mat_funcs<Q4_0_Unpacker>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<Q4_0_Unpacker>(mm);
             row_size_q8 = ggml_row_size(GGML_TYPE_Q8_0, ne00);
             break;
         case GGML_TYPE_Q4_1:
             assert (ne00 % Q4K_1 == 0);
-            set_mul_mat_funcs<Q4_1_Unpacker>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<Q4_1_Unpacker>(mm);
             row_size_q8 = ggml_row_size(GGML_TYPE_Q8_1, ne00);
             break;
         case GGML_TYPE_Q5_0:
             assert (ne00 % Q5K_0 == 0);
-            set_mul_mat_funcs<Q5_0_Unpacker>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<Q5_0_Unpacker>(mm);
             row_size_q8 = ggml_row_size(GGML_TYPE_Q8_0, ne00);
             break;
         case GGML_TYPE_Q5_1:
             assert (ne00 % Q5K_1 == 0);
-            set_mul_mat_funcs<Q5_1_Unpacker>(mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+            MulMat::set_functions<Q5_1_Unpacker>(mm);
             row_size_q8 = ggml_row_size(GGML_TYPE_Q8_1, ne00);
             break;
 
@@ -1329,9 +1358,9 @@ bool set_mul_mat(int typeA, int ne00, mul_mat_t& mm_nx1, mul_mat_t& mm_nx2, mul_
 bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const void * B,
         float * C, long stride_C, int ith, int nth) {
 
-    mul_mat_t mm_nx1, mm_nx2, mm_nx4, mm_nx8;
+    MulMat mm;
     int row_size_q8;
-    if (!set_mul_mat(typeA, ne00, mm_nx1, mm_nx2, mm_nx4, mm_nx8, row_size_q8)) {
+    if (!set_mul_mat(typeA, ne00, mm, row_size_q8)) {
         return false;
     }
 
@@ -1343,8 +1372,7 @@ bool iqk_mul_mat(long Nx, long Ny, long ne00, int typeA, const void * A, const v
 
     DataInfo info{C + first_x, (const char *)B, (size_t)stride_C, (size_t)row_size_q8, 0, 1, nullptr, 0};
 
-    mul_mat_NxM(ne00, (const char *)A + row_size_qx*first_x, row_size_qx, info,
-                nrc_x, Ny, mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+    mm.mul_mat_NxM(ne00, (const char *)A + row_size_qx*first_x, row_size_qx, info, nrc_x, Ny);
 
     return true;
 }
@@ -1354,9 +1382,9 @@ bool iqk_mul_mat_moe(long Nx, long Ny, long ne00, int ne11, int typeA, const voi
     const mmid_row_mapping * row_mapping = (const mmid_row_mapping *)vrow_mapping;
     assert(row_mapping != nullptr);
 
-    mul_mat_t mm_nx1, mm_nx2, mm_nx4, mm_nx8;
+    MulMat mm;
     int row_size_q8;
-    if (!set_mul_mat(typeA, ne00, mm_nx1, mm_nx2, mm_nx4, mm_nx8, row_size_q8)) {
+    if (!set_mul_mat(typeA, ne00, mm, row_size_q8)) {
         return false;
     }
     int row_size_qx = ggml_row_size((ggml_type)typeA, ne00);
@@ -1364,8 +1392,7 @@ bool iqk_mul_mat_moe(long Nx, long Ny, long ne00, int ne11, int typeA, const voi
     int first_x = ith*nrc_x;
     if (first_x + nrc_x > Nx) nrc_x = Nx - first_x;
     DataInfo info{C + first_x, (const char *)B, nb1/sizeof(float), (size_t)row_size_q8, 0, ne11, row_mapping, nb2/sizeof(float)};
-    mul_mat_NxM(ne00, (const char *)A + row_size_qx*first_x, row_size_qx, info,
-                nrc_x, Ny, mm_nx1, mm_nx2, mm_nx4, mm_nx8);
+    mm.mul_mat_NxM(ne00, (const char *)A + row_size_qx*first_x, row_size_qx, info, nrc_x, Ny);
     return true;
 }
 
