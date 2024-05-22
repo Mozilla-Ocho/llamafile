@@ -52,8 +52,8 @@ static const std::vector<struct quant_option> QUANT_OPTIONS = {
     { "Q5_K_M", LLAMA_FTYPE_MOSTLY_Q5_K_M, " 4.45G, +0.0122 ppl @ LLaMA-v1-7B", },
     { "Q6_K",   LLAMA_FTYPE_MOSTLY_Q6_K,   " 5.15G, +0.0008 ppl @ LLaMA-v1-7B", },
     { "Q8_0",   LLAMA_FTYPE_MOSTLY_Q8_0,   " 6.70G, +0.0004 ppl @ LLaMA-v1-7B", },
-    { "BF16",   LLAMA_FTYPE_MOSTLY_BF16,   "Google Brain Floating Point",       },
-    { "F16",    LLAMA_FTYPE_MOSTLY_F16,    "13.00G              @ 7B", },
+    { "F16",    LLAMA_FTYPE_MOSTLY_F16,    "14.00G, -0.0020 ppl @ Mistral-7B", },
+    { "BF16",   LLAMA_FTYPE_MOSTLY_BF16,   "14.00G, -0.0050 ppl @ Mistral-7B", },
     { "F32",    LLAMA_FTYPE_ALL_F32,       "26.00G              @ 7B", },
     // Note: Ensure COPY comes after F32 to avoid ftype 0 from matching.
     { "COPY",   LLAMA_FTYPE_ALL_F32,       "only copy tensors, no quantizing", },
@@ -63,13 +63,6 @@ static const char * const LLM_KV_QUANTIZE_IMATRIX_FILE       = "quantize.imatrix
 static const char * const LLM_KV_QUANTIZE_IMATRIX_DATASET    = "quantize.imatrix.dataset";
 static const char * const LLM_KV_QUANTIZE_IMATRIX_N_ENTRIES  = "quantize.imatrix.entries_count";
 static const char * const LLM_KV_QUANTIZE_IMATRIX_N_CHUNKS   = "quantize.imatrix.chunks_count";
-
-static bool is_integer_str(const char *s) {
-    if (*s == '-') ++s;
-    if (!*s) return false;
-    while (isdigit(*s)) ++s;
-    return !*s;
-}
 
 static bool try_parse_ftype(const std::string & ftype_str_in, llama_ftype & ftype, std::string & ftype_str_out) {
     std::string ftype_str;
@@ -84,7 +77,7 @@ static bool try_parse_ftype(const std::string & ftype_str_in, llama_ftype & ftyp
             return true;
         }
     }
-    if (is_integer_str(ftype_str.c_str())) {
+    try {
         int ftype_int = std::stoi(ftype_str);
         for (auto & it : QUANT_OPTIONS) {
             if (it.ftype == ftype_int) {
@@ -93,6 +86,9 @@ static bool try_parse_ftype(const std::string & ftype_str_in, llama_ftype & ftyp
                 return true;
             }
         }
+    }
+    catch (...) {
+        // stoi failed
     }
     return false;
 }
@@ -309,7 +305,7 @@ int main(int argc, char ** argv) {
             } else {
                 usage(argv[0]);
             }
-        } else if (strcmp(argv[arg_idx], "--keep-split")) {
+        } else if (strcmp(argv[arg_idx], "--keep-split") == 0) {
             params.keep_split = true;
         } else {
             usage(argv[0]);

@@ -49,10 +49,12 @@
 #define ggml_vec_sum_f32 ggml_vec_sum_f32_arm80
 #define ggml_vec_sum_f32_ggf ggml_vec_sum_f32_ggf_arm80
 #define ggml_vec_sum_f16_ggf ggml_vec_sum_f16_ggf_arm80
+#define ggml_vec_sum_bf16_ggf ggml_vec_sum_bf16_ggf_arm80
 #define ggml_vec_max_f32 ggml_vec_max_f32_arm80
-#define ggml_vec_norm_inv_f32 ggml_vec_norm_inv_f32_arm80
 #define ggml_vec_argmax_f32 ggml_vec_argmax_f32_arm80
 #define ggml_vec_soft_max_f32 ggml_vec_soft_max_f32_arm80
+#define ggml_vec_norm_inv_f32 ggml_vec_norm_inv_f32_arm80
+#define ggml_vec_sigmoid_f32 ggml_vec_sigmoid_f32_arm80
 #define GGML_VECTOR
 #include "ggml-vector.inc"
 #endif // __aarch64__

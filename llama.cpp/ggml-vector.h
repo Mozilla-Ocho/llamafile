@@ -58,10 +58,12 @@ void ggml_vec_silu_backward_f32(const int n, float * dx, const float * x, const 
 void ggml_vec_sum_f32(const int n, float * s, const float * x);
 void ggml_vec_sum_f32_ggf(const int n, ggml_float * s, const float * x);
 void ggml_vec_sum_f16_ggf(const int n, float * s, const ggml_fp16_t * x);
+void ggml_vec_sum_bf16_ggf(const int n, float * s, const ggml_bf16_t * x);
 void ggml_vec_max_f32(const int n, float * s, const float * x);
-void ggml_vec_norm_inv_f32(const int n, float * s, const float * x);
 void ggml_vec_argmax_f32(const int n, int * s, const float * x);
-float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max);
+ggml_float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max);
+void ggml_vec_norm_inv_f32(const int n, float * s, const float * x);
+void ggml_vec_sigmoid_f32 (const int n, float * y, const float * x);
 
 #ifdef __cplusplus
 }

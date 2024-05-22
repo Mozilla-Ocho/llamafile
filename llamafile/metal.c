@@ -96,7 +96,7 @@ static bool BuildMetal(const char *dso) {
     bool needs_rebuild = false;
     for (int i = 0; i < sizeof(srcs) / sizeof(*srcs); ++i) {
         llamafile_get_app_dir(src, PATH_MAX);
-        if (!i && mkdir(src, 0755) && errno != EEXIST) {
+        if (!i && makedirs(src, 0755)) {
             perror(src);
             return false;
         }

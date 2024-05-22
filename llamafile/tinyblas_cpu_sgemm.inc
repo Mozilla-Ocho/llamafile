@@ -85,7 +85,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         if (k % 32)
             return NOT_SUPPORTED;
         if (Btype == GGML_TYPE_F32 && n < 2) {
-            tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, float, TC> tb{
+            tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, float, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
             tb.matmul(m, n, task);
             return true;

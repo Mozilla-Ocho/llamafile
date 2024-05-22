@@ -453,6 +453,15 @@ extern "C" void ggml_vec_sum_f16_ggf_amd_avx(const int n, float * s, const ggml_
 extern "C" void ggml_vec_sum_f16_ggf_arm82(const int n, float * s, const ggml_fp16_t * x);
 extern "C" void ggml_vec_sum_f16_ggf_arm80(const int n, float * s, const ggml_fp16_t * x);
 
+extern "C" void ggml_vec_sum_bf16_ggf_amd_avx512bf16(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_amd_avx512(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_amd_avx2(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_amd_f16c(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_amd_fma(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_amd_avx(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_arm82(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_arm80(const int n, float * s, const ggml_bf16_t * x);
+
 extern "C" void ggml_vec_max_f32_amd_avx512bf16(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_amd_avx512(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_amd_avx2(const int n, float * s, const float * x);
@@ -461,15 +470,6 @@ extern "C" void ggml_vec_max_f32_amd_fma(const int n, float * s, const float * x
 extern "C" void ggml_vec_max_f32_amd_avx(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_arm82(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_arm80(const int n, float * s, const float * x);
-
-extern "C" void ggml_vec_norm_inv_f32_amd_avx512bf16(const int n, float * s, const float * x);
-extern "C" void ggml_vec_norm_inv_f32_amd_avx512(const int n, float * s, const float * x);
-extern "C" void ggml_vec_norm_inv_f32_amd_avx2(const int n, float * s, const float * x);
-extern "C" void ggml_vec_norm_inv_f32_amd_f16c(const int n, float * s, const float * x);
-extern "C" void ggml_vec_norm_inv_f32_amd_fma(const int n, float * s, const float * x);
-extern "C" void ggml_vec_norm_inv_f32_amd_avx(const int n, float * s, const float * x);
-extern "C" void ggml_vec_norm_inv_f32_arm82(const int n, float * s, const float * x);
-extern "C" void ggml_vec_norm_inv_f32_arm80(const int n, float * s, const float * x);
 
 extern "C" void ggml_vec_argmax_f32_amd_avx512bf16(const int n, int * s, const float * x);
 extern "C" void ggml_vec_argmax_f32_amd_avx512(const int n, int * s, const float * x);
@@ -480,14 +480,32 @@ extern "C" void ggml_vec_argmax_f32_amd_avx(const int n, int * s, const float * 
 extern "C" void ggml_vec_argmax_f32_arm82(const int n, int * s, const float * x);
 extern "C" void ggml_vec_argmax_f32_arm80(const int n, int * s, const float * x);
 
-extern "C" float ggml_vec_soft_max_f32_amd_avx512bf16(const int n, float * y, const float * x, float max);
-extern "C" float ggml_vec_soft_max_f32_amd_avx512(const int n, float * y, const float * x, float max);
-extern "C" float ggml_vec_soft_max_f32_amd_avx2(const int n, float * y, const float * x, float max);
-extern "C" float ggml_vec_soft_max_f32_amd_f16c(const int n, float * y, const float * x, float max);
-extern "C" float ggml_vec_soft_max_f32_amd_fma(const int n, float * y, const float * x, float max);
-extern "C" float ggml_vec_soft_max_f32_amd_avx(const int n, float * y, const float * x, float max);
-extern "C" float ggml_vec_soft_max_f32_arm82(const int n, float * y, const float * x, float max);
-extern "C" float ggml_vec_soft_max_f32_arm80(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_avx512bf16(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_avx512(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_avx2(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_f16c(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_fma(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_avx(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_arm82(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_arm80(const int n, float * y, const float * x, float max);
+
+extern "C" void ggml_vec_norm_inv_f32_amd_avx512bf16(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_amd_avx512(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_amd_avx2(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_amd_f16c(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_amd_fma(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_amd_avx(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_arm82(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_arm80(const int n, float * s, const float * x);
+
+extern "C" void ggml_vec_sigmoid_f32_amd_avx512bf16 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_amd_avx512 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_amd_avx2 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_amd_f16c (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_amd_fma (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_arm82 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_arm80 (const int n, float * y, const float * x);
 
 static const struct VectorFuncs {
     typeof(ggml_fp16_to_fp32_row) *ptr_ggml_fp16_to_fp32_row;
@@ -540,10 +558,12 @@ static const struct VectorFuncs {
     typeof(ggml_vec_sum_f32) *ptr_ggml_vec_sum_f32;
     typeof(ggml_vec_sum_f32_ggf) *ptr_ggml_vec_sum_f32_ggf;
     typeof(ggml_vec_sum_f16_ggf) *ptr_ggml_vec_sum_f16_ggf;
+    typeof(ggml_vec_sum_bf16_ggf) *ptr_ggml_vec_sum_bf16_ggf;
     typeof(ggml_vec_max_f32) *ptr_ggml_vec_max_f32;
-    typeof(ggml_vec_norm_inv_f32) *ptr_ggml_vec_norm_inv_f32;
     typeof(ggml_vec_argmax_f32) *ptr_ggml_vec_argmax_f32;
     typeof(ggml_vec_soft_max_f32) *ptr_ggml_vec_soft_max_f32;
+    typeof(ggml_vec_norm_inv_f32) *ptr_ggml_vec_norm_inv_f32;
+    typeof(ggml_vec_sigmoid_f32) *ptr_ggml_vec_sigmoid_f32;
 
     VectorFuncs() {
 #ifdef __x86_64__
@@ -598,10 +618,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_avx512bf16;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx512bf16;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx512bf16;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx512bf16;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx512bf16;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx512bf16;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx512bf16;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx512bf16;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx512bf16;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_avx512bf16;
             return;
         }
 #endif
@@ -657,10 +679,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_avx512;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx512;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx512;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx512;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx512;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx512;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx512;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx512;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx512;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_avx512;
             return;
         }
 #endif
@@ -716,10 +740,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_avx2;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx2;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx2;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx2;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx2;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx2;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx2;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx2;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx2;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_avx2;
             return;
         }
 #endif
@@ -775,10 +801,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_f16c;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_f16c;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_f16c;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_f16c;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_f16c;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_f16c;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_f16c;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_f16c;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_f16c;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_f16c;
             return;
         }
 #endif
@@ -834,10 +862,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_fma;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_fma;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_fma;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_fma;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_fma;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_fma;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_fma;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_fma;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_fma;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_fma;
             return;
         }
 #endif
@@ -893,10 +923,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_avx;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_avx;
             return;
         }
 #endif
@@ -952,10 +984,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_arm82;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_arm82;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_arm82;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_arm82;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_arm82;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_arm82;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_arm82;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_arm82;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_arm82;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_arm82;
             return;
         }
 #endif
@@ -1011,10 +1045,12 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_arm80;
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_arm80;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_arm80;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_arm80;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_arm80;
-            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_arm80;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_arm80;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_arm80;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_arm80;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_arm80;
             return;
         }
 #endif
@@ -1221,19 +1257,27 @@ void ggml_vec_sum_f16_ggf(const int n, float * s, const ggml_fp16_t * x) {
   return funcs.ptr_ggml_vec_sum_f16_ggf(n, s, x);
 }
 
-void ggml_vec_max_f32(const int n, float * s, const float * x) {
-  return funcs.ptr_ggml_vec_max_f32(n, s, x);
+void ggml_vec_sum_bf16_ggf(const int n, float * s, const ggml_bf16_t * x) {
+  return funcs.ptr_ggml_vec_sum_bf16_ggf(n, s, x);
 }
 
-void ggml_vec_norm_inv_f32(const int n, float * s, const float * x) {
-  return funcs.ptr_ggml_vec_norm_inv_f32(n, s, x);
+void ggml_vec_max_f32(const int n, float * s, const float * x) {
+  return funcs.ptr_ggml_vec_max_f32(n, s, x);
 }
 
 void ggml_vec_argmax_f32(const int n, int * s, const float * x) {
   return funcs.ptr_ggml_vec_argmax_f32(n, s, x);
 }
 
-float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) {
+ggml_float ggml_vec_soft_max_f32(const int n, float * y, const float * x, float max) {
   return funcs.ptr_ggml_vec_soft_max_f32(n, y, x, max);
+}
+
+void ggml_vec_norm_inv_f32(const int n, float * s, const float * x) {
+  return funcs.ptr_ggml_vec_norm_inv_f32(n, s, x);
+}
+
+void ggml_vec_sigmoid_f32 (const int n, float * y, const float * x) {
+  return funcs.ptr_ggml_vec_sigmoid_f32(n, y, x);
 }
 

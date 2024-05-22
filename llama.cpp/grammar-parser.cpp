@@ -1,6 +1,3 @@
-// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
-// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
-
 #include "grammar-parser.h"
 #include <cstdint>
 #include <cwchar>
@@ -29,7 +26,7 @@ namespace grammar_parser {
 
     static uint32_t get_symbol_id(parse_state & state, const char * src, size_t len) {
         uint32_t next_id = static_cast<uint32_t>(state.symbol_ids.size());
-        auto result = state.symbol_ids.insert(std::make_pair(std::string(src, len), next_id));
+        auto result = state.symbol_ids.emplace(std::string(src, len), next_id);
         return result.first->second;
     }
 
@@ -145,7 +142,7 @@ namespace grammar_parser {
                 pos++;
                 last_sym_start = out_elements.size();
                 while (*pos != '"') {
-                    if (!*pos) {  // [jart] don't sync until upstream fixes bug
+                    if (!*pos) {
                         throw std::runtime_error("unexpected end of input");
                     }
                     auto char_pair = parse_char(pos);
@@ -162,7 +159,7 @@ namespace grammar_parser {
                 }
                 last_sym_start = out_elements.size();
                 while (*pos != ']') {
-                    if (!*pos) {  // [jart] don't sync until upstream fixes bug
+                    if (!*pos) {
                         throw std::runtime_error("unexpected end of input");
                     }
                     auto char_pair = parse_char(pos);
@@ -173,7 +170,7 @@ namespace grammar_parser {
 
                     out_elements.push_back({type, char_pair.first});
                     if (pos[0] == '-' && pos[1] != ']') {
-                        if (!pos[1]) {  // [jart] don't sync until upstream fixes bug
+                        if (!pos[1]) {
                             throw std::runtime_error("unexpected end of input");
                         }
                         auto endchar_pair = parse_char(pos + 1);
