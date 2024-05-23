@@ -1775,7 +1775,6 @@ static __global__ void dequantize_block_q2_K(const void * __restrict__ vx, dst_t
     const block_q2_K * x = (const block_q2_K *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t n   = tid/32;
     const int64_t l   = tid - 32*n;
     const int64_t is  = 8*n + l/16;
@@ -1789,17 +1788,6 @@ static __global__ void dequantize_block_q2_K(const void * __restrict__ vx, dst_t
     y[l+32] = dall * (x[i].scales[is+2] & 0xF) * ((q >> 2) & 3) - dmin * (x[i].scales[is+2] >> 4);
     y[l+64] = dall * (x[i].scales[is+4] & 0xF) * ((q >> 4) & 3) - dmin * (x[i].scales[is+4] >> 4);
     y[l+96] = dall * (x[i].scales[is+6] & 0xF) * ((q >> 6) & 3) - dmin * (x[i].scales[is+6] >> 4);
-#else
-    const int64_t is = tid/16;  // 0 or 1
-    const int64_t il = tid%16;  // 0...15
-    const uint8_t q = x[i].qs[il] >> (2*is);
-    dst_t * y = yy + i*QK_K + 16*is + il;
-    float dall = __low2half(x[i].dm);
-    float dmin = __high2half(x[i].dm);
-    y[ 0] = dall * (x[i].scales[is+0] & 0xF) * ((q >> 0) & 3) - dmin * (x[i].scales[is+0] >> 4);
-    y[32] = dall * (x[i].scales[is+2] & 0xF) * ((q >> 4) & 3) - dmin * (x[i].scales[is+2] >> 4);
-#endif
-
 }
 
 template<typename dst_t>
@@ -1808,7 +1796,6 @@ static __global__ void dequantize_block_q3_K(const void * __restrict__ vx, dst_t
     const int64_t i = blockIdx.x;
     const block_q3_K * x = (const block_q3_K *) vx;
 
-#if QK_K == 256
     const int64_t r = threadIdx.x/4;
     const int64_t tid = r/2;
     const int64_t is0 = r%2;
@@ -1832,31 +1819,8 @@ static __global__ void dequantize_block_q3_K(const void * __restrict__ vx, dst_t
     const uint8_t * hm = x[i].hmask;
 
     for (int l = l0; l < l0+4; ++l) y[l] = dl * ((int8_t)((q[l] >> shift) & 3) - ((hm[l] & m) ? 0 : 4));
-#else
-    const int64_t tid = threadIdx.x;
-    const int64_t is  = tid/16;  // 0 or 1
-    const int64_t il  = tid%16;  // 0...15
-    const int64_t im  = il/8;    // 0...1
-    const int64_t in  = il%8;    // 0...7
-
-    dst_t * y = yy + i*QK_K + 16*is + il;
-
-    const uint8_t q = x[i].qs[il] >> (2*is);
-    const uint8_t h = x[i].hmask[in] >> (2*is + im);
-    const float   d = (float)x[i].d;
-
-    if (is == 0) {
-        y[ 0] = d * ((x[i].scales[0] & 0xF) - 8) * ((int8_t)((q >> 0) & 3) - ((h >> 0) & 1 ? 0 : 4));
-        y[32] = d * ((x[i].scales[1] & 0xF) - 8) * ((int8_t)((q >> 4) & 3) - ((h >> 4) & 1 ? 0 : 4));
-    } else {
-        y[ 0] = d * ((x[i].scales[0] >>  4) - 8) * ((int8_t)((q >> 0) & 3) - ((h >> 0) & 1 ? 0 : 4));
-        y[32] = d * ((x[i].scales[1] >>  4) - 8) * ((int8_t)((q >> 4) & 3) - ((h >> 4) & 1 ? 0 : 4));
-    }
-#endif
-
 }
 
-#if QK_K == 256
 static inline __device__ void get_scale_min_k4(int j, const uint8_t * q, uint8_t & d, uint8_t & m) {
     if (j < 4) {
         d = q[j] & 63; m = q[j + 4] & 63;
@@ -1865,7 +1829,6 @@ static inline __device__ void get_scale_min_k4(int j, const uint8_t * q, uint8_t
         m = (q[j+4] >>  4) | ((q[j-0] >> 6) << 4);
     }
 }
-#endif
 
 template<typename dst_t>
 static __global__ void dequantize_block_q4_K(const void * __restrict__ vx, dst_t * __restrict__ yy) {
@@ -1873,7 +1836,6 @@ static __global__ void dequantize_block_q4_K(const void * __restrict__ vx, dst_t
 
     const int64_t i = blockIdx.x;
 
-#if QK_K == 256
     // assume 32 threads
     const int64_t tid = threadIdx.x;
     const int64_t il  = tid/8;
@@ -1897,15 +1859,6 @@ static __global__ void dequantize_block_q4_K(const void * __restrict__ vx, dst_t
         y[l + 0] = d1 * (q[l] & 0xF) - m1;
         y[l +32] = d2 * (q[l] >>  4) - m2;
     }
-#else
-    const int64_t tid = threadIdx.x;
-    const uint8_t * q = x[i].qs;
-    dst_t * y = yy + i*QK_K;
-    const float d = (float)x[i].dm[0];
-    const float m = (float)x[i].dm[1];
-    y[tid+ 0] = d * (x[i].scales[0] & 0xF) * (q[tid] & 0xF) - m * (x[i].scales[0] >> 4);
-    y[tid+32] = d * (x[i].scales[1] & 0xF) * (q[tid] >>  4) - m * (x[i].scales[1] >> 4);
-#endif
 }
 
 template<typename dst_t>
@@ -1914,7 +1867,6 @@ static __global__ void dequantize_block_q5_K(const void * __restrict__ vx, dst_t
 
     const int64_t i = blockIdx.x;
 
-#if QK_K == 256
     // assume 64 threads - this is very slightly better than the one below
     const int64_t tid = threadIdx.x;
     const int64_t il  = tid/16;   // il is in 0...3
@@ -1941,18 +1893,6 @@ static __global__ void dequantize_block_q5_K(const void * __restrict__ vx, dst_t
     hm <<= 1;
     y[32] = d2 * ((ql[ 0] >>  4) + (qh[ 0] & hm ? 16 : 0)) - m2;
     y[33] = d2 * ((ql[ 1] >>  4) + (qh[ 1] & hm ? 16 : 0)) - m2;
-#else
-    const int64_t tid = threadIdx.x;
-    const uint8_t q = x[i].qs[tid];
-    const int64_t im = tid/8;  // 0...3
-    const int64_t in = tid%8;  // 0...7
-    const int64_t is = tid/16; // 0 or 1
-    const uint8_t h = x[i].qh[in] >> im;
-    const float d = x[i].d;
-    dst_t * y = yy + i*QK_K + tid;
-    y[ 0] = d * x[i].scales[is+0] * ((q & 0xF) - ((h >> 0) & 1 ? 0 : 16));
-    y[32] = d * x[i].scales[is+2] * ((q >>  4) - ((h >> 4) & 1 ? 0 : 16));
-#endif
 }
 
 template<typename dst_t>
@@ -1960,7 +1900,6 @@ static __global__ void dequantize_block_q6_K(const void * __restrict__ vx, dst_t
     const block_q6_K * x = (const block_q6_K *) vx;
 
     const int64_t i = blockIdx.x;
-#if QK_K == 256
 
     // assume 64 threads - this is very slightly better than the one below
     const int64_t tid = threadIdx.x;
@@ -1980,24 +1919,6 @@ static __global__ void dequantize_block_q6_K(const void * __restrict__ vx, dst_t
     y[32] = d * sc[2] * ((int8_t)((ql[32] & 0xF) | (((qh >> 2) & 3) << 4)) - 32);
     y[64] = d * sc[4] * ((int8_t)((ql[ 0]  >> 4) | (((qh >> 4) & 3) << 4)) - 32);
     y[96] = d * sc[6] * ((int8_t)((ql[32]  >> 4) | (((qh >> 6) & 3) << 4)) - 32);
-#else
-
-    // assume 32 threads
-    const int64_t tid = threadIdx.x;
-    const int64_t ip  = tid/16;         // 0 or 1
-    const int64_t il  = tid - 16*ip;    // 0...15
-
-    dst_t * y = yy + i*QK_K + 16*ip + il;
-
-    const float d = x[i].d;
-
-    const uint8_t   ql = x[i].ql[16*ip + il];
-    const uint8_t   qh = x[i].qh[il] >> (2*ip);
-    const int8_t  * sc = x[i].scales;
-
-    y[ 0] = d * sc[ip+0] * ((int8_t)((ql & 0xF) | (((qh >> 0) & 3) << 4)) - 32);
-    y[32] = d * sc[ip+2] * ((int8_t)((ql  >> 4) | (((qh >> 4) & 3) << 4)) - 32);
-#endif
 }
 
 template<typename dst_t>
@@ -2007,7 +1928,6 @@ static __global__ void dequantize_block_iq2_xxs(const void * __restrict__ vx, ds
     const block_iq2_xxs * x = (const block_iq2_xxs  *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t il = tid/8; // 0...3
     const int64_t ib = tid%8; // 0...7
     dst_t * y = yy + i*QK_K + 32*ib + 8*il;
@@ -2018,10 +1938,6 @@ static __global__ void dequantize_block_iq2_xxs(const void * __restrict__ vx, ds
     const float d = (float)x[i].d * (0.5f + (aux32 >> 28)) * 0.25f;
     const uint8_t signs = ksigns_iq2xs[(aux32 >> 7*il) & 127];
     for (int j = 0; j < 8; ++j) y[j] = d * grid[j] * (signs & kmask_iq2xs[j] ? -1.f : 1.f);
-#else
-    NO_DEVICE_CODE;
-#endif
-
 }
 
 template<typename dst_t>
@@ -2031,7 +1947,6 @@ static __global__ void dequantize_block_iq2_xs(const void * __restrict__ vx, dst
     const block_iq2_xs * x = (const block_iq2_xs *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t il = tid/8; // 0...3
     const int64_t ib = tid%8; // 0...7
     dst_t * y = yy + i*QK_K + 32*ib + 8*il;
@@ -2040,10 +1955,6 @@ static __global__ void dequantize_block_iq2_xs(const void * __restrict__ vx, dst
     const float d = (float)x[i].d * (0.5f + ((x[i].scales[ib] >> 4*(il/2)) & 0xf)) * 0.25f;
     const uint8_t signs = ksigns_iq2xs[q2[il] >> 9];
     for (int j = 0; j < 8; ++j) y[j] = d * grid[j] * (signs & kmask_iq2xs[j] ? -1.f : 1.f);
-#else
-    NO_DEVICE_CODE;
-#endif
-
 }
 
 template<typename dst_t>
@@ -2053,7 +1964,6 @@ static __global__ void dequantize_block_iq2_s(const void * __restrict__ vx, dst_
     const block_iq2_s * x = (const block_iq2_s *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t il = tid/8; // 0...3
     const int64_t ib = tid%8; // 0...7
     dst_t * y = yy + i*QK_K + 32*ib + 8*il;
@@ -2061,10 +1971,6 @@ static __global__ void dequantize_block_iq2_s(const void * __restrict__ vx, dst_
     const float d = (float)x[i].d * (0.5f + ((x[i].scales[ib] >> 4*(il/2)) & 0xf)) * 0.25f;
     const uint8_t signs = x[i].qs[QK_K/8+4*ib+il];
     for (int j = 0; j < 8; ++j) y[j] = d * grid[j] * (signs & kmask_iq2xs[j] ? -1.f : 1.f);
-#else
-    NO_DEVICE_CODE;
-#endif
-
 }
 
 template<typename dst_t>
@@ -2074,7 +1980,6 @@ static __global__ void dequantize_block_iq3_xxs(const void * __restrict__ vx, ds
     const block_iq3_xxs * x = (const block_iq3_xxs  *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t il = tid/8; // 0...3
     const int64_t ib = tid%8; // 0...7
     dst_t * y = yy + i*QK_K + 32*ib + 8*il;
@@ -2089,10 +1994,6 @@ static __global__ void dequantize_block_iq3_xxs(const void * __restrict__ vx, ds
         y[j+0] = d * grid1[j] * (signs & kmask_iq2xs[j+0] ? -1.f : 1.f);
         y[j+4] = d * grid2[j] * (signs & kmask_iq2xs[j+4] ? -1.f : 1.f);
     }
-#else
-    NO_DEVICE_CODE;
-#endif
-
 }
 
 template<typename dst_t>
@@ -2102,7 +2003,6 @@ static __global__ void dequantize_block_iq3_s(const void * __restrict__ vx, dst_
     const block_iq3_s * x = (const block_iq3_s *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t il = tid/8; // 0...3
     const int64_t ib = tid%8; // 0...7
     dst_t * y = yy + i*QK_K + 32*ib + 8*il;
@@ -2115,10 +2015,6 @@ static __global__ void dequantize_block_iq3_s(const void * __restrict__ vx, dst_
         y[j+0] = d * grid1[j] * (signs & kmask_iq2xs[j+0] ? -1.f : 1.f);
         y[j+4] = d * grid2[j] * (signs & kmask_iq2xs[j+4] ? -1.f : 1.f);
     }
-#else
-    NO_DEVICE_CODE;
-#endif
-
 }
 
 template<typename dst_t>
@@ -2128,7 +2024,6 @@ static __global__ void dequantize_block_iq1_s(const void * __restrict__ vx, dst_
     const block_iq1_s * x = (const block_iq1_s  *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t il = tid/8; // 0...3
     const int64_t ib = tid%8; // 0...7
     dst_t * y = yy + i*QK_K + 32*ib + 8*il;
@@ -2141,10 +2036,6 @@ static __global__ void dequantize_block_iq1_s(const void * __restrict__ vx, dst_
     for (int j = 0; j < 8; ++j) {
         y[j] = d * (q[j] + delta);
     }
-#else
-    NO_DEVICE_CODE;
-#endif
-
 }
 
 template<typename dst_t>
@@ -2154,7 +2045,6 @@ static __global__ void dequantize_block_iq1_m(const void * __restrict__ vx, dst_
     const block_iq1_m * x = (const block_iq1_m  *) vx;
 
     const int64_t tid = threadIdx.x;
-#if QK_K == 256
     const int64_t il = tid/8; // 0...3
     const int64_t ib = tid%8; // 0...7
     dst_t * y = yy + i*QK_K + 32*ib + 8*il;
@@ -2171,12 +2061,7 @@ static __global__ void dequantize_block_iq1_m(const void * __restrict__ vx, dst_
     for (int j = 0; j < 8; ++j) {
         y[j] = d * (q[j] + delta);
     }
-#else
-    NO_DEVICE_CODE;
-#endif
-
 }
-
 
 template<typename dst_t>
 static __global__ void dequantize_block_iq4_nl(const void * __restrict__ vx, dst_t * __restrict__ yy) {
@@ -2194,10 +2079,8 @@ static __global__ void dequantize_block_iq4_nl(const void * __restrict__ vx, dst
         y[j+ 0] = d * kvalues_iq4nl[q4[j] & 0xf];
         y[j+16] = d * kvalues_iq4nl[q4[j] >>  4];
     }
-
 }
 
-#if QK_K != 64
 template<typename dst_t>
 static __global__ void dequantize_block_iq4_xs(const void * __restrict__ vx, dst_t * __restrict__ yy) {
     const int64_t i   = blockIdx.x;
@@ -2214,7 +2097,6 @@ static __global__ void dequantize_block_iq4_xs(const void * __restrict__ vx, dst
         y[j+16] = d * kvalues_iq4nl[q4[j] >>  4];
     }
 }
-#endif
 
 template <int qk, int qr, dequantize_kernel_t dequantize_kernel, typename dst_t>
 static void dequantize_block_cuda(const void * __restrict__ vx, dst_t * __restrict__ y, const int64_t k, cudaStream_t stream) {
@@ -2236,21 +2118,13 @@ static void dequantize_block_q8_0_f16_cuda(const void * __restrict__ vx, half * 
 template<typename dst_t>
 static void dequantize_row_q2_K_cuda(const void * vx, dst_t * y, const int64_t k, cudaStream_t stream) {
     const int nb = k / QK_K;
-#if QK_K == 256
     dequantize_block_q2_K<<<nb, 64, 0, stream>>>(vx, y);
-#else
-    dequantize_block_q2_K<<<nb, 32, 0, stream>>>(vx, y);
-#endif
 }
 
 template<typename dst_t>
 static void dequantize_row_q3_K_cuda(const void * vx, dst_t * y, const int64_t k, cudaStream_t stream) {
     const int nb = k / QK_K;
-#if QK_K == 256
     dequantize_block_q3_K<<<nb, 64, 0, stream>>>(vx, y);
-#else
-    dequantize_block_q3_K<<<nb, 32, 0, stream>>>(vx, y);
-#endif
 }
 
 template<typename dst_t>
@@ -2276,21 +2150,13 @@ static void dequantize_row_q4_K_cuda(const void * vx, dst_t * y, const int64_t k
 template<typename dst_t>
 static void dequantize_row_q5_K_cuda(const void * vx, dst_t * y, const int64_t k, cudaStream_t stream) {
     const int nb = k / QK_K;
-#if QK_K == 256
     dequantize_block_q5_K<<<nb, 64, 0, stream>>>(vx, y);
-#else
-    dequantize_block_q5_K<<<nb, 32, 0, stream>>>(vx, y);
-#endif
 }
 
 template<typename dst_t>
 static void dequantize_row_q6_K_cuda(const void * vx, dst_t * y, const int64_t k, cudaStream_t stream) {
     const int nb = k / QK_K;
-#if QK_K == 256
     dequantize_block_q6_K<<<nb, 64, 0, stream>>>(vx, y);
-#else
-    dequantize_block_q6_K<<<nb, 32, 0, stream>>>(vx, y);
-#endif
 }
 
 template<typename dst_t>
@@ -2344,11 +2210,7 @@ static void dequantize_row_iq1_m_cuda(const void * vx, dst_t * y, const int64_t 
 template<typename dst_t>
 static void dequantize_row_iq4_xs_cuda(const void * vx, dst_t * y, const int64_t k, cudaStream_t stream) {
     const int nb = (k + QK_K - 1) / QK_K;
-#if QK_K == 64
-    dequantize_block_iq4_nl<<<nb, 32, 0, stream>>>(vx, y);
-#else
     dequantize_block_iq4_xs<<<nb, 32, 0, stream>>>(vx, y);
-#endif
 }
 
 template <typename src_t, typename dst_t>
@@ -3086,7 +2948,6 @@ static __global__ void dequantize_mul_mat_vec_q2_k(const void * __restrict__ vx,
 
     float tmp = 0; // partial sum for thread in warp
 
-#if QK_K == 256
     const int tid = threadIdx.x/K_QUANTS_PER_ITERATION;  // 0...31 or 0...15
     const int ix  = threadIdx.x%K_QUANTS_PER_ITERATION;  // 0 or 0,1
 
@@ -3135,37 +2996,6 @@ static __global__ void dequantize_mul_mat_vec_q2_k(const void * __restrict__ vx,
         tmp += dall * sum1 - dmin * sum2;
 
     }
-#else
-    const int tid = threadIdx.x/(2*K_QUANTS_PER_ITERATION);  // 0...15 or 0...7
-    const int ix  = threadIdx.x%(2*K_QUANTS_PER_ITERATION);  // 0....1 or 0...3
-    const int offset = tid * K_QUANTS_PER_ITERATION;
-
-    uint32_t uaux[2];
-    const uint8_t * d = (const uint8_t *)uaux;
-
-    for (int i = ix; i < num_blocks_per_row; i += 2*K_QUANTS_PER_ITERATION) {
-
-        const float   * y = yy + i * QK_K + offset;
-        const uint8_t * q = x[i].qs + offset;
-        const uint32_t * s = (const uint32_t *)x[i].scales;
-
-        uaux[0] = s[0] & 0x0f0f0f0f;
-        uaux[1] = (s[0] >> 4) & 0x0f0f0f0f;
-
-        const float2 dall = __half22float2(x[i].dm);
-
-        float sum1 = 0, sum2 = 0;
-        for (int l = 0; l < K_QUANTS_PER_ITERATION; ++l) {
-            const uint8_t ql = q[l];
-            sum1 += y[l+ 0] * d[0] * ((ql >> 0) & 3)
-                  + y[l+16] * d[1] * ((ql >> 2) & 3)
-                  + y[l+32] * d[2] * ((ql >> 4) & 3)
-                  + y[l+48] * d[3] * ((ql >> 6) & 3);
-            sum2 += y[l+0] * d[4] + y[l+16] * d[5] + y[l+32] * d[6] + y[l+48] * d[7];
-        }
-        tmp += dall.x * sum1 - dall.y * sum2;
-    }
-#endif
 
     // sum up partial sums and write back result
     tmp = warp_reduce_sum(tmp);
@@ -3186,8 +3016,6 @@ static __global__ void dequantize_mul_mat_vec_q3_k(const void * __restrict__ vx,
     const block_q3_K * x = (const block_q3_K *)vx + ib0;
 
     float tmp = 0; // partial sum for thread in warp
-
-#if QK_K == 256
 
     const uint16_t kmask1 = 0x0303;
     const uint16_t kmask2 = 0x0f0f;
@@ -3239,34 +3067,6 @@ static __global__ void dequantize_mul_mat_vec_q3_k(const void * __restrict__ vx,
         tmp += d * sum;
 
     }
-#else
-
-    const int tid = threadIdx.x/(2*K_QUANTS_PER_ITERATION);  // 0...15 or 0...7
-    const int ix  = threadIdx.x%(2*K_QUANTS_PER_ITERATION);  // 0....1 or 0...3
-    const int offset = tid * K_QUANTS_PER_ITERATION;         // 0...15 or 0...14
-    const int in = offset/8;                                 // 0 or 1
-    const int im = offset%8;                                 // 0...7
-
-    for (int i = ix; i < num_blocks_per_row; i += 2*K_QUANTS_PER_ITERATION) {
-
-        const float   * y = yy + i * QK_K + offset;
-        const uint8_t * q = x[i].qs + offset;
-        const uint8_t * s = x[i].scales;
-
-        const float dall = (float)x[i].d;
-
-        float sum = 0;
-        for (int l = 0; l < K_QUANTS_PER_ITERATION; ++l) {
-            const uint8_t hl = x[i].hmask[im+l] >> in;
-            const uint8_t ql = q[l];
-            sum += y[l+ 0] * dall * ((s[0] & 0xF) - 8) * ((int8_t)((ql >> 0) & 3) - ((hl >> 0) & 1 ? 0 : 4))
-                 + y[l+16] * dall * ((s[0] >>  4) - 8) * ((int8_t)((ql >> 2) & 3) - ((hl >> 2) & 1 ? 0 : 4))
-                 + y[l+32] * dall * ((s[1] & 0xF) - 8) * ((int8_t)((ql >> 4) & 3) - ((hl >> 4) & 1 ? 0 : 4))
-                 + y[l+48] * dall * ((s[1] >>  4) - 8) * ((int8_t)((ql >> 6) & 3) - ((hl >> 6) & 1 ? 0 : 4));
-        }
-        tmp += sum;
-    }
-#endif
 
     // sum up partial sums and write back result
     tmp = warp_reduce_sum(tmp);
@@ -3285,7 +3085,6 @@ static __global__ void dequantize_mul_mat_vec_q4_k(const void * __restrict__ vx,
 
     const block_q4_K * x = (const block_q4_K *)vx + ib0;
 
-#if QK_K == 256
     const uint16_t kmask1 = 0x3f3f;
     const uint16_t kmask2 = 0x0f0f;
     const uint16_t kmask3 = 0xc0c0;
@@ -3370,36 +3169,6 @@ static __global__ void dequantize_mul_mat_vec_q4_k(const void * __restrict__ vx,
 #endif
 
     }
-#else
-    const int tid = threadIdx.x/(2*K_QUANTS_PER_ITERATION);  // 0...15
-    const int ix  = threadIdx.x%(2*K_QUANTS_PER_ITERATION);
-
-    const int step = tid * K_QUANTS_PER_ITERATION;
-
-    uint16_t aux16[2];
-    const uint8_t * s = (const uint8_t *)aux16;
-
-    float tmp = 0;
-
-    for (int i = ix; i < num_blocks_per_row; i += 2*K_QUANTS_PER_ITERATION) {
-        const uint8_t * q = x[i].qs + step;
-        const float   * y = yy + i*QK_K + step;
-        const uint16_t * a = (const uint16_t *)x[i].scales;
-        aux16[0] = a[0] & 0x0f0f;
-        aux16[1] = (a[0] >> 4) & 0x0f0f;
-        const float d = (float)x[i].dm[0];
-        const float m = (float)x[i].dm[1];
-        float sum = 0.f;
-        for (int j = 0; j < K_QUANTS_PER_ITERATION; ++j) {
-            sum += y[j+ 0] * (d * s[0] * (q[j+ 0] & 0xF) - m * s[2])
-                 + y[j+16] * (d * s[0] * (q[j+16] & 0xF) - m * s[2])
-                 + y[j+32] * (d * s[1] * (q[j+ 0] >>  4) - m * s[3])
-                 + y[j+48] * (d * s[1] * (q[j+16] >>  4) - m * s[3]);
-        }
-        tmp += sum;
-    }
-
-#endif
 
     // sum up partial sums and write back result
     tmp = warp_reduce_sum(tmp);
@@ -3419,7 +3188,6 @@ static __global__ void dequantize_mul_mat_vec_q5_k(const void * __restrict__ vx,
 
     float tmp = 0; // partial sum for thread in warp
 
-#if QK_K == 256
     const uint16_t kmask1 = 0x3f3f;
     const uint16_t kmask2 = 0x0f0f;
     const uint16_t kmask3 = 0xc0c0;
@@ -3490,30 +3258,6 @@ static __global__ void dequantize_mul_mat_vec_q5_k(const void * __restrict__ vx,
         tmp += dall * (sum.x * sc[0] + sum.y * sc[1] + sum.z * sc[4] + sum.w * sc[5]) - dmin * smin;
     }
 
-#else
-    const int tid = threadIdx.x/(2*K_QUANTS_PER_ITERATION);  // 0...15
-    const int ix  = threadIdx.x%(2*K_QUANTS_PER_ITERATION);
-    const int step = tid * K_QUANTS_PER_ITERATION;
-    const int im = step/8;
-    const int in = step%8;
-
-    for (int i = ix; i < num_blocks_per_row; i += 2*K_QUANTS_PER_ITERATION) {
-        const uint8_t * q = x[i].qs + step;
-        const int8_t  * s = x[i].scales;
-        const float   * y = yy + i*QK_K + step;
-        const float     d = x[i].d;
-        float sum = 0.f;
-        for (int j = 0; j < K_QUANTS_PER_ITERATION; ++j) {
-            const uint8_t h = x[i].qh[in+j] >> im;
-            sum += y[j+ 0] * d * s[0] * ((q[j+ 0] & 0xF) - ((h >> 0) & 1 ? 0 : 16))
-                 + y[j+16] * d * s[1] * ((q[j+16] & 0xF) - ((h >> 2) & 1 ? 0 : 16))
-                 + y[j+32] * d * s[2] * ((q[j+ 0] >>  4) - ((h >> 4) & 1 ? 0 : 16))
-                 + y[j+48] * d * s[3] * ((q[j+16] >>  4) - ((h >> 6) & 1 ? 0 : 16));
-        }
-        tmp += sum;
-    }
-#endif
-
     // sum up partial sums and write back result
     tmp = warp_reduce_sum(tmp);
 
@@ -3533,8 +3277,6 @@ static __global__ void dequantize_mul_mat_vec_q6_k(const void * __restrict__ vx,
     const int ib0 = row*num_blocks_per_row;
 
     const block_q6_K * x = (const block_q6_K *)vx + ib0;
-
-#if QK_K == 256
 
     const int tid = threadIdx.x/K_QUANTS_PER_ITERATION;  // 0...31 or 0...16
     const int ix  = threadIdx.x%K_QUANTS_PER_ITERATION;  // 0 or 0, 1
@@ -3589,37 +3331,6 @@ static __global__ void dequantize_mul_mat_vec_q6_k(const void * __restrict__ vx,
 #endif
 
     }
-
-#else
-
-    const int tid = threadIdx.x/(2*K_QUANTS_PER_ITERATION);  // 0...7
-    const int ix  = threadIdx.x%(2*K_QUANTS_PER_ITERATION);  // 0...3
-
-    const int step = tid * K_QUANTS_PER_ITERATION;
-
-    float tmp = 0; // partial sum for thread in warp
-
-    for (int i = ix; i < num_blocks_per_row; i += 2*K_QUANTS_PER_ITERATION) {
-
-        const float   * y  = yy + i * QK_K + step;
-        const uint8_t * ql = x[i].ql + step;
-        const uint8_t * qh = x[i].qh + step;
-        const int8_t  * s  = x[i].scales;
-
-        const float d = x[i+0].d;
-
-        float sum = 0;
-        for (int j = 0; j < K_QUANTS_PER_ITERATION; ++j) {
-            sum += y[j+ 0] * s[0] * d * ((int8_t)((ql[j+ 0] & 0xF) | ((qh[j] & 0x03) << 4)) - 32)
-                 + y[j+16] * s[1] * d * ((int8_t)((ql[j+16] & 0xF) | ((qh[j] & 0x0c) << 2)) - 32)
-                 + y[j+32] * s[2] * d * ((int8_t)((ql[j+ 0] >>  4) | ((qh[j] & 0x30) >> 0)) - 32)
-                 + y[j+48] * s[3] * d * ((int8_t)((ql[j+16] >>  4) | ((qh[j] & 0xc0) >> 2)) - 32);
-        }
-        tmp += sum;
-
-    }
-
-#endif
 
     // sum up partial sums and write back result
     tmp = warp_reduce_sum(tmp);
@@ -4815,7 +4526,7 @@ static __global__ void flash_attn_tile_ext_f16(
         for (int i0 = 0; i0 < D/2; i0 += WARP_SIZE) {
             const int i = i0 + threadIdx.x;
 
-            const float2 tmp = Q_f2[j*(nb01/sizeof(float2)) + i];
+            const float2 tmp = ic0 + j < ne01 ? Q_f2[j*(nb01/sizeof(float2)) + i] : make_float2(0.0f, 0.0f);
             Q_h2[j][i] = make_half2(scale, scale) * make_half2(tmp.x, tmp.y);
         }
     }
@@ -4969,6 +4680,10 @@ static __global__ void flash_attn_tile_ext_f16(
 #pragma unroll
     for (int j_VKQ_0 = 0; j_VKQ_0 < ncols; j_VKQ_0 += nwarps) {
         const int j_VKQ = j_VKQ_0 + threadIdx.y;
+
+        if (ic0 + j_VKQ >= ne01) {
+            return;
+        }
 
         half kqsum_j = __low2half(kqsum[j_VKQ_0/nwarps]) + __high2half(kqsum[j_VKQ_0/nwarps]);
         kqsum_j = warp_reduce_sum(kqsum_j);
@@ -5127,7 +4842,7 @@ static __global__ void flash_attn_tile_ext_f32(
 
 #pragma unroll
         for (int i0 = 0; i0 < D; i0 += 2*WARP_SIZE) {
-            float2 tmp = Q_f2[j*(nb01/sizeof(float2)) + i0/2 + threadIdx.x];
+            float2 tmp = ic0 + j < ne01 ? Q_f2[j*(nb01/sizeof(float2)) + i0/2 + threadIdx.x] : make_float2(0.0f, 0.0f);
             Q_f[j][i0 + 0*WARP_SIZE + threadIdx.x] = tmp.x * scale;
             Q_f[j][i0 + 1*WARP_SIZE + threadIdx.x] = tmp.y * scale;
         }
@@ -5285,6 +5000,10 @@ static __global__ void flash_attn_tile_ext_f32(
     for (int j_VKQ_0 = 0; j_VKQ_0 < ncols; j_VKQ_0 += nwarps) {
         const int j_VKQ = j_VKQ_0 + threadIdx.y;
 
+        if (ic0 + j_VKQ >= ne01) {
+            return;
+        }
+
         float kqsum_j = kqsum[j_VKQ_0/nwarps];
         kqsum_j = warp_reduce_sum(kqsum_j);
 
@@ -5331,11 +5050,7 @@ void launch_fattn_tile_f32_64_128(ggml_backend_cuda_context & ctx, ggml_tensor *
 }
 
 void ggml_cuda_flash_attn_ext_tile_f32(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
-    const ggml_tensor * KQV = dst;
-    const ggml_tensor * Q   = dst->src[0];
-
-    const int32_t precision = KQV->op_params[2];
-    GGML_ASSERT(precision == GGML_PREC_DEFAULT);
+    const ggml_tensor * Q = dst->src[0];
 
     if (Q->ne[1] <= 16) {
         constexpr int cols_per_block = 16;
@@ -5455,7 +5170,7 @@ static __global__ void flash_attn_vec_ext_f16(
         for (int i0 = 0; i0 < D/2; i0 += WARP_SIZE) {
             const int i = i0 + threadIdx.x;
 
-            const float2 tmp = Q_f2[j*(nb01/sizeof(float2)) + i];
+            const float2 tmp = ncols <= 2 || ic0 + j < ne01 ? Q_f2[j*(nb01/sizeof(float2)) + i] : make_float2(0.0f, 0.0f);
             Q_h2[j][i0/WARP_SIZE] = make_half2(scale, scale) * make_half2(tmp.x, tmp.y);
         }
     }
@@ -5573,6 +5288,10 @@ static __global__ void flash_attn_vec_ext_f16(
 
 #pragma unroll
     for (int j_VKQ = 0; j_VKQ < ncols; ++j_VKQ) {
+        if (ncols > 2 && ic0 + j_VKQ >= ne01) {
+            break;
+        }
+
         kqsum[j_VKQ] = kqsum_shared[j_VKQ][threadIdx.x];
         kqsum[j_VKQ] = warp_reduce_sum(kqsum[j_VKQ]);
 
@@ -5584,7 +5303,7 @@ static __global__ void flash_attn_vec_ext_f16(
         dst[j_dst*D*gridDim.y + D*blockIdx.y + tid] = dst_val;
     }
 
-    if (parallel_blocks != 1 && tid < ncols) {
+    if (parallel_blocks != 1 && tid < ncols && (ncols <= 2 || ic0 + tid < ne01)) {
         dst_meta[(ic0 + tid)*gridDim.y*parallel_blocks + blockIdx.y*parallel_blocks + ip] = make_float2(kqmax[tid], kqsum[tid]);
     }
 #else
@@ -5782,7 +5501,7 @@ static __global__ void flash_attn_vec_ext_f32(
         for (int i0 = 0; i0 < D/2; i0 += WARP_SIZE) {
             const int i = i0 + threadIdx.x;
 
-            Q_h2[j][i0/WARP_SIZE]    = Q_f2[j*(nb01/sizeof(float2)) + i];
+            Q_h2[j][i0/WARP_SIZE]    = ncols <= 2 || ic0 + j ? Q_f2[j*(nb01/sizeof(float2)) + i] : make_float2(0.0f, 0.0f);
             Q_h2[j][i0/WARP_SIZE].x *= scale;
             Q_h2[j][i0/WARP_SIZE].y *= scale;
         }
@@ -5891,6 +5610,10 @@ static __global__ void flash_attn_vec_ext_f32(
 
 #pragma unroll
     for (int j_VKQ = 0; j_VKQ < ncols; ++j_VKQ) {
+        if (ncols > 2 && ic0 + j_VKQ >= ne01) {
+            break;
+        }
+
         kqsum[j_VKQ] = kqsum_shared[j_VKQ][threadIdx.x];
         kqsum[j_VKQ] = warp_reduce_sum(kqsum[j_VKQ]);
 
@@ -5902,7 +5625,7 @@ static __global__ void flash_attn_vec_ext_f32(
         dst[j_dst*D*gridDim.y + D*blockIdx.y + tid] = dst_val;
     }
 
-    if (parallel_blocks != 1 && tid < ncols) {
+    if (parallel_blocks != 1 && tid < ncols && (ncols <= 2 || ic0 + tid < ne01)) {
         dst_meta[(ic0 + tid)*gridDim.y*parallel_blocks + blockIdx.y*parallel_blocks + ip] = make_float2(kqmax[tid], kqsum[tid]);
     }
 }
@@ -7021,7 +6744,6 @@ static __device__ __forceinline__ float vec_dot_q3_K_q8_1(
 static __device__ __forceinline__ float vec_dot_q4_K_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
 
-#ifndef GGML_QKK_64
     const block_q4_K * bq4_K = (const block_q4_K *) vbq;
 
     int    v[2];
@@ -7063,58 +6785,11 @@ static __device__ __forceinline__ float vec_dot_q4_K_q8_1(
     }
 
     return vec_dot_q4_K_q8_1_impl_vmmq(v, u, sc, m, bq4_K->dm, d8);
-
-#else
-
-#if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
-    const block_q4_K * bq4_K = (const block_q4_K *) vbq;
-
-    float sumf_d = 0.0f;
-    float sumf_m = 0.0f;
-
-    uint16_t aux16[2];
-    const uint8_t * s = (const uint8_t *)aux16;
-
-    const uint16_t * a = (const uint16_t *)bq4_K->scales;
-    aux16[0] = a[0] & 0x0f0f;
-    aux16[1] = (a[0] >> 4) & 0x0f0f;
-
-    const float dall = bq4_K->dm[0];
-    const float dmin = bq4_K->dm[1];
-
-    const float d8_1 = __low2float(bq8_1[0].ds);
-    const float d8_2 = __low2float(bq8_1[1].ds);
-
-    const int ui1 = *((const int *)bq8_1[0].qs + (iqs/2));
-    const int ui2 = *((const int *)bq8_1[0].qs + (iqs/2) + 4);
-    const int ui3 = *((const int *)bq8_1[1].qs + (iqs/2));
-    const int ui4 = *((const int *)bq8_1[1].qs + (iqs/2) + 4);
-
-    const int * q4 = (const int *)bq4_K->qs + (iqs/2);
-    const int v1 = q4[0];
-    const int v2 = q4[4];
-
-    const int dot1 = __dp4a(ui2, v2 & 0x0f0f0f0f, __dp4a(ui1, v1 & 0x0f0f0f0f, 0));
-    const int dot2 = __dp4a(ui4, (v2 >> 4) & 0x0f0f0f0f, __dp4a(ui3, (v1 >> 4) & 0x0f0f0f0f, 0));
-    const int dot3 = __dp4a(0x01010101, ui2, __dp4a(0x01010101, ui1, 0));
-    const int dot4 = __dp4a(0x01010101, ui4, __dp4a(0x01010101, ui3, 0));
-
-    sumf_d += d8_1 * (dot1 * s[0]) + d8_2 * (dot2 * s[1]);
-    sumf_m += d8_1 * (dot3 * s[2]) + d8_2 * (dot4 * s[3]);
-
-    return dall * sumf_d - dmin * sumf_m;
-
-#else
-    NO_DEVICE_CODE;
-#endif // __CUDA_ARCH__ >= MIN_CC_DP4A
-
-#endif
 }
 
 static __device__ __forceinline__ float vec_dot_q5_K_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
 
-#ifndef GGML_QKK_64
     const block_q5_K * bq5_K = (const block_q5_K *) vbq;
 
     int   vl[2];
@@ -7156,48 +6831,6 @@ static __device__ __forceinline__ float vec_dot_q5_K_q8_1(
     }
 
     return vec_dot_q5_K_q8_1_impl_vmmq(vl, vh, u, sc, m, bq5_K->dm, d8);
-
-#else
-
-#if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
-    const block_q5_K * bq5_K = (const block_q5_K *) vbq;
-
-    const int8_t * s = bq5_K->scales;
-
-    const float d = bq5_K->d;
-
-    const float d8_1 = __low2half(bq8_1[0].ds);
-    const float d8_2 = __low2half(bq8_1[1].ds);
-
-    const int ui1 = *((const int *)bq8_1[0].qs + (iqs/2));
-    const int ui2 = *((const int *)bq8_1[0].qs + (iqs/2) + 4);
-    const int ui3 = *((const int *)bq8_1[1].qs + (iqs/2));
-    const int ui4 = *((const int *)bq8_1[1].qs + (iqs/2) + 4);
-
-    const int * ql = (const int *)bq5_K->qs + (iqs/2);
-    const int vl1 = ql[0];
-    const int vl2 = ql[4];
-
-    const int step = 4 * (iqs/2); // 0, 4, 8, 12
-    const int im = step/8; // = 0 for iqs = 0, 2, = 1 for iqs = 4, 6
-    const int in = step%8; // 0, 4, 0, 4
-    const int vh = (*((const int *)(bq5_K->qh + in))) >> im;
-
-    const int v1 = (((vh << 4) & 0x10101010) ^ 0x10101010) | ((vl1 >> 0) & 0x0f0f0f0f);
-    const int v2 = (((vh << 2) & 0x10101010) ^ 0x10101010) | ((vl2 >> 0) & 0x0f0f0f0f);
-    const int v3 = (((vh >> 0) & 0x10101010) ^ 0x10101010) | ((vl1 >> 4) & 0x0f0f0f0f);
-    const int v4 = (((vh >> 2) & 0x10101010) ^ 0x10101010) | ((vl2 >> 4) & 0x0f0f0f0f);
-
-    const float sumf_d = d8_1 * (__dp4a(ui1, v1, 0) * s[0] + __dp4a(ui2, v2, 0) * s[1])
-                       + d8_2 * (__dp4a(ui3, v3, 0) * s[2] + __dp4a(ui4, v4, 0) * s[3]);
-
-    return d * sumf_d;
-
-#else
-    NO_DEVICE_CODE;
-#endif // __CUDA_ARCH__ >= MIN_CC_DP4A
-
-#endif
 }
 
 static __device__ __forceinline__ float vec_dot_q6_K_q8_1(
@@ -7228,7 +6861,6 @@ static __device__ __forceinline__ float vec_dot_q6_K_q8_1(
 
 static __device__ __forceinline__ float vec_dot_iq2_xxs_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
-#if QK_K == 256
     const block_iq2_xxs * bq2 = (const block_iq2_xxs *) vbq;
 
 #if QR2_XXS == 8
@@ -7269,15 +6901,11 @@ static __device__ __forceinline__ float vec_dot_iq2_xxs_q8_1(
     }
     return d * (sumi1 + sumi2);
 #endif
-#else
-    NO_DEVICE_CODE;
-#endif
 }
 
 static __device__ __forceinline__ float vec_dot_iq2_xs_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
 #if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
-#if QK_K == 256
     const block_iq2_xs * bq2 = (const block_iq2_xs *) vbq;
 
     const int ib32 = iqs;
@@ -7311,17 +6939,12 @@ static __device__ __forceinline__ float vec_dot_iq2_xs_q8_1(
     GGML_UNUSED(ksigns64);
     NO_DEVICE_CODE;
 #endif
-#else
-    GGML_UNUSED(ksigns64);
-    NO_DEVICE_CODE;
-#endif
 }
 
 // TODO
 static __device__ __forceinline__ float vec_dot_iq2_s_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
 #if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
-#if QK_K == 256
     const block_iq2_s * bq2 = (const block_iq2_s *) vbq;
 
     const int ib32 = iqs;
@@ -7357,16 +6980,11 @@ static __device__ __forceinline__ float vec_dot_iq2_s_q8_1(
     GGML_UNUSED(ksigns64);
     NO_DEVICE_CODE;
 #endif
-#else
-    GGML_UNUSED(ksigns64);
-    NO_DEVICE_CODE;
-#endif
 }
 
 static __device__ __forceinline__ float vec_dot_iq3_xxs_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
 #if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
-#if QK_K == 256
     const block_iq3_xxs * bq2 = (const block_iq3_xxs *) vbq;
 
     const int ib32 = iqs;
@@ -7391,16 +7009,12 @@ static __device__ __forceinline__ float vec_dot_iq3_xxs_q8_1(
 #else
     NO_DEVICE_CODE;
 #endif
-#else
-    NO_DEVICE_CODE;
-#endif
 }
 
 // TODO: don't use lookup table for signs
 static __device__ __forceinline__ float vec_dot_iq3_s_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
 #if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
-#if QK_K == 256
     const block_iq3_s * bq2 = (const block_iq3_s *) vbq;
 
     const int ib32 = iqs;
@@ -7423,14 +7037,10 @@ static __device__ __forceinline__ float vec_dot_iq3_s_q8_1(
 #else
     NO_DEVICE_CODE;
 #endif
-#else
-    NO_DEVICE_CODE;
-#endif
 }
 
 static __device__ __forceinline__ float vec_dot_iq1_s_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
-#if QK_K == 256
     const block_iq1_s * bq1 = (const block_iq1_s *) vbq;
 
     const int ib32 = iqs;
@@ -7458,14 +7068,10 @@ static __device__ __forceinline__ float vec_dot_iq1_s_q8_1(
     const float d = d1q * __low2float (bq8_1[ib32].ds);
     const float m = d1q * __high2float(bq8_1[ib32].ds);
     return d * sumi + m * delta;
-#else
-    NO_DEVICE_CODE;
-#endif
 }
 
 static __device__ __forceinline__ float vec_dot_iq1_m_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
-#if QK_K == 256
     const block_iq1_m * bq1 = (const block_iq1_m *) vbq;
 
     const int ib32 = iqs;
@@ -7501,9 +7107,6 @@ static __device__ __forceinline__ float vec_dot_iq1_m_q8_1(
     scale.u16 = (sc[0] >> 12) | ((sc[1] >> 8) & 0x00f0) | ((sc[2] >> 4) & 0x0f00) | (sc[3] & 0xf000);
     const float d = (float)scale.f16 * __low2float (bq8_1[ib32].ds);
     return d * ((sumi[0] + sumf[0]) * (2*((sc[ib32/2] >> 6*(ib32%2)) & 0x7) + 1) + (sumi[1] + sumf[1]) * (2*((sc[ib32/2] >> (6*(ib32%2)+3)) & 0x7) + 1));
-#else
-    NO_DEVICE_CODE;
-#endif
 }
 
 #if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
@@ -7559,9 +7162,7 @@ static __device__ __forceinline__ float vec_dot_iq4_nl_q8_1(
 static __device__ __forceinline__ float vec_dot_iq4_xs_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & iqs) {
 
-#if QK_K == 256
 #if __CUDA_ARCH__ >= MIN_CC_DP4A // lowest compute capability for integer intrinsics
-
     const block_iq4_xs * bq4 = (const block_iq4_xs *) vbq;
     const uint8_t * values = (const uint8_t *)kvalues_iq4nl;
 
@@ -7579,10 +7180,6 @@ static __device__ __forceinline__ float vec_dot_iq4_xs_q8_1(
         sumi2 = __dp4a(v2, q8[j+4], sumi2);
     }
     return d * (sumi1 + sumi2);
-
-#else
-    NO_DEVICE_CODE;
-#endif
 #else
     return vec_dot_iq4_xs_q8_1(vbq, bq8_1, iqs);
 #endif
@@ -8413,11 +8010,7 @@ template <int mmq_y, int nwarps, bool need_check> static __device__ __forceinlin
 
         const block_q4_K * bxi = bx0 + i*blocks_per_row + kbxd;
 
-#if QK_K == 256
         x_dm[i * (WARP_SIZE/QI4_K) + i / QI4_K + kbxd] = bxi->dm;
-#else
-        x_dm[i * (WARP_SIZE/QI4_K) + i / QI4_K + kbxd] = {bxi->dm[0], bxi->dm[1]};
-#endif
     }
 
 #pragma unroll
@@ -8520,9 +8113,7 @@ template <int mmq_y, int nwarps, bool need_check> static __device__ __forceinlin
 
         const block_q5_K * bxi = bx0 + i*blocks_per_row + kbxd;
 
-#if QK_K == 256
         x_dm[i * (WARP_SIZE/QI5_K) + i / QI5_K + kbxd] = bxi->dm;
-#endif
     }
 
 #pragma unroll
@@ -10127,10 +9718,10 @@ static __global__ void rope(
     dst[i + 1] = x0*sin_theta + x1*cos_theta;
 }
 
-template<typename T, bool has_pos>
+template<typename T, bool has_pos, bool has_freq_facs>
 static __global__ void rope_neox(
     const T * x, T * dst, int ncols, int n_dims, const int32_t * pos, float freq_scale, int p_delta_rows,
-    float ext_factor, float attn_factor, rope_corr_dims corr_dims, float theta_scale, float inv_ndims
+    float ext_factor, float attn_factor, rope_corr_dims corr_dims, float theta_scale, float inv_ndims, const float * freq_factors
 ) {
     const int col = 2*(blockDim.y*blockIdx.y + threadIdx.y);
 
@@ -10157,7 +9748,9 @@ static __global__ void rope_neox(
     float cur_rot = inv_ndims * ic - ib;
 
     const int p = has_pos ? pos[i2] : 0;
-    const float theta_base = p*freq_scale*powf(theta_scale, col/2.0f);
+    const float freq_factor = has_freq_facs ? freq_factors[ic/2] : 1.0f;
+
+    const float theta_base = p*freq_scale*powf(theta_scale, col/2.0f)/freq_factor;
 
     float cos_theta, sin_theta;
     rope_yarn(theta_base, freq_scale, corr_dims, cur_rot, ext_factor, attn_factor, &cos_theta, &sin_theta);
@@ -10233,7 +9826,7 @@ static void rope_cuda(
 template<typename T>
 static void rope_neox_cuda(
     const T * x, T * dst, int ncols, int n_dims, int nrows, const int32_t * pos, float freq_scale, int p_delta_rows,
-    float freq_base, float ext_factor, float attn_factor, rope_corr_dims corr_dims, cudaStream_t stream
+    float freq_base, float ext_factor, float attn_factor, rope_corr_dims corr_dims, const float * freq_factors, cudaStream_t stream
 ) {
     GGML_ASSERT(ncols % 2 == 0);
     const dim3 block_dims(1, CUDA_ROPE_BLOCK_SIZE, 1);
@@ -10244,15 +9837,29 @@ static void rope_neox_cuda(
     const float inv_ndims = -1.0f / n_dims;
 
     if (pos == nullptr) {
-        rope_neox<T, false><<<block_nums, block_dims, 0, stream>>>(
-            x, dst, ncols, n_dims, pos, freq_scale, p_delta_rows, ext_factor, attn_factor, corr_dims,
-            theta_scale, inv_ndims
-        );
+        if (freq_factors == nullptr) {
+            rope_neox<T, false, false><<<block_nums, block_dims, 0, stream>>>(
+                x, dst, ncols, n_dims, pos, freq_scale, p_delta_rows, ext_factor, attn_factor, corr_dims,
+                theta_scale, inv_ndims, freq_factors
+                );
+        } else {
+            rope_neox<T, false, true><<<block_nums, block_dims, 0, stream>>>(
+                x, dst, ncols, n_dims, pos, freq_scale, p_delta_rows, ext_factor, attn_factor, corr_dims,
+                theta_scale, inv_ndims, freq_factors
+                );
+        }
     } else {
-        rope_neox<T, true><<<block_nums, block_dims, 0, stream>>>(
-            x, dst, ncols, n_dims, pos, freq_scale, p_delta_rows, ext_factor, attn_factor, corr_dims,
-            theta_scale, inv_ndims
-        );
+        if (freq_factors == nullptr) {
+            rope_neox<T, true, false><<<block_nums, block_dims, 0, stream>>>(
+                x, dst, ncols, n_dims, pos, freq_scale, p_delta_rows, ext_factor, attn_factor, corr_dims,
+                theta_scale, inv_ndims, freq_factors
+                );
+        } else {
+            rope_neox<T, true, true><<<block_nums, block_dims, 0, stream>>>(
+                x, dst, ncols, n_dims, pos, freq_scale, p_delta_rows, ext_factor, attn_factor, corr_dims,
+                theta_scale, inv_ndims, freq_factors
+                );
+        }
     }
 }
 
@@ -10283,24 +9890,27 @@ static void rope_cuda_f32(
 
 static void rope_neox_cuda_f16(
     const half * x, half * dst, int ncols, int n_dims, int nrows, const int32_t * pos, float freq_scale, int p_delta_rows,
-    float freq_base, float ext_factor, float attn_factor, rope_corr_dims corr_dims, cudaStream_t stream) {
+    float freq_base, float ext_factor, float attn_factor, rope_corr_dims corr_dims, const float * freq_factors, cudaStream_t stream) {
 
-    rope_neox_cuda<half>(x, dst, ncols, n_dims, nrows, pos, freq_scale, p_delta_rows, freq_base, ext_factor, attn_factor, corr_dims, stream);
+    rope_neox_cuda<half>(x, dst, ncols, n_dims, nrows, pos, freq_scale, p_delta_rows, freq_base, ext_factor, attn_factor, corr_dims, freq_factors, stream);
 }
 
 static void rope_neox_cuda_f32(
     const float * x, float * dst, int ncols, int n_dims, int nrows, const int32_t * pos, float freq_scale, int p_delta_rows,
-    float freq_base, float ext_factor, float attn_factor, rope_corr_dims corr_dims, cudaStream_t stream
+    float freq_base, float ext_factor, float attn_factor, rope_corr_dims corr_dims, const float * freq_factors, cudaStream_t stream
 ) {
 
-    rope_neox_cuda<float>(x, dst, ncols, n_dims, nrows, pos, freq_scale, p_delta_rows, freq_base, ext_factor, attn_factor, corr_dims, stream);
+    rope_neox_cuda<float>(x, dst, ncols, n_dims, nrows, pos, freq_scale, p_delta_rows, freq_base, ext_factor, attn_factor, corr_dims, freq_factors, stream);
 }
 
 void ggml_cuda_op_rope(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
     const ggml_tensor * src0 = dst->src[0];
     const ggml_tensor * src1 = dst->src[1];
+    const ggml_tensor * src2 = dst->src[2];
+
     const float * src0_d = (const float *)src0->data;
     const float * src1_d = (const float *)src1->data;
+
     float * dst_d = (float *)dst->data;
     cudaStream_t stream = ctx.stream();
 
@@ -10310,7 +9920,6 @@ void ggml_cuda_op_rope(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
 
     const int64_t ne00 = src0->ne[0];
     const int64_t ne01 = src0->ne[1];
-    const int64_t ne2 = dst->ne[2];
     const int64_t nrows = ggml_nrows(src0);
 
     //const int n_past      = ((int32_t *) dst->op_params)[0];
@@ -10328,15 +9937,21 @@ void ggml_cuda_op_rope(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
     memcpy(&beta_fast,   (int32_t *) dst->op_params +  9, sizeof(float));
     memcpy(&beta_slow,   (int32_t *) dst->op_params + 10, sizeof(float));
 
+    const float * freq_factors = nullptr;
     const int32_t * pos = nullptr;
-    if ((mode & 1) == 0) {
-        GGML_ASSERT(src1->type == GGML_TYPE_I32);
-        GGML_ASSERT(src1->ne[0] == ne2);
-        pos = (const int32_t *) src1_d;
-    }
 
     const bool is_neox = mode & 2;
     const bool is_glm  = mode & 4;
+
+    pos = (const int32_t *) src1_d;
+
+    if (is_neox) {
+        if (src2 != nullptr) {
+            freq_factors = (const float *) src2->data;
+        }
+    } else {
+        GGML_ASSERT(src2 == nullptr && "TODO: freq_factors not implemented for !is_neox");
+    }
 
     rope_corr_dims corr_dims;
     ggml_rope_yarn_corr_dims(n_dims, n_orig_ctx, freq_base, beta_fast, beta_slow, corr_dims.v);
@@ -10349,12 +9964,12 @@ void ggml_cuda_op_rope(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
         if (src0->type == GGML_TYPE_F32) {
             rope_neox_cuda_f32(
                 (const float *)src0_d, (float *)dst_d, ne00, n_dims, nrows, pos, freq_scale, ne01, freq_base, ext_factor,
-                attn_factor, corr_dims, stream
+                attn_factor, corr_dims, freq_factors, stream
             );
         } else if (src0->type == GGML_TYPE_F16) {
             rope_neox_cuda_f16(
                 (const half *)src0_d, (half *)dst_d, ne00, n_dims, nrows, pos, freq_scale, ne01, freq_base, ext_factor,
-                attn_factor, corr_dims, stream
+                attn_factor, corr_dims, freq_factors, stream
             );
         } else {
             GGML_ASSERT(false);
