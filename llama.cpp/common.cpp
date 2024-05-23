@@ -162,7 +162,7 @@ static int count_math_cpus(int cpu_count) {
 /**
  * Returns number of CPUs on system that are useful for math.
  */
-int get_math_cpu_count() {
+int cpu_get_num_math() {
 #if defined(__x86_64__) && (defined(__linux__) || defined(__COSMOPOLITAN__)) && !defined(__ANDROID__)
     int cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
     if (cpu_count < 1) {

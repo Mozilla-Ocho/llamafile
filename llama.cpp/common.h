@@ -46,7 +46,7 @@ extern char const *LLAMA_BUILD_TARGET;
 
 struct llama_control_vector_load_info;
 
-int get_math_cpu_count();
+int cpu_get_num_math();
 int32_t get_num_physical_cores();
 
 //
@@ -56,7 +56,7 @@ int32_t get_num_physical_cores();
 struct gpt_params {
     uint32_t seed                 = LLAMA_DEFAULT_SEED; // RNG seed
 
-    int32_t n_threads             = get_math_cpu_count();
+    int32_t n_threads             = cpu_get_num_math();
     int32_t n_threads_draft       = -1;
     int32_t n_threads_batch       = -1;    // number of threads to use for batch processing (-1 = use n_threads)
     int32_t n_threads_batch_draft = -1;
