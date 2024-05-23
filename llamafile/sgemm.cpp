@@ -33,7 +33,11 @@ static const struct GemmFuncs {
             if (X86_HAVE(FMA)) {
                 if (X86_HAVE(AVX2)) {
                     if (X86_HAVE(AVX512F)) {
-                        if (X86_HAVE(AVX512VL) && X86_HAVE(AVX512_VNNI) && X86_HAVE(AVX512_BF16)) {
+                        if (X86_HAVE(AVX512VL) && //
+                            X86_HAVE(AVX512BW) && //
+                            X86_HAVE(AVX512DQ) && //
+                            X86_HAVE(AVX512_VNNI) && //
+                            X86_HAVE(AVX512_BF16)) {
                             // AMD Zen4+ (2023-)
                             sgemm = llamafile_sgemm_amd_zen4;
                             mixmul = llamafile_mixmul_amd_zen4;
@@ -135,7 +139,8 @@ bool llamafile_mixmul(const ggml_compute_params *params, const ggml_tensor *weig
     return funcs.mixmul(params, weights, thought, plan, result);
 }
 
-bool llamafile_mixmul_iqk(long Nx, long Ny, long ne00, int ne11, int typeA, const void * A, const void * B,
-        float * C, long nb1, long nb2, const void * vrow_mapping, int ith, int nth) {
+bool llamafile_mixmul_iqk(long Nx, long Ny, long ne00, int ne11, int typeA, const void *A,
+                          const void *B, float *C, long nb1, long nb2, const void *vrow_mapping,
+                          int ith, int nth) {
     return funcs.iqk_mixmul(Nx, Ny, ne00, ne11, typeA, A, B, C, nb1, nb2, vrow_mapping, ith, nth);
 }
