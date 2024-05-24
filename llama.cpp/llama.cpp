@@ -1217,28 +1217,28 @@ struct llama_mmap {
     void * addr;
     size_t size;
     bool is_owned;
+    llamafile * lfile;
 
     llama_mmap(const llama_mmap &) = delete;
 
     static constexpr bool SUPPORTED = true;
 
-    // list of mapped fragments (first_offset, last_offset)
-    std::vector<std::pair<size_t, size_t>> mapped_fragments;
-
     llama_mmap(struct llama_file * file, size_t prefetch = (size_t) -1 /* -1 = max value */, bool numa = false) {
-        size = llamafile_size(file->file);
-        if (!llamafile_fp(file->file)) {
+        lfile = file->file;
+        size = llamafile_size(lfile);
+        if (!llamafile_fp(lfile)) {
             // file is an uncompressed zip asset
             // therefore it's already mapped
             is_owned = false;
-            addr = llamafile_content(file->file);
+            llamafile_ref(lfile);
+            addr = llamafile_content(lfile);
             if (!llamafile_has_gpu()) {
                 llamafile_schlep(addr, size);
             }
             return;
         }
         is_owned = true;
-        int fd = fileno(llamafile_fp(file->file));
+        int fd = fileno(llamafile_fp(lfile));
         // advise the kernel to read the file sequentially (increases readahead)
         errno_t err;
         if ((err = posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) && err != ENOSYS) {
@@ -1273,83 +1273,19 @@ struct llama_mmap {
         if (!llamafile_has_gpu()) {
             llamafile_schlep(addr, size);
         }
-
-        // initialize list of mapped_fragments
-        mapped_fragments.emplace_back(0, size);
-    }
-
-    static void align_range(size_t * first, size_t * last, size_t page_size) {
-        // align first to the next page
-        size_t offset_in_page = *first & (page_size - 1);
-        size_t offset_to_page = offset_in_page == 0 ? 0 : page_size - offset_in_page;
-        *first += offset_to_page;
-
-        // align last to the previous page
-        *last = *last & ~(page_size - 1);
-
-        if (*last <= *first) {
-            *last = *first;
-        }
     }
 
     // partially unmap the file in the range [first, last)
     void unmap_fragment(size_t first, size_t last) {
-        // note: this function must not be called multiple times with overlapping ranges
-        // otherwise, there is a risk of invalidating addresses that have been repurposed for other mappings
-        int page_size = sysconf(_SC_PAGESIZE);
-        align_range(&first, &last, page_size);
-        size_t len = last - first;
-
-        if (len == 0) {
-            return;
-        }
-
-        GGML_ASSERT(first % page_size == 0);
-        GGML_ASSERT(last % page_size == 0);
-        GGML_ASSERT(last > first);
-
-        void * next_page_start = (uint8_t *) addr + first;
-
-        // unmap the range
-#if 0
-        // TODO(jart): make this safe
-        if (munmap(next_page_start, len)) {
-            LLAMA_LOG_WARN("warning: munmap failed: %s\n", strerror(errno));
-        }
-#endif
-
-        // update the list of mapped fragments to avoid unmapping the same range again in the destructor
-        std::vector<std::pair<size_t, size_t>> new_mapped_fragments;
-        for (const auto & frag : mapped_fragments) {
-            if (frag.first < first && frag.second > last) {
-                // the range is in the middle of the fragment, split it
-                new_mapped_fragments.emplace_back(frag.first, first);
-                new_mapped_fragments.emplace_back(last, frag.second);
-            } else if (frag.first < first && frag.second > first) {
-                // the range starts in the middle of the fragment
-                new_mapped_fragments.emplace_back(frag.first, first);
-            } else if (frag.first < last && frag.second > last) {
-                // the range ends in the middle of the fragment
-                new_mapped_fragments.emplace_back(last, frag.second);
-            } else if (frag.first >= first && frag.second <= last) {
-                // the range covers the entire fragment
-            } else {
-                // the range is outside the fragment
-                new_mapped_fragments.push_back(frag);
-            }
-        }
-        mapped_fragments = std::move(new_mapped_fragments);
+        // [jart] nah
     }
 
     ~llama_mmap() {
-#if 0
-        // TODO(jart): make this safe
-        for (const auto & frag : mapped_fragments) {
-            if (munmap((char *) addr + frag.first, frag.second - frag.first)) {
-                LLAMA_LOG_WARN("warning: munmap failed: %s\n", strerror(errno));
-            }
+        if (is_owned) {
+            munmap(addr, size);
+        } else {
+            llamafile_unref(lfile);
         }
-#endif
     }
 };
 using llama_mmaps = std::vector<std::unique_ptr<llama_mmap>>;

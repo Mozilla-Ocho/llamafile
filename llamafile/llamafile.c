@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,6 +55,7 @@ struct llamafile {
     void *mapping;
     size_t mapsize;
     char fname[PATH_MAX];
+    atomic_int refs;
 };
 
 static struct llamafile *llamafile_open_zip(const char *prog, const char *fname, const char *mode) {
@@ -214,7 +216,7 @@ static struct llamafile *llamafile_open_zip(const char *prog, const char *fname,
     off_t mapoff = off & -pagesz;
     long skew = off - mapoff;
     file->mapsize = skew + file->size;
-    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, mapoff);
+    file->mapping = mmap(0, file->mapsize, PROT_READ, MAP_SHARED, fd, mapoff);
     if (file->mapping == MAP_FAILED) {
         fprintf(stderr, "%s: warning: failed to map zip file: %s\n", file->fname, strerror(errno));
         goto Failure;
@@ -377,12 +379,25 @@ long llamafile_write(struct llamafile *file, const void *ptr, size_t len) {
     return len;
 }
 
-void llamafile_close(struct llamafile *file) {
+static void llamafile_close_impl(struct llamafile *file) {
     if (file->fp)
         fclose(file->fp);
     if (file->mapping && file->mapping != MAP_FAILED) {
-        // TODO(jart): reference count this mapping w/ llama_mmap
-        // munmap(file->mapping, file->mapsize);
+        munmap(file->mapping, file->mapsize);
     }
     free(file);
+}
+
+void llamafile_ref(struct llamafile *file) {
+    atomic_fetch_add(&file->refs, 1);
+}
+
+void llamafile_unref(struct llamafile *file) {
+    if (!atomic_fetch_sub(&file->refs, 1)) {
+        llamafile_close_impl(file);
+    }
+}
+
+void llamafile_close(struct llamafile *file) {
+    llamafile_unref(file);
 }

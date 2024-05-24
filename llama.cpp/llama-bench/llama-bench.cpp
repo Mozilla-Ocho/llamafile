@@ -92,7 +92,8 @@ static std::string get_cpu_info() {
         if (f) {
             char buf[1024];
             while (fgets(buf, sizeof(buf), f)) {
-                if (strncmp(buf, "model name", 10) == 0) {
+                if (strncmp(buf, "model name", 10) == 0 ||
+                    startswith(buf, "Model           :")) {
                     char * p = strchr(buf, ':');
                     if (p) {
                         p++;
