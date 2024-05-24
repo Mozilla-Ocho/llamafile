@@ -9,6 +9,10 @@ o/$(MODE)/depend: $(SRCS) $(HDRS) $(INCS)
 	@mkdir -p $(@D)
 	$(MKDEPS) -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS) $(INCS)
 
+o/$(MODE)/depend.test: $(SRCS) $(HDRS) $(INCS)
+	@mkdir -p $(@D)
+	$(MKDEPS) -o $@ -r o/$(MODE)/ $(SRCS) $(HDRS) $(INCS)
+
 $(SRCS):
 $(HDRS):
 $(INCS):

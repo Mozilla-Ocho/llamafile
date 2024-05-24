@@ -17,8 +17,8 @@
 
 #ifdef __x86_64__
 
-#include "../llama.cpp/ggml-impl.h"
-#include "../llama.cpp/ggml-quants.h"
+#include "llama.cpp/ggml-impl.h"
+#include "llama.cpp/ggml-quants.h"
 #include "sgemm.h"
 
 // clang-format off
