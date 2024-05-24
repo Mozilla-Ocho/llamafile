@@ -18,11 +18,13 @@
 #include <vector>
 #include <cosmo.h>
 #include <libgen.h>
+#include <sys/stat.h>
 
 #include "llama.cpp/ggml.h"
 #include "llama.cpp/llama.h"
 #include "llama.cpp/common.h"
 #include "llama.cpp/ggml-cuda.h"
+#include "llamafile/llamafile.h"
 
 // utils
 static uint64_t get_time_ns() {
@@ -106,6 +108,12 @@ static std::string get_cpu_info() {
                 }
             }
             fclose(f);
+        }
+    } else if (IsXnu()) {
+        char cpu_name[128] = {0};
+        size_t size = sizeof(cpu_name);
+        if (sysctlbyname("machdep.cpu.brand_string", cpu_name, &size, NULL, 0) != -1) {
+            id = cpu_name;
         }
     }
     // TODO: other platforms
@@ -211,7 +219,7 @@ static const cmd_params cmd_params_defaults = {
     /* use_mmap      */ {true},
     /* embeddings    */ {false},
     /* numa          */ GGML_NUMA_STRATEGY_DISABLED,
-    /* reps          */ 1,
+    /* reps          */ 3,
     /* verbose       */ false,
     /* output_format */ MARKDOWN
 };
@@ -499,9 +507,13 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
             }
         } else if (arg == "-v" || arg == "--verbose") {
             params.verbose = true;
-        } else {
+        } else if (arg[0] == '-') {
             invalid_param = true;
             break;
+        } else {
+            // [jart] let me glob without needing -m flag
+            auto p = split<std::string>(argv[i], split_delim);
+            params.model.insert(params.model.end(), p.begin(), p.end());
         }
     }
     if (invalid_param) {
@@ -509,6 +521,20 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
         print_usage(argc, argv);
         exit(1);
     }
+
+    // [jart] sort larger models first
+    std::sort(params.model.begin(), params.model.end(), [](const std::string& a, const std::string& b) {
+        struct stat statA, statB;
+        if (stat(a.c_str(), &statA)) {
+            perror(a.c_str());
+            exit(1);
+        }
+        if (stat(b.c_str(), &statB)) {
+            perror(b.c_str());
+            exit(1);
+        }
+        return statA.st_size > statB.st_size;
+    });
 
     // set defaults
     if (params.model.empty())        { params.model = cmd_params_defaults.model; }
@@ -1010,7 +1036,7 @@ struct markdown_printer : public printer {
             return 48; // [jart]
         }
         if (field == "model_filename") {
-            return 35; // [jart]
+            return 40; // [jart]
         }
         if (field == "size" || field == "params") {
             return 10;
@@ -1063,7 +1089,7 @@ struct markdown_printer : public printer {
         fields.emplace_back("cpu_info"); // [jart]
         fields.emplace_back("model_filename");
         // fields.emplace_back("model");
-        // fields.emplace_back("size"); // [jart]
+        fields.emplace_back("size"); // [jart]
         // fields.emplace_back("params"); // [jart]
         // fields.emplace_back("backend"); // [jart]
         bool is_cpu_backend = test::get_backend() == "CPU" || test::get_backend() == "BLAS";
@@ -1168,10 +1194,10 @@ struct markdown_printer : public printer {
             }
 
             int width = get_field_width(field);
-            if (field == "t/s") {
-                // HACK: the utf-8 character is 2 bytes
-                width += 1;
-            }
+            // if (field == "t/s") { // [jart]
+            //     // HACK: the utf-8 character is 2 bytes
+            //     width += 1;
+            // }
             fprintf(fout, " %*s |", width, value.c_str());
         }
         fprintf(fout, "\n");
@@ -1269,12 +1295,20 @@ __attribute__((__constructor__(101))) static void init(void) {
 }
 
 int main(int argc, char ** argv) {
+
+    ShowCrashReports();
+
     // try to set locale for unicode characters in markdown
     setlocale(LC_CTYPE, ".UTF-8");
 
-#if !defined(NDEBUG)
-    fprintf(stderr, "warning: asserts enabled, performance may be affected\n");
-#endif
+    __warn_if_powersave();  // [jart]
+    if (!getenv("LLAMAFILE_TEMPERATURE_FILE") || !getenv("LLAMAFILE_TEMPERATURE_MAX"))
+        fprintf(stderr, "warning: don't know how to govern your cpu temperature; "
+                "consider setting the environment variables described in llamafile/govern.cpp\n");
+
+// #if !defined(NDEBUG)
+//     fprintf(stderr, "warning: asserts enabled, performance may be affected\n");
+// #endif
 
 #if (defined(_MSC_VER) && defined(_DEBUG)) || (!defined(_MSC_VER) && !defined(__OPTIMIZE__))
     fprintf(stderr, "warning: debug build, performance may be affected\n");
@@ -1358,6 +1392,8 @@ int main(int argc, char ** argv) {
         for (int i = 0; i < params.reps; i++) {
             llama_kv_cache_clear(ctx);
 
+            llamafile_govern(); // [jart] see docs in llamafile/govern.cpp
+
             uint64_t t_start = get_time_ns();
 
             if (t.n_prompt > 0) {
@@ -1376,9 +1412,6 @@ int main(int argc, char ** argv) {
         llama_print_timings(ctx);
 
         llama_free(ctx);
-
-        // [jart] let cpu cool off
-        sleep(7);
     }
 
     llama_free_model(lmodel);

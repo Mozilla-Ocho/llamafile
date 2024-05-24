@@ -458,7 +458,7 @@ class tinyBLAS {
             case 0x22:
                 mc = 2;
                 nc = 2;
-                gemm<2, 2, true>(m0, m, n0, n);
+                gemm<2, 2, false>(m0, m, n0, n);
                 break;
             case 0x51:
             case 0x41:
@@ -466,7 +466,7 @@ class tinyBLAS {
             case 0x21:
                 mc = 2;
                 nc = 1;
-                gemm<2, 1, true>(m0, m, n0, n);
+                gemm<2, 1, false>(m0, m, n0, n);
                 break;
             case 0x15:
             case 0x14:
@@ -474,12 +474,12 @@ class tinyBLAS {
             case 0x12:
                 mc = 1;
                 nc = 2;
-                gemm<1, 2, true>(m0, m, n0, n);
+                gemm<1, 2, false>(m0, m, n0, n);
                 break;
             case 0x11:
                 mc = 1;
                 nc = 1;
-                gemm<1, 1, true>(m0, m, n0, n);
+                gemm<1, 1, false>(m0, m, n0, n);
                 break;
             default:
                 return;
@@ -539,25 +539,25 @@ class tinyBLAS {
             case 0x22:
                 mc = 2;
                 nc = 2;
-                gemm<2, 2, true>(m0, m, n0, n);
+                gemm<2, 2, false>(m0, m, n0, n);
                 break;
             case 0x41:
             case 0x31:
             case 0x21:
                 mc = 2;
                 nc = 1;
-                gemm<2, 1, true>(m0, m, n0, n);
+                gemm<2, 1, false>(m0, m, n0, n);
                 break;
             case 0x13:
             case 0x12:
                 mc = 1;
                 nc = 2;
-                gemm<1, 2, true>(m0, m, n0, n);
+                gemm<1, 2, false>(m0, m, n0, n);
                 break;
             case 0x11:
                 mc = 1;
                 nc = 1;
-                gemm<1, 1, true>(m0, m, n0, n);
+                gemm<1, 1, false>(m0, m, n0, n);
                 break;
             default:
                 return;
@@ -693,18 +693,18 @@ class tinyBLAS_Q0_ARM {
             case 0x21:
                 mc = 2;
                 nc = 1;
-                gemm<2, 1, true>(m0, m, n0, n);
+                gemm<2, 1, false>(m0, m, n0, n);
                 break;
             case 0x13:
             case 0x12:
                 mc = 1;
                 nc = 2;
-                gemm<1, 2, true>(m0, m, n0, n);
+                gemm<1, 2, false>(m0, m, n0, n);
                 break;
             case 0x11:
                 mc = 1;
                 nc = 1;
-                gemm<1, 1, true>(m0, m, n0, n);
+                gemm<1, 1, false>(m0, m, n0, n);
                 break;
             default:
                 return;
@@ -931,17 +931,17 @@ class tinyBLAS_Q0_AVX2 {
             case 0x21:
                 mc = 2;
                 nc = 1;
-                gemm<2, 1, true>(m0, m, n0, n);
+                gemm<2, 1, false>(m0, m, n0, n);
                 break;
             case 0x12:
                 mc = 1;
                 nc = 2;
-                gemm<1, 2, true>(m0, m, n0, n);
+                gemm<1, 2, false>(m0, m, n0, n);
                 break;
             case 0x11:
                 mc = 1;
                 nc = 1;
-                gemm<1, 1, true>(m0, m, n0, n);
+                gemm<1, 1, false>(m0, m, n0, n);
                 break;
             default:
                 return;

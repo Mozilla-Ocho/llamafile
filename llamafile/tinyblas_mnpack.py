@@ -40,35 +40,17 @@ def doit(VECTOR_REGISTERS, PRECISE):
       if (mc > EDGE_M or nc > EDGE_N) and (mc == 1 or nc == 1):
         continue
 
-      # always use precise if there's enough registers
-      v = accumulators * 2 + memory_loads + OVERHEAD
-      if v <= VECTOR_REGISTERS:
-        if mc % 8 == 0:
-          v += 2
-        if mc % 4 == 0:
-          v += 1
-        specified[mc, nc] = v
-        if PRECISE or (mc == 1 or nc == 1):
-          precise.add((mc, nc))
-      elif not PRECISE:
-        v = accumulators + memory_loads + OVERHEAD
-        if v <= VECTOR_REGISTERS:
-          if mc % 8 == 0:
-            v += 2
-          if mc % 4 == 0:
-            v += 1
-          specified[mc, nc] = v
-
-      # if PRECISE:
-      #   v = accumulators * 2 + memory_loads + OVERHEAD
-      #   if v <= VECTOR_REGISTERS:
-      #     if mc % 8 == 0:
-      #       v += 2
-      #     if mc % 4 == 0:
-      #       v += 1
-      #     specified[mc, nc] = v
+      # # always use precise if there's enough registers
+      # v = accumulators * 2 + memory_loads + OVERHEAD
+      # if v <= VECTOR_REGISTERS:
+      #   if mc % 8 == 0:
+      #     v += 2
+      #   if mc % 4 == 0:
+      #     v += 1
+      #   specified[mc, nc] = v
+      #   if PRECISE or (mc == 1 or nc == 1):
       #     precise.add((mc, nc))
-      # else:
+      # elif not PRECISE:
       #   v = accumulators + memory_loads + OVERHEAD
       #   if v <= VECTOR_REGISTERS:
       #     if mc % 8 == 0:
@@ -76,6 +58,24 @@ def doit(VECTOR_REGISTERS, PRECISE):
       #     if mc % 4 == 0:
       #       v += 1
       #     specified[mc, nc] = v
+
+      if PRECISE:
+        v = accumulators * 2 + memory_loads + OVERHEAD
+        if v <= VECTOR_REGISTERS:
+          if mc % 8 == 0:
+            v += 2
+          if mc % 4 == 0:
+            v += 1
+          specified[mc, nc] = v
+          precise.add((mc, nc))
+      else:
+        v = accumulators + memory_loads + OVERHEAD
+        if v <= VECTOR_REGISTERS:
+          if mc % 8 == 0:
+            v += 2
+          if mc % 4 == 0:
+            v += 1
+          specified[mc, nc] = v
 
   # generate code for handling biggest tile (e.g. 5x5)
   # generate code for handling edge tiles (i.e. <=2x2)

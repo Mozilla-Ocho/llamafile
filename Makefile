@@ -32,6 +32,7 @@ install:	llamafile/zipalign.1					\
 		o/$(MODE)/llama.cpp/main/main				\
 		o/$(MODE)/llama.cpp/imatrix/imatrix			\
 		o/$(MODE)/llama.cpp/quantize/quantize			\
+		o/$(MODE)/llama.cpp/llama-bench/llama-bench		\
 		o/$(MODE)/llama.cpp/perplexity/perplexity		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize
 	mkdir -p $(PREFIX)/bin
@@ -40,6 +41,7 @@ install:	llamafile/zipalign.1					\
 	$(INSTALL) o/$(MODE)/llama.cpp/main/main $(PREFIX)/bin/llamafile
 	$(INSTALL) o/$(MODE)/llama.cpp/imatrix/imatrix $(PREFIX)/bin/llamafile-imatrix
 	$(INSTALL) o/$(MODE)/llama.cpp/quantize/quantize $(PREFIX)/bin/llamafile-quantize
+	$(INSTALL) o/$(MODE)/llama.cpp/llama-bench/llama-bench $(PREFIX)/bin/llamafile-bench
 	$(INSTALL) build/llamafile-convert $(PREFIX)/bin/llamafile-convert
 	$(INSTALL) build/llamafile-upgrade-engine $(PREFIX)/bin/llamafile-upgrade-engine
 	$(INSTALL) o/$(MODE)/llama.cpp/perplexity/perplexity $(PREFIX)/bin/llamafile-perplexity

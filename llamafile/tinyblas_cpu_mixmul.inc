@@ -182,9 +182,15 @@ class MixMul {
             if (thought->type != GGML_TYPE_F32 && thought->type != GGML_TYPE_BF16)
                 return false;
 #if defined(__AVX512BF16__)
-            return mixmat<32, 1,
-                          tinyBLAS<NCB | NCC, 32, __m512, __m512bh, ggml_bf16_t, ggml_bf16_t, TC>,
-                          ggml_bf16_t, ggml_bf16_t, TC>();
+            if (!FLAG_precise) {
+                return mixmat<
+                    32, 1, tinyBLAS<NCB | NCC, 32, __m512, __m512bh, ggml_bf16_t, ggml_bf16_t, TC>,
+                    ggml_bf16_t, ggml_bf16_t, TC>();
+            } else {
+                return mixmat<16, 1,
+                              tinyBLAS<NCB | NCC, 16, __m512, __m512, ggml_bf16_t, ggml_bf16_t, TC>,
+                              ggml_bf16_t, ggml_bf16_t, TC>();
+            }
 #elif defined(__AVX512F__)
             return mixmat<16, 1,
                           tinyBLAS<NCB | NCC, 16, __m512, __m512, ggml_bf16_t, ggml_bf16_t, TC>,
