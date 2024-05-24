@@ -120,7 +120,8 @@ struct llava_context * volatile g_ctx;
 static void sigint_handler(int signo) {
     if (signo == SIGINT) {
         printf("\n");
-        llama_print_timings(g_ctx->ctx_llama);
+        if (g_ctx)
+            llama_print_timings(g_ctx->ctx_llama);
         _exit(128 + SIGINT);
     }
 }
