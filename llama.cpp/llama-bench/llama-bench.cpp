@@ -19,6 +19,9 @@
 #include <cosmo.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#include <sys/auxv.h>
+#include <libc/intrin/x86.h>
+#include <libc/sysv/consts/hwcap.h>
 
 #include "llama.cpp/ggml.h"
 #include "llama.cpp/llama.h"
@@ -85,8 +88,18 @@ static T stdev(const std::vector<T> & v) {
     return stdev;
 }
 
-static std::string get_cpu_info() {
+static std::string replaceAll(std::string str, const std::string& from, const std::string& to) {
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
+    }
+    return str;
+}
+
+static std::string get_cpu_info() { // [jart]
     std::string id;
+
     if (IsLinux()) {
         FILE * f = fopen("/proc/cpuinfo", "r");
         if (f) {
@@ -104,20 +117,46 @@ static std::string get_cpu_info() {
                             p[strlen(p) - 1] = '\0';
                         }
                         id = p;
+                        id = replaceAll(id, " 96-Cores", "");
+                        id = replaceAll(id, "(TM)", "");
+                        id = replaceAll(id, "(R)", "");
                         break;
                     }
                 }
             }
             fclose(f);
         }
-    } else if (IsXnu()) {
+    }
+
+    if (IsXnu()) {
         char cpu_name[128] = {0};
         size_t size = sizeof(cpu_name);
         if (sysctlbyname("machdep.cpu.brand_string", cpu_name, &size, NULL, 0) != -1) {
             id = cpu_name;
         }
     }
-    // TODO: other platforms
+
+    std::string march;
+#ifdef __x86_64__
+    if (__cpu_march(__cpu_model.__cpu_subtype))
+        march = __cpu_march(__cpu_model.__cpu_subtype);
+#else
+    long hwcap = getauxval(AT_HWCAP);
+    if (hwcap & HWCAP_ASIMDHP)
+        march += "+fp16";
+    if (hwcap & HWCAP_ASIMDDP)
+        march += "+dotprod";
+#endif
+
+    if (!march.empty()) {
+        bool empty = id.empty();
+        if (!empty)
+            id += " (";
+        id += march;
+        if (!empty)
+            id += ")";
+    }
+
     return id;
 }
 
@@ -1034,7 +1073,7 @@ struct markdown_printer : public printer {
             return 15; // [jart]
         }
         if (field == "cpu_info") {
-            return 48; // [jart]
+            return test::cpu_info.size(); // [jart]
         }
         if (field == "model_filename") {
             return 40; // [jart]
@@ -1157,7 +1196,7 @@ struct markdown_printer : public printer {
             std::string value;
             char buf[128];
             if (field == "model") {
-                value = t.model_type;
+              value = t.model_type;
             } else if (field == "size") {
                 if (t.model_size < 1024*1024*1024) {
                     snprintf(buf, sizeof(buf), "%.2f MiB", t.model_size / 1024.0 / 1024.0);
@@ -1188,7 +1227,7 @@ struct markdown_printer : public printer {
                 snprintf(buf, sizeof(buf), "%.2f", t.avg_ts());
                 value = buf;
             } else if (vmap.find(field) != vmap.end()) {
-                value = vmap.at(field);
+                value = replaceAll(replaceAll(vmap.at(field), ".gguf", ""), ".llamafile", ""); // [jart]
             } else {
                 assert(false);
                 exit(1);

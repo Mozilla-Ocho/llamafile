@@ -39,7 +39,7 @@
 // threshold, which jart configures to 80°C. the actual path of your cpu
 // temperature sensor may vary.
 
-int llamafile_read_temperature(void) {
+static int llamafile_read_temperature(void) {
     int fd;
     const char *path;
     char buf[13] = {0};
@@ -54,7 +54,7 @@ int llamafile_read_temperature(void) {
     return atoi(buf);
 }
 
-int llamafile_govern_threshold(void) {
+static int llamafile_govern_threshold(void) {
     int temp;
     const char *s;
     if (!(s = getenv("LLAMAFILE_TEMPERATURE_MAX")))
