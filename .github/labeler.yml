@@ -1,0 +1,29 @@
+# https://github.com/actions/labeler
+documentation:
+    - changed-files:
+        - any-glob-to-any-file:
+            - README.md
+            - LICENSE
+            - docs/**
+testing:
+    - changed-files:
+        - any-glob-to-any-file:
+            - tests/**
+build:
+    - changed-files:
+        - any-glob-to-any-file:
+            - cmake/**
+            - CMakeLists.txt
+            - CMakePresets.json
+            - codecov.yml
+llama.cpp:
+    - changed-files:
+        - any-glob-to-any-file: llama.cpp/**
+llamafile:
+    - changed-files:
+        - any-glob-to-any-file: llamafile/**
+devops:
+    - changed-files:
+        - any-glob-to-any-file:
+            - .devops/**
+            - .github/**
