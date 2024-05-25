@@ -58,13 +58,15 @@ static const struct GemmFuncs {
                         // AMD Excavator (2015-2022)
                         sgemm = llamafile_sgemm_amd_avx2;
                         mixmul = llamafile_mixmul_amd_avx2;
-                        iqk_mixmul = iqk_mul_mat_moe;
+                        if (X86_HAVE(F16C))
+                            iqk_mixmul = iqk_mul_mat_moe;
                     }
                 } else {
                     // AMD Piledriver (2011-2014)
                     sgemm = llamafile_sgemm_amd_fma;
                     mixmul = llamafile_mixmul_amd_fma;
-                    iqk_mixmul = iqk_mul_mat_moe;
+                    if (X86_HAVE(F16C))
+                        iqk_mixmul = iqk_mul_mat_moe;
                 }
             } else {
                 // Intel Sandybridge/Ivybridge (2010-2012)
