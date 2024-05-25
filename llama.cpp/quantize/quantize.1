@@ -38,49 +38,54 @@ Is the desired quantization format, which may be the integer id of a supported q
 Number of threads to use during computation (default: nproc/2)
 .El
 .Sh QUANTIZATION TYPES
-The following quantization types are available:
+The following quantization types are available. This table shows the ID
+of the quantization format, its name, the file size of 7B model weights
+that use it, and finally the amount of quality badness it introduces as
+measured by the llamafile-perplexity tool averaged over 128 chunks with
+the TinyLLaMA 1.1B v1.0 Chat model. Rows are ordered in accordance with
+how recommended the quantization format is for general usage.
 .Pp
 .Bl -dash -compact
 .It
-   2 Q4_0   3.56G +0.2166 ppl @ LLaMA-v1-7B
+  18 Q6_K   5.6gb +0.0446 ppl (q6 kawrakow)
 .It
-   3 Q4_1   3.90G +0.1585 ppl @ LLaMA-v1-7B
+   7 Q8_0   7.2gb +0.0022 ppl (q8 gerganov)
 .It
-   8 Q5_0   4.33G +0.0683 ppl @ LLaMA-v1-7B
+   1 F16    14gb  +0.0000 ppl (best but biggest)
 .It
-   9 Q5_1   4.70G +0.0349 ppl @ LLaMA-v1-7B
+   8 Q5_0   4.7gb +0.0817 ppl (q5 gerganov zero)
 .It
-  10 Q2_K   2.63G +0.6717 ppl @ LLaMA-v1-7B
+  17 Q5_K_M 4.8gb +0.0836 ppl (q5 kawrakow medium)
+.It
+  16 Q5_K_S 4.7gb +0.1049 ppl (q5 kawrakow small)
+.It
+  15 Q4_K_M 4.1gb +0.3132 ppl (q4 kawrakow medium)
+.It
+  14 Q4_K_S 3.9gb +0.3408 ppl (q4 kawrakow small)
+.It
+  13 Q3_K_L 3.6gb +0.5736 ppl (q3 kawrakow large)
+.It
+  12 Q3_K_M 3.3gb +0.7612 ppl (q3 kawrakow medium)
+.It
+  11 Q3_K_S 3.0gb +1.3834 ppl (q3 kawrakow small)
+.It
+  10 Q2_K   2.6gb +4.2359 ppl (tiniest hallucinates most)
+.It
+  32 BF16   14gb  +0.0000 ppl (canonical but cpu/cuda only)
+.It
+   0 F32    27gb   9.0952 ppl (reference point)
+.It
+   2 Q4_0   3.9gb +0.3339 ppl (legacy)
+.It
+   3 Q4_1   4.3gb +0.4163 ppl (legacy)
+.It
+   9 Q5_1   5.1gb +0.1091 ppl (legacy)
 .It
   12 Q3_K   alias for Q3_K_M
 .It
-  11 Q3_K_S 2.75G +0.5551 ppl @ LLaMA-v1-7B
-.It
-  12 Q3_K_M 3.07G +0.2496 ppl @ LLaMA-v1-7B
-.It
-  13 Q3_K_L 3.35G +0.1764 ppl @ LLaMA-v1-7B
-.It
   15 Q4_K   alias for Q4_K_M
 .It
-  14 Q4_K_S 3.59G +0.0992 ppl @ LLaMA-v1-7B
-.It
-  15 Q4_K_M 3.80G +0.0532 ppl @ LLaMA-v1-7B
-.It
   17 Q5_K   alias for Q5_K_M
-.It
-  16 Q5_K_S 4.33G +0.0400 ppl @ LLaMA-v1-7B
-.It
-  17 Q5_K_M 4.45G +0.0122 ppl @ LLaMA-v1-7B
-.It
-  18 Q6_K   5.15G -0.0008 ppl @ LLaMA-v1-7B
-.It
-   7 Q8_0   6.70G +0.0004 ppl @ LLaMA-v1-7B
-.It
-  32 BF16   Google Brain Floating Point
-.It
-   1 F16    13.00G @ 7B
-.It
-   0 F32    26.00G @ 7B
 .It
 COPY Only copy tensors, no quantizing.
 .El
