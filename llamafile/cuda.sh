@@ -23,7 +23,11 @@ cd "$TMP"
 
 /usr/local/cuda/bin/nvcc \
   --shared \
-  -arch=all-major \
+  --use_fast_math \
+  -gencode arch=compute_60,code=sm_60 \
+  -gencode arch=compute_70,code=sm_70 \
+  -gencode arch=compute_80,code=sm_80 \
+  -gencode arch=compute_90,code=sm_90 \
   --forward-unknown-to-host-compiler \
   --compiler-options "-fPIC -O2" \
   -DNDEBUG \
