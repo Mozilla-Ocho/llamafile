@@ -10,6 +10,8 @@
 
 int main(int argc, char *argv[]) {
 
+    FLAG_gpu = LLAMAFILE_GPU_DISABLE; // [jart]
+
     if (llamafile_has(argv, "--version")) {
         puts("llava-quantize v" LLAMAFILE_VERSION_STRING);
         return 0;
