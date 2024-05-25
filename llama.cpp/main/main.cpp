@@ -814,7 +814,8 @@ int main(int argc, char ** argv) {
         // display text
         if (input_echo && display) {
             for (auto id : embd) {
-                const std::string token_str = llama_token_to_piece(ctx, id, !params.conversation && sparams.grammar.empty());
+                // [jart] don't print special tokens until its design stabilizes
+                const std::string token_str = llama_token_to_piece(ctx, id, false);
                 printf("%s", token_str.c_str());
 
                 if (embd.size() > 1) {
