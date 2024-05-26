@@ -10,6 +10,8 @@ body:
         Please include information about your system, the steps to reproduce the bug, 
         and the version of llamafiles that you are using. 
         If possible, please provide a minimal code example that reproduces the bug.
+        You may also consider using function call tracing `--ftrace` or the lighter system call tracing `--strace`
+        for additional technical logging that may allow us to narrow down where the fault occurred.
   - type: input
     id: contact
     attributes:
