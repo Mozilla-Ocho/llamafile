@@ -1,8 +1,7 @@
-name: Low Severity Bugs
-about: Used to report low severity bugs in llamafiles (e.g. cosmetic issues, non critical UI glitches)
+name: Critical Severity Bug
+description: Used to report critical severity bugs in llamafiles (e.g. Crashing, Corrupted, Dataloss)
 title: "Bug: "
-labels: ["bug", "low severity"]
-assignees: ''
+labels: ["bug", "critical severity"]
 body:
   - type: markdown
     attributes:

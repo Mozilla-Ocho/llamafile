@@ -1,8 +1,7 @@
-name: Medium Severity Bug
-about: Used to report medium severity bugs in llamafiles (e.g. Malfunctioning Features but generally still useable)
+name: Low Severity Bugs
+description: Used to report low severity bugs in llamafiles (e.g. cosmetic issues, non critical UI glitches)
 title: "Bug: "
-labels: ["bug", "medium severity"]
-assignees: ''
+labels: ["bug", "low severity"]
 body:
   - type: markdown
     attributes:
