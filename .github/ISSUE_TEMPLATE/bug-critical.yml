@@ -1,0 +1,58 @@
+name: Critical Severity Bug
+about: Used to report critical severity bugs in llamafiles (e.g. Crashing, Corrupted, Dataloss)
+title: "Bug: "
+labels: ["bug", "critical severity"]
+assignees: ''
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! 
+        Please include information about your system, the steps to reproduce the bug, 
+        and the version of llamafiles that you are using. 
+        If possible, please provide a minimal code example that reproduces the bug.
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: How can we get in touch with you if we need more info?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: What version of our software are you running? (use `--version` to get a version string)
+      placeholder: "llamafile v0.8.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: What operating system are you seeing the problem on?
+      multiple: true
+      options:
+        - Linux
+        - Mac
+        - Windows
+        - FreeBSD
+        - OpenBSD
+        - NetBSD
+        - BIOS
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
