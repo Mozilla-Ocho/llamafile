@@ -1,8 +1,7 @@
 name: Question template
-about: Used to ask questions about llamafiles
+description: Used to ask questions about llamafiles
 title: "Question: "
 labels: ["question"]
-assignees: ''
 body:
   - type: markdown
     attributes:

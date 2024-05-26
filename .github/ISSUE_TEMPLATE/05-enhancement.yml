@@ -1,8 +1,7 @@
 name: Enhancement template
-about: Used to request enhancements for llamafiles
+description: Used to request enhancements for llamafiles
 title: "Feature Request: "
 labels: ["enhancement"]
-assignees: ''
 body:
   - type: markdown
     attributes:

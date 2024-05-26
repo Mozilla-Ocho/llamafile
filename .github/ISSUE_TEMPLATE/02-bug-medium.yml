@@ -1,8 +1,7 @@
-name: High Severity Bug
-about: Used to report high severity bugs in llamafiles (e.g. Malfunctioning features hindering important common workflow)
+name: Medium Severity Bug
+description: Used to report medium severity bugs in llamafiles (e.g. Malfunctioning Features but generally still useable)
 title: "Bug: "
-labels: ["bug", "high severity"]
-assignees: ''
+labels: ["bug", "medium severity"]
 body:
   - type: markdown
     attributes:

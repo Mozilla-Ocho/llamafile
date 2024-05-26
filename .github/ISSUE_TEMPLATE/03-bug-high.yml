@@ -1,8 +1,7 @@
-name: Critical Severity Bug
-about: Used to report critical severity bugs in llamafiles (e.g. Crashing, Corrupted, Dataloss)
+name: High Severity Bug
+description: Used to report high severity bugs in llamafiles (e.g. Malfunctioning features hindering important common workflow)
 title: "Bug: "
-labels: ["bug", "critical severity"]
-assignees: ''
+labels: ["bug", "high severity"]
 body:
   - type: markdown
     attributes:
