@@ -3,7 +3,7 @@
 FROM alpine as build
 
 RUN apk update && \
-    apk add build-base git
+    apk add make
 
 WORKDIR /build
 COPY . .
