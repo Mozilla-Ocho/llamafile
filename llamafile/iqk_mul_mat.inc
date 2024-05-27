@@ -2250,6 +2250,27 @@ struct DequantizerQ50 final : public BaseLegacyDequantizer<block_q5_0> {
 
 };
 
+struct DequantizerQ80 final : public BaseLegacyDequantizer<block_q8_0> {
+
+    DequantizerQ80(const void * vx, size_t bx) : BaseLegacyDequantizer(vx, bx) {}
+
+    inline void prepare1(int i) {
+        bits.b[0] = vld1q_s8(x[i].qs);
+        bits.b[1] = vld1q_s8(x[i].qs+16);
+    }
+
+    inline float16x4_t new_block(int i) {
+        ggml_half aux[4];
+        for (int k = 0; k < 4; ++k) {
+            aux[k] = x[4*i+k].d;
+            bits.b[2*k+0] = vld1q_s8(x[4*i+k].qs);
+            bits.b[2*k+1] = vld1q_s8(x[4*i+k].qs+16);
+        }
+        return vld1_f16((const float16_t *)aux);
+    }
+
+};
+
 struct DequantizerQ51 final : public BaseLegacyDequantizer<block_q5_1> {
 
     DequantizerQ51(const void * vx, size_t bx) : BaseLegacyDequantizer(vx, bx) {}
@@ -2387,7 +2408,8 @@ static void mul_mat_qX_0_q8_0_1(int n, const void * vx, size_t bx, const DataInf
 }
 
 template <typename Dequantizer> void MulMat::set_functions(MulMat& m) {
-    if constexpr (std::is_same_v<Dequantizer, DequantizerQ40> || std::is_same_v<Dequantizer, DequantizerQ50>) {
+    if constexpr (std::is_same_v<Dequantizer, DequantizerQ40> || std::is_same_v<Dequantizer, DequantizerQ50> ||
+                  std::is_same_v<Dequantizer, DequantizerQ80>) {
         m.funcs[0] = mul_mat_qX_0_q8_0<Dequantizer, 1>;
         m.funcs[1] = mul_mat_qX_0_q8_0<Dequantizer, 2>;
         m.funcs[2] = mul_mat_qX_0_q8_0<Dequantizer, 3>;
@@ -2456,6 +2478,10 @@ bool MulMat::set_mul_mat(int typeA, int ne00, MulMat& m, int& row_size_q8, int /
         case GGML_TYPE_Q5_1:
             MulMat::set_functions<DequantizerQ51>(m);
             row_size_q8 = ggml_row_size(GGML_TYPE_Q8_1, ne00);
+            break;
+        case GGML_TYPE_Q8_0:
+            MulMat::set_functions<DequantizerQ80>(m);
+            row_size_q8 = ggml_row_size(GGML_TYPE_Q8_0, ne00);
             break;
         default:
             return false;
