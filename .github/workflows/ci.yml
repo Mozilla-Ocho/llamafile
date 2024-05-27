@@ -15,12 +15,16 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
 
-      - name: Build # 'make -j $(nproc)' did not work when tested on https://github.com/nektos/act
+      - name: Dependencies
+        id: depends
+        run: |
+          sudo apt-get update
+          sudo apt-get install make
+
+      - name: Build
         shell: bash
         run: |
-          curl -L -o make https://cosmo.zip/pub/cosmos/bin/make
-          chmod +x make
-          ./make
+          make -j $(nproc)
 
       - name: Make Llamafile
         shell: bash
