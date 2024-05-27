@@ -24,7 +24,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          make -j $(nproc)
+          make
 
       - name: Make Llamafile
         shell: bash
