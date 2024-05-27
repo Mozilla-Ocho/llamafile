@@ -873,7 +873,11 @@ void quantize_row_q8_0(const float * restrict x, void * restrict vy, int64_t k) 
     block_q8_0 * restrict y = vy;
 
 #if defined(__ARM_NEON)
+    // [kawrakow] When running on Arm, we change how the data is layed out for performance reasons
+    block_q8_0_x4 * y4 = (block_q8_0_x4 *)vy;
+    int nb4 = 4*(nb/4);
     for (int i = 0; i < nb; i++) {
+        int i4 = i/4, ir = i%4;
         float32x4_t srcv [8];
         float32x4_t asrcv[8];
         float32x4_t amaxv[8];
@@ -890,16 +894,29 @@ void quantize_row_q8_0(const float * restrict x, void * restrict vy, int64_t k) 
         const float d = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f/d : 0.0f;
 
-        y[i].d = GGML_FP32_TO_FP16(d);
+        // [kawrakow] When running on Arm, we change how the data is layed out for performance reasons
+        if (i < nb4) {
+            y4[i4].d[ir] = GGML_FP32_TO_FP16(d);
+        } else {
+            y[i].d = GGML_FP32_TO_FP16(d);
+        }
 
         for (int j = 0; j < 8; j++) {
             const float32x4_t v  = vmulq_n_f32(srcv[j], id);
             const int32x4_t   vi = vcvtnq_s32_f32(v);
 
-            y[i].qs[4*j + 0] = vgetq_lane_s32(vi, 0);
-            y[i].qs[4*j + 1] = vgetq_lane_s32(vi, 1);
-            y[i].qs[4*j + 2] = vgetq_lane_s32(vi, 2);
-            y[i].qs[4*j + 3] = vgetq_lane_s32(vi, 3);
+            // [kawrakow] When running on Arm, we change how the data is layed out for performance reasons
+            if (i < nb4) {
+                y4[i4].qs[32*ir + 4*j + 0] = vgetq_lane_s32(vi, 0);
+                y4[i4].qs[32*ir + 4*j + 1] = vgetq_lane_s32(vi, 1);
+                y4[i4].qs[32*ir + 4*j + 2] = vgetq_lane_s32(vi, 2);
+                y4[i4].qs[32*ir + 4*j + 3] = vgetq_lane_s32(vi, 3);
+            } else {
+                y[i].qs[4*j + 0] = vgetq_lane_s32(vi, 0);
+                y[i].qs[4*j + 1] = vgetq_lane_s32(vi, 1);
+                y[i].qs[4*j + 2] = vgetq_lane_s32(vi, 2);
+                y[i].qs[4*j + 3] = vgetq_lane_s32(vi, 3);
+            }
         }
     }
 #elif defined(__wasm_simd128__)
@@ -1192,7 +1209,11 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int64_t k) 
     block_q8_1 * restrict y = vy;
 
 #if defined(__ARM_NEON)
+    // [kawrakow] When running on Arm, we change how the data is layed out for performance reasons
+    block_q8_1_x4 * restrict y4 = vy;
+    int nb4 = 4*(nb/4);
     for (int i = 0; i < nb; i++) {
+        int i4 = i/4, ir = i%4;
         float32x4_t srcv [8];
         float32x4_t asrcv[8];
         float32x4_t amaxv[8];
@@ -1209,7 +1230,12 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int64_t k) 
         const float d = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f/d : 0.0f;
 
-        y[i].d = GGML_FP32_TO_FP16(d);
+        // [kawrakow] When running on Arm, we change how the data is layed out for performance reasons
+        if (i < nb4) {
+            y4[i4].d[ir] = GGML_FP32_TO_FP16(d);
+        } else {
+            y[i].d = GGML_FP32_TO_FP16(d);
+        }
 
         int32x4_t accv = vdupq_n_s32(0);
 
@@ -1217,15 +1243,28 @@ void quantize_row_q8_1(const float * restrict x, void * restrict vy, int64_t k) 
             const float32x4_t v  = vmulq_n_f32(srcv[j], id);
             const int32x4_t   vi = vcvtnq_s32_f32(v);
 
-            y[i].qs[4*j + 0] = vgetq_lane_s32(vi, 0);
-            y[i].qs[4*j + 1] = vgetq_lane_s32(vi, 1);
-            y[i].qs[4*j + 2] = vgetq_lane_s32(vi, 2);
-            y[i].qs[4*j + 3] = vgetq_lane_s32(vi, 3);
+            // [kawrakow] When running on Arm, we change how the data is layed out for performance reasons
+            if (i < nb4) {
+                y4[i4].qs[QK8_1*ir + 4*j + 0] = vgetq_lane_s32(vi, 0);
+                y4[i4].qs[QK8_1*ir + 4*j + 1] = vgetq_lane_s32(vi, 1);
+                y4[i4].qs[QK8_1*ir + 4*j + 2] = vgetq_lane_s32(vi, 2);
+                y4[i4].qs[QK8_1*ir + 4*j + 3] = vgetq_lane_s32(vi, 3);
+            } else {
+                y[i].qs[4*j + 0] = vgetq_lane_s32(vi, 0);
+                y[i].qs[4*j + 1] = vgetq_lane_s32(vi, 1);
+                y[i].qs[4*j + 2] = vgetq_lane_s32(vi, 2);
+                y[i].qs[4*j + 3] = vgetq_lane_s32(vi, 3);
+            }
 
             accv = vaddq_s32(accv, vi);
         }
 
-        y[i].s = GGML_FP32_TO_FP16(d * vaddvq_s32(accv));
+        // [kawrakow] When running on Arm, we change how the data is layed out for performance reasons
+        if (i < nb4) {
+            y4[i4].d[ir+4] = GGML_FP32_TO_FP16(d * vaddvq_s32(accv));
+        } else {
+            y[i].s = GGML_FP32_TO_FP16(d * vaddvq_s32(accv));
+        }
     }
 #elif defined(__wasm_simd128__)
     for (int i = 0; i < nb; i++) {

@@ -9,10 +9,13 @@ struct ggml_compute_params;
 
 bool iqk_mul_mat(long, long, long, int, const void *, const void *, float *, long, int, int);
 bool iqk_mul_mat_zen4(long, long, long, int, const void *, const void *, float *, long, int, int);
+bool iqk_mul_mat_arm82(long, long, long, int, const void *, const void *, float *, long, int, int);
 
 bool iqk_mul_mat_moe(long, long, long, int, int, const void *, const void *,
         float *, long, long, const void *, int, int);
 bool iqk_mul_mat_moe_zen4(long, long, long, int, int, const void *, const void *,
+        float *, long, long, const void *, int, int);
+bool iqk_mul_mat_moe_arm82(long, long, long, int, int, const void *, const void *,
         float *, long, long, const void *, int, int);
 bool iqk_mul_mat_moe_unsupported(long, long, long, int, int, const void *, const void *,
         float *, long, long, const void *, int, int);
