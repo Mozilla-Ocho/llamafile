@@ -57,5 +57,9 @@ install:	llamafile/zipalign.1					\
 .PHONY: check
 check: o/$(MODE)/llamafile/check
 
+.PHONY: check
+cosmocc-ci: $(COSMOCC)
+	$(INSTALL) $(COSMOCC)/bin/ape-aarch64.elf $(PREFIX)/bin/ape
+
 include build/deps.mk
 include build/tags.mk

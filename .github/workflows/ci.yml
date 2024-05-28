@@ -21,10 +21,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install make
 
+      - name: Setup cosmocc and ape loader
+        run: |
+          sudo make cosmocc-ci PREFIX=/usr
+
+      - name: Config binfmt_misc ape loader
+        run: |
+          sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
+
       - name: Build
         shell: bash
         run: |
-          make
+          make -j $(nproc)
 
       - name: Make Llamafile
         shell: bash
