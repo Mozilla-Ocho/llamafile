@@ -29,10 +29,14 @@ jobs:
         run: |
           sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
 
+      - name: Check that ape works
+        run: |
+          /usr/bin/ape
+
       - name: Build
         shell: bash
         run: |
-          make -j $(nproc)
+          sudo make -j $(nproc)
 
       - name: Make Llamafile
         shell: bash
