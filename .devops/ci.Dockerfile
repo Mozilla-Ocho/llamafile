@@ -7,7 +7,8 @@ RUN apk update && \
 
 WORKDIR /build
 COPY . .
-RUN make -j $(nproc)
+
+RUN make
 
 ###############################################################################
 FROM alpine as package
