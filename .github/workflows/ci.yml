@@ -27,7 +27,10 @@ jobs:
         env:
           cache-name: cache-cosmocc-toolchain
         with:
-          path: .cosmocc
+          path: |
+            .cosmocc
+            o/depend
+            o/depend.test
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/config.mk') }}
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}
