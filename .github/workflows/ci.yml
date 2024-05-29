@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+    branches: [ master, main, fix ]
+  pull_request:
+    branches: [ master, main, fix ]
+
+jobs:
+  ubuntu-focal-make:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Dependencies
+        id: depends
+        run: |
+          sudo apt-get update
+          sudo apt-get install make
+
+      - name: Cache cosmocc toolchain
+        id: cache-cosmocc-toolchain
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-cosmocc-toolchain
+        with:
+          path: |
+            .cosmocc
+            o/depend
+            o/depend.test
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/config.mk') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}
+
+      - name: Setup cosmocc and ape loader
+        run: |
+          sudo make cosmocc-ci PREFIX=/usr
+
+      - name: Build
+        run: |
+          sudo make -j $(nproc)
+
+      - name: Make Llamafile
+        run: |
+          cp ./models/TinyLLama-v0.1-5M-F16.gguf tinyllama.gguf
+          cat << EoF > .args
+          -m
+          tinyllama.gguf
+          ...
+          EoF
+          cp o//llama.cpp/main/main \
+            tinyllama.llamafile
+          o//llamafile/zipalign -j0 \
+            tinyllama.llamafile \
+            tinyllama.gguf \
+            .args
+
+      - name: Execute LLM CLI CPU  # GA doesn't have "support_simdgroup_reduction" for RMS_NORM :'(
+        run: |
+          ./tinyllama.llamafile -e -p '## Famous Speech\n\nFour score and seven' -n 50 -ngl 0

@@ -39,3 +39,10 @@ o/$(MODE)/%.zip.o: % $(COSMOCC)
 	@mkdir -p $(dir $@)/.aarch64
 	$(ZIPOBJ) $(ZIPOBJ_FLAGS) -a x86_64 -o $@ $<
 	$(ZIPOBJ) $(ZIPOBJ_FLAGS) -a aarch64 -o $(dir $@)/.aarch64/$(notdir $@) $<
+
+$(PREFIX)/bin/ape: $(COSMOCC) # cosmocc toolchain setup in restricted ci context 
+	# Install ape loader
+	$(INSTALL) $(COSMOCC)/bin/ape-$(ARCH).elf $(PREFIX)/bin/ape
+
+	# Config binfmt_misc to use ape loader for ape.elf files
+	echo ':APE:M::MZqFpD::/usr/bin/ape:' > /proc/sys/fs/binfmt_misc/register

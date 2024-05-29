@@ -57,5 +57,11 @@ install:	llamafile/zipalign.1					\
 .PHONY: check
 check: o/$(MODE)/llamafile/check
 
+.PHONY: check
+cosmocc: $(COSMOCC) # cosmocc toolchain setup
+
+.PHONY: check
+cosmocc-ci: $(COSMOCC) $(PREFIX)/bin/ape # cosmocc toolchain setup in ci context
+
 include build/deps.mk
 include build/tags.mk

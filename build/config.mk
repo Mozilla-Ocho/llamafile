@@ -19,6 +19,7 @@ TARGET_ARCH = -Xx86_64-mavx -Xx86_64-mtune=znver4
 
 TMPDIR = o//tmp
 IGNORE := $(shell mkdir -p $(TMPDIR))
+ARCH := $(shell uname -m)
 
 # apple still distributes a 17 year old version of gnu make
 ifeq ($(MAKE_VERSION), 3.81)
