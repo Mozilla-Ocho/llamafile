@@ -25,17 +25,11 @@ jobs:
         run: |
           sudo make cosmocc-ci PREFIX=/usr
 
-      - name: Config binfmt_misc ape loader
-        run: |
-          sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
-
       - name: Build
-        shell: bash
         run: |
           sudo make -j $(nproc)
 
       - name: Make Llamafile
-        shell: bash
         run: |
           cp ./models/TinyLLama-v0.1-5M-F16.gguf tinyllama.gguf
           cat << EoF > .args
@@ -51,6 +45,5 @@ jobs:
             .args
 
       - name: Execute LLM CLI CPU  # GA doesn't have "support_simdgroup_reduction" for RMS_NORM :'(
-        shell: bash
         run: |
           ./tinyllama.llamafile -e -p '## Famous Speech\n\nFour score and seven' -n 50 -ngl 0

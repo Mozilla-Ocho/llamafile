@@ -14,6 +14,16 @@ include build/rules.mk
 include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
 
+# Detect architecture and set the appropriate ape loader binary when in CI context
+ARCH := $(shell uname -m)
+ifeq ($(ARCH), x86_64)
+	APE_LOADER_BIN := ape-x86_64.elf
+else ifeq ($(ARCH), aarch64)
+	APE_LOADER_BIN := ape-aarch64.elf
+else
+	APE_LOADER_BIN := unsupported
+endif
+
 # the root package is `o//` by default
 # building a package also builds its sub-packages
 .PHONY: o/$(MODE)/
@@ -58,8 +68,20 @@ install:	llamafile/zipalign.1					\
 check: o/$(MODE)/llamafile/check
 
 .PHONY: check
-cosmocc-ci: $(COSMOCC)
-	$(INSTALL) $(COSMOCC)/bin/ape-x86_64.elf $(PREFIX)/bin/ape
+cosmocc: $(COSMOCC) # cosmocc toolchain setup
+
+.PHONY: check
+cosmocc-ci: $(COSMOCC) # cosmocc toolchain setup in ci context
+	if [ "$(APE_LOADER_BIN)" = "unsupported" ]; then \
+		echo "Unsupported architecture: $(ARCH)"; \
+		exit 1; \
+	fi;
+
+	# Install ape loader
+	$(INSTALL) $(COSMOCC)/bin/$(APE_LOADER_BIN) $(PREFIX)/bin/ape
+
+	# Config binfmt_misc to use ape loader for ape.elf files
+	echo ':APE:M::MZqFpD::/usr/bin/ape:' > /proc/sys/fs/binfmt_misc/register
 
 include build/deps.mk
 include build/tags.mk
