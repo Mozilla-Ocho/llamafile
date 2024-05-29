@@ -21,6 +21,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install make
 
+      - name: Cache cosmocc toolchain
+        id: cache-cosmocc-toolchain
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-cosmocc-toolchain
+        with:
+          path: .cosmocc
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/config.mk') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}
+
       - name: Setup cosmocc and ape loader
         run: |
           sudo make cosmocc-ci PREFIX=/usr

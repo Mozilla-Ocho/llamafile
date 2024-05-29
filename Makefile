@@ -14,8 +14,6 @@ include build/rules.mk
 include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
 
-ARCH := $(shell uname -m)
-
 # the root package is `o//` by default
 # building a package also builds its sub-packages
 .PHONY: o/$(MODE)/
@@ -63,12 +61,7 @@ check: o/$(MODE)/llamafile/check
 cosmocc: $(COSMOCC) # cosmocc toolchain setup
 
 .PHONY: check
-cosmocc-ci: $(COSMOCC) # cosmocc toolchain setup in ci context
-	# Install ape loader
-	$(INSTALL) $(COSMOCC)/bin/ape-$(ARCH).elf $(PREFIX)/bin/ape
-
-	# Config binfmt_misc to use ape loader for ape.elf files
-	echo ':APE:M::MZqFpD::/usr/bin/ape:' > /proc/sys/fs/binfmt_misc/register
+cosmocc-ci: $(COSMOCC) $(PREFIX)/bin/ape # cosmocc toolchain setup in ci context
 
 include build/deps.mk
 include build/tags.mk
