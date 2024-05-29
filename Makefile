@@ -59,7 +59,7 @@ check: o/$(MODE)/llamafile/check
 
 .PHONY: check
 cosmocc-ci: $(COSMOCC)
-	$(INSTALL) $(COSMOCC)/bin/ape-aarch64.elf $(PREFIX)/bin/ape
+	$(INSTALL) $(COSMOCC)/bin/ape-x86_64.elf $(PREFIX)/bin/ape
 
 include build/deps.mk
 include build/tags.mk
