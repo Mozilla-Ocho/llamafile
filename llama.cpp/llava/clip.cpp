@@ -23,8 +23,8 @@
 #include "llama.cpp/llava/clip.h"
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/ggml-cuda.h"
-#include "llama.cpp/stb_image.h"
 #include "llama.cpp/ggml.h"
+#include "stb/stb_image.h"
 
 //#define CLIP_DEBUG_FUNCTIONS
 

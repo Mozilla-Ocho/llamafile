@@ -37,7 +37,6 @@ o/$(MODE)/llama.cpp/ggml-backend.o			\
 o/$(MODE)/llama.cpp/grammar-parser.o			\
 o/$(MODE)/llama.cpp/json-schema-to-grammar.o		\
 o/$(MODE)/llama.cpp/llama.o				\
-o/$(MODE)/llama.cpp/stb_image.o				\
 o/$(MODE)/llama.cpp/unicode.o				\
 o/$(MODE)/llama.cpp/sampling.o				\
 o/$(MODE)/llama.cpp/ggml-alloc.o			\

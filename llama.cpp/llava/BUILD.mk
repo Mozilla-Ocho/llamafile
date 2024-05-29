@@ -17,7 +17,8 @@ o/$(MODE)/llama.cpp/llava/llava-quantize:				\
 		o/$(MODE)/llama.cpp/llava/llava-quantize.o		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize.1.asc.zip.o	\
 		o/$(MODE)/llama.cpp/llava/llava.a			\
-		o/$(MODE)/llama.cpp/llama.cpp.a
+		o/$(MODE)/llama.cpp/llama.cpp.a				\
+		o/$(MODE)/stb/stb.a
 
 o/$(MODE)/llama.cpp/llava/clip.o					\
 o/$(MODE)/llama.cpp/llava/llava.o					\

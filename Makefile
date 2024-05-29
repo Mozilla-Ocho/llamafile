@@ -13,11 +13,16 @@ include build/rules.mk
 
 include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
+include stable-diffusion.cpp/BUILD.mk
+include stb/BUILD.mk
 
 # the root package is `o//` by default
 # building a package also builds its sub-packages
 .PHONY: o/$(MODE)/
-o/$(MODE)/: o/$(MODE)/llama.cpp o/$(MODE)/llamafile o/$(MODE)/depend.test
+o/$(MODE)/:	o/$(MODE)/llamafile					\
+		o/$(MODE)/stable-diffusion.cpp				\
+		o/$(MODE)/stb						\
+		o/$(MODE)/depend.test
 
 # for installing to `make PREFIX=/usr/local`
 .PHONY: install

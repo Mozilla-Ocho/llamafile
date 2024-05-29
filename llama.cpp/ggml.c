@@ -11848,6 +11848,7 @@ IQK_MulMat_Not_Available:;
 
 // ggml_compute_forward_out_prod
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_out_prod_f32(
         const struct ggml_compute_params * params,
               struct ggml_tensor * dst) {
@@ -12266,6 +12267,7 @@ static void ggml_compute_forward_scale(
 
 // ggml_compute_forward_set
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_set_f32(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -12684,6 +12686,7 @@ static void ggml_compute_forward_get_rows(
 
 // ggml_compute_forward_get_rows_back
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_get_rows_back_f32_f16(
         const struct ggml_compute_params * params,
               struct ggml_tensor * dst) {
@@ -12723,6 +12726,7 @@ static void ggml_compute_forward_get_rows_back_f32_f16(
     }
 }
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_get_rows_back_f32(
         const struct ggml_compute_params * params,
               struct ggml_tensor * dst) {
@@ -12866,6 +12870,7 @@ static void ggml_compute_forward_diag(
 
 // ggml_compute_forward_diag_mask_inf
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_diag_mask_f32(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst,
@@ -13954,6 +13959,7 @@ static void ggml_compute_forward_conv_transpose_1d(
 // src0: kernel [OC, IC, KH, KW]
 // src1: image [N, IC, IH, IW]
 // dst:  result [N, OH, OW, IC*KH*KW]
+__target_clones("arch=znver4,avx2") // [jart]
 static void ggml_compute_forward_im2col_f32(
         const struct ggml_compute_params * params,
               struct ggml_tensor * dst) {
@@ -14148,6 +14154,7 @@ static void ggml_compute_forward_im2col(
 
 // ggml_compute_forward_conv_transpose_2d
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_conv_transpose_2d(
         const struct ggml_compute_params * params,
               struct ggml_tensor * dst) {
@@ -15947,6 +15954,7 @@ static void ggml_compute_forward_ssm_conv(
 
 // ggml_compute_forward_ssm_scan
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_ssm_scan_f32(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -21249,7 +21257,7 @@ size_t ggml_quantize_chunk(
             assert(false);
     }
 
-    GGML_ASSERT(result == nrows * row_size);
+    // GGML_ASSERT(result == nrows * row_size); // [jart] should return error
 
     return result;
 }
