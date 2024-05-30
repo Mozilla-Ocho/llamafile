@@ -88,6 +88,7 @@ static const struct GemmFuncs {
             // e.g. Apple M1, Raspberry Pi 5
             sgemm = llamafile_sgemm_arm82;
             mixmul = llamafile_mixmul_arm82;
+            iqk_mixmul = iqk_mul_mat_moe_arm82;
         } else {
             // ARM64 baseline ISA
             sgemm = llamafile_sgemm_arm80;

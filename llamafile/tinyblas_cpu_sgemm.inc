@@ -322,7 +322,8 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     assert(nth > 0);
     assert(ith < nth);
 
-#if defined(__x86_64__) && QK_K == 256
+#if QK_K == 256
+#if defined(__x86_64__)
     if (X86_CHECK(AVX2) && X86_CHECK(FMA)) {
         if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
             if (iqk_mul_mat(m, n, k * QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
@@ -336,6 +337,19 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
             }
         }
     }
+#elif defined __aarch64__ && defined __ARM_FEATURE_DOTPROD && !defined _MSC_VER
+    if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
+        if (iqk_mul_mat(m, n, k * QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
+            return true;
+        }
+    }
+    if ((Btype == GGML_TYPE_Q8_0 || Btype == GGML_TYPE_Q8_1) && Ctype == GGML_TYPE_F32) {
+        assert(QK8_0 == QK8_1 == QK4_0 == QK4_1 == QK5_0 == QK5_1 == 32);
+        if (iqk_mul_mat(m, n, k * QK8_0, Atype, A, B, (float *)C, ldc, ith, nth)) {
+            return true;
+        }
+    }
+#endif
 #endif
 
     switch (Ctype) {

@@ -203,6 +203,18 @@ typedef struct {
 } block_q8_1;
 static_assert(sizeof(block_q8_1) == 2*sizeof(ggml_half) + QK8_1, "wrong q8_1 block size/padding");
 
+//[kawrakow] Need these two for performance on Arm
+typedef struct {
+    ggml_half d[8];
+    int8_t qs[4*QK8_1];
+} block_q8_1_x4;
+static_assert(sizeof(block_q8_1_x4) == 4*sizeof(block_q8_1), "wrong q8_1_x4 block size/padding");
+typedef struct {
+    ggml_half d[4];
+    int8_t qs[4*QK8_0];
+} block_q8_0_x4;
+static_assert(sizeof(block_q8_0_x4) == 4*sizeof(block_q8_0), "wrong q8_0_x4 block size/padding");
+
 //
 // Super-block quantization structures
 //
@@ -313,10 +325,11 @@ typedef struct {
 static_assert(sizeof(block_q6_K) == sizeof(ggml_half) + QK_K / 16 + 3*QK_K/4, "wrong q6_K block size/padding");
 
 // This is only used for intermediate quantization and dot products
+// [kawrakow] Note: I have switched the order of bsums and qs. This results in some performance gain on Arm
 typedef struct {
     float   d;              // delta
-    int8_t  qs[QK_K];       // quants
     int16_t bsums[QK_K/16]; // sum of quants in groups of 16
+    int8_t  qs[QK_K];       // quants
 } block_q8_K;
 static_assert(sizeof(block_q8_K) == sizeof(float) + QK_K + QK_K/16*sizeof(int16_t), "wrong q8_K block size/padding");
 

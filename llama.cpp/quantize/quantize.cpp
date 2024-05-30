@@ -65,10 +65,12 @@ static const char * const LLM_KV_QUANTIZE_IMATRIX_N_ENTRIES  = "quantize.imatrix
 static const char * const LLM_KV_QUANTIZE_IMATRIX_N_CHUNKS   = "quantize.imatrix.chunks_count";
 
 static bool try_parse_ftype(const std::string & ftype_str_in, llama_ftype & ftype, std::string & ftype_str_out) {
-    std::string ftype_str;
+    std::string ftype_str; ftype_str.reserve(ftype_str_in.size());
 
+    bool is_number = true;
     for (auto ch : ftype_str_in) {
         ftype_str.push_back(std::toupper(ch));
+        if (!std::isdigit(ftype_str.back())) is_number = false;
     }
     for (auto & it : QUANT_OPTIONS) {
         if (it.name == ftype_str) {
@@ -77,6 +79,9 @@ static bool try_parse_ftype(const std::string & ftype_str_in, llama_ftype & ftyp
             return true;
         }
     }
+    // On my system (OS Ventura 13.2.1) calling std::stoi with invalid input leads to a crash (Segmentation fault 11)
+    // Hence the check above and the early return
+    if (!is_number) return false;
     try {
         int ftype_int = std::stoi(ftype_str);
         for (auto & it : QUANT_OPTIONS) {
