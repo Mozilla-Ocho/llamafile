@@ -23,6 +23,12 @@
 #include "llama.cpp/ggml-quants.h"
 #include "sgemm.h"
 
+#ifdef _MSC_VER
+#define IQK_NOINLINE __declspec(noinline)
+#else
+#define IQK_NOINLINE __attribute__((__noinline__))
+#endif
+
 #define GGML_COMMON_IMPL_C
 #include "llama.cpp/ggml-common.h"
 
@@ -86,8 +92,8 @@ typedef void (*mul_mat_t)(int n, const void * vx, size_t bx, const DataInfo& inf
 
 struct MulMat {
     std::array<mul_mat_t, 8> funcs = {};
-    //std::array<mul_mat_t, 4> funcs = {};
-    inline void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y) {
+    //inline void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y) {
+    IQK_NOINLINE void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y) {
 #ifdef __aarch64__
         constexpr int k_x_step = 64; //8192; // Tiling does not seem to help on my M2 Max (but difference to tiling is small)
 #else
@@ -111,9 +117,9 @@ struct MulMat {
             funcs[n_left-1](n, vx, bx, info, nrc_x);
         }
     }
-    static bool set_mul_mat(int typeA, int ne00, MulMat& mm, int& row_size_q8, int Ny);
+    static IQK_NOINLINE bool set_mul_mat(int typeA, int ne00, MulMat& mm, int& row_size_q8, int Ny);
 private:
-    template <typename Dequantizer> static void set_functions(MulMat& m);
+    template <typename Dequantizer> static IQK_NOINLINE void set_functions(MulMat& m);
 };
 
 inline void make_q4_scales(const uint8_t * scales8, uint32_t * aux32) {
@@ -2140,6 +2146,20 @@ struct SignHelper {
     const uint8x16_t step  = vdupq_n_u8(2);
     uint8x16_t shuffle;
 };
+struct SignHelper1 {
+
+    inline void apply_signs_1x(uint8x16_t * b, const uint8_t * sign_bits) const {
+        auto aux = vcombine_u8(vdup_n_u8(sign_bits[0]), vdup_n_u8(sign_bits[1]));
+        //auto s = vceqq_u8(vandq_u8(aux, smask), smask);
+        //b[0] = vreinterpretq_u8_s8(vsubq_s8(vreinterpretq_s8_u8(veorq_u8(b[0], s)), vreinterpretq_s8_u8(s)));
+        // Not much of a difference compared to the above. Perhaps tiny little bit faster.
+        auto s = vreinterpretq_s8_u8(vorrq_u8(vceqq_u8(vandq_u8(aux, smask), smask), m1));
+        b[0] = vreinterpretq_u8_s8(vmulq_s8(vreinterpretq_s8_u8(b[0]), s));
+    }
+
+    const uint8x16_t smask = vreinterpretq_u8_u64(vdupq_n_u64(0x8040201008040201));
+    const uint8x16_t m1    = vdupq_n_u8(1);
+};
 
 struct DequantizerIQ2S final : public BaseDequantizer<block_iq2_s> {
     DequantizerIQ2S(const void * vx, size_t bx, int nrc) : BaseDequantizer(vx, bx, nrc) {}
@@ -2244,39 +2264,65 @@ struct DequantizerIQ3S final : public BaseDequantizer<block_iq3_s> {
         return scales;
     }
 
-    static inline void make2(SignHelper& sh, const uint8x16_t& signs16, const uint16x8_t& idx_l, uint8_t qh,
+    static inline void make2(SignHelper1& sh, const uint8_t * sign_bits, const uint16x8_t& idx_l, uint8_t qh,
             const int16x8_t& hshift, uint8x16_t * b) {
         auto vindex = vorrq_u16(idx_l, vandq_u16(vshlq_u16(vdupq_n_u16(qh), hshift), vdupq_n_u16(256)));
         const uint16_t * idx = (const uint16_t *)&vindex;
         b[0] = vreinterpretq_u8_u32(uint32x4_t{iq3s_grid[idx[0]], iq3s_grid[idx[1]], iq3s_grid[idx[2]], iq3s_grid[idx[3]]});
+        sh.apply_signs_1x(b+0, sign_bits+0);
         b[1] = vreinterpretq_u8_u32(uint32x4_t{iq3s_grid[idx[4]], iq3s_grid[idx[5]], iq3s_grid[idx[6]], iq3s_grid[idx[7]]});
-        sh.apply_signs_1(b+0, signs16);
-        sh.apply_signs_1(b+1, signs16);
+        sh.apply_signs_1x(b+1, sign_bits+2);
     }
-    static inline void make4(SignHelper& sh, const uint8x16_t& signs16, const uint8_t * qs, const uint8_t * qh,
+    static inline void make4(SignHelper1& sh, const uint8_t * sign_bits, const uint8_t * qs, const uint8_t * qh,
             const int16x8_t& hshift, uint8x16_t * b) {
         auto idx_l = vld1q_u8(qs);
-        make2(sh, signs16, vmovl_u8(vget_low_u8 (idx_l)), qh[0], hshift, b+0);
-        make2(sh, signs16, vmovl_u8(vget_high_u8(idx_l)), qh[1], hshift, b+2);
+        make2(sh, sign_bits+0, vmovl_u8(vget_low_u8 (idx_l)), qh[0], hshift, b+0);
+        make2(sh, sign_bits+4, vmovl_u8(vget_high_u8(idx_l)), qh[1], hshift, b+2);
+    }
+
+    static int16x8_t load_shift() {
+        static const int16_t k_shift[8] = {8, 7, 6, 5, 4, 3, 2, 1};
+        return vld1q_s16(k_shift);
     }
 
     inline void prepare(int i, int j) {
 
-        static const int16_t k_shift[8] = {8, 7, 6, 5, 4, 3, 2, 1};
-        const auto hshift  = vld1q_s16(k_shift);
-
         const auto * qs = x[i].qs + 32*j;
         const auto * qh = x[i].qh + 4*j;
-        const auto signs16 = vld1q_u8(x[i].signs + 16*j);
 
-        sh.init();
-        make4(sh, signs16, qs+ 0, qh+0, hshift, bits.b1.val);
-        make4(sh, signs16, qs+16, qh+2, hshift, bits.b2.val);
+        make4(sh, x[i].signs + 16*j + 0, qs+ 0, qh+0, hshift, bits.b1.val);
+        make4(sh, x[i].signs + 16*j + 8, qs+16, qh+2, hshift, bits.b2.val);
+    }
+
+    inline void new_block(int i) {
+        d = GGML_FP16_TO_FP32(x[i].d);
+    }
+    inline int32_t process_block(int i, int j, const Q8<1, block_q8_K>& q8) {
+        prepare(i, j);
+        const uint16_t * aux16 = (const uint16_t *)x[i].scales + j;
+        uint32_t scales32 = (((aux16[0] | (aux16[0] << 12)) & 0x0f0f0f0f) << 1) | 0x01010101;
+        int8x16_t * b1 = (int8x16_t *)bits.b1.val;
+        int8x16_t * b2 = (int8x16_t *)bits.b2.val;
+        auto q1 = q8.load_quants_64(0, i, 2*j+0);
+        auto q2 = q8.load_quants_64(0, i, 2*j+1);
+        //auto p1 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b1[0], q1.val[0]), b1[1], q1.val[1]);
+        //auto p2 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b1[2], q1.val[2]), b1[3], q1.val[3]);
+        //auto p3 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b2[0], q2.val[0]), b2[1], q2.val[1]);
+        //auto p4 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b2[2], q2.val[2]), b2[3], q2.val[3]);
+        //const int8_t * s8 = (const int8_t *)&scales32;
+        //return vaddvq_s32(p1) * s8[0] + vaddvq_s32(p2) * s8[2] + vaddvq_s32(p3) * s8[1] + vaddvq_s32(p4) * s8[3];
+        auto zero = vdupq_n_s32(0);
+        auto p1 = vaddvq_s32(ggml_vdotq_s32(ggml_vdotq_s32(zero, b1[0], q1.val[0]), b1[1], q1.val[1]));
+        auto p2 = vaddvq_s32(ggml_vdotq_s32(ggml_vdotq_s32(zero, b1[2], q1.val[2]), b1[3], q1.val[3]));
+        auto p3 = vaddvq_s32(ggml_vdotq_s32(ggml_vdotq_s32(zero, b2[0], q2.val[0]), b2[1], q2.val[1]));
+        auto p4 = vaddvq_s32(ggml_vdotq_s32(ggml_vdotq_s32(zero, b2[2], q2.val[2]), b2[3], q2.val[3]));
+        const int8_t * s8 = (const int8_t *)&scales32;
+        return p1 * s8[0] + p2 * s8[2] + p3 * s8[1] + p4 * s8[3];
     }
 
     SimpleBits bits;
-    SignHelper sh;
-    uint32x4x2_t gas;
+    SignHelper1 sh;
+    const int16x8_t hshift = load_shift();
 
     float d;
 
@@ -2284,7 +2330,7 @@ struct DequantizerIQ3S final : public BaseDequantizer<block_iq3_s> {
 
 
 template <int nrc_y, typename Dequantizer>
-void mul_mat_qX_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+IQK_NOINLINE void mul_mat_qX_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n % QK_K == 0);
     const int nb = n / QK_K;
 
@@ -2342,7 +2388,7 @@ void mul_mat_qX_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info
 }
 
 template <typename Dequantizer>
-void mul_mat_qX_K_q8_K_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+IQK_NOINLINE void mul_mat_qX_K_q8_K_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     assert(n % QK_K == 0);
     const int nb = n / QK_K;
 
@@ -2758,7 +2804,7 @@ inline void mul_mat_qX_Y_q8_Y_1(int n, Dequantizer& deq1, Dequantizer& deq2, Q8&
 }
 
 template <typename Dequantizer, int nrc_y>
-static void mul_mat_qX_1_q8_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+static void IQK_NOINLINE mul_mat_qX_1_q8_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     Q81<nrc_y> q8(info);
     if constexpr (nrc_y == 1) {
         Dequantizer deq1(vx, bx), deq2(vx, bx);
@@ -2770,7 +2816,7 @@ static void mul_mat_qX_1_q8_1(int n, const void * vx, size_t bx, const DataInfo&
 }
 
 template <typename Dequantizer, int nrc_y>
-static void mul_mat_qX_0_q8_0(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+static void IQK_NOINLINE mul_mat_qX_0_q8_0(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     Q80<nrc_y> q8(info);
     if constexpr (nrc_y == 1) {
         Dequantizer deq1(vx, bx), deq2(vx, bx);
@@ -2782,14 +2828,14 @@ static void mul_mat_qX_0_q8_0(int n, const void * vx, size_t bx, const DataInfo&
 }
 
 template <typename Dequantizer>
-static void mul_mat_qX_1_q8_1_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+static void IQK_NOINLINE mul_mat_qX_1_q8_1_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     Dequantizer deq1(vx, bx), deq2(vx, bx);
     Q81<1> q8(info);
     mul_mat_qX_Y_q8_Y_1(n, deq1, deq2, q8, info, nrc_x);
 }
 
 template <typename Dequantizer>
-static void mul_mat_qX_0_q8_0_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+static void IQK_NOINLINE mul_mat_qX_0_q8_0_1(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
     Dequantizer deq1(vx, bx), deq2(vx, bx);
     Q80<1> q8(info);
     mul_mat_qX_Y_q8_Y(n, deq1, deq2, q8, info, nrc_x);
@@ -2816,6 +2862,17 @@ template <typename Dequantizer> void MulMat::set_functions(MulMat& m) {
         m.funcs[5] = mul_mat_qX_1_q8_1<Dequantizer, 6>;
         m.funcs[6] = mul_mat_qX_1_q8_1<Dequantizer, 7>;
         m.funcs[7] = mul_mat_qX_1_q8_1<Dequantizer, 8>;
+    }
+    else if constexpr (std::is_same_v<Dequantizer, DequantizerIQ2XXS> || std::is_same_v<Dequantizer, DequantizerIQ3S>) {
+        m.funcs[0] = mul_mat_qX_K_q8_K_1<Dequantizer>;
+        //m.funcs[0] = mul_mat_qX_K_q8_K_T<1, DequantizerIQ2XXS>;
+        m.funcs[1] = mul_mat_qX_K_q8_K_T<2, Dequantizer>;
+        m.funcs[2] = mul_mat_qX_K_q8_K_T<3, Dequantizer>;
+        m.funcs[3] = mul_mat_qX_K_q8_K_T<4, Dequantizer>;
+        m.funcs[4] = mul_mat_qX_K_q8_K_T<5, Dequantizer>;
+        m.funcs[5] = mul_mat_qX_K_q8_K_T<6, Dequantizer>;
+        m.funcs[6] = mul_mat_qX_K_q8_K_T<7, Dequantizer>;
+        m.funcs[7] = mul_mat_qX_K_q8_K_T<8, Dequantizer>;
     }
     else {
         m.funcs[0] = mul_mat_qX_K_q8_K_T<1, Dequantizer>;
@@ -2852,15 +2909,7 @@ bool MulMat::set_mul_mat(int typeA, int ne00, MulMat& m, int& row_size_q8, int /
             MulMat::set_functions<DequantizerIQ4XS>(m);
             break;
         case GGML_TYPE_IQ2_XXS:
-            //MulMat::set_functions<DequantizerIQ2XXS>(m);
-            m.funcs[0] = mul_mat_qX_K_q8_K_1<DequantizerIQ2XXS>;
-            m.funcs[1] = mul_mat_qX_K_q8_K_T<2, DequantizerIQ2XXS>;
-            m.funcs[2] = mul_mat_qX_K_q8_K_T<3, DequantizerIQ2XXS>;
-            m.funcs[3] = mul_mat_qX_K_q8_K_T<4, DequantizerIQ2XXS>;
-            m.funcs[4] = mul_mat_qX_K_q8_K_T<5, DequantizerIQ2XXS>;
-            m.funcs[5] = mul_mat_qX_K_q8_K_T<6, DequantizerIQ2XXS>;
-            m.funcs[6] = mul_mat_qX_K_q8_K_T<7, DequantizerIQ2XXS>;
-            m.funcs[7] = mul_mat_qX_K_q8_K_T<8, DequantizerIQ2XXS>;
+            MulMat::set_functions<DequantizerIQ2XXS>(m);
             break;
         case GGML_TYPE_IQ2_XS:
             MulMat::set_functions<DequantizerIQ2XS>(m);
