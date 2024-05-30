@@ -2014,14 +2014,6 @@ struct DequantizerIQ2XXS final : public BaseDequantizer<block_iq2_xxs> {
     inline int32x4x2_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
         d = 0.125f * GGML_FP16_TO_FP32(x[i].d);
 
-        // This is slower
-        //auto tmp = vld1q_u8_x2((const uint8_t *)x[i].qs);
-        //data.val[0] = vreinterpretq_u32_u8(vqtbl2q_u8(tmp, vreinterpretq_u8_u32(shuffle1)));
-        //data.val[1] = vreinterpretq_u32_u8(vqtbl2q_u8(tmp, vreinterpretq_u8_u32(shuffle2)));
-        //tmp = vld1q_u8_x2((const uint8_t *)x[i].qs + 32);
-        //data.val[2] = vreinterpretq_u32_u8(vqtbl2q_u8(tmp, vreinterpretq_u8_u32(shuffle1)));
-        //data.val[3] = vreinterpretq_u32_u8(vqtbl2q_u8(tmp, vreinterpretq_u8_u32(shuffle2)));
-
         auto tmp = vld1q_u32_x4((const uint32_t *)x[i].qs);
         data.val[0] = vuzp1q_u32(tmp.val[0], tmp.val[1]);  // codebook indices for blocks 0...3
         data.val[1] = vuzp2q_u32(tmp.val[0], tmp.val[1]);  // scales and signs for blocks 0...3
@@ -2034,8 +2026,6 @@ struct DequantizerIQ2XXS final : public BaseDequantizer<block_iq2_xxs> {
     static inline void prepare2(uint8x16_t * b, const uint8_t * idx, const uint64_t * signs, uint32_t sidx) {
         b[0] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[0]], iq2xxs_grid[idx[1]]});
         b[1] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[2]], iq2xxs_grid[idx[3]]});
-        //b[0] = vcombine_u8(vld1_u8((const uint8_t *)(iq2xxs_grid + idx[0])), vld1_u8((const uint8_t *)(iq2xxs_grid + idx[1])));
-        //b[1] = vcombine_u8(vld1_u8((const uint8_t *)(iq2xxs_grid + idx[2])), vld1_u8((const uint8_t *)(iq2xxs_grid + idx[3])));
         apply_signs_2(b, signs, sidx);
     }
     static inline void prepare4(uint8x16_t * b, const uint32_t * aux32) {
@@ -2045,18 +2035,6 @@ struct DequantizerIQ2XXS final : public BaseDequantizer<block_iq2_xxs> {
         idx += 8;
         b[2] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[0]], iq2xxs_grid[idx[1]]});
         b[3] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[2]], iq2xxs_grid[idx[3]]});
-        apply_signs_2(b+0, keven_signs, aux32[1]);
-        apply_signs_2(b+2, keven_signs, aux32[3]);
-    }
-    static inline void prepare4_unsigned(uint8x16_t * b, const uint32_t * aux32) {
-        const uint8_t * idx = (const uint8_t *)aux32;
-        b[0] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[0]], iq2xxs_grid[idx[1]]});
-        b[1] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[2]], iq2xxs_grid[idx[3]]});
-        idx += 8;
-        b[2] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[0]], iq2xxs_grid[idx[1]]});
-        b[3] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[2]], iq2xxs_grid[idx[3]]});
-    }
-    static inline void sign4(uint8x16_t * b, const uint32_t * aux32) {
         apply_signs_2(b+0, keven_signs, aux32[1]);
         apply_signs_2(b+2, keven_signs, aux32[3]);
     }
@@ -2072,30 +2050,7 @@ struct DequantizerIQ2XXS final : public BaseDequantizer<block_iq2_xxs> {
 
     inline void new_block(int i) {
         d = 0.125f * GGML_FP16_TO_FP32(x[i].d);
-        //auto tmp = vld1q_u32_x4((const uint32_t *)x[i].qs);
-        //data.val[0] = vuzp1q_u32(tmp.val[0], tmp.val[1]);  // codebook indices for blocks 0...3
-        //data.val[1] = vuzp2q_u32(tmp.val[0], tmp.val[1]);  // scales and signs for blocks 0...3
-        //data.val[2] = vuzp1q_u32(tmp.val[2], tmp.val[3]);  // codebook indices for blocks 4...7
-        //data.val[3] = vuzp2q_u32(tmp.val[2], tmp.val[3]);  // scales and signs for blocks 4...7
     }
-    //inline int32_t process_block(int i, int j, const Q8<1, block_q8_K>& q8) { //const Q8& q8) {
-    //    auto qs = x[i].qs + 16*j;
-    //    prepare2(bits.b1.val + 0, (const uint8_t *)(qs + 0), keven_signs, qs[ 2] | (qs[ 3] << 16));
-    //    auto q = q8.load_quants(0, i, 4*j+0);
-    //    auto p1 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(bits.b1.val[0]), q.val[0]), vreinterpretq_s8_u8(bits.b1.val[1]), q.val[1]);
-    //    prepare2(bits.b1.val + 2, (const uint8_t *)(qs + 4), keven_signs, qs[ 6] | (qs[ 7] << 16));
-    //    q = q8.load_quants(0, i, 4*j+1);
-    //    auto p2 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(bits.b1.val[2]), q.val[0]), vreinterpretq_s8_u8(bits.b1.val[3]), q.val[1]);
-    //    prepare2(bits.b1.val + 0, (const uint8_t *)(qs + 8), keven_signs, qs[10] | (qs[11] << 16));
-    //    q = q8.load_quants(0, i, 4*j+2);
-    //    auto p3 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(bits.b1.val[0]), q.val[0]), vreinterpretq_s8_u8(bits.b1.val[1]), q.val[1]);
-    //    prepare2(bits.b1.val + 2, (const uint8_t *)(qs +12), keven_signs, qs[14] | (qs[15] << 16));
-    //    q = q8.load_quants(0, i, 4*j+3);
-    //    auto p4 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(bits.b1.val[2]), q.val[0]), vreinterpretq_s8_u8(bits.b1.val[3]), q.val[1]);
-    //    int32_t sum = vaddvq_s32(p1) * (2*(qs[ 3] >> 12) + 1) + vaddvq_s32(p2) * (2*(qs[ 7] >> 12) + 1)
-    //                + vaddvq_s32(p3) * (2*(qs[11] >> 12) + 1) + vaddvq_s32(p4) * (2*(qs[15] >> 12) + 1);
-    //    return sum;
-    //}
     inline int32_t process_block(int i, int j, const Q8<1, block_q8_K>& q8) {
         uint32_t aux32[8];
         std::memcpy(aux32, x[i].qs + 16*j, 32);
@@ -2105,14 +2060,6 @@ struct DequantizerIQ2XXS final : public BaseDequantizer<block_iq2_xxs> {
         int8x16_t * b2 = (int8x16_t *)bits.b2.val;
         prepare4(bits.b1.val, aux32+0);
         prepare4(bits.b2.val, aux32+4);
-        //prepare4_unsigned(bits.b1.val, aux32+0);
-        //prepare4_unsigned(bits.b2.val, aux32+4);
-        //sign4(bits.b1.val, aux32+0);
-        //sign4(bits.b2.val, aux32+4);
-        //prepare2(bits.b1.val + 0, (const uint8_t *)(aux32 + 0), keven_signs, aux32[1]);
-        //prepare2(bits.b1.val + 2, (const uint8_t *)(aux32 + 2), keven_signs, aux32[3]);
-        //prepare2(bits.b2.val + 0, (const uint8_t *)(aux32 + 4), keven_signs, aux32[5]);
-        //prepare2(bits.b2.val + 2, (const uint8_t *)(aux32 + 6), keven_signs, aux32[7]);
         auto p1 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b1[0], q1.val[0]), b1[1], q1.val[1]);
         auto p2 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b1[2], q1.val[2]), b1[3], q1.val[3]);
         auto p3 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b2[0], q2.val[0]), b2[1], q2.val[1]);
@@ -2122,16 +2069,10 @@ struct DequantizerIQ2XXS final : public BaseDequantizer<block_iq2_xxs> {
                      + vaddvq_s32(p3) * (2*(aux32[5] >> 28) + 1)
                      + vaddvq_s32(p4) * (2*(aux32[7] >> 28) + 1);
         return sumi;
-        //sumi[0] += vaddvq_s32(p1) * (2*(aux32[1] >> 28) + 1);
-        //sumi[1] += vaddvq_s32(p2) * (2*(aux32[3] >> 28) + 1);
-        //sumi[2] += vaddvq_s32(p3) * (2*(aux32[5] >> 28) + 1);
-        //sumi[3] += vaddvq_s32(p4) * (2*(aux32[7] >> 28) + 1);
     }
 
     uint32x4x4_t data;
     SimpleBits bits;
-    //const uint32x4_t shuffle1 = {0x03020100, 0x0b0a0908, 0x13121110, 0x1b1a1918};
-    //const uint32x4_t shuffle2 = {0x07060504, 0x0f0e0d0c, 0x17161514, 0x1f1e1d1c};
 
     float d;
 };
