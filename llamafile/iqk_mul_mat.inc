@@ -2226,6 +2226,10 @@ struct DequantizerIQ3XXS final : public BaseDequantizer<block_iq3_xxs> {
         b[1] = vreinterpretq_u8_u32(uint32x4_t{iq3xxs_grid[q3[4]], iq3xxs_grid[q3[5]], iq3xxs_grid[q3[6]], iq3xxs_grid[q3[7]]});
         apply_signs_2(b, keven_signs, sidx);
     }
+    inline static void make2_unsigned(const uint8_t * q3, uint8x16_t * b) {
+        b[0] = vreinterpretq_u8_u32(uint32x4_t{iq3xxs_grid[q3[0]], iq3xxs_grid[q3[1]], iq3xxs_grid[q3[2]], iq3xxs_grid[q3[3]]});
+        b[1] = vreinterpretq_u8_u32(uint32x4_t{iq3xxs_grid[q3[4]], iq3xxs_grid[q3[5]], iq3xxs_grid[q3[6]], iq3xxs_grid[q3[7]]});
+    }
     inline void prepare(int i, int j) {
         const auto * q3 = x[i].qs + 32*j;
         const auto * signs = (const uint32_t *)(gas.val + j);
@@ -2233,6 +2237,37 @@ struct DequantizerIQ3XXS final : public BaseDequantizer<block_iq3_xxs> {
         make2(q3, signs[1], bits.b1.val + 2); q3 += 8;
         make2(q3, signs[2], bits.b2.val + 0); q3 += 8;
         make2(q3, signs[3], bits.b2.val + 2);
+    }
+    inline void prepare_v2(int i, int j, const uint32_t * signs) {
+        const auto * q3 = x[i].qs + 32*j;
+        make2_unsigned(q3, bits.b1.val + 0); q3 += 8;
+        make2_unsigned(q3, bits.b1.val + 2); q3 += 8;
+        apply_signs_2(bits.b1.val+0, keven_signs, signs[0]);
+        apply_signs_2(bits.b1.val+2, keven_signs, signs[1]);
+        make2_unsigned(q3, bits.b2.val + 0); q3 += 8;
+        make2_unsigned(q3, bits.b2.val + 2);
+        apply_signs_2(bits.b2.val+0, keven_signs, signs[2]);
+        apply_signs_2(bits.b2.val+2, keven_signs, signs[3]);
+    }
+
+    inline void new_block(int i) {
+        d = 0.25f * GGML_FP16_TO_FP32(x[i].d);
+    }
+
+    inline int32_t process_block(int i, int j, const Q8<1, block_q8_K>& q8) {
+        gas.val[0] = vld1q_u32((const uint32_t *)(x[i].qs + QK_K/4 + 16*j));
+        prepare_v2(i, j, (const uint32_t *)gas.val);
+        gas.val[0] = vorrq_u32(vshlq_n_u32(vshrq_n_u32(gas.val[0], 28), 1), vdupq_n_u32(1));
+        int8x16_t * b1 = (int8x16_t *)bits.b1.val;
+        int8x16_t * b2 = (int8x16_t *)bits.b2.val;
+        auto q1 = q8.load_quants_64(0, i, 2*j+0);
+        auto q2 = q8.load_quants_64(0, i, 2*j+1);
+        auto p1 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b1[0], q1.val[0]), b1[1], q1.val[1]);
+        auto p2 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b1[2], q1.val[2]), b1[3], q1.val[3]);
+        auto p3 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b2[0], q2.val[0]), b2[1], q2.val[1]);
+        auto p4 = ggml_vdotq_s32(ggml_vdotq_s32(vdupq_n_s32(0), b2[2], q2.val[2]), b2[3], q2.val[3]);
+        const int32_t * s32 = (const int32_t *)gas.val;
+        return vaddvq_s32(p1) * s32[0] + vaddvq_s32(p2) * s32[1] + vaddvq_s32(p3) * s32[2] + vaddvq_s32(p4) * s32[3];
     }
 
     SimpleBits bits;
@@ -2863,7 +2898,8 @@ template <typename Dequantizer> void MulMat::set_functions(MulMat& m) {
         m.funcs[6] = mul_mat_qX_1_q8_1<Dequantizer, 7>;
         m.funcs[7] = mul_mat_qX_1_q8_1<Dequantizer, 8>;
     }
-    else if constexpr (std::is_same_v<Dequantizer, DequantizerIQ2XXS> || std::is_same_v<Dequantizer, DequantizerIQ3S>) {
+    else if constexpr (std::is_same_v<Dequantizer, DequantizerIQ2XXS> || std::is_same_v<Dequantizer, DequantizerIQ3S> ||
+                       std::is_same_v<Dequantizer, DequantizerIQ3XXS>) {
         m.funcs[0] = mul_mat_qX_K_q8_K_1<Dequantizer>;
         //m.funcs[0] = mul_mat_qX_K_q8_K_T<1, DequantizerIQ2XXS>;
         m.funcs[1] = mul_mat_qX_K_q8_K_T<2, Dequantizer>;
