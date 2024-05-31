@@ -2103,6 +2103,7 @@ struct DequantizerIQ2XS final : public BaseDequantizer<block_iq2_xs> {
     template <typename Q8>
     inline int32x4x4_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
         d = 0.125f * GGML_FP16_TO_FP32(x[i].d);
+        prepare_internal(i, 0);
         return prepare_4bit_scales16(x[i].scales);
     }
 
@@ -2119,9 +2120,13 @@ struct DequantizerIQ2XS final : public BaseDequantizer<block_iq2_xs> {
         b[3] = make1(qs + 6);
     }
 
-    inline void prepare(int i, int j) {
+    inline void prepare_internal(int i, int j) {
         make4(x[i].qs + 16*j + 0, bits.b1.val);
         make4(x[i].qs + 16*j + 8, bits.b2.val);
+    }
+
+    inline void prepare(int i, int j) {
+        if (j == 1) prepare_internal(i, 1);
     }
 
     SimpleBits bits;
