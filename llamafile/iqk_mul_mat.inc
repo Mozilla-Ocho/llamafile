@@ -2170,10 +2170,12 @@ struct DequantizerIQ2S final : public BaseDequantizer<block_iq2_s> {
     template <typename Q8>
     inline int32x4x4_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
         d = 0.125f * GGML_FP16_TO_FP32(x[i].d);
+        prepare_internal(i, 0, bits);
+        //prepare_internal(i, 1, bits1);
         return prepare_4bit_scales16(x[i].scales);
     }
 
-    static inline void make4(SignHelper& sh, const uint8x16_t& signs16, const uint8_t * qs, const uint8_t * qh, uint8x16_t * b) {
+    static inline void make4(SignHelper1& sh, const uint8_t * sign_bits, const uint8_t * qs, const uint8_t * qh, uint8x16_t * b) {
         uint32_t aux32[2];
         const uint16_t * aux16 = (const uint16_t *)aux32;
         for (int k = 0; k < 2; ++k) {
@@ -2182,27 +2184,31 @@ struct DequantizerIQ2S final : public BaseDequantizer<block_iq2_s> {
             aux32[1] &= 0x03000300;
             b[2*k+0] = vcombine_u8(vld1_u8((const uint8_t *)(iq2s_grid + (qs[4*k+0] | aux16[0]))),
                                    vld1_u8((const uint8_t *)(iq2s_grid + (qs[4*k+1] | aux16[1]))));
-            sh.apply_signs_1(b+2*k+0, signs16);
-
             b[2*k+1] = vcombine_u8(vld1_u8((const uint8_t *)(iq2s_grid + (qs[4*k+2] | aux16[2]))),
                                    vld1_u8((const uint8_t *)(iq2s_grid + (qs[4*k+3] | aux16[3]))));
-            sh.apply_signs_1(b+2*k+1, signs16);
+            sh.apply_signs_1x(b+2*k+0, sign_bits); sign_bits += 2;
+            sh.apply_signs_1x(b+2*k+1, sign_bits); sign_bits += 2;
         }
     }
 
     inline void prepare(int i, int j) {
+        if (j == 1) prepare_internal(i, 1, bits);
+        //if (j == 1) bits = bits1;
+    }
+
+    inline void prepare_internal(int i, int j, SimpleBits& sb) {
 
         const auto * qs = x[i].qs + 16*j;
         const auto * qh = x[i].qh + 4*j;
-        const auto signs16 = vld1q_u8(qs + QK_K/8);
+        const auto * sign_bits = qs + QK_K/8;
 
-        sh.init();
-        make4(sh, signs16, qs+0, qh+0, bits.b1.val);
-        make4(sh, signs16, qs+8, qh+2, bits.b2.val);
+        make4(sh, sign_bits+0, qs+0, qh+0, sb.b1.val);
+        make4(sh, sign_bits+8, qs+8, qh+2, sb.b2.val);
     }
 
     SimpleBits bits;
-    SignHelper sh;
+    //SimpleBits bits1;
+    SignHelper1 sh;
 
     float d;
 
@@ -2899,7 +2905,7 @@ template <typename Dequantizer> void MulMat::set_functions(MulMat& m) {
         m.funcs[7] = mul_mat_qX_1_q8_1<Dequantizer, 8>;
     }
     else if constexpr (std::is_same_v<Dequantizer, DequantizerIQ2XXS> || std::is_same_v<Dequantizer, DequantizerIQ3S> ||
-                       std::is_same_v<Dequantizer, DequantizerIQ3XXS>) {
+                       std::is_same_v<Dequantizer, DequantizerIQ3XXS>) {// || std::is_same_v<Dequantizer, DequantizerIQ2S>) {
         m.funcs[0] = mul_mat_qX_K_q8_K_1<Dequantizer>;
         //m.funcs[0] = mul_mat_qX_K_q8_K_T<1, DequantizerIQ2XXS>;
         m.funcs[1] = mul_mat_qX_K_q8_K_T<2, Dequantizer>;
