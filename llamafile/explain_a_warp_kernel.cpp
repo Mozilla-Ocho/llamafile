@@ -52,7 +52,7 @@ constexpr int TN = 4;
 #define maxThreadsPerMultiProcessor 2048
 
 #define MIN(X, Y) ((Y) > (X) ? (X) : (Y))
-#define ROUNDUP(X, K) (((X) + (K) - 1) & -(K))
+#define ROUNDUP(X, K) (((X) + (K)-1) & -(K))
 
 int main(int argc, char *argv[]) {
 

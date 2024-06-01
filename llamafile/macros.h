@@ -4,6 +4,6 @@
 
 #define MIN(X, Y) ((Y) > (X) ? (X) : (Y))
 #define MAX(X, Y) ((Y) < (X) ? (X) : (Y))
-#define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
-#define ROUNDUP(X, K) (((X) + (K) - 1) & -(K))
+#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+#define ROUNDUP(X, K) (((X) + (K)-1) & -(K))
 #define ARRAYLEN(A) ((sizeof(A) / sizeof(*(A))) / ((unsigned)!(sizeof(A) % sizeof(*(A)))))

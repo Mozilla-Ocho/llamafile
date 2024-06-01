@@ -35,7 +35,7 @@
 #define CHUNK 2097152
 
 #define Min(a, b) ((a) < (b) ? (a) : (b))
-#define DOS_DATE(YEAR, MONTH_IDX1, DAY_IDX1) (((YEAR) - 1980) << 9 | (MONTH_IDX1) << 5 | (DAY_IDX1))
+#define DOS_DATE(YEAR, MONTH_IDX1, DAY_IDX1) (((YEAR)-1980) << 9 | (MONTH_IDX1) << 5 | (DAY_IDX1))
 #define DOS_TIME(HOUR, MINUTE, SECOND) ((HOUR) << 11 | (MINUTE) << 5 | (SECOND) >> 1)
 
 static const char *prog;

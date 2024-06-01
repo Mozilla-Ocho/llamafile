@@ -80,7 +80,8 @@ void show_cuda_device(int);
 void show_cuda_devices();
 void test_matmul(std::function<void(int, int, int, int, float, float)>);
 
-template <typename T> struct cuda_memory {
+template <typename T>
+struct cuda_memory {
     const size_t size;
     T *const p;
     explicit cuda_memory(int len)
@@ -97,7 +98,8 @@ template <typename T> struct cuda_memory {
     }
 };
 
-template <typename T> ErrorReport diff(int m, int n, const T *Wan, int lda, const T *Got, int ldb) {
+template <typename T>
+ErrorReport diff(int m, int n, const T *Wan, int lda, const T *Got, int ldb) {
     double sad = 0;
     double worsta = 0;
     double worstb = 0;
@@ -301,41 +303,55 @@ void check(double tol, //
 
 [[noreturn]] void cuda_die(const char *, const char *, const char *, int, const char *);
 
-template <typename T> struct cublas_data_type;
-template <> struct cublas_data_type<half> {
+template <typename T>
+struct cublas_data_type;
+template <>
+struct cublas_data_type<half> {
     static constexpr cudaDataType_t id = CUDA_R_16F;
 };
-template <> struct cublas_data_type<float> {
+template <>
+struct cublas_data_type<float> {
     static constexpr cudaDataType_t id = CUDA_R_32F;
 };
-template <> struct cublas_data_type<double> {
+template <>
+struct cublas_data_type<double> {
     static constexpr cudaDataType_t id = CUDA_R_64F;
 };
 
-template <typename T> struct cublas_compute_type;
-template <> struct cublas_compute_type<half> {
+template <typename T>
+struct cublas_compute_type;
+template <>
+struct cublas_compute_type<half> {
     static constexpr cublasComputeType_t id = CUBLAS_COMPUTE_16F;
 };
-template <> struct cublas_compute_type<float> {
+template <>
+struct cublas_compute_type<float> {
     static constexpr cublasComputeType_t id = CUBLAS_COMPUTE_32F;
 };
-template <> struct cublas_compute_type<double> {
+template <>
+struct cublas_compute_type<double> {
     static constexpr cublasComputeType_t id = CUBLAS_COMPUTE_64F;
 };
 
-template <typename T> struct tinyblas_data_type;
-template <> struct tinyblas_data_type<half> {
+template <typename T>
+struct tinyblas_data_type;
+template <>
+struct tinyblas_data_type<half> {
     static constexpr tinyblasDataType_t id = TINYBLAS_R_16F;
 };
-template <> struct tinyblas_data_type<float> {
+template <>
+struct tinyblas_data_type<float> {
     static constexpr tinyblasDataType_t id = TINYBLAS_R_32F;
 };
 
-template <typename T> struct tinyblas_compute_type;
-template <> struct tinyblas_compute_type<half> {
+template <typename T>
+struct tinyblas_compute_type;
+template <>
+struct tinyblas_compute_type<half> {
     static constexpr tinyblasComputeType_t id = TINYBLAS_COMPUTE_16F;
 };
-template <> struct tinyblas_compute_type<float> {
+template <>
+struct tinyblas_compute_type<float> {
     static constexpr tinyblasComputeType_t id = TINYBLAS_COMPUTE_32F;
 };
 
