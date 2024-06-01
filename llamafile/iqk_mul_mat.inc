@@ -1470,6 +1470,7 @@ template <int nrc, typename block_q8 = block_q8_K> struct Q8 {
         for (int iy = 0; iy < nrc_y; ++iy) y[iy] = (const block_q8 *)info.src1_row(iy);
     }
 
+    inline int8x16_t load_quants_16(int iy, int i, int j) const { return vld1q_s8(y[iy][i].qs + 16*j); }
     inline int8x16x2_t load_quants(int iy, int i, int j) const { return vld1q_s8_x2(y[iy][i].qs + 32*j); }
     inline int8x16x4_t load_quants_64(int iy, int i, int j) const { return vld1q_s8_x4(y[iy][i].qs + 64*j); }
     inline int16x8x2_t load_bsums(int iy, int i) const { return vld1q_s16_x2(y[iy][i].bsums); }
@@ -1482,12 +1483,131 @@ template <int nrc, typename block_q8 = block_q8_K> struct Q8 {
     const block_q8 * y[nrc_y];
 };
 
+template <int nrc_y, typename Dequantizer>
+IQK_NOINLINE void mul_mat_qX_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+    assert(n % QK_K == 0);
+    const int nb = n / QK_K;
+
+    Q8<nrc_y, block_q8_K> q8(info);
+
+    Dequantizer deq(vx, bx, nrc_y);
+
+    for (int ix = 0; ix < nrc_x; ++ix) {
+
+        deq.new_row(ix);
+
+        float32x4_t acc[nrc_y];
+        for (int iy = 0; iy < nrc_y; ++iy) acc[iy] = vdupq_n_f32(0.f);
+
+//#pragma GCC unroll 4
+        for (int i = 0; i < nb; ++i) {
+
+            int32x4_t sumi[nrc_y];
+            for (int iy = 0; iy < nrc_y; ++iy) sumi[iy] = vdupq_n_s32(0);
+
+            if constexpr (nrc_y > 1 && Dequantizer::should_scale_quants()) {
+                deq.process_scales(i, q8, acc);
+                deq.prepare(i, 0);
+                deq.compute(q8, i, 0, sumi);
+                deq.prepare(i, 1);
+                deq.compute(q8, i, 1, sumi);
+            } else {
+                if constexpr (Dequantizer::num_blocks() == 8) {
+                    auto scales = deq.new_block(i, q8, acc);
+                    deq.prepare(i, 0);
+#pragma GCC unroll 8
+                    for (int iy = 0; iy < nrc_y; ++iy) compute_8_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 0, sumi[iy]);
+                    deq.prepare(i, 1);
+#pragma GCC unroll 8
+                    for (int iy = 0; iy < nrc_y; ++iy) compute_8_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 1, sumi[iy]);
+                }
+                else if constexpr (Dequantizer::num_blocks() == 16) {
+                    auto scales = deq.new_block(i, q8, acc);
+                    deq.prepare(i, 0);
+#pragma GCC unroll 8
+                    for (int iy = 0; iy < nrc_y; ++iy) compute_16_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 0, sumi[iy]);
+                    deq.prepare(i, 1);
+#pragma GCC unroll 8
+                    for (int iy = 0; iy < nrc_y; ++iy) compute_16_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 1, sumi[iy]);
+                }
+                else {
+                    GGML_ASSERT(false);
+                }
+            }
+
+#pragma GCC unroll 8
+            for (int iy = 0; iy < nrc_y; ++iy) {
+                acc[iy] = vmlaq_f32(acc[iy], vcvtq_f32_s32(sumi[iy]), vdupq_n_f32(deq.d*q8.scale(iy, i)));
+            }
+        }
+
+#pragma GCC unroll 8
+        for (int iy = 0; iy < nrc_y; ++iy) {
+            info.store(ix, iy, vaddvq_f32(acc[iy]));
+        }
+    }
+}
+template <int nrc_y, typename Dequantizer>
+IQK_NOINLINE void mul_mat_qX_K_q8_K_IQ(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
+    assert(n % QK_K == 0);
+    const int nb = n / QK_K;
+
+    Q8<nrc_y, block_q8_K> q8(info);
+
+    Dequantizer deq(vx, bx, nrc_y);
+
+    for (int ix = 0; ix < nrc_x; ++ix) {
+
+        deq.new_row(ix);
+
+        float32x4_t acc[nrc_y];
+        for (int iy = 0; iy < nrc_y; ++iy) acc[iy] = vdupq_n_f32(0.f);
+
+        for (int i = 0; i < nb; ++i) {
+
+            int32x4_t sumi[nrc_y];
+            for (int iy = 0; iy < nrc_y; ++iy) sumi[iy] = vdupq_n_s32(0);
+
+            if constexpr (Dequantizer::num_blocks() == 8) {
+                auto scales = deq.new_block(i);
+                deq.prepare(i, 0);
+#pragma GCC unroll 8
+                for (int iy = 0; iy < nrc_y; ++iy) compute_8_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 0, sumi[iy]);
+                deq.prepare(i, 1);
+#pragma GCC unroll 8
+                for (int iy = 0; iy < nrc_y; ++iy) compute_8_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 1, sumi[iy]);
+            }
+            else if constexpr (Dequantizer::num_blocks() == 16) {
+                auto scales = deq.new_block(i);
+                deq.prepare(i, 0);
+#pragma GCC unroll 8
+                for (int iy = 0; iy < nrc_y; ++iy) compute_16_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 0, sumi[iy]);
+                deq.prepare(i, 1);
+#pragma GCC unroll 8
+                for (int iy = 0; iy < nrc_y; ++iy) compute_16_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 1, sumi[iy]);
+            }
+            else {
+                GGML_ASSERT(false);
+            }
+#pragma GCC unroll 8
+            for (int iy = 0; iy < nrc_y; ++iy) {
+                acc[iy] = vmlaq_f32(acc[iy], vcvtq_f32_s32(sumi[iy]), vdupq_n_f32(deq.d*q8.scale(iy, i)));
+            }
+        }
+#pragma GCC unroll 8
+        for (int iy = 0; iy < nrc_y; ++iy) {
+            info.store(ix, iy, vaddvq_f32(acc[iy]));
+        }
+    }
+}
+
 template <typename Q8>
 IQK_ALWAYS_INLINE void compute_8_blocks(const uint8x16x4_t& qx_1, const uint8x16x4_t& qx_2, const Q8& q8,
         const int32x4x2_t& scales, int iy, int i, int j, int32x4_t& sumi) {
     auto mzero = vdupq_n_s32(0);
     const int8x16_t * qs_1 = (const int8x16_t *)qx_1.val;
     const int8x16_t * qs_2 = (const int8x16_t *)qx_2.val;
+
     auto q8b_1 = q8.load_quants(iy, i, 4*j+0);
     auto p1 = ggml_vdotq_s32(ggml_vdotq_s32(mzero, qs_1[0], q8b_1.val[0]), qs_1[1], q8b_1.val[1]); // block 1
     auto q8b_2 = q8.load_quants(iy, i, 4*j+1);
@@ -2019,56 +2139,37 @@ struct DequantizerIQ2XXS final : public BaseDequantizer<block_iq2_xxs> {
     constexpr static int num_blocks() { return 8; }
     constexpr static bool should_scale_quants() { return false; }
 
-    template <typename Q8>
-    inline int32x4x2_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
+    SimpleBits bits;
+    float d;
+
+    IQK_ALWAYS_INLINE int32x4x2_t new_block(int i) {
         d = 0.125f * GGML_FP16_TO_FP32(x[i].d);
-
-        //data = vld1q_u32_x4((const uint32_t *)x[i].qs);
-        //return prepare_scales_8(vuzp2q_u32(data.val[0], data.val[1]), vuzp2q_u32(data.val[2], data.val[3]));
-
-        auto tmp = vld1q_u32_x4((const uint32_t *)x[i].qs);
-        data.val[0] = vuzp1q_u32(tmp.val[0], tmp.val[1]);  // codebook indices for blocks 0...3
-        data.val[1] = vuzp2q_u32(tmp.val[0], tmp.val[1]);  // scales and signs for blocks 0...3
-        data.val[2] = vuzp1q_u32(tmp.val[2], tmp.val[3]);  // codebook indices for blocks 4...7
-        data.val[3] = vuzp2q_u32(tmp.val[2], tmp.val[3]);  // scales and signs for blocks 4...7
-
-        return prepare_scales_8(data.val[1], data.val[3]);
+        data = vld1q_u32_x4((const uint32_t *)x[i].qs);
+        prepare_block(0);
+        return prepare_scales_8(vuzp2q_u32(data.val[0], data.val[1]), vuzp2q_u32(data.val[2], data.val[3]));
+    }
+    inline void prepare(int /*i*/, int j) {
+        if (j == 1) prepare_block(1);
     }
 
-    inline void prepare2(uint8x16_t * b, const uint8_t * idx, const uint64_t * signs, uint32_t sidx) {
+private:
+
+    static inline void prepare2(uint8x16_t * b, const uint32_t * bits, const uint64_t * signs) {
+        const uint8_t * idx = (const uint8_t *)bits;
         b[0] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[0]], iq2xxs_grid[idx[1]]});
         b[1] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[2]], iq2xxs_grid[idx[3]]});
-        apply_signs_2(b, signs, sidx);
+        apply_signs_2(b, signs, bits[1]);
     }
 
-    inline void prepare(int /*i*/, int j) {
-        const uint8_t * idx = (const uint8_t *)(data.val + 2*j);
-        const uint32_t * sidx = (const uint32_t *)(data.val + 2*j+1);
-        prepare2(bits.b1.val + 0, idx, keven_signs, sidx[0]); idx += 4;
-        prepare2(bits.b1.val + 2, idx, keven_signs, sidx[1]); idx += 4;
-        prepare2(bits.b2.val + 0, idx, keven_signs, sidx[2]); idx += 4;
-        prepare2(bits.b2.val + 2, idx, keven_signs, sidx[3]);
+    inline void prepare_block(int j) {
+        const uint32_t * q2 = (const uint32_t *)(data.val + 2*j);
+        prepare2(bits.b1.val + 0, q2+0, keven_signs);
+        prepare2(bits.b1.val + 2, q2+2, keven_signs);
+        prepare2(bits.b2.val + 0, q2+4, keven_signs);
+        prepare2(bits.b2.val + 2, q2+6, keven_signs);
     }
-
-    //static inline void prepare2(uint8x16_t * b, const uint32_t * bits, const uint64_t * signs) {
-    //    const uint8_t * idx = (const uint8_t *)bits;
-    //    b[0] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[0]], iq2xxs_grid[idx[1]]});
-    //    b[1] = vreinterpretq_u8_u64(uint64x2_t{iq2xxs_grid[idx[2]], iq2xxs_grid[idx[3]]});
-    //    apply_signs_2(b, signs, bits[1]);
-    //}
-
-    //inline void prepare(int /*i*/, int j) {
-    //    const uint32_t * q2 = (const uint32_t *)(data.val + 2*j);
-    //    prepare2(bits.b1.val + 0, q2+0, keven_signs);
-    //    prepare2(bits.b1.val + 2, q2+2, keven_signs);
-    //    prepare2(bits.b2.val + 0, q2+4, keven_signs);
-    //    prepare2(bits.b2.val + 2, q2+6, keven_signs);
-    //}
 
     uint32x4x4_t data;
-    SimpleBits bits;
-
-    float d;
 };
 
 inline int32x4x4_t prepare_4bit_scales16(const uint8_t * sc) {
@@ -2088,12 +2189,20 @@ struct DequantizerIQ2XS final : public BaseDequantizer<block_iq2_xs> {
     constexpr static int num_blocks() { return 16; }
     constexpr static bool should_scale_quants() { return false; }
 
-    template <typename Q8>
-    inline int32x4x4_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
+    SimpleBits bits;
+    float d;
+
+    inline int32x4x4_t new_block(int i) {
         d = 0.125f * GGML_FP16_TO_FP32(x[i].d);
         prepare_internal(i, 0);
         return prepare_4bit_scales16(x[i].scales);
     }
+
+    inline void prepare(int i, int j) {
+        if (j == 1) prepare_internal(i, 1);
+    }
+
+private:
 
     static inline uint8x16_t make1(const uint16_t * qs) {
         auto b = vcombine_u8(vld1_u8((const uint8_t *)(iq2xs_grid + (qs[0] & 511))), vld1_u8((const uint8_t *)(iq2xs_grid + (qs[1] & 511))));
@@ -2113,19 +2222,11 @@ struct DequantizerIQ2XS final : public BaseDequantizer<block_iq2_xs> {
         make4(x[i].qs + 16*j + 8, bits.b2.val);
     }
 
-    inline void prepare(int i, int j) {
-        if (j == 1) prepare_internal(i, 1);
-    }
-
-    SimpleBits bits;
-
-    float d;
-
 };
 
 struct SignHelper {
 
-    IQK_ALWAYS_INLINE void apply_signs_1x(uint8x16_t * b, const uint8_t * sign_bits) const {
+    inline void apply_signs_1x(uint8x16_t * b, const uint8_t * sign_bits) const {
         auto aux = vcombine_u8(vdup_n_u8(sign_bits[0]), vdup_n_u8(sign_bits[1]));
         //auto s = vceqq_u8(vandq_u8(aux, smask), smask);
         //b[0] = vreinterpretq_u8_s8(vsubq_s8(vreinterpretq_s8_u8(veorq_u8(b[0], s)), vreinterpretq_s8_u8(s)));
@@ -2144,12 +2245,20 @@ struct DequantizerIQ2S final : public BaseDequantizer<block_iq2_s> {
     constexpr static int num_blocks() { return 16; }
     constexpr static bool should_scale_quants() { return false; }
 
-    template <typename Q8>
-    inline int32x4x4_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
+    SimpleBits bits;
+    float d;
+
+    inline int32x4x4_t new_block(int i) {
         d = 0.125f * GGML_FP16_TO_FP32(x[i].d);
         prepare_internal(i, 0, bits);
         return prepare_4bit_scales16(x[i].scales);
     }
+
+    inline void prepare(int i, int j) {
+        if (j == 1) prepare_internal(i, 1, bits);
+    }
+
+private:
 
     static inline void make4(const SignHelper& sh, const uint8_t * sign_bits, const uint8_t * qs, const uint8_t * qh, uint8x16_t * b) {
         uint32_t aux32[2];
@@ -2167,10 +2276,6 @@ struct DequantizerIQ2S final : public BaseDequantizer<block_iq2_s> {
         }
     }
 
-    inline void prepare(int i, int j) {
-        if (j == 1) prepare_internal(i, 1, bits);
-    }
-
     inline void prepare_internal(int i, int j, SimpleBits& sb) {
 
         const auto * qs = x[i].qs + 16*j;
@@ -2181,11 +2286,7 @@ struct DequantizerIQ2S final : public BaseDequantizer<block_iq2_s> {
         make4(sh, sign_bits+8, qs+8, qh+2, sb.b2.val);
     }
 
-    SimpleBits bits;
     SignHelper sh;
-
-    float d;
-
 };
 
 struct DequantizerIQ3XXS final : public BaseDequantizer<block_iq3_xxs> {
@@ -2194,32 +2295,39 @@ struct DequantizerIQ3XXS final : public BaseDequantizer<block_iq3_xxs> {
     constexpr static int num_blocks() { return 8; }
     constexpr static bool should_scale_quants() { return false; }
 
-    template <typename Q8>
-    inline int32x4x2_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
+    SimpleBits bits;
+    float d;
+
+    inline int32x4x2_t new_block(int i) {
         d = 0.25f * GGML_FP16_TO_FP32(x[i].d);
+        auto q3data = vld1q_u8_x2(x[i].qs);
         gas = vld1q_u32_x2((const uint32_t *)(x[i].qs + QK_K/4));
+        prepare_block((const uint8_t *)q3data.val, (const uint32_t *)gas.val, bits.b1.val, bits.b2.val);
         return prepare_scales_8(gas.val[0], gas.val[1]);
     }
+
+    inline void prepare(int i, int j) {
+        if (j == 1) {
+            auto q3data = vld1q_u8_x2(x[i].qs + 32);
+            prepare_block((const uint8_t *)q3data.val, (const uint32_t *)(gas.val + 1), bits.b1.val, bits.b2.val);
+        }
+    }
+
+private:
 
     inline static void make2(const uint8_t * q3, uint32_t sidx, uint8x16_t * b) {
         b[0] = vreinterpretq_u8_u32(uint32x4_t{iq3xxs_grid[q3[0]], iq3xxs_grid[q3[1]], iq3xxs_grid[q3[2]], iq3xxs_grid[q3[3]]});
         b[1] = vreinterpretq_u8_u32(uint32x4_t{iq3xxs_grid[q3[4]], iq3xxs_grid[q3[5]], iq3xxs_grid[q3[6]], iq3xxs_grid[q3[7]]});
         apply_signs_2(b, keven_signs, sidx);
     }
-    inline void prepare(int i, int j) {
-        const auto * q3 = x[i].qs + 32*j;
-        const auto * signs = (const uint32_t *)(gas.val + j);
-        make2(q3+ 0, signs[0], bits.b1.val + 0);
-        make2(q3+ 8, signs[1], bits.b1.val + 2);
-        make2(q3+16, signs[2], bits.b2.val + 0);
-        make2(q3+24, signs[3], bits.b2.val + 2);
+    inline static void prepare_block(const uint8_t * q3, const uint32_t * signs, uint8x16_t * b1, uint8x16_t * b2) {
+        make2(q3+ 0, signs[0], b1 + 0);
+        make2(q3+ 8, signs[1], b1 + 2);
+        make2(q3+16, signs[2], b2 + 0);
+        make2(q3+24, signs[3], b2 + 2);
     }
 
-    SimpleBits bits;
     uint32x4x2_t gas;
-
-    float d;
-
 };
 
 struct DequantizerIQ3S final : public BaseDequantizer<block_iq3_s> {
@@ -2228,10 +2336,17 @@ struct DequantizerIQ3S final : public BaseDequantizer<block_iq3_s> {
     constexpr static int num_blocks() { return 8; }
     constexpr static bool should_scale_quants() { return false; }
 
-    template <typename Q8>
-    inline int32x4x2_t new_block(int i, const Q8& /*q8*/, float32x4_t * /*acc*/) {
+    SimpleBits bits;
+    float d;
+
+    inline int32x4x2_t new_block(int i) {
         d = GGML_FP16_TO_FP32(x[i].d);
         uint32_t scales32[2];
+        auto qs = vld1q_u8_x2(x[i].qs);
+        auto signs = vld1q_u8(x[i].signs);
+
+        prepare_block((const uint8_t *)qs.val, x[i].qh, (const uint8_t *)&signs);
+
         std::memcpy(scales32, x[i].scales, 4);
         scales32[1] = (((scales32[0] >> 4) & 0x0f0f0f0f) << 1) | 0x01010101;
         scales32[0] = ((scales32[0] & 0x0f0f0f0f) << 1) | 0x01010101;
@@ -2243,6 +2358,16 @@ struct DequantizerIQ3S final : public BaseDequantizer<block_iq3_s> {
         scales.val[1] = vmovl_s16(vget_high_s16(scales16));
         return scales;
     }
+
+    inline void prepare(int i, int j) {
+        if (j == 1) {
+            auto qs = vld1q_u8_x2(x[i].qs + 32);
+            auto signs = vld1q_u8(x[i].signs + 16);
+            prepare_block((const uint8_t *)qs.val, x[i].qh + 4, (const uint8_t *)&signs);
+        }
+    }
+
+private:
 
     static inline void make2(const SignHelper& sh, const uint8_t * sign_bits, const uint16x8_t& idx_l, uint8_t qh,
             const int16x8_t& hshift, uint8x16_t * b) {
@@ -2265,87 +2390,15 @@ struct DequantizerIQ3S final : public BaseDequantizer<block_iq3_s> {
         return vld1q_s16(k_shift);
     }
 
-    inline void prepare(int i, int j) {
-
-        const auto * qs = x[i].qs + 32*j;
-        const auto * qh = x[i].qh + 4*j;
-
-        make4(sh, x[i].signs + 16*j + 0, qs+ 0, qh+0, hshift, bits.b1.val);
-        make4(sh, x[i].signs + 16*j + 8, qs+16, qh+2, hshift, bits.b2.val);
+    inline void prepare_block(const uint8_t * qs, const uint8_t * qh, const uint8_t * signs) {
+        make4(sh, signs + 0, qs+ 0, qh+0, hshift, bits.b1.val);
+        make4(sh, signs + 8, qs+16, qh+2, hshift, bits.b2.val);
     }
 
-    SimpleBits bits;
     SignHelper sh;
     const int16x8_t hshift = load_shift();
 
-    float d;
-
 };
-
-template <int nrc_y, typename Dequantizer>
-IQK_NOINLINE void mul_mat_qX_K_q8_K_T(int n, const void * vx, size_t bx, const DataInfo& info, int nrc_x) {
-    assert(n % QK_K == 0);
-    const int nb = n / QK_K;
-
-    Q8<nrc_y, block_q8_K> q8(info);
-
-    Dequantizer deq(vx, bx, nrc_y);
-
-    for (int ix = 0; ix < nrc_x; ++ix) {
-
-        deq.new_row(ix);
-
-        float32x4_t acc[nrc_y];
-        for (int iy = 0; iy < nrc_y; ++iy) acc[iy] = vdupq_n_f32(0.f);
-
-//#pragma GCC unroll 4
-        for (int i = 0; i < nb; ++i) {
-
-            int32x4_t sumi[nrc_y];
-            for (int iy = 0; iy < nrc_y; ++iy) sumi[iy] = vdupq_n_s32(0);
-
-            if constexpr (nrc_y > 1 && Dequantizer::should_scale_quants()) {
-                deq.process_scales(i, q8, acc);
-                deq.prepare(i, 0);
-                deq.compute(q8, i, 0, sumi);
-                deq.prepare(i, 1);
-                deq.compute(q8, i, 1, sumi);
-            } else {
-                if constexpr (Dequantizer::num_blocks() == 8) {
-                    auto scales = deq.new_block(i, q8, acc);
-                    deq.prepare(i, 0);
-#pragma GCC unroll 8
-                    for (int iy = 0; iy < nrc_y; ++iy) compute_8_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 0, sumi[iy]);
-                    deq.prepare(i, 1);
-#pragma GCC unroll 8
-                    for (int iy = 0; iy < nrc_y; ++iy) compute_8_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 1, sumi[iy]);
-                }
-                else if constexpr (Dequantizer::num_blocks() == 16) {
-                    auto scales = deq.new_block(i, q8, acc);
-                    deq.prepare(i, 0);
-#pragma GCC unroll 8
-                    for (int iy = 0; iy < nrc_y; ++iy) compute_16_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 0, sumi[iy]);
-                    deq.prepare(i, 1);
-#pragma GCC unroll 8
-                    for (int iy = 0; iy < nrc_y; ++iy) compute_16_blocks(deq.bits.b1, deq.bits.b2, q8, scales, iy, i, 1, sumi[iy]);
-                }
-                else {
-                    GGML_ASSERT(false);
-                }
-            }
-
-#pragma GCC unroll 8
-            for (int iy = 0; iy < nrc_y; ++iy) {
-                acc[iy] = vmlaq_f32(acc[iy], vcvtq_f32_s32(sumi[iy]), vdupq_n_f32(deq.d*q8.scale(iy, i)));
-            }
-        }
-
-#pragma GCC unroll 8
-        for (int iy = 0; iy < nrc_y; ++iy) {
-            info.store(ix, iy, vaddvq_f32(acc[iy]));
-        }
-    }
-}
 
 // =========================================== Legacy quants
 
@@ -2798,6 +2851,18 @@ template <typename Dequantizer> void MulMat::set_functions(MulMat& m) {
         m.funcs[5] = mul_mat_qX_1_q8_1<Dequantizer, 6>;
         m.funcs[6] = mul_mat_qX_1_q8_1<Dequantizer, 7>;
         m.funcs[7] = mul_mat_qX_1_q8_1<Dequantizer, 8>;
+    }
+    else if constexpr (std::is_same_v<Dequantizer, DequantizerIQ2XXS> || std::is_same_v<Dequantizer, DequantizerIQ2S> ||
+                       std::is_same_v<Dequantizer, DequantizerIQ3XXS> || std::is_same_v<Dequantizer, DequantizerIQ3S> ||
+                       std::is_same_v<Dequantizer, DequantizerIQ2XS>) {
+        m.funcs[0] = mul_mat_qX_K_q8_K_IQ<1, Dequantizer>;
+        m.funcs[1] = mul_mat_qX_K_q8_K_IQ<2, Dequantizer>;
+        m.funcs[2] = mul_mat_qX_K_q8_K_IQ<3, Dequantizer>;
+        m.funcs[3] = mul_mat_qX_K_q8_K_IQ<4, Dequantizer>;
+        m.funcs[4] = mul_mat_qX_K_q8_K_IQ<5, Dequantizer>;
+        m.funcs[5] = mul_mat_qX_K_q8_K_IQ<6, Dequantizer>;
+        m.funcs[6] = mul_mat_qX_K_q8_K_IQ<7, Dequantizer>;
+        m.funcs[7] = mul_mat_qX_K_q8_K_IQ<8, Dequantizer>;
     }
     else {
         m.funcs[0] = mul_mat_qX_K_q8_K_T<1, Dequantizer>;
