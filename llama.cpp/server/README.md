@@ -34,7 +34,7 @@ Command line options:
 -   `--grp-attn-w`: Set the group attention width to extend context size through self-extend(default: 512), used together with group attention factor `--grp-attn-n`
 ## Build
 
-server is build alongside everything else from the root of the project
+The server is vendored from `llama.cpp` and built at the root of the `llamafile` as part of the compilation of `llama.cpp/main/main`. To build it, compile the project at root. 
 
 - Using `make`:
 
@@ -47,6 +47,14 @@ server is build alongside everything else from the root of the project
   ```bash
   cmake --build . --config Release
   ```
+
+Then, to test your compiled artifacts, run the `--server` CLI command at the root of the repo where you pointed your compiled artifacts to from your root `sudo make install` command. 
+
+Example:
+
+```
+$PREFIX/bin/llamafile --server -m /mistral-7b-instruct-v0.1.Q4_K_M.gguf 
+```
 
 ## Quick Start
 
