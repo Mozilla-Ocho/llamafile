@@ -2,7 +2,7 @@
 #── vi: set noet ft=make ts=8 sw=8 fenc=utf-8 :vi ────────────────────┘
 
 PREFIX = /usr/local
-COSMOCC = .cosmocc/3.3.8
+COSMOCC = .cosmocc/3.3.10
 TOOLCHAIN = $(COSMOCC)/bin/cosmo
 
 AR = $(TOOLCHAIN)ar
@@ -51,5 +51,5 @@ clean:; rm -rf o
 .PHONY: distclean
 distclean:; rm -rf o .cosmocc
 
-.cosmocc/3.3.8:
-	build/download-cosmocc.sh $@ 3.3.8 61208872dea249fb9621e950a15f438d2db70b0ca3aa3e91f5e8d0b078fc328d
+.cosmocc/3.3.10:
+	build/download-cosmocc.sh $@ 3.3.10 00d61c1215667314f66e288c8285bae38cc6137fca083e5bba6c74e3a52439de
