@@ -53,7 +53,7 @@ Then, to test your compiled artifacts, run the `--server` CLI command at the roo
 Example:
 
 ```
-/usr/local/llamafile --server -m /mistral-7b-instruct-v0.1.Q4_K_M.gguf 
+$PREFIX/bin/llamafile --server -m /mistral-7b-instruct-v0.1.Q4_K_M.gguf 
 ```
 
 ## Quick Start
