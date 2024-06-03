@@ -1,22 +1,22 @@
 # llamafile
 
-[![ci status](https://github.com/Mozilla-Ocho/llamafile/actions/workflows/ci.yml/badge.svg)](https://github.com/Mozilla-Ocho/llamafile/actions/workflows/ci.yml)
+[![ci status](https://github.com/Mozilla-Ocho/llamafile/actions/workflows/ci.yml/badge.svg)](https://github.com/Mozilla-Ocho/llamafile/actions/workflows/ci.yml)<br/>
+[![](https://dcbadge.vercel.app/api/server/teDuGYVTB2)](https://discord.gg/teDuGYVTB2)<br/><br/>
 
 <img src="llamafile/llamafile-640x640.png" width="320" height="320"
      alt="[line drawing of llama animal head in front of slightly open manilla folder filled with files]">
 
 **llamafile lets you distribute and run LLMs with a single file. ([announcement blog post](https://hacks.mozilla.org/2023/11/introducing-llamafile/))**
 
-[![](https://dcbadge.vercel.app/api/server/teDuGYVTB2)](https://discord.gg/teDuGYVTB2)
-
 Our goal is to make open LLMs much more
 accessible to both developers and end users. We're doing that by
 combining [llama.cpp](https://github.com/ggerganov/llama.cpp) with [Cosmopolitan Libc](https://github.com/jart/cosmopolitan) into one
 framework that collapses all the complexity of LLMs down to
 a single-file executable (called a "llamafile") that runs
-locally on most computers, with no installation.
+locally on most computers, with no installation.<br/><br/>
 
-[Join us on our Discord](https://discord.gg/teDuGYVTB2)
+<a href="https://future.mozilla.org"><img src="llamafile/mozilla-logo-bw-rgb.png" width="150"></a><br/>
+llamafile is a Mozilla Builders project.<br/><br/>
 
 ## Quickstart
 
