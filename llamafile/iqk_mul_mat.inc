@@ -23,6 +23,12 @@
 #include "llama.cpp/ggml-quants.h"
 #include "sgemm.h"
 
+// For i-quants, I had to explicitely specify which
+// functions to inline / not inline (at least for some
+// of the functions), else performance would be significantly
+// lower. This is worrysome as things can change with,
+// e.g., a different compiler version or running on a different
+// CPU.
 #ifdef _MSC_VER
 #define IQK_NOINLINE __declspec(noinline)
 #define IQK_ALWAYS_INLINE inline
@@ -37,16 +43,21 @@
 // clang-format off
 
 // This matrix - vector and matrix - matrix multiplication implementation
-// for k-quants and IQ4_XS makes prompt processing 150-200% faster
+// for legacy quants, k-quants and i-quants makes prompt processing 150-200%
+// (legacy and k-quants) or 250-400% (i-quants) faster.
 // compared to mainline llama.cpp (and llamafile).
-// It is AVX2 only for now.
+// It provides implementations for ARM_NEON (all quants) and AVX2
+// (all quants except sub-4 bit i-quants).
 //
 // Main idea is that unpacking the quants and the block scales to
-// be ready for dot products with the corresponding Q8_K quants
-// takes time. Hence, if we are performing a QX x Q8_K matrix matrix
+// be ready for dot products with the corresponding Q8_Y quants
+// takes time (here 'Y' stands for K, 0, or 1, depending on quantization type).
+// Hence, if we are performing a QX x Q8_Y matrix matrix
 // multiplication (as needed for prompt processing), we can get
 // a significant speedup by reusing the unpacked QX quants and scales
-// for multiplication with several Q8_K columns.
+// for multiplication with several Q8_K columns. We also achieve fewer
+// loads from memory, which is the main purpose of tiling in general
+// purpose matrix multiplication packages.
 
 #include <utility>
 #include <array>
@@ -96,11 +107,7 @@ struct MulMat {
     std::array<mul_mat_t, 8> funcs = {};
     //inline void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y) {
     IQK_NOINLINE void mul_mat_NxM(int n, const void * vx, size_t bx, DataInfo& info, int nrc_x, int nrc_y) {
-#ifdef __aarch64__
-        constexpr int k_x_step = 64; //8192; // Tiling does not seem to help on my M2 Max (but difference to tiling is small)
-#else
-        constexpr int k_x_step = 64; // This works best on my Ryzen-7950X (but differences to other tile size are small)
-#endif
+        constexpr int k_x_step = 64; // This works best on my Ryzen-7950X and M2 Max CPUs (but differences to other tile size are small)
         int n_step = (nrc_y - info.cur_y)/funcs.size();
         if (n_step > 0) {
             for (int ix = 0; ix < nrc_x; ix += k_x_step) {
@@ -2111,11 +2118,6 @@ struct DequantizerIQ4XS final : public BaseDequantizer<block_iq4_xs> {
     }
     inline void prepare(int i, int j) {
         bits.prepare16(x[i].qs+64*j);
-        //if (nrc == 1) {
-        //    bits.prepare16_v2(x[i].qs+64*j);
-        //} else {
-        //    bits.prepare16(x[i].qs+64*j);
-        //}
         for (int k = 0; k < 4; ++k) {
             bits.b1.val[k] = vreinterpretq_u8_s8(vqtbl1q_s8(values, bits.b1.val[k]));
             bits.b2.val[k] = vreinterpretq_u8_s8(vqtbl1q_s8(values, bits.b2.val[k]));
@@ -2141,8 +2143,6 @@ IQK_ALWAYS_INLINE int32x4x2_t prepare_scales_8(const uint32x4_t& v1, const uint3
     auto one = vdupq_n_u32(1);
     scales.val[0] = vreinterpretq_s32_u32(vsliq_n_u32(one, vshrq_n_u32(v1, 28), 1));
     scales.val[1] = vreinterpretq_s32_u32(vsliq_n_u32(one, vshrq_n_u32(v2, 28), 1));
-    //scales.val[0] = vreinterpretq_s32_u32(vorrq_u32(vshlq_n_u32(vshrq_n_u32(v1, 28), 1), vdupq_n_u32(1)));
-    //scales.val[1] = vreinterpretq_s32_u32(vorrq_u32(vshlq_n_u32(vshrq_n_u32(v2, 28), 1), vdupq_n_u32(1)));
     return scales;
 }
 
@@ -2239,6 +2239,11 @@ private:
 
 };
 
+// So, I hate to include this table, but with the GCC 12.3 compiler
+// bundled in the Cosmopolitan tools, loading the unpacked sign bytes
+// from this table using the packed 8 sign bits as index is faster than
+// using the standard trick of vceqq_u8(vandq_u8(bits, mask), mask) to
+// expand the bits to bytes.
 static const uint64_t kall_signs[256] = {
     0x0101010101010101, 0x01010101010101ff, 0x010101010101ff01, 0x010101010101ffff,
     0x0101010101ff0101, 0x0101010101ff01ff, 0x0101010101ffff01, 0x0101010101ffffff,
@@ -2310,14 +2315,13 @@ struct SignHelper {
 
     IQK_ALWAYS_INLINE void apply_signs_1x(uint8x16_t * b, const uint8_t * sign_bits) const {
         auto s = vreinterpretq_s8_u64(uint64x2_t{kall_signs[sign_bits[0]], kall_signs[sign_bits[1]]});
-        //auto aux = vcombine_u8(vdup_n_u8(sign_bits[0]), vdup_n_u8(sign_bits[1]));
-        ////auto s = vceqq_u8(vandq_u8(aux, smask), smask);
-        ////b[0] = vreinterpretq_u8_s8(vsubq_s8(vreinterpretq_s8_u8(veorq_u8(b[0], s)), vreinterpretq_s8_u8(s)));
-        //// Not much of a difference compared to the above. Perhaps tiny little bit faster.
-        //auto s = vreinterpretq_s8_u8(vorrq_u8(vceqq_u8(vandq_u8(aux, smask), smask), m1));
+        // Normally we would expect this to be faster, but it isn't.
+        // auto aux = vcombine_u8(vdup_n_u8(sign_bits[0]), vdup_n_u8(sign_bits[1]));
+        // auto s = vreinterpretq_s8_u8(vorrq_u8(vceqq_u8(vandq_u8(aux, smask), smask), m1));
         b[0] = vreinterpretq_u8_s8(vmulq_s8(vreinterpretq_s8_u8(b[0]), s));
     }
 
+    // We would need these two if we weren't loading from the unpacked sign table.
     //const uint8x16_t smask = vreinterpretq_u8_u64(vdupq_n_u64(0x8040201008040201));
     //const uint8x16_t m1    = vdupq_n_u8(1);
 };
@@ -2344,24 +2348,6 @@ struct DequantizerIQ2S final : public BaseDequantizer<block_iq2_s> {
 private:
 
     static void make4(const SignHelper& sh, const uint8_t * sign_bits, const uint8_t * qs, const uint8_t * qh, uint8x16_t * b) {
-        // This commented out version is faster by a few percent.
-        // But using it makes iq2_xxs run 20% slower. This is the strangest thing I have ever seen.
-        //uint32_t aux32[2];
-        //const uint16_t * aux16 = (const uint16_t *)aux32;
-        //aux32[1] = (qh[0] << 4) | (qh[0] << 18);
-        //aux32[0] = (aux32[1] << 4) & 0x03000300;
-        //aux32[1] &= 0x03000300;
-        //b[0] = vreinterpretq_u8_u64(uint64x2_t{iq2s_grid[qs[0] | aux16[0]], iq2s_grid[qs[1] | aux16[1]]});
-        //b[1] = vreinterpretq_u8_u64(uint64x2_t{iq2s_grid[qs[2] | aux16[2]], iq2s_grid[qs[3] | aux16[3]]});
-        //sh.apply_signs_1x(b+0, sign_bits+0);
-        //sh.apply_signs_1x(b+1, sign_bits+2);
-        //aux32[1] = (qh[1] << 4) | (qh[1] << 18);
-        //aux32[0] = (aux32[1] << 4) & 0x03000300;
-        //aux32[1] &= 0x03000300;
-        //b[2] = vreinterpretq_u8_u64(uint64x2_t{iq2s_grid[qs[4] | aux16[0]], iq2s_grid[qs[5] | aux16[1]]});
-        //b[3] = vreinterpretq_u8_u64(uint64x2_t{iq2s_grid[qs[6] | aux16[2]], iq2s_grid[qs[7] | aux16[3]]});
-        //sh.apply_signs_1x(b+2, sign_bits+4);
-        //sh.apply_signs_1x(b+3, sign_bits+6);
         uint32_t aux32[2];
         const uint16_t * aux16 = (const uint16_t *)aux32;
         for (int k = 0; k < 2; ++k) {
@@ -3016,6 +3002,8 @@ template <typename Dequantizer> void MulMat::set_functions(MulMat& m) {
 bool MulMat::set_mul_mat(int typeA, int ne00, MulMat& m, int& row_size_q8, int Ny) {
     row_size_q8 = ggml_row_size(GGML_TYPE_Q8_K, ne00);
 
+    (void)Ny;
+    // Uncommenting out this would disable iqk_mul_mat for matrix x vector multiplications.
     //if (Ny == 1 && (typeA == GGML_TYPE_IQ2_XXS || typeA == GGML_TYPE_IQ2_XS || typeA == GGML_TYPE_IQ2_S ||
     //                typeA == GGML_TYPE_IQ3_XXS || typeA == GGML_TYPE_IQ3_S)) return false;
 
