@@ -1,0 +1,17 @@
+DESCRIPTION
+
+  Converts floating point numbers to strings
+
+LICENSE
+
+  BSD-3
+
+ORIGIN
+
+  git@github.com:google/double-conversion.git
+  75b48d66ac835da2c1678926f7d61d6cb2992922
+  Tue May 21 10:45:11 2024 +0200
+
+LOCAL MODIFICATIONS
+
+  - Ignored compiler warning

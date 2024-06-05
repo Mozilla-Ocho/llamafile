@@ -14,6 +14,7 @@ include build/rules.mk
 include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
 include stable-diffusion.cpp/BUILD.mk
+include double-conversion/BUILD.mk
 include stb/BUILD.mk
 
 # the root package is `o//` by default
