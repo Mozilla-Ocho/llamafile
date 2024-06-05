@@ -11,14 +11,14 @@ bool iqk_mul_mat(long, long, long, int, const void *, const void *, float *, lon
 bool iqk_mul_mat_zen4(long, long, long, int, const void *, const void *, float *, long, int, int);
 bool iqk_mul_mat_arm82(long, long, long, int, const void *, const void *, float *, long, int, int);
 
-bool iqk_mul_mat_moe(long, long, long, int, int, const void *, const void *,
-        float *, long, long, const void *, int, int);
-bool iqk_mul_mat_moe_zen4(long, long, long, int, int, const void *, const void *,
-        float *, long, long, const void *, int, int);
-bool iqk_mul_mat_moe_arm82(long, long, long, int, int, const void *, const void *,
-        float *, long, long, const void *, int, int);
-bool iqk_mul_mat_moe_unsupported(long, long, long, int, int, const void *, const void *,
-        float *, long, long, const void *, int, int);
+bool iqk_mul_mat_moe(long, long, long, int, int, const void *, const void *, float *, long, long,
+                     const void *, int, int);
+bool iqk_mul_mat_moe_zen4(long, long, long, int, int, const void *, const void *, float *, long,
+                          long, const void *, int, int);
+bool iqk_mul_mat_moe_arm82(long, long, long, int, int, const void *, const void *, float *, long,
+                           long, const void *, int, int);
+bool iqk_mul_mat_moe_unsupported(long, long, long, int, int, const void *, const void *, float *,
+                                 long, long, const void *, int, int);
 
 bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, void *, long, int,
                      int, int, int, int, int, int);
@@ -73,8 +73,8 @@ bool llamafile_mixmul_arm80(const struct ggml_compute_params *, const struct ggm
 bool llamafile_mixmul_arm82(const struct ggml_compute_params *, const struct ggml_tensor *,
                             const struct ggml_tensor *, const struct ggml_tensor *,
                             struct ggml_tensor *);
-bool llamafile_mixmul_iqk(long, long, long, int, int, const void *, const void *,
-        float *, long, long, const void *, int, int);
+bool llamafile_mixmul_iqk(long, long, long, int, int, const void *, const void *, float *, long,
+                          long, const void *, int, int);
 
 #ifdef __cplusplus
 }

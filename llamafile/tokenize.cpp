@@ -15,68 +15,82 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cerrno>
-#include <cmath>
-#include <cosmo.h>
-#include <cstdio>
-#include <cstring>
-#include <vector>
+#include "llamafile.h"
+#include "version.h"
 
-#include "llama.cpp/common.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <tool/args/args.h>
+
 #include "llama.cpp/llama.h"
-#include "llamafile/llamafile.h"
 
 int main(int argc, char **argv) {
+    llamafile_check_cpu();
 
     if (llamafile_has(argv, "--version")) {
         puts("llamafile-tokenize v" LLAMAFILE_VERSION_STRING);
         return 0;
     }
 
-    llamafile_check_cpu();
-    log_disable();
+    FLAG_log_disable = true;
 
-    gpt_params params;
-    params.n_ctx = 0;
+    LoadZipArgs(&argc, &argv);
+    llamafile_get_flags(argc, argv);
 
-    if (!gpt_params_parse(argc, argv, params))
-        return 1;
-
-    llama_model_params model_params = llama_model_default_params();
-    llama_model *model = llama_load_model_from_file(params.model.c_str(), model_params);
+    llama_model_params mparams = {
+        .n_gpu_layers = 0,
+        .split_mode = (enum llama_split_mode)FLAG_split_mode,
+        .main_gpu = 0,
+        .tensor_split = nullptr,
+        .rpc_servers = nullptr,
+        .progress_callback = nullptr,
+        .progress_callback_user_data = nullptr,
+        .kv_overrides = nullptr,
+        .vocab_only = true,
+        .use_mmap = true,
+        .use_mlock = false,
+        .check_tensors = false,
+    };
+    llama_model *model = llama_load_model_from_file(FLAG_model, mparams);
     if (model == NULL)
         return 3;
 
-    llama_context_params ctx_params = llama_context_params_from_gpt_params(params);
-    llama_context *ctx = llama_new_context_with_model(model, ctx_params);
-    if (ctx == NULL)
-        return 4;
-
-    bool should_read_stdin = params.prompt.empty();
+    FILE *input;
+    if (FLAG_prompt) {
+        input = fmemopen((void *)FLAG_prompt, strlen(FLAG_prompt), "rb");
+    } else if (FLAG_file) {
+        if (!(input = fopen(FLAG_file, "rb"))) {
+            perror(FLAG_file);
+            exit(1);
+        }
+    } else {
+        input = stdin;
+    }
 
     for (;;) {
-        ssize_t n;
-        char buf[4097];
-        const char *input;
-        if (should_read_stdin) {
-            n = read(0, buf, 4096);
-            if (n == -1) {
-                fprintf(stderr, "/dev/stdin: %s\n", strerror(errno));
-                exit(1);
-            }
-            if (!n)
-                break;
-            buf[n] = 0;
-            input = buf;
-        } else {
-            input = params.prompt.c_str();
+        char *text;
+        size_t textlen;
+        if (!(text = fgetln(input, &textlen)))
+            break;
+
+        static llama_token toks[4096];
+        int count = llama_tokenize(model, text, textlen, toks, 4096, false, false);
+        if (count < 0) {
+            fprintf(stderr, "%s: failed to tokenize line\n", argv[0]);
+            exit(1);
         }
 
-        std::vector<llama_token> toks = ::llama_tokenize(ctx, input, false);
-        for (llama_token tok : toks) {
-            std::string str = llama_token_to_piece(ctx, tok, true);
-            const char *s = str.c_str();
-            for (int i = 0; s[i]; ++i) {
+        for (int i = 0; i < count; ++i) {
+
+            char s[256];
+            int n = llama_token_to_piece(model, toks[i], s, sizeof(s), false);
+            if (n < 0) {
+                fprintf(stderr, "%s: failed to convert token %d to string\n", argv[0], toks[i]);
+                exit(1);
+            }
+
+            for (int i = 0; i < n; ++i) {
                 int c = s[i] & 255;
                 switch (c) {
                 case '\\':
@@ -123,6 +137,5 @@ int main(int argc, char **argv) {
         }
     }
 
-    llama_free(ctx);
     llama_free_model(model);
 }

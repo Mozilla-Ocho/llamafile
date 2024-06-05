@@ -1,5 +1,5 @@
-// -*- mode:c;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
-// vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;coding:utf-8 -*-
+// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
 // Copyright 2024 Mozilla Foundation
 //
@@ -15,6 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "llamafile.h"
+#pragma once
+#include <ctl/string_view.h>
 
-bool FLAG_unsecure;
+extern const signed char kHexToInt[256];
+
+bool
+atob(ctl::string_view, bool);
+
+char*
+hexcpy(char*, unsigned long);

@@ -17,9 +17,9 @@
 
 #include "sgemm.h"
 
-bool llamafile_sgemm_unsupported(int m, int n, int k, const void *A, int lda, const void *B,
-                                 int ldb, void *C, int ldc, int ith, int nth, int task, int Atype,
-                                 int Btype, int Ctype) {
+bool llamafile_sgemm_unsupported(long m, long n, long k, const void *A, long lda, const void *B,
+                                 long ldb, void *C, long ldc, int ith, int nth, int task, int Atype,
+                                 int Btype, int Ctype, int precision) {
     return false;
 }
 
@@ -30,7 +30,7 @@ bool llamafile_mixmul_unsupported(const struct ggml_compute_params *params,
     return false;
 }
 
-bool iqk_mul_mat_moe_unsupported(long, long, long, int, int, const void *, const void *,
-        float *, long, long, const void *, int, int) {
+bool iqk_mul_mat_moe_unsupported(long, long, long, int, int, const void *, const void *, float *,
+                                 long, long, const void *, int, int) {
     return false;
 }

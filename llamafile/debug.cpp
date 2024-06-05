@@ -18,12 +18,12 @@
 #include "debug.h"
 #include "log.h"
 
+#include <atomic>
 #include <cosmo.h>
 #include <fenv.h>
 #include <libc/calls/struct/aarch64.internal.h>
 #include <libc/calls/struct/ucontext.internal.h>
 #include <signal.h>
-#include <stdatomic.h>
 #include <termios.h>
 #include <ucontext.h>
 #include <unistd.h>
@@ -36,7 +36,7 @@
 #define UNDERFLOW_DELAY 2
 
 bool FLAG_trap;
-static atomic_llong g_underflowed;
+static std::atomic_llong g_underflowed;
 static thread_local int g_enabled;
 thread_local int llamafile_debug_op_index;
 const struct ggml_cgraph *llamafile_debug_graph;
@@ -59,17 +59,17 @@ static long long millis(void) {
     return timespec_tomillis(timespec_real());
 }
 
-static inline void spinlock(atomic_uint *lock) {
+static inline void spinlock(std::atomic_uint *lock) {
     int x;
     for (;;) {
-        x = atomic_exchange_explicit(lock, 1, memory_order_acquire);
+        x = lock->exchange(1, std::memory_order_acquire);
         if (!x)
             break;
     }
 }
 
-static inline void spunlock(atomic_uint *lock) {
-    atomic_store_explicit(lock, 0, memory_order_release);
+static inline void spunlock(std::atomic_uint *lock) {
+    lock->store(0, std::memory_order_release);
 }
 
 static const char *describe_vertex(struct ggml_tensor *t) {
@@ -130,8 +130,7 @@ static void on_sigfpe(int sig, siginfo_t *si, void *arg) {
     if (reason == FPE_FLTUND) {
         if (g_terminal_buddy.is_terminal) {
             long long now = millis();
-            if ((now - atomic_exchange_explicit(&g_underflowed, now, memory_order_relaxed)) >
-                UNDERFLOW_DELAY) {
+            if ((now - g_underflowed.exchange(now, std::memory_order_relaxed)) > UNDERFLOW_DELAY) {
                 write(2, UNDERFLOW_ALARM, strlen(UNDERFLOW_ALARM));
             }
         }
@@ -139,7 +138,7 @@ static void on_sigfpe(int sig, siginfo_t *si, void *arg) {
         return;
     }
 
-    static atomic_uint lock;
+    static std::atomic_uint lock;
     spinlock(&lock);
 
     const char *issue;
@@ -205,7 +204,7 @@ static void setup_sigfpe(void) {
 }
 
 int llamafile_trapping_enabled(int delta) {
-    static atomic_uint once;
+    static _Atomic(uint32_t) once;
     bool was_enabled = g_enabled > 0;
     bool is_enabled = (g_enabled += delta) > 0;
     feclearexcept(FE_ALL_EXCEPT);
@@ -225,11 +224,10 @@ void llamafile_trapping_restore(void) {
         feenableexcept(TRAPS);
         long long last;
         if (g_terminal_buddy.is_terminal &&
-            (last = atomic_load_explicit(&g_underflowed, memory_order_relaxed))) {
+            (last = g_underflowed.load(std::memory_order_relaxed))) {
             long long now = millis();
             if (now - last > UNDERFLOW_DELAY &&
-                now - atomic_exchange_explicit(&g_underflowed, 0, memory_order_relaxed) >
-                    UNDERFLOW_DELAY) {
+                now - g_underflowed.exchange(0, std::memory_order_relaxed) > UNDERFLOW_DELAY) {
                 write(2, UNDERFLOW_RESET, strlen(UNDERFLOW_RESET));
             }
         }

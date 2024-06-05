@@ -17,10 +17,10 @@
 
 #include "llamafile.h"
 #include "zip.h"
+
 #include <assert.h>
 #include <cosmo.h>
 #include <fcntl.h>
-#include <getopt.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -29,8 +29,12 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <third_party/getopt/getopt.internal.h>
 #include <third_party/zlib/zlib.h>
 #include <time.h>
+
+#define TINYMALLOC_MAX_BYTES (64 * 1024 * 1024)
+#include <libc/mem/tinymalloc.inc>
 
 #define CHUNK 2097152
 
@@ -39,11 +43,11 @@
 #define DOS_TIME(HOUR, MINUTE, SECOND) ((HOUR) << 11 | (MINUTE) << 5 | (SECOND) >> 1)
 
 static const char *prog;
-static int FLAG_junk;
-static int FLAG_level;
-static int FLAG_verbose;
-static int FLAG_alignment = 65536;
-static bool FLAG_nondeterministic;
+static int flag_junk;
+static int flag_level;
+static int flag_verbose;
+static int flag_alignment = 65536;
+static bool flag_nondeterministic;
 
 static wontreturn void Die(const char *thing, const char *reason) {
     tinyprint(2, thing, ": fatal error: ", reason, "\n", NULL);
@@ -113,23 +117,23 @@ int main(int argc, char *argv[]) {
         case '7':
         case '8':
         case '9':
-            FLAG_level = opt - '0';
+            flag_level = opt - '0';
             break;
         case 'v':
-            ++FLAG_verbose;
+            ++flag_verbose;
             break;
         case 'j':
-            FLAG_junk = true;
+            flag_junk = true;
             break;
         case 'N':
-            FLAG_nondeterministic = true;
+            flag_nondeterministic = true;
             break;
         case 'a':
-            FLAG_alignment = atoi(optarg);
-            if (FLAG_alignment < 1)
-                Die(prog, "FLAG_alignment must be at least 1");
-            if (FLAG_alignment & (FLAG_alignment - 1))
-                Die(prog, "FLAG_alignment must be two power");
+            flag_alignment = atoi(optarg);
+            if (flag_alignment < 1)
+                Die(prog, "flag_alignment must be at least 1");
+            if (flag_alignment & (flag_alignment - 1))
+                Die(prog, "flag_alignment must be two power");
             break;
         default:
             return 1;
@@ -201,7 +205,7 @@ int main(int argc, char *argv[]) {
     char **names = Malloc(sizeof(char *) * argc);
     for (int i = optind; i < argc; ++i) {
         names[i] = StrDup(argv[i]);
-        if (FLAG_junk)
+        if (flag_junk)
             names[i] = basename(names[i]);
         else
             while (*names[i] == '/')
@@ -266,7 +270,7 @@ int main(int argc, char *argv[]) {
         // get time
         int64_t ts;
         uint16_t mtime, mdate;
-        if (FLAG_nondeterministic)
+        if (flag_nondeterministic)
             ts = st.st_mtime;
         else
             ts = 1700000000;
@@ -277,20 +281,20 @@ int main(int argc, char *argv[]) {
         size_t namlen = strlen(name);
         size_t extlen = (2 + 2 + 8 + 8);
         size_t hdrlen = kZipLfileHdrMinSize + namlen + extlen;
-        while ((zsize + hdrlen) & (FLAG_alignment - 1))
+        while ((zsize + hdrlen) & (flag_alignment - 1))
             ++zsize;
 
         // initialize zlib in raw deflate mode
         z_stream zs;
         int compression;
-        if (!FLAG_level) {
+        if (!flag_level) {
             compression = kZipCompressionNone;
         } else {
             compression = kZipCompressionDeflate;
             zs.zalloc = 0;
             zs.zfree = 0;
             zs.opaque = 0;
-            switch (deflateInit2(&zs, FLAG_level, Z_DEFLATED, -MAX_WBITS, DEF_MEM_LEVEL,
+            switch (deflateInit2(&zs, flag_level, Z_DEFLATED, -MAX_WBITS, DEF_MEM_LEVEL,
                                  Z_DEFAULT_STRATEGY)) {
             case Z_OK:
                 break;
@@ -312,7 +316,7 @@ int main(int argc, char *argv[]) {
             if ((rc = pread(fd, iobuf, Min(size, CHUNK), i)) <= 0)
                 DieSys(path);
             crc = crc32(crc, iobuf, rc);
-            if (!FLAG_level) {
+            if (!flag_level) {
                 // write uncompressed chunk to output
                 if (pwrite(zfd, iobuf, rc, zsize + hdrlen + compsize) != rc)
                     DieSys(zpath);
@@ -340,7 +344,7 @@ int main(int argc, char *argv[]) {
                 } while (!zs.avail_out);
             }
         }
-        if (FLAG_level)
+        if (flag_level)
             unassert(deflateEnd(&zs) == Z_OK);
 
         // write local file header
@@ -411,7 +415,7 @@ int main(int argc, char *argv[]) {
             DieSys(path);
 
         // log asset creation
-        if (FLAG_verbose)
+        if (flag_verbose)
             tinyprint(2, path, " -> ", name, "\n", NULL);
     }
 

@@ -12,10 +12,16 @@ LLAMAFILE_SRCS_CPP = $(filter %.cpp,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS = $(LLAMAFILE_SRCS_C) $(LLAMAFILE_SRCS_CPP) $(LLAMAFILE_SRCS_CU)
 LLAMAFILE_DOCS = $(filter %.1,$(LLAMAFILE_FILES))
 
-LLAMAFILE_OBJS =					\
+LLAMAFILE_OBJS :=					\
 	$(LLAMAFILE_SRCS_C:%.c=o/$(MODE)/%.o)		\
 	$(LLAMAFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.o)	\
 	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)
+
+# this executable defines its own malloc(), free(), etc.
+# therefore we want to avoid it going inside the .a file
+LLAMAFILE_OBJS := $(filter-out o/$(MODE)/llamafile/zipalign.o,$(LLAMAFILE_OBJS))
+
+include llamafile/server/BUILD.mk
 
 o/$(MODE)/llamafile/zipalign:				\
 		o/$(MODE)/llamafile/zipalign.o		\
@@ -29,7 +35,6 @@ o/$(MODE)/llamafile/zipcheck:				\
 
 o/$(MODE)/llamafile/simple:				\
 		o/$(MODE)/llamafile/simple.o		\
-		o/$(MODE)/llama.cpp/llava/llava.a	\
 		o/$(MODE)/llama.cpp/llama.cpp.a
 
 o/$(MODE)/llamafile/tokenize:				\
@@ -39,6 +44,7 @@ o/$(MODE)/llamafile/tokenize:				\
 .PHONY: o/$(MODE)/llamafile
 o/$(MODE)/llamafile:					\
 		$(LLAMAFILE_OBJS)			\
+		o/$(MODE)/llamafile/server		\
 		o/$(MODE)/llamafile/simple		\
 		o/$(MODE)/llamafile/zipalign		\
 		o/$(MODE)/llamafile/zipcheck		\

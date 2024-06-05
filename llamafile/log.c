@@ -16,11 +16,11 @@
 // limitations under the License.
 
 #include "log.h"
+#include "llamafile.h"
+
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
-
-bool FLAG_log_disable;
 
 void(tinylog)(const char *s, ...) {
     size_t n;

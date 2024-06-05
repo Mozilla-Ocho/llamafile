@@ -24,12 +24,6 @@
 #include <string.h>
 #include <unistd.h>
 
-int FLAG_gpu;
-bool FLAG_nogpu;
-bool FLAG_tinyblas;
-bool FLAG_nocompile;
-bool FLAG_recompile;
-
 const char *llamafile_describe_gpu(void) {
     switch (FLAG_gpu) {
     case LLAMAFILE_GPU_AUTO:
