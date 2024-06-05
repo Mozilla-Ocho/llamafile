@@ -18,7 +18,6 @@ o/$(MODE)/llamafile/server/main:				\
 		o/$(MODE)/llama.cpp/llava/llava.a		\
 		o/$(MODE)/double-conversion/double-conversion.a	\
 		o/$(MODE)/stb/stb.a				\
-		o/$(MODE)/llamafile/server/malloc.o		\
 
 $(LLAMAFILE_SERVER_OBJS): llamafile/server/BUILD.mk
 $(LLAMAFILE_SERVER_OBJS): private CCFLAGS += -O
