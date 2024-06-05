@@ -265,7 +265,7 @@ struct cmd_params {
 };
 
 static const cmd_params cmd_params_defaults = {
-    /* model         */ {"models/7B/ggml-model-q4_0.gguf"},
+    /* model         */ {}, // [jart] no default guessing
     /* n_prompt      */ {512},
     /* n_gen         */ {16},
     /* n_pg          */ {},
@@ -359,7 +359,7 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
     for (int i = 1; i < argc; i++) {
         arg = argv[i];
         if (arg.compare(0, arg_prefix.size(), arg_prefix) == 0) {
-            std::replace(arg.begin(), arg.end(), '_', '-');
+            std::replace (arg.begin(), arg.end(), '_', '-');
         }
 
         if (arg == "-h" || arg == "--help") {
@@ -581,8 +581,11 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
         }
     }
     if (invalid_param) {
-        fprintf(stderr, "error: invalid parameter for argument: %s\n", arg.c_str());
-        print_usage(argc, argv);
+        fprintf(stderr, "%s: invalid parameter for argument: %s\n", program_invocation_name, arg.c_str());
+        exit(1);
+    }
+    if (params.model.empty()) {
+        fprintf(stderr, "%s: missing operand\n", program_invocation_name, arg.c_str());
         exit(1);
     }
 

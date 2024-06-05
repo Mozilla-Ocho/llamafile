@@ -1,0 +1,15 @@
+DESCRIPTION
+
+  Single-file public domain libraries for C/C++
+
+LICENSE
+
+  Public Domain or MIT
+
+ORIGIN
+
+  https://github.com/nothings/stb
+
+LOCAL MODIFICATIONS
+
+  - Add "e" to fopen() calls for O_CLOEXEC behavior

@@ -18975,6 +18975,8 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
     }
 #endif
 
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
+
 #ifdef LLAMAFILE_SYNC_REPORT
     g_sync.stamp = rdtsc();
     unsigned long old = 0;

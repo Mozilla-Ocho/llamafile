@@ -11,6 +11,8 @@
 #include "stb/stb_image.h"
 #include "stb/stb_image_write.h"
 #include "stb/stb_image_resize.h"
+#include "llamafile/llamafile.h"
+#include "llamafile/debug.h"
 
 const char* rng_type_to_str[] = {
     "std_default",
@@ -198,7 +200,33 @@ void parse_args(int argc, const char** argv, SDParams& params) {
     for (int i = 1; i < argc; i++) {
         arg = argv[i];
 
-        if (arg == "-t" || arg == "--threads") {
+        // [jart]
+        if (arg == "--fast") {
+            FLAG_precise = false;
+        } else if (arg == "--precise") {
+            FLAG_precise = true;
+        } else if (arg == "--trap") {
+            FLAG_trap = true;
+            FLAG_unsecure = true; // for better backtraces
+            llamafile_trapping_enabled(+1);
+        } else if (arg == "--unsecure") {
+            FLAG_unsecure = true;
+        } else if (arg == "--nocompile") {
+            FLAG_nocompile = true;
+        } else if (arg == "--recompile") {
+            FLAG_recompile = true;
+        } else if (arg == "--tinyblas") {
+            FLAG_tinyblas = true;  // undocumented
+        } else if (arg == "--gpu") {
+            if (++i >= argc) {
+                invalid_arg = true;
+                }
+            FLAG_gpu = llamafile_gpu_parse(argv[i]);
+            if (FLAG_gpu == LLAMAFILE_GPU_ERROR) {
+                fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
+                exit(1);
+            }
+        } else if (arg == "-t" || arg == "--threads") {
             if (++i >= argc) {
                 invalid_arg = true;
                 break;

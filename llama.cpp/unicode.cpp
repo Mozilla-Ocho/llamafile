@@ -2,6 +2,7 @@
 #include "unicode-data.h"
 
 #include <cassert>
+#include <algorithm> // [jart]
 #include <cstddef>
 #include <cstdint>
 #include <map>
