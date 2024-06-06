@@ -21,6 +21,7 @@ include stb/BUILD.mk
 # building a package also builds its sub-packages
 .PHONY: o/$(MODE)/
 o/$(MODE)/:	o/$(MODE)/llamafile					\
+		o/$(MODE)/llama.cpp					\
 		o/$(MODE)/stb						\
 		o/$(MODE)/depend.test
 
