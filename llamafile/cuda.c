@@ -778,9 +778,9 @@ static bool import_cuda_impl(void) {
 
     char dso[PATH_MAX];
     char bindir[PATH_MAX];
-    const char *compiler_path;
+    const char *compiler_path = NULL;
     char compiler_path_buf[PATH_MAX];
-    const char *library_path;
+    const char *library_path = NULL;
     char library_path_buf[PATH_MAX];
 
     // Attempt to load AMD GPU support.
@@ -791,15 +791,21 @@ static bool import_cuda_impl(void) {
 
         // Get some essential paths.
         // ROCm SDK puts BLAS DLLs in same folder as clang++
-        if (get_rocm_bin_path(compiler_path_buf, "amdclang++") ||
-            get_rocm_bin_path(compiler_path_buf, "clang++")) {
-            strcpy(library_path_buf, compiler_path_buf);
-            dirname(library_path_buf);
-            compiler_path = compiler_path_buf;
-            library_path = library_path_buf;
+        if (!IsWindows()) {
+            if (get_rocm_bin_path(compiler_path_buf, "hipcc")) {
+                strcpy(library_path_buf, compiler_path_buf);
+                dirname(library_path_buf);
+                compiler_path = compiler_path_buf;
+                library_path = library_path_buf;
+            }
         } else {
-            compiler_path = 0;
-            library_path = 0;
+            if (get_rocm_bin_path(compiler_path_buf, "amdclang++") ||
+                get_rocm_bin_path(compiler_path_buf, "clang++")) {
+                strcpy(library_path_buf, compiler_path_buf);
+                dirname(library_path_buf);
+                compiler_path = compiler_path_buf;
+                library_path = library_path_buf;
+            }
         }
 
         // Get path of GGML DSO for AMD.
