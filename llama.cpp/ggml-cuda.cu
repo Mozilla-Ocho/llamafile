@@ -10884,8 +10884,8 @@ static ggml_cuda_device_info ggml_cuda_init() {
     // Workaround for a rocBLAS bug when using multiple graphics cards:
     // https://github.com/ROCmSoftwarePlatform/rocBLAS/issues/1346
 #ifndef GGML_USE_TINYBLAS
-    rocblas_initialize();
-    CUDA_CHECK(cudaDeviceSynchronize());
+    // rocblas_initialize(); // already called
+    // CUDA_CHECK(cudaDeviceSynchronize());
 #endif
 #endif
 
@@ -13507,7 +13507,9 @@ GGML_CALL static enum ggml_status ggml_backend_cuda_graph_compute(ggml_backend_t
             GGML_ASSERT(stat == cudaSuccess);
         }
         // Launch graph
+        printf("cudaGraphLaunch begin\n");
         CUDA_CHECK(cudaGraphLaunch(cuda_ctx->cuda_graph->instance, cuda_ctx->stream()));
+        printf("cudaGraphLaunch done\n");
 #else
         graph_evaluated_or_captured = true;
 #endif // USE_CUDA_GRAPH

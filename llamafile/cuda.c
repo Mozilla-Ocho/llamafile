@@ -559,7 +559,14 @@ static bool compile_amd_windows(const char *clangxx, const char *dso, const char
         (char *)offload_arch,
         "-Wno-ignored-attributes",
         "-D_CRT_SECURE_NO_WARNINGS",
-        COMMON_FLAGS,
+        "-DGGML_BUILD=1",
+        "-DGGML_SHARED=1",
+        "-DGGML_MULTIPLATFORM",
+        "-DGGML_CUDA_DMMV_X=32",
+        "-DK_QUANTS_PER_ITERATION=2",
+        "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",
+        "-DGGML_CUDA_MMV_Y=1",
+        "-DGGML_USE_TINYBLAS",
         "-o",
         (char *)tmpdso,
         (char *)src,
@@ -571,10 +578,10 @@ static bool compile_amd_windows(const char *clangxx, const char *dso, const char
         "-amdgpu-early-inline-all=true",
         "-isystem",
         gc(xasprintf("%s/include", hip_path)),
-        BLAS_ONLY("-l"),
-        BLAS_ONLY(gc(xasprintf("%s/lib/hipblas.%s", hip_path, lib))),
-        BLAS_ONLY("-l"),
-        BLAS_ONLY(gc(xasprintf("%s/lib/rocblas.%s", hip_path, lib))),
+        /* BLAS_ONLY("-l"), */
+        /* BLAS_ONLY(gc(xasprintf("%s/lib/hipblas.%s", hip_path, lib))), */
+        /* BLAS_ONLY("-l"), */
+        /* BLAS_ONLY(gc(xasprintf("%s/lib/rocblas.%s", hip_path, lib))), */
         "-l",
         gc(xasprintf("%s/lib/amdhip64.%s", hip_path, lib)),
         "-lkernel32",
