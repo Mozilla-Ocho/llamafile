@@ -23,7 +23,6 @@
 #include <string>
 #include <vector>
 
-
 ////////////////////////////////////////////////////////////////////////////////
 //
 // ROLLUP acc.cu
@@ -3608,6 +3607,8 @@ void ggml_cuda_op_dequantize_mul_mat_vec(
     GGML_UNUSED(src1_padded_row_size);
 }
 
+#ifndef GGML_MINIMIZE_CODE_SIZE
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // ROLLUP fattn.cu
@@ -5098,7 +5099,6 @@ void ggml_cuda_flash_attn_ext_tile_f32(ggml_backend_cuda_context & ctx, ggml_ten
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-
 template<int D, int ncols, int parallel_blocks> // D == head size
 #if !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__))
 __launch_bounds__(D, 1)
@@ -5432,7 +5432,6 @@ void ggml_cuda_flash_attn_ext_vec_f16_no_mma(ggml_backend_cuda_context & ctx, gg
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-
 template<int D, int ncols, int parallel_blocks> // D == head size
 #if !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__))
 __launch_bounds__(D, 1)
@@ -5708,6 +5707,8 @@ void ggml_cuda_flash_attn_ext_vec_f32(ggml_backend_cuda_context & ctx, ggml_tens
     constexpr int parallel_blocks = 1;
     launch_fattn_vec_f32_64_128<cols_per_block, parallel_blocks>(ctx, dst);
 }
+
+#endif // GGML_MINIMIZE_CODE_SIZE
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -13096,7 +13097,9 @@ static bool ggml_cuda_compute_forward(ggml_backend_cuda_context & ctx, struct gg
             ggml_cuda_op_argsort(ctx, dst);
             break;
         case GGML_OP_FLASH_ATTN_EXT:
+#ifndef GGML_MINIMIZE_CODE_SIZE
             ggml_cuda_flash_attn_ext(ctx, dst);
+#endif
             break;
         default:
             return false;
@@ -13649,7 +13652,9 @@ GGML_CALL static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, cons
         case GGML_OP_LEAKY_RELU:
             return true;
         case GGML_OP_FLASH_ATTN_EXT:
-#if defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)
+#if defined(GGML_MINIMIZE_CODE_SIZE)
+            return false;
+#elif defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)
             return op->src[0]->ne[0] == 64 || op->src[0]->ne[0] == 128;
 #else
             if (op->src[0]->ne[0] == 64 || op->src[0]->ne[0] == 128) {

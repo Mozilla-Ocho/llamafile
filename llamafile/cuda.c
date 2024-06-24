@@ -61,7 +61,8 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
     /* "-DNDEBUG",  */ "-DGGML_BUILD=1", "-DGGML_SHARED=1", "-DGGML_MULTIPLATFORM", \
         "-DGGML_CUDA_DMMV_X=32", "-DK_QUANTS_PER_ITERATION=2", \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128", "-DGGML_CUDA_MMV_Y=1", \
-        (FLAG_tinyblas ? "-DGGML_USE_TINYBLAS" : "-DGGML_USE_CUBLAS")
+        (FLAG_tinyblas ? "-DGGML_USE_TINYBLAS" : "-DGGML_USE_CUBLAS"), \
+        (FLAG_flash_attn ? "-DTEHFLASH" : "-DGGML_MINIMIZE_CODE_SIZE")
 
 #define NVCC_FLAGS \
     "-std=c++11", "-O3", "--shared", "--use_fast_math", "--forward-unknown-to-host-compiler", \
@@ -567,6 +568,7 @@ static bool compile_amd_windows(const char *clangxx, const char *dso, const char
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",
         "-DGGML_CUDA_MMV_Y=1",
         "-DGGML_USE_TINYBLAS",
+        FLAG_flash_attn ? "-DTEHFLASH" : "-DGGML_MINIMIZE_CODE_SIZE",
         "-o",
         (char *)tmpdso,
         (char *)src,

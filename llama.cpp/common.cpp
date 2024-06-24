@@ -901,6 +901,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     }
     if (arg == "-fa" || arg == "--flash-attn") {
         params.flash_attn = true;
+        FLAG_flash_attn = true; // [jart]
         return true;
     }
     if (arg == "--color") {
