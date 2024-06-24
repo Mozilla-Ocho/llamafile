@@ -2220,6 +2220,15 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
             }
             sparams.hostname = argv[i];
         }
+        else if (arg == "--temp")
+        {
+            if (++i >= argc)
+            {
+                invalid_param = true;
+                break;
+            }
+            // ignored
+        }
         else if (arg == "--path")
         {
             if (++i >= argc)
