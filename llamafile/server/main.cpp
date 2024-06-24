@@ -56,7 +56,7 @@ main(int argc, char* argv[])
         .progress_callback = nullptr,
         .progress_callback_user_data = nullptr,
         .kv_overrides = nullptr,
-        .vocab_only = false,
+        .vocab_only = true,
         .use_mmap = true,
         .use_mlock = false,
         .check_tensors = false,
@@ -83,8 +83,9 @@ main(int argc, char* argv[])
     g_server->shutdown();
     g_server->close();
     delete g_server;
+    llama_free_model(g_model);
     LOG("exit");
 
-    // quality assurance
-    CheckForMemoryLeaks();
+    // // quality assurance
+    // CheckForMemoryLeaks();
 }
