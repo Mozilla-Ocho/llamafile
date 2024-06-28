@@ -859,12 +859,12 @@ void ggml_bf16_to_fp32_row(const ggml_bf16_t * x, float * y, int64_t n) {
 
 void ggml_fp32_to_bf16_row(const float * x, ggml_bf16_t * y, int64_t n) {
   int i = 0;
-#if defined(__AVX512BF16__)
+#if defined(__AVX512BF16__) && 0 // [jart] it kills subnormals
   for (; i + 32 <= n; i += 32) {
         _mm512_storeu_si512(
             (__m512i *)(y + i),
             m512i(_mm512_cvtne2ps_pbh(_mm512_loadu_ps(x + i + 16),
-                                _mm512_loadu_ps(x + i))));
+                                      _mm512_loadu_ps(x + i))));
   }
 #endif
     for (; i < n; i++) {
