@@ -815,7 +815,7 @@ int main(int argc, char ** argv) {
         if (input_echo && display) {
             for (auto id : embd) {
                 // [jart] don't print special tokens until its design stabilizes
-                const std::string token_str = llama_token_to_piece(ctx, id, false);
+                const std::string token_str = llama_token_to_piece(ctx, id, params.special);
                 printf("%s", token_str.c_str());
 
                 if (embd.size() > 1) {
@@ -958,7 +958,7 @@ int main(int argc, char ** argv) {
                     }
 
                     const auto line_pfx = ::llama_tokenize(ctx, params.input_prefix, false, true);
-                    const auto line_inp = ::llama_tokenize(ctx, buffer,              false, params.interactive_specials);
+                    const auto line_inp = ::llama_tokenize(ctx, buffer,              false, params.conversation);
                     const auto line_sfx = ::llama_tokenize(ctx, params.input_suffix, false, true);
 
                     LOG("input tokens: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, line_inp).c_str());
