@@ -82,9 +82,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 
     case GGML_TYPE_BF16: {
 #if defined(__AVX512BF16__)
-        if (k % 32)
-            return NOT_SUPPORTED;
-        if (Btype == GGML_TYPE_F32 && n < 2) {
+        if (Btype == GGML_TYPE_F32 && n < 2 && !(k % 16)) {
             tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, float, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
             tb.matmul(m, n, task);
@@ -94,12 +92,14 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
             return WANT_QUANTIZATION;
         if (Btype != GGML_TYPE_BF16)
             return NOT_SUPPORTED;
-        if (!FLAG_precise) {
+        if (n > 1 && !FLAG_precise && !(k % 32)) {
             tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, ggml_bf16_t, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const ggml_bf16_t *)B, ldb, C, ldc, ith, nth};
             tb.matmul(m, n, task);
             return true;
         } else {
+            if (k % 16)
+                return NOT_SUPPORTED;
             tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, ggml_bf16_t, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const ggml_bf16_t *)B, ldb, C, ldc, ith, nth};
             tb.matmul(m, n, task);
