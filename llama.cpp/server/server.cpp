@@ -2278,6 +2278,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
             sparams.read_timeout = std::stoi(argv[i]);
             sparams.write_timeout = std::stoi(argv[i]);
         }
+        else if (arg == "-fa" || arg == "--flash-attn") {
+            params.flash_attn = true;
+            FLAG_flash_attn = true;
+        }
         else if (arg == "-m" || arg == "--model")
         {
             if (++i >= argc)
