@@ -37,6 +37,7 @@ struct Clock
 };
 
 static Clock g_clck[2];
+static pthread_t g_time_thread;
 
 static void
 set_clck(Clock* clck, long time, long date)
@@ -131,7 +132,7 @@ time_worker(void* arg)
     sigaddset(&ss, SIGTERM);
     sigaddset(&ss, SIGUSR1);
     sigaddset(&ss, SIGALRM);
-    pthread_sigmask(SIG_BLOCK, &ss, 0);
+    pthread_sigmask(SIG_SETMASK, &ss, 0);
     set_thread_name("localtime");
     for (;;) {
         sleep(10);
@@ -144,15 +145,23 @@ void
 time_init()
 {
     update_time();
-    pthread_t th;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, 65536);
     pthread_attr_setguardsize(&attr, getauxval(AT_PAGESZ));
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    if (pthread_create(&th, &attr, time_worker, 0))
+    if (pthread_create(&g_time_thread, &attr, time_worker, 0))
         __builtin_trap();
     pthread_attr_destroy(&attr);
+}
+
+void
+time_destroy()
+{
+    if (!g_time_thread)
+        return;
+    pthread_cancel(g_time_thread);
+    if (pthread_join(g_time_thread, 0))
+        __builtin_trap();
 }
 
 static const char kMonDays[2][12] = {

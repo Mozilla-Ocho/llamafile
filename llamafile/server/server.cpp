@@ -162,7 +162,7 @@ Server::run()
         if (terminated.load(std::memory_order_acquire))
             break;
         int missing =
-          FLAG_threads - worker_count.load(std::memory_order_acquire);
+          FLAG_workers - worker_count.load(std::memory_order_acquire);
         for (int i = 0; i < missing; ++i)
             spawn();
     }

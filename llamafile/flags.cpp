@@ -48,10 +48,10 @@ int FLAG_main_gpu = 0;
 int FLAG_n_gpu_layers = -1;
 int FLAG_seed = LLAMA_DEFAULT_SEED;
 int FLAG_split_mode = LLAMA_SPLIT_MODE_LAYER;
-int FLAG_threads = 64;
+int FLAG_threads;
 int FLAG_ubatch = 512;
 int FLAG_verbose = 0;
-int FLAG_workers = 0;
+int FLAG_workers;
 
 int cpu_get_num_math();
 

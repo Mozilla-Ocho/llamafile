@@ -22,6 +22,9 @@ void
 time_init();
 
 void
+time_destroy();
+
+void
 gmtime_lockless(long, tm*);
 
 void

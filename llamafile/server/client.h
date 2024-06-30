@@ -20,11 +20,21 @@
 #include "buffer.h"
 
 #include <ctl/optional.h>
-#include <ctl/string_view.h>
+#include <ctl/string.h>
+#include <libc/fmt/itoa.h>
+#include <libc/str/slice.h>
 #include <net/http/http.h>
 #include <net/http/url.h>
 #include <sys/resource.h>
 #include <time.h>
+
+#define HasHeader(H) (!!msg.headers[H].a)
+#define HeaderData(H) (ibuf.p + msg.headers[H].a)
+#define HeaderLength(H) (msg.headers[H].b - msg.headers[H].a)
+#define HeaderEqual(H, S) \
+    SlicesEqual(S, strlen(S), HeaderData(H), HeaderLength(H))
+#define HeaderEqualCase(H, S) \
+    SlicesEqualCase(S, strlen(S), HeaderData(H), HeaderLength(H))
 
 struct Client
 {

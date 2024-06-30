@@ -105,6 +105,7 @@ create_listening_socket(const char* hostport)
         uint32_t* hostips;
         for (hostips = GetHostIps(), i = 0; hostips[i]; ++i)
             print_listening_url(hostips[i], ntohs(in->sin_port));
+        free(hostips);
     } else {
         print_listening_url(ntohl(in->sin_addr.s_addr), ntohs(in->sin_port));
     }

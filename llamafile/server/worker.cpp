@@ -132,7 +132,7 @@ Worker::run()
         sigaddset(&mask, SIGTERM);
         sigaddset(&mask, SIGUSR1);
         sigaddset(&mask, SIGALRM);
-        pthread_sigmask(SIG_BLOCK, &mask, 0);
+        pthread_sigmask(SIG_SETMASK, &mask, 0);
         handle();
     }
 

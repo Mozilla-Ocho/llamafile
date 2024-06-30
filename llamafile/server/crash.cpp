@@ -18,7 +18,6 @@
 #include "signals.h"
 #include "utils.h"
 
-#include <assert.h>
 #include <cosmo.h>
 #include <ucontext.h>
 
@@ -50,14 +49,16 @@ is_call(const unsigned char* p)
     return 0;
 }
 
-void
+char*
 describe_crash(char* buf, size_t len, int sig, siginfo_t* si, void* arg)
 {
-    unassert(len >= 64);
+    char* p = buf;
+
+    // check minimum length
+    if (len < 64)
+        return p;
 
     // describe crash
-    char* p = buf;
-    char* pe = p + len;
     char signame[21];
     p = stpcpy(p, strsignal_r(sig, signame));
     if (si && //
@@ -71,24 +72,31 @@ describe_crash(char* buf, size_t len, int sig, siginfo_t* si, void* arg)
     }
 
     // get stack frame daisy chain
-    long pc;
+    StackFrame pc;
+    StackFrame* sf;
     ucontext_t* ctx;
-    struct StackFrame* sf;
     if ((ctx = (ucontext_t*)arg)) {
-        pc = ctx->uc_mcontext.PC;
-        sf = (struct StackFrame*)ctx->uc_mcontext.BP;
+        pc.addr = ctx->uc_mcontext.PC;
+        pc.next = (struct StackFrame*)ctx->uc_mcontext.BP;
+        sf = &pc;
     } else {
-        pc = 0;
         sf = (struct StackFrame*)__builtin_frame_address(0);
     }
 
     // describe backtrace
     p = stpcpy(p, " bt ");
-    if (pc) {
-        p = hexcpy(p, pc);
-        *p++ = ' ';
-    }
+    p = describe_backtrace(p, len - (p - buf), sf);
+
+    return p;
+}
+
+char*
+describe_backtrace(char* p, size_t len, const StackFrame* sf)
+{
+    char* pe = p + len;
     bool gotsome = false;
+
+    // show address of each function
     while (sf) {
         if (kisdangerous(sf)) {
             if (p + 1 + 9 + 1 < pe) {
@@ -124,5 +132,7 @@ describe_crash(char* buf, size_t len, int sig, siginfo_t* si, void* arg)
     }
 
     // terminate string
-    *p = '\0';
+    if (p < pe)
+        *p = '\0';
+    return p;
 }

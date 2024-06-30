@@ -16,7 +16,6 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <third_party/dlmalloc/dlmalloc.h>
 #include <tool/args/args.h>
 
 #include "llama.cpp/llama.h"
@@ -28,6 +27,9 @@
 #include "server.h"
 #include "signals.h"
 #include "time.h"
+
+extern "C" void
+_pthread_decimate(void);
 
 Server* g_server;
 llama_model* g_model;
@@ -65,7 +67,7 @@ main(int argc, char* argv[])
 
     // create server
     if (FLAG_workers <= 0)
-        FLAG_workers = __get_cpu_count();
+        FLAG_workers = __get_cpu_count() + 4;
     if (FLAG_workers <= 0)
         FLAG_workers = 16;
     set_thread_name("server");
@@ -74,9 +76,9 @@ main(int argc, char* argv[])
         unassert(!g_server->spawn());
 
     // run server
-    setup_signals();
+    signals_init();
     g_server->run();
-    restore_signals();
+    signals_destroy();
 
     // shutdown server
     LOG("shutdown");
@@ -84,8 +86,11 @@ main(int argc, char* argv[])
     g_server->close();
     delete g_server;
     llama_free_model(g_model);
+    time_destroy();
     LOG("exit");
 
-    // // quality assurance
-    // CheckForMemoryLeaks();
+    // quality assurance
+    while (!pthread_orphan_np())
+        _pthread_decimate();
+    CheckForMemoryLeaks();
 }

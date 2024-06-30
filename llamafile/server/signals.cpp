@@ -17,10 +17,26 @@
 
 #include "signals.h"
 
+#include <signal.h>
 #include <ucontext.h>
 
 #include "log.h"
 #include "server.h"
+
+static struct
+{
+    struct sigaction sigint; // ctrl-c
+    struct sigaction sighup; // terminal close
+    struct sigaction sigterm; // kill
+    struct sigaction sigabrt; // abort()
+    struct sigaction sigtrap; // breakpoint
+    struct sigaction sigfpe; // illegal math
+    struct sigaction sigbus; // illegal memory
+    struct sigaction sigsegv; // illegal memory
+    struct sigaction sigill; // illegal instruction
+    struct sigaction sigxcpu; // out of cpu quota
+    struct sigaction sigxfsz; // file too large
+} old;
 
 void
 on_termination_signal(int sig)
@@ -40,55 +56,49 @@ on_crash_signal(int sig, siginfo_t* si, void* arg)
 }
 
 void
-setup_signals(void)
+signals_init(void)
 {
     struct sigaction sa;
     sa.sa_flags = SA_SIGINFO;
     sigemptyset(&sa.sa_mask);
     sa.sa_handler = on_termination_signal;
 
-    sigaction(SIGINT, &sa, 0); // ctrl-c
-    sigaction(SIGHUP, &sa, 0); // terminal close
-    sigaction(SIGTERM, &sa, 0); // kill
+    sigaction(SIGINT, &sa, &old.sigint);
+    sigaction(SIGHUP, &sa, &old.sighup);
+    sigaction(SIGTERM, &sa, &old.sigterm);
 
     sa.sa_sigaction = on_crash_signal;
-    sigaddset(&sa.sa_mask, SIGABRT); // abort()
-    sigaddset(&sa.sa_mask, SIGTRAP); // breakpoint
-    sigaddset(&sa.sa_mask, SIGFPE); // illegal math
-    sigaddset(&sa.sa_mask, SIGBUS); // illegal memory
-    sigaddset(&sa.sa_mask, SIGSEGV); // illegal memory
-    sigaddset(&sa.sa_mask, SIGILL); // illegal instruction
-    sigaddset(&sa.sa_mask, SIGXCPU); // out of cpu quota
-    sigaddset(&sa.sa_mask, SIGXFSZ); // file too large
+    sigaddset(&sa.sa_mask, SIGABRT);
+    sigaddset(&sa.sa_mask, SIGTRAP);
+    sigaddset(&sa.sa_mask, SIGFPE);
+    sigaddset(&sa.sa_mask, SIGBUS);
+    sigaddset(&sa.sa_mask, SIGSEGV);
+    sigaddset(&sa.sa_mask, SIGILL);
+    sigaddset(&sa.sa_mask, SIGXCPU);
+    sigaddset(&sa.sa_mask, SIGXFSZ);
 
-    sigaction(SIGABRT, &sa, 0); // abort()
-    sigaction(SIGTRAP, &sa, 0); // breakpoint
-    sigaction(SIGFPE, &sa, 0); // illegal math
-    sigaction(SIGBUS, &sa, 0); // illegal memory
-    sigaction(SIGSEGV, &sa, 0); // illegal memory
-    sigaction(SIGILL, &sa, 0); // illegal instruction
-    sigaction(SIGXCPU, &sa, 0); // out of cpu quota
-    sigaction(SIGXFSZ, &sa, 0); // file too large
+    sigaction(SIGABRT, &sa, &old.sigabrt);
+    sigaction(SIGTRAP, &sa, &old.sigtrap);
+    sigaction(SIGFPE, &sa, &old.sigfpe);
+    sigaction(SIGBUS, &sa, &old.sigbus);
+    sigaction(SIGSEGV, &sa, &old.sigsegv);
+    sigaction(SIGILL, &sa, &old.sigill);
+    sigaction(SIGXCPU, &sa, &old.sigxcpu);
+    sigaction(SIGXFSZ, &sa, &old.sigxfsz);
 }
 
 void
-restore_signals(void)
+signals_destroy(void)
 {
-    struct sigaction sa;
-    sa.sa_flags = 0;
-    sa.sa_handler = SIG_DFL;
-    sigemptyset(&sa.sa_mask);
-
-    sigaction(SIGINT, &sa, 0); // ctrl-c
-    sigaction(SIGHUP, &sa, 0); // terminal close
-    sigaction(SIGTERM, &sa, 0); // kill
-
-    sigaction(SIGABRT, &sa, 0); // abort()
-    sigaction(SIGTRAP, &sa, 0); // breakpoint
-    sigaction(SIGFPE, &sa, 0); // illegal math
-    sigaction(SIGBUS, &sa, 0); // illegal memory
-    sigaction(SIGSEGV, &sa, 0); // illegal memory
-    sigaction(SIGILL, &sa, 0); // illegal instruction
-    sigaction(SIGXCPU, &sa, 0); // out of cpu quota
-    sigaction(SIGXFSZ, &sa, 0); // file too large
+    sigaction(SIGINT, &old.sigint, 0);
+    sigaction(SIGHUP, &old.sighup, 0);
+    sigaction(SIGTERM, &old.sigterm, 0);
+    sigaction(SIGABRT, &old.sigabrt, 0);
+    sigaction(SIGTRAP, &old.sigtrap, 0);
+    sigaction(SIGFPE, &old.sigfpe, 0);
+    sigaction(SIGBUS, &old.sigbus, 0);
+    sigaction(SIGSEGV, &old.sigsegv, 0);
+    sigaction(SIGILL, &old.sigill, 0);
+    sigaction(SIGXCPU, &old.sigxcpu, 0);
+    sigaction(SIGXFSZ, &old.sigxfsz, 0);
 }

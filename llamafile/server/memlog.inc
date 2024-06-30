@@ -15,19 +15,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <signal.h>
+#include "signals.h"
+#include <cosmo.h>
+#include <stdlib.h>
+#include <third_party/dlmalloc/dlmalloc.h>
 
-struct StackFrame;
+void*
+memlog(void* p)
+{
+    char bt[160];
+    StackFrame* sf;
+    sf = (StackFrame*)__builtin_frame_address(0);
+    describe_backtrace(bt, sizeof(bt), sf);
+    kprintf("alloc %p bt %s\n", p, bt);
+    return p;
+}
 
-void
-signals_init(void);
+void*
+malloc(size_t n)
+{
+    return memlog(dlmalloc(n));
+}
 
-void
-signals_destroy(void);
+void*
+calloc(size_t n, size_t z)
+{
+    return memlog(dlcalloc(n, z));
+}
 
-char*
-describe_crash(char*, size_t, int, siginfo_t*, void*);
+void*
+realloc(void* p, size_t n)
+{
+    return memlog(dlrealloc(p, n));
+}
 
-char*
-describe_backtrace(char*, size_t, const StackFrame*);
+void*
+memalign(size_t a, size_t n)
+{
+    return memlog(dlmemalign(a, n));
+}
