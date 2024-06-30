@@ -4616,7 +4616,8 @@ static bool llm_load_tensors(
     model.n_gpu_layers = n_gpu_layers;
 
     const int64_t n_layer     = hparams.n_layer;
-    const int64_t i_gpu_start = std::max((int64_t) hparams.n_layer - n_gpu_layers, (int64_t) 0);
+    const int     n_gpu       = std::min(n_gpu_layers, int(n_layer)); // [jart] prevent vector overflow
+    const int64_t i_gpu_start = std::max((int64_t) hparams.n_layer - n_gpu, (int64_t) 0);
     bool use_mmap_buffer = true;
 
     // there is very little benefit to offloading the input layer, so always keep it on the CPU
