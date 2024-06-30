@@ -20,6 +20,8 @@
 #include <signal.h>
 #include <ucontext.h>
 
+#include "llamafile/crash.h"
+
 #include "log.h"
 #include "server.h"
 

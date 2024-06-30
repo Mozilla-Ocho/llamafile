@@ -26,6 +26,7 @@
 #include <time.h>
 
 #include "llamafile/llamafile.h"
+
 #include "log.h"
 #include "server.h"
 #include "worker.h"
@@ -59,9 +60,7 @@ Server::signal()
 void
 Server::wait()
 {
-    struct timespec waitfor =
-      timespec_add(timespec_real(), timespec_fromseconds(1));
-    pthread_cond_timedwait(&cond_, &lock_, &waitfor);
+    pthread_cond_wait(&cond_, &lock_);
 }
 
 void

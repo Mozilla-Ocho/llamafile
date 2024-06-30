@@ -56,6 +56,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <ctl/vector.h>
 
 #define LLAMA_ATTRIBUTE_FORMAT(...) __attribute__((__format__(__gnu_printf__, __VA_ARGS__)))
 
@@ -1629,6 +1630,7 @@ struct llama_cparams {
     float defrag_thold;
 
     bool embeddings;
+    bool embeddings_only;
     bool causal_attn;
     bool offload_kqv;
     bool flash_attn;
@@ -1908,7 +1910,7 @@ struct llama_model {
 
     layer_buft buft_input;
     layer_buft buft_output;
-    std::vector<layer_buft> buft_layer;
+    ctl::vector<layer_buft> buft_layer;
 
     // contexts where the model tensors metadata is stored
     std::vector<struct ggml_context *> ctxs;
@@ -2240,6 +2242,7 @@ static bool llama_kv_cache_init(
     }
 
     // allocate tensors and initialize the buffers to avoid NaNs in the padding
+    // BOOP 2709 us
     for (auto it : ctx_map) {
         ggml_backend_buffer_type_t buft = it.first;
         ggml_context * ctx = it.second;
@@ -2248,7 +2251,8 @@ static bool llama_kv_cache_init(
             LLAMA_LOG_ERROR("%s: failed to allocate buffer for kv cache\n", __func__);
             return false;
         }
-        ggml_backend_buffer_clear(buf, 0);
+        if (!cparams.embeddings_only)
+            ggml_backend_buffer_clear(buf, 0);
         LLAMA_LOG_INFO("%s: %10s KV buffer size = %8.2f MiB\n", __func__, ggml_backend_buffer_name(buf), ggml_backend_buffer_get_size(buf)/1024.0/1024.0);
         cache.bufs.push_back(buf);
     }
@@ -4611,13 +4615,15 @@ static bool llm_load_tensors(
     }
 #endif
 
+    n_gpu_layers = std::min(n_gpu_layers, (int)hparams.n_layer); // [jart]
+    n_gpu_layers = std::max(n_gpu_layers, 0); // [jart]
+
     model.split_mode   = split_mode;
     model.main_gpu     = main_gpu;
     model.n_gpu_layers = n_gpu_layers;
 
     const int64_t n_layer     = hparams.n_layer;
-    const int     n_gpu       = std::min(n_gpu_layers, int(n_layer)); // [jart] prevent vector overflow
-    const int64_t i_gpu_start = std::max((int64_t) hparams.n_layer - n_gpu, (int64_t) 0);
+    const int64_t i_gpu_start = std::max((int64_t) hparams.n_layer - n_gpu_layers, (int64_t) 0);
     bool use_mmap_buffer = true;
 
     // there is very little benefit to offloading the input layer, so always keep it on the CPU
@@ -11122,7 +11128,7 @@ static int llama_decode_internal(
     const uint32_t n_tokens_all = batch_all.n_tokens;
 
     if (n_tokens_all == 0) {
-        LLAMA_LOG_ERROR("%s: n_tokens == 0", __func__);
+        LLAMA_LOG_ERROR("%s: n_tokens == 0\n", __func__);
         return -1;
     }
 
@@ -15231,6 +15237,7 @@ struct llama_context_params llama_context_default_params() {
         /*.type_v                      =*/ GGML_TYPE_F16,
         /*.logits_all                  =*/ false,
         /*.embeddings                  =*/ false,
+        /*.embeddings_only             =*/ false, // [jart]
         /*.offload_kqv                 =*/ true,
         /*.flash_attn                  =*/ false,
         /*.abort_callback              =*/ nullptr,
@@ -15408,6 +15415,8 @@ struct llama_context * llama_new_context_with_model(
     cparams.offload_kqv      = params.offload_kqv;
     cparams.flash_attn       = params.flash_attn;
     cparams.pooling_type     = params.pooling_type;
+    cparams.embeddings       = params.embeddings;
+    cparams.embeddings_only  = params.embeddings_only; // [jart]
 
     cparams.n_ctx            = params.n_ctx           == 0    ? hparams.n_ctx_train           : params.n_ctx;
     cparams.rope_freq_base   = params.rope_freq_base  == 0.0f ? hparams.rope_freq_base_train  : params.rope_freq_base;
@@ -15675,6 +15684,7 @@ if (llamafile_has_metal()) {
             pipeline_parallel = false;
             }
 // #endif
+            // BOOP 1611 us ggml_backend_sched_new(ctx->backends.data(), backend_buft.data(), ctx->backends.size(), LLAMA_MAX_NODES, pipeline_parallel)
             ctx->sched = ggml_backend_sched_new(ctx->backends.data(), backend_buft.data(), ctx->backends.size(), LLAMA_MAX_NODES, pipeline_parallel);
 
             if (pipeline_parallel) {
@@ -15688,6 +15698,7 @@ if (llamafile_has_metal()) {
             ggml_cgraph * gf = llama_build_graph(*ctx, llama_batch_get_one(&token, n_tokens, n_past, 0), true);
 
             // initialize scheduler with the worst-case graph
+            // BOOP 298 us ggml_backend_sched_reserve(ctx->sched, gf)
             if (!ggml_backend_sched_reserve(ctx->sched, gf)) {
                 LLAMA_LOG_ERROR("%s: failed to allocate compute buffers\n", __func__);
                 llama_free(ctx);
@@ -16112,6 +16123,8 @@ int32_t llama_get_kv_cache_used_cells(const struct llama_context * ctx) {
 }
 
 void llama_kv_cache_clear(struct llama_context * ctx) {
+    if (ctx->cparams.embeddings_only) // [jart]
+        return;
     llama_kv_cache_clear(ctx->kv_self);
 }
 
@@ -17316,7 +17329,7 @@ float * llama_get_embeddings(struct llama_context * ctx) {
 
 // [jart] DO NOT SYNC this function
 static float * llama_get_embeddings_ith_fail(int i, std::string reason) {
-    LLAMA_LOG_ERROR("%s: invalid embeddings id %d, reason: %s\n", __func__, i, reason);
+    LLAMA_LOG_ERROR("%s: invalid embeddings id %d, reason: %s\n", __func__, i, reason.c_str());
     return nullptr;
 }
 

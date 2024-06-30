@@ -16,6 +16,7 @@
 // limitations under the License.
 
 #pragma once
+#include <ctl/optional.h>
 #include <ctl/string_view.h>
 
 extern const signed char kHexToInt[256];
@@ -23,5 +24,10 @@ extern const signed char kHexToInt[256];
 bool
 atob(ctl::string_view, bool);
 
-char*
-hexcpy(char*, unsigned long);
+static inline ctl::string_view
+or_empty(ctl::optional<ctl::string_view> x)
+{
+    if (x.has_value())
+        return x.value();
+    return {};
+}

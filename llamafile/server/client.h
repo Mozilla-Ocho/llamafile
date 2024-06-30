@@ -74,4 +74,5 @@ struct Client
 
     bool dispatch() __wur;
     bool tokenize() __wur;
+    bool embedding() __wur;
 };

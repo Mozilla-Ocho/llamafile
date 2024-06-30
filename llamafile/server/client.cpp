@@ -38,7 +38,7 @@
 
 using namespace ctl;
 
-Client::Client() : ibuf(8 * 1024 * 1024), obuf(64 * 1024 * 1024)
+Client::Client() : ibuf(FLAG_http_ibuf_size), obuf(FLAG_http_obuf_size)
 {
     InitHttpMessage(&msg, 0);
     url.params.p = nullptr;
@@ -341,6 +341,8 @@ Client::dispatch()
 {
     if (path() == "/tokenize")
         return tokenize();
+    if (path() == "/embedding")
+        return embedding();
     return send_error(404);
 }
 

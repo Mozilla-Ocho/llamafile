@@ -58,7 +58,7 @@ main(int argc, char* argv[])
         .progress_callback = nullptr,
         .progress_callback_user_data = nullptr,
         .kv_overrides = nullptr,
-        .vocab_only = true,
+        .vocab_only = false,
         .use_mmap = true,
         .use_mlock = false,
         .check_tensors = false,
@@ -77,7 +77,9 @@ main(int argc, char* argv[])
 
     // run server
     signals_init();
+    llama_backend_init();
     g_server->run();
+    llama_backend_free();
     signals_destroy();
 
     // shutdown server

@@ -16,12 +16,30 @@
 // limitations under the License.
 
 #pragma once
-#include <signal.h>
+#include <pthread.h>
 
-struct StackFrame;
+template <typename T>
+struct ThreadLocal {
 
-void
-signals_init(void);
+    explicit ThreadLocal(void (*dtor)(T *value)) {
+        if (pthread_key_create(&key_, (void (*)(void *))dtor))
+            __builtin_trap();
+    }
 
-void
-signals_destroy(void);
+    ~ThreadLocal() {
+        if (pthread_key_delete(key_))
+            __builtin_trap();
+    }
+
+    void set(T *value) {
+        if (pthread_setspecific(key_, value))
+            __builtin_trap();
+    }
+
+    T *get() {
+        return (T *)pthread_getspecific(key_);
+    }
+
+  private:
+    pthread_key_t key_;
+};

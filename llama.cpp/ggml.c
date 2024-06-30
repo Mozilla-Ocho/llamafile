@@ -41,6 +41,7 @@ SOFTWARE.");
 #include "llamafile/log.h"
 #include "llamafile/debug.h"
 #include "llamafile/sgemm.h"
+#include "llamafile/thread.h"
 
 #include <alloca.h>
 #include <assert.h>
@@ -1574,7 +1575,7 @@ int ggml_delay(int backoff) {
         }
         backoff++;
     } else {
-        sched_yield();
+        pthread_yield_np();
     }
     return backoff;
 }
@@ -18561,7 +18562,7 @@ typedef int ggml_lock_t;
 
 typedef pthread_t ggml_thread_t;
 
-#define ggml_thread_create pthread_create
+#define ggml_thread_create llamafile_thread_create
 #define ggml_thread_join   pthread_join
 
 #else
@@ -18975,8 +18976,6 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
     }
 #endif
 
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
-
 #ifdef LLAMAFILE_SYNC_REPORT
     g_sync.stamp = rdtsc();
     unsigned long old = 0;
@@ -18986,10 +18985,15 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
                                             memory_order_relaxed);
 #endif
 
+    int ct;
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &ct);
+    pthread_testcancel();
+
     while (true) {
         if (cplan->abort_callback && cplan->abort_callback(cplan->abort_callback_data)) {
             state->shared->node_n += 1;
             state->ec = GGML_STATUS_ABORTED;
+            pthread_setcanceltype(ct, 0);
             return 0;
         }
 
@@ -19125,6 +19129,8 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
             ggml_graph_compute_thread_sync_task(&task_phase, state, false);
         }
     }
+
+    pthread_setcanceltype(ct,0);
 
 #ifdef LLAMAFILE_SYNC_REPORT
     g_sync.work_cycles += rdtsc() - g_sync.stamp;

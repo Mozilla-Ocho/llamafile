@@ -25,6 +25,8 @@ extern int FLAG_ctx;
 extern int FLAG_flash_attn;
 extern int FLAG_gpu;
 extern int FLAG_gpu;
+extern int FLAG_http_ibuf_size;
+extern int FLAG_http_obuf_size;
 extern int FLAG_keepalive;
 extern int FLAG_main_gpu;
 extern int FLAG_n_gpu_layers;

@@ -16,12 +16,31 @@
 // limitations under the License.
 
 #pragma once
-#include <signal.h>
+#include <stdatomic.h>
 
-struct StackFrame;
+template <typename T>
+class RefCounted {
+  public:
+    RefCounted() : refs_(ATOMIC_VAR_INIT(0)) {
+    }
 
-void
-signals_init(void);
+    virtual ~RefCounted() {
+        if (atomic_load_explicit(&refs_, memory_order_relaxed) != -1)
+            __builtin_trap();
+    }
 
-void
-signals_destroy(void);
+    T *ref() {
+        atomic_fetch_add_explicit(&refs_, 1, memory_order_relaxed);
+        return (T *)this;
+    }
+
+    void unref() {
+        if (atomic_fetch_sub_explicit(&refs_, 1, memory_order_release))
+            return;
+        atomic_thread_fence(memory_order_acquire);
+        delete this;
+    }
+
+  private:
+    atomic_int refs_;
+};

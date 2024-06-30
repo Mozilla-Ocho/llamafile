@@ -18,6 +18,7 @@
 #include "client.h"
 
 #include <ctl/vector.h>
+#include <math.h>
 #include <string.h>
 #include <sys/resource.h>
 
@@ -27,8 +28,38 @@
 #include "log.h"
 #include "utils.h"
 
+void
+normalize_embeddings(const float* inp, float* out, int n)
+{
+    double sum = 0;
+    for (int i = 0; i < n; i++)
+        sum += inp[i] * inp[i];
+    sum = sqrt(sum);
+    const float norm = sum > 0 ? 1.f / sum : 0.f;
+    for (int i = 0; i < n; i++)
+        out[i] = inp[i] * norm;
+}
+
+void
+add_token_to_batch(struct llama_batch& batch,
+                   llama_token id,
+                   llama_pos pos,
+                   const ctl::vector<llama_seq_id>& seq_ids,
+                   bool logits)
+{
+    batch.token[batch.n_tokens] = id;
+    batch.pos[batch.n_tokens] = pos;
+    batch.n_seq_id[batch.n_tokens] = seq_ids.size();
+    for (size_t i = 0; i < seq_ids.size(); ++i) {
+        batch.seq_id[batch.n_tokens][i] = seq_ids[i];
+    }
+    batch.logits[batch.n_tokens] = logits;
+
+    batch.n_tokens++;
+}
+
 bool
-Client::tokenize()
+Client::embedding()
 {
     if (msg.method != kHttpGet && msg.method != kHttpPost)
         return send_error(405);
@@ -69,20 +100,80 @@ Client::tokenize()
 
     // turn text into tokens
     extern llama_model* g_model;
-    int maxcount = input.size() + 16;
-    ctl::vector<llama_token> toks(maxcount);
+    ctl::vector<llama_token> toks(input.size() + 16);
     int count = llama_tokenize(g_model,
                                input.data(),
                                input.size(),
                                &toks[0],
-                               maxcount,
+                               toks.size(),
                                add_special,
                                parse_special);
     if (count < 0) {
-        LOG("failed to tokenize");
+        LOG("llama_tokenize failed");
         return send_error(405);
     }
     toks.resize(count);
+    LOG("toks.size() = %d", count);
+
+    // truncate if exceeds model context size
+    const int n_ctx_train = llama_n_ctx_train(g_model);
+    LOG("n_ctx_train = %d", n_ctx_train);
+    if (count > n_ctx_train)
+        count = n_ctx_train;
+    LOG("count = %d", count);
+
+    // initialize context
+    llama_context_params cparams = {};
+    cparams.embeddings = true;
+    cparams.embeddings_only = true;
+    cparams.logits_all = true;
+    cparams.seed = _rand64();
+    cparams.n_ctx = count;
+    cparams.n_batch = count;
+    cparams.n_ubatch = count;
+    cparams.n_seq_max = 1;
+    cparams.n_threads = 8;
+    cparams.n_threads_batch = 8;
+    cparams.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
+    cparams.pooling_type = LLAMA_POOLING_TYPE_NONE;
+    cparams.type_k = GGML_TYPE_F16;
+    cparams.type_v = GGML_TYPE_F16;
+    cparams.flash_attn = FLAG_flash_attn;
+    llama_context* ctx = llama_new_context_with_model(g_model, cparams);
+    if (!ctx) {
+        LOG("llama_new_context_with_model failed");
+        return send_error(500);
+    }
+
+    // initialize batch
+    const int n_embd = llama_n_embd(g_model);
+    struct llama_batch batch = llama_batch_init(count, 0, 1);
+    for (size_t i = 0; i < count; ++i)
+        add_token_to_batch(batch, toks[i], i, { 0 }, i == count - 1);
+
+    // inference time
+    if (llama_decode(ctx, batch) < 0) {
+        LOG("llama_decode failed");
+        llama_free(ctx);
+        llama_batch_free(batch);
+        return send_error(500);
+    }
+    ctl::vector<float> embeddings(n_embd, 0);
+    for (int i = 0; i < batch.n_tokens; i++) {
+        if (!batch.logits[i])
+            continue;
+        const float* embd = llama_get_embeddings_ith(ctx, i);
+        if (!embd) {
+            LOG("llama_get_embeddings_ith failed");
+            llama_free(ctx);
+            llama_batch_free(batch);
+            return send_error(500);
+        }
+        normalize_embeddings(
+          embd, &embeddings[0] + batch.seq_id[i][0] * n_embd, n_embd);
+    }
+    llama_free(ctx);
+    llama_batch_free(batch);
 
     // serialize tokens to json
     char* p = obuf.p;
@@ -93,20 +184,21 @@ Client::tokenize()
     p = stpcpy(p, "  \"parse_special\": ");
     p = encode_bool(p, parse_special);
     p = stpcpy(p, ",\n");
-    p = stpcpy(p, "  \"tokens\": [");
-    for (int i = 0; i < count; ++i) {
-        if (i)
+    p = stpcpy(p, "  \"tokens_provided\": ");
+    p = encode_json(p, toks.size());
+    p = stpcpy(p, ",\n");
+    p = stpcpy(p, "  \"tokens_used\": ");
+    p = encode_json(p, count);
+    p = stpcpy(p, ",\n");
+    p = stpcpy(p, "  \"embedding\": [");
+    for (size_t i = 0; i < embeddings.size(); ++i) {
+        if (i) {
             *p++ = ',';
-        p = stpcpy(p, "\r\n    ");
-        char s[32];
-        int n = llama_token_to_piece(g_model, toks[i], s, sizeof(s), true);
-        if (n < 0) {
-            LOG("failed to turn token into string");
-            return send_error(405);
+            *p++ = ' ';
         }
-        p = encode_json(p, ctl::string_view(s, n));
+        p = encode_json(p, embeddings[i]);
     }
-    p = stpcpy(p, "\r\n  ]\r\n");
+    p = stpcpy(p, "]\r\n");
     p = stpcpy(p, "}\r\n");
     ctl::string_view content(obuf.p, p - obuf.p);
 

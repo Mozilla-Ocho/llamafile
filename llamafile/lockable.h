@@ -15,42 +15,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "signals.h"
-#include <cosmo.h>
-#include <stdlib.h>
-#include <third_party/dlmalloc/dlmalloc.h>
+#pragma once
+#include <pthread.h>
 
-void*
-memlog(void* p)
-{
-    char bt[160];
-    StackFrame* sf;
-    sf = (StackFrame*)__builtin_frame_address(0);
-    describe_backtrace(bt, sizeof(bt), sf);
-    kprintf("alloc %p bt %s\n", p, bt);
-    return p;
-}
+class Lockable {
+  public:
+    Lockable() {
+        if (pthread_mutex_init(&lock_, nullptr))
+            __builtin_trap();
+    }
 
-void*
-malloc(size_t n)
-{
-    return memlog(dlmalloc(n));
-}
+    virtual ~Lockable() {
+        if (pthread_mutex_destroy(&lock_))
+            __builtin_trap();
+    }
 
-void*
-calloc(size_t n, size_t z)
-{
-    return memlog(dlcalloc(n, z));
-}
+    void lock() {
+        if (pthread_mutex_lock(&lock_))
+            __builtin_trap();
+    }
 
-void*
-realloc(void* p, size_t n)
-{
-    return memlog(dlrealloc(p, n));
-}
+    void unlock() {
+        if (pthread_mutex_unlock(&lock_))
+            __builtin_trap();
+    }
 
-void*
-memalign(size_t a, size_t n)
-{
-    return memlog(dlmemalign(a, n));
-}
+  private:
+    pthread_mutex_t lock_;
+};
