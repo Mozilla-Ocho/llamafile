@@ -38,7 +38,8 @@
 
 using namespace ctl;
 
-Client::Client() : ibuf(FLAG_http_ibuf_size), obuf(FLAG_http_obuf_size)
+Client::Client()
+  : cleanups(nullptr), ibuf(FLAG_http_ibuf_size), obuf(FLAG_http_obuf_size)
 {
     InitHttpMessage(&msg, 0);
     url.params.p = nullptr;
@@ -60,8 +61,20 @@ Client::close()
 }
 
 void
+Client::cleanup()
+{
+    Cleanup* clean;
+    while ((clean = cleanups)) {
+        cleanups = clean->next;
+        clean->func(clean->arg);
+        delete clean;
+    }
+}
+
+void
 Client::clear()
 {
+    cleanup();
     free(url_memory);
     url_memory = nullptr;
     free(params_memory);
@@ -71,6 +84,16 @@ Client::clear()
     close_connection = false;
     payload = "";
     unread = 0;
+}
+
+void
+Client::defer_cleanup(void (*func)(void*), void* arg)
+{
+    Cleanup* clean = new Cleanup;
+    clean->next = cleanups;
+    clean->func = func;
+    clean->arg = arg;
+    cleanups = clean;
 }
 
 void
@@ -195,6 +218,7 @@ Client::transport()
 bool
 Client::send_error(int code, const char* reason)
 {
+    cleanup();
     if (!reason)
         reason = GetHttpReason(code);
     LOG("error %d %s", code, reason);
@@ -230,6 +254,8 @@ Client::start_response(char* p, int code, const char* reason)
 bool
 Client::send_response(char* p0, char* p, string_view content)
 {
+    cleanup();
+
     // append date header
     tm tm;
     p = stpcpy(p, "Date: ");

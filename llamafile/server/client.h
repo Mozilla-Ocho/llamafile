@@ -36,6 +36,13 @@
 #define HeaderEqualCase(H, S) \
     SlicesEqualCase(S, strlen(S), HeaderData(H), HeaderLength(H))
 
+struct Cleanup
+{
+    Cleanup* next;
+    void (*func)(void*);
+    void* arg;
+};
+
 struct Client
 {
     int fd = -1;
@@ -47,6 +54,7 @@ struct Client
     char* url_memory = nullptr;
     char* params_memory = nullptr;
     ctl::string_view payload;
+    Cleanup* cleanups;
     Buffer ibuf;
     Buffer obuf;
 
@@ -55,6 +63,7 @@ struct Client
     void run();
     int close();
     void clear();
+    void cleanup();
     bool transport() __wur;
     bool synchronize() __wur;
     bool read_payload() __wur;
@@ -62,6 +71,7 @@ struct Client
     bool read_content() __wur;
     bool send_continue() __wur;
     bool send(const ctl::string_view) __wur;
+    void defer_cleanup(void (*)(void*), void*);
     char* start_response(char*, int, const char* = nullptr);
     bool send_error(int, const char* = nullptr) __wur;
     bool send_response(char*, char*, const ctl::string_view) __wur;

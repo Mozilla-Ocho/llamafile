@@ -11134,6 +11134,15 @@ static void llama_graph_compute(
     // fprintf(stderr, "splits: %d\n", ggml_backend_sched_get_n_splits(lctx.sched));
 }
 
+struct llama_decoder {
+    std::vector<llama_pos> pos;
+    std::vector<int32_t> n_seq_id;
+    std::vector<llama_seq_id *> seq_id_arr;
+    std::vector<std::vector<llama_seq_id>> seq_id;
+    llama_decoder() = default;
+    ~llama_decoder() = default;
+};
+
 // decode a batch of tokens by evaluating the transformer
 //
 //   - lctx:      llama context
@@ -11145,7 +11154,8 @@ static void llama_graph_compute(
 //
 static int llama_decode_internal(
          llama_context & lctx,
-           llama_batch   batch_all) { // TODO: rename back to batch
+           llama_batch   batch_all,
+         llama_decoder * decoder) { // TODO: rename back to batch
 
     const uint32_t n_tokens_all = batch_all.n_tokens;
 
@@ -11179,10 +11189,7 @@ static int llama_decode_internal(
 
     const auto n_ubatch = cparams.n_ubatch;
 
-    std::vector<llama_pos> pos;
-    std::vector<int32_t>                   n_seq_id;
-    std::vector<llama_seq_id *>            seq_id_arr;
-    std::vector<std::vector<llama_seq_id>> seq_id;
+    // TODO(jart): these need to be cleanup up on thread cancelation
 
     // count outputs
     if (batch_all.logits) {
@@ -11258,27 +11265,27 @@ static int llama_decode_internal(
         // helpers for smoother batch API transition
         // after deprecating the llama_eval calls, these will be removed
         if (u_batch.pos == nullptr) {
-            pos.resize(n_tokens);
+            decoder->pos.resize(n_tokens);
             for (uint32_t i = 0; i < n_tokens; i++) {
-                pos[i] = u_batch.all_pos_0 + i*u_batch.all_pos_1;
+                decoder->pos[i] = u_batch.all_pos_0 + i*u_batch.all_pos_1;
             }
 
-            u_batch.pos = pos.data();
+            u_batch.pos = decoder->pos.data();
         }
 
         if (u_batch.seq_id == nullptr) {
-            n_seq_id.resize(n_tokens);
-            seq_id.resize(n_tokens);
-            seq_id_arr.resize(n_tokens);
+            decoder->n_seq_id.resize(n_tokens);
+            decoder->seq_id.resize(n_tokens);
+            decoder->seq_id_arr.resize(n_tokens);
             for (uint32_t i = 0; i < n_tokens; i++) {
-                n_seq_id[i] = 1;
-                seq_id[i].resize(1);
-                seq_id[i][0] = u_batch.all_seq_id;
-                seq_id_arr[i] = seq_id[i].data();
+                decoder->n_seq_id[i] = 1;
+                decoder->seq_id[i].resize(1);
+                decoder->seq_id[i][0] = u_batch.all_seq_id;
+                decoder->seq_id_arr[i] = decoder->seq_id[i].data();
             }
 
-            u_batch.n_seq_id = n_seq_id.data();
-            u_batch.seq_id = seq_id_arr.data();
+            u_batch.n_seq_id = decoder->n_seq_id.data();
+            u_batch.seq_id = decoder->seq_id_arr.data();
         }
 
         // non-causal masks do not use the KV cache
@@ -17270,7 +17277,21 @@ void llama_batch_free(struct llama_batch batch) {
 int32_t llama_decode(
         struct llama_context * ctx,
           struct llama_batch   batch) {
-    const int ret = llama_decode_internal(*ctx, batch);
+    int ret;
+
+    // [jart] pthread_cancel() safety
+    llama_decoder * decoder = new llama_decoder;
+    pthread_cleanup_push(
+      [](void* arg) {
+          llama_decoder * decoder = (llama_decoder*)arg;
+          delete decoder;
+      },
+      decoder);
+
+    ret = llama_decode_internal(*ctx, batch, decoder);
+
+    pthread_cleanup_pop(true);
+
     if (ret < 0) {
         LLAMA_LOG_ERROR("%s: failed to decode, ret = %d\n", __func__, ret);
     }

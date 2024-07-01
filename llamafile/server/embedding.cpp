@@ -28,6 +28,8 @@
 #include "log.h"
 #include "utils.h"
 
+extern llama_model* g_model;
+
 void
 normalize_embeddings(const float* inp, float* out, int n)
 {
@@ -50,12 +52,30 @@ add_token_to_batch(struct llama_batch& batch,
     batch.token[batch.n_tokens] = id;
     batch.pos[batch.n_tokens] = pos;
     batch.n_seq_id[batch.n_tokens] = seq_ids.size();
-    for (size_t i = 0; i < seq_ids.size(); ++i) {
+    for (size_t i = 0; i < seq_ids.size(); ++i)
         batch.seq_id[batch.n_tokens][i] = seq_ids[i];
-    }
     batch.logits[batch.n_tokens] = logits;
-
     batch.n_tokens++;
+}
+
+void
+cleanup_llama_batch(void* arg)
+{
+    llama_batch* batch = (llama_batch*)arg;
+    llama_batch_free(*batch);
+    delete batch;
+}
+
+void
+cleanup_token_vector(void* arg)
+{
+    delete (ctl::vector<llama_token>*)arg;
+}
+
+void
+cleanup_llama_context(void* arg)
+{
+    llama_free((llama_context*)arg);
 }
 
 bool
@@ -99,28 +119,25 @@ Client::embedding()
     timespec started = timespec_real();
 
     // turn text into tokens
-    extern llama_model* g_model;
-    ctl::vector<llama_token> toks(input.size() + 16);
+    auto toks = new ctl::vector<llama_token>(input.size() + 16);
+    defer_cleanup(cleanup_token_vector, toks);
     int count = llama_tokenize(g_model,
                                input.data(),
                                input.size(),
-                               &toks[0],
-                               toks.size(),
+                               &(*toks)[0],
+                               toks->size(),
                                add_special,
                                parse_special);
     if (count < 0) {
         LOG("llama_tokenize failed");
         return send_error(405);
     }
-    toks.resize(count);
-    LOG("toks.size() = %d", count);
+    toks->resize(count);
 
     // truncate if exceeds model context size
     const int n_ctx_train = llama_n_ctx_train(g_model);
-    LOG("n_ctx_train = %d", n_ctx_train);
     if (count > n_ctx_train)
         count = n_ctx_train;
-    LOG("count = %d", count);
 
     // initialize context
     llama_context_params cparams = {};
@@ -144,36 +161,33 @@ Client::embedding()
         LOG("llama_new_context_with_model failed");
         return send_error(500);
     }
+    defer_cleanup(cleanup_llama_context, ctx);
 
     // initialize batch
     const int n_embd = llama_n_embd(g_model);
-    struct llama_batch batch = llama_batch_init(count, 0, 1);
+    llama_batch* batch = new llama_batch;
+    *batch = llama_batch_init(count, 0, 1);
+    defer_cleanup(cleanup_llama_batch, batch);
     for (size_t i = 0; i < count; ++i)
-        add_token_to_batch(batch, toks[i], i, { 0 }, i == count - 1);
+        add_token_to_batch(*batch, (*toks)[i], i, { 0 }, i == count - 1);
 
     // inference time
-    if (llama_decode(ctx, batch) < 0) {
+    if (llama_decode(ctx, *batch) < 0) {
         LOG("llama_decode failed");
-        llama_free(ctx);
-        llama_batch_free(batch);
         return send_error(500);
     }
     ctl::vector<float> embeddings(n_embd, 0);
-    for (int i = 0; i < batch.n_tokens; i++) {
-        if (!batch.logits[i])
+    for (int i = 0; i < batch->n_tokens; i++) {
+        if (!batch->logits[i])
             continue;
         const float* embd = llama_get_embeddings_ith(ctx, i);
         if (!embd) {
             LOG("llama_get_embeddings_ith failed");
-            llama_free(ctx);
-            llama_batch_free(batch);
             return send_error(500);
         }
         normalize_embeddings(
-          embd, &embeddings[0] + batch.seq_id[i][0] * n_embd, n_embd);
+          embd, &embeddings[0] + batch->seq_id[i][0] * n_embd, n_embd);
     }
-    llama_free(ctx);
-    llama_batch_free(batch);
 
     // serialize tokens to json
     char* p = obuf.p;
@@ -185,7 +199,7 @@ Client::embedding()
     p = encode_bool(p, parse_special);
     p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"tokens_provided\": ");
-    p = encode_json(p, toks.size());
+    p = encode_json(p, toks->size());
     p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"tokens_used\": ");
     p = encode_json(p, count);

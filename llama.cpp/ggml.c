@@ -18511,7 +18511,7 @@ typedef int ggml_lock_t;
 
 typedef pthread_t ggml_thread_t;
 
-#define ggml_thread_create llamafile_thread_create
+#define ggml_thread_create llamafile_thread_create // [jart]
 #define ggml_thread_join   pthread_join
 
 #else
@@ -18934,7 +18934,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
                                             memory_order_relaxed);
 #endif
 
-    int ct;
+    int ct; // [jart] enable instant math cancelation
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &ct);
     pthread_testcancel();
 
@@ -18942,7 +18942,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
         if (cplan->abort_callback && cplan->abort_callback(cplan->abort_callback_data)) {
             state->shared->node_n += 1;
             state->ec = GGML_STATUS_ABORTED;
-            pthread_setcanceltype(ct, 0);
+            pthread_setcanceltype(ct, 0); // [jart]
             return 0;
         }
 
@@ -19079,7 +19079,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
         }
     }
 
-    pthread_setcanceltype(ct,0);
+    pthread_setcanceltype(ct, 0); // [jart]
 
 #ifdef LLAMAFILE_SYNC_REPORT
     g_sync.work_cycles += rdtsc() - g_sync.stamp;
@@ -19354,6 +19354,10 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
             GGML_ASSERT(cplan->work_data);
         }
     }
+
+    // if we've been canceled then must
+    // die before launching the threads
+    pthread_testcancel(); // [jart]
 
 #ifdef LLAMAFILE_SYNC_REPORT
     fprintf(stderr, "\n");

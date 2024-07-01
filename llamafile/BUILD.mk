@@ -51,6 +51,7 @@ o/$(MODE)/llamafile:					\
 		o/$(MODE)/llamafile/zipcheck		\
 		o/$(MODE)/llamafile/tokenize		\
 		o/$(MODE)/llamafile/addnl		\
+		o/$(MODE)/llamafile/thread_test.runs	\
 
 ################################################################################
 # microarchitectures

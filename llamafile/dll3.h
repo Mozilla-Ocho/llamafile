@@ -21,6 +21,12 @@
 extern "C" {
 #endif
 
+/**
+ * Double linked list.
+ *
+ * This is the same thing as `Dll` except it does not need `offsetof()`,
+ * which can't be used for non-POD C++ object types.
+ */
 struct Dll3 {
     struct Dll3 *next;
     struct Dll3 *prev;

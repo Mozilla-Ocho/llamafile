@@ -89,12 +89,10 @@ static void on_parent_exit(Parent *parent) {
             dll3_remove(&parent->children, e);
             parent->unlock();
             parent->unref(); // remove child's reference to parent
-            if (child->thread) {
-                pthread_cancel(child->thread);
-                if (child->detach_state == PTHREAD_CREATE_JOINABLE)
-                    if (pthread_join(child->thread, 0))
-                        __builtin_trap();
-            }
+            pthread_cancel(child->thread);
+            if (child->detach_state == PTHREAD_CREATE_JOINABLE)
+                if (pthread_join(child->thread, 0))
+                    __builtin_trap();
             child->unref(); // remove parent's reference to child
             parent->lock();
         }
