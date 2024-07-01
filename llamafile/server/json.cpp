@@ -77,9 +77,18 @@ encode_json(char* p, unsigned long x) noexcept
 }
 
 char*
+encode_json(char* p, float x) noexcept
+{
+    double_conversion::StringBuilder b(p, 256);
+    kDoubleToJson.ToShortestSingle(x, &b);
+    b.Finalize();
+    return p + strlen(p);
+}
+
+char*
 encode_json(char* p, double x) noexcept
 {
-    double_conversion::StringBuilder b(p, 128);
+    double_conversion::StringBuilder b(p, 256);
     kDoubleToJson.ToShortest(x, &b);
     b.Finalize();
     return p + strlen(p);

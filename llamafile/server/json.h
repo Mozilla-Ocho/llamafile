@@ -28,6 +28,9 @@ char*
 encode_json(char*, long) noexcept;
 
 char*
+encode_json(char*, float) noexcept;
+
+char*
 encode_json(char*, double) noexcept;
 
 char*
