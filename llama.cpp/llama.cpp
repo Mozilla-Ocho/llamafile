@@ -1808,6 +1808,14 @@ struct llama_control_vector {
         return tensors[il];
     }
 
+    struct ggml_tensor * apply_to(struct ggml_context * ctx, struct ggml_tensor * cur, int  il) const {
+        ggml_tensor * layer_dir = tensor_for(il);
+        if (layer_dir != nullptr) {
+            cur = ggml_add(ctx, cur, layer_dir);
+        }
+        return cur;
+    }
+
     ~llama_control_vector() {
         for (struct ggml_context * ctx : ctxs) {
             ggml_free(ctx);
@@ -4015,8 +4023,8 @@ static void llm_load_hparams(
                 hparams.attn_soft_cap = true;
 
                 switch (hparams.n_layer) {
-                    case 18: model.type = e_model::MODEL_9B; break;
-                    case 28: model.type = e_model::MODEL_27B; break;
+                    case 42: model.type = e_model::MODEL_9B; break;
+                    case 46: model.type = e_model::MODEL_27B; break;
                     default: model.type = e_model::MODEL_UNKNOWN;
                }
             } break;
@@ -5713,7 +5721,7 @@ static bool llm_load_tensors(
                         layer.wk = ml.create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_K,   "weight", i), {n_embd, n_embd_k_gqa});
                         layer.wv = ml.create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_V,   "weight", i), {n_embd, n_embd_v_gqa});
                         layer.wo = ml.create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_OUT, "weight", i), {n_embd_head_k * hparams.n_head, n_embd});
-                        layer.attn_post_norm = ml.create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_POST_NORM, "weight", i), {n_embd});
+                        layer.attn_post_norm = ml.create_tensor(ctx_layer, tn(LLM_TENSOR_ATTN_POST_NORM, "weight", i), {n_embd});
 
                         layer.ffn_norm = ml.create_tensor(ctx_layer, tn(LLM_TENSOR_FFN_NORM, "weight", i), {n_embd});
                         layer.ffn_gate = ml.create_tensor(ctx_split, tn(LLM_TENSOR_FFN_GATE, "weight", i), {n_embd,   n_ff});
@@ -9987,11 +9995,6 @@ struct llm_build_context {
                 inpL = ggml_get_rows(ctx0, inpL, inp_out_ids);
             }
 
-            cur = llm_build_norm(ctx0, cur, hparams,
-                    model.layers[il].attn_post_norm, NULL,
-                    LLM_NORM_RMS, cb, il);
-            cb(cur, "attn_post_norm", il);
-
             struct ggml_tensor * sa_out = ggml_add(ctx0, cur, inpL);
             cb(sa_out, "sa_out", il);
 
@@ -10003,7 +10006,7 @@ struct llm_build_context {
             // feed-forward network
             {
                 cur = llm_build_ffn(ctx0, cur,
-                        model.layers[il].ffn_up, NULL,
+                        model.layers[il].ffn_up,   NULL,
                         model.layers[il].ffn_gate, NULL,
                         model.layers[il].ffn_down, NULL,
                         NULL,
@@ -10017,6 +10020,7 @@ struct llm_build_context {
             cb(cur, "ffn_post_norm", -1);
 
             cur = ggml_add(ctx0, cur, sa_out);
+            cur = lctx.cvec.apply_to(ctx0, cur, il);
             cb(cur, "l_out", il);
 
             // input for next layer
@@ -10032,12 +10036,13 @@ struct llm_build_context {
 
         // lm_head
         cur = ggml_mul_mat(ctx0, model.output, cur);
-        cb(cur, "result_output", -1);
 
         // final logit soft-capping
         cur = ggml_scale(ctx0, cur, 1.0f / hparams.f_final_logit_softcapping);
         cur = ggml_tanh(ctx0, cur);
         cur = ggml_scale(ctx0, cur, hparams.f_final_logit_softcapping);
+
+        cb(cur, "result_output", -1);
 
         ggml_build_forward_expand(gf, cur);
 

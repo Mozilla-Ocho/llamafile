@@ -372,15 +372,6 @@ extern "C" void ggml_vec_hardsigmoid_f32_amd_avx (const int n, float * y, const 
 extern "C" void ggml_vec_hardsigmoid_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardsigmoid_f32_arm80 (const int n, float * y, const float * x);
 
-extern "C" void ggml_vec_gelu_f16_amd_avx512bf16(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-extern "C" void ggml_vec_gelu_f16_amd_avx512(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-extern "C" void ggml_vec_gelu_f16_amd_avx2(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-extern "C" void ggml_vec_gelu_f16_amd_f16c(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-extern "C" void ggml_vec_gelu_f16_amd_fma(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-extern "C" void ggml_vec_gelu_f16_amd_avx(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-extern "C" void ggml_vec_gelu_f16_arm82(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-extern "C" void ggml_vec_gelu_f16_arm80(const int n, ggml_fp16_t * y, const ggml_fp16_t * x);
-
 extern "C" void ggml_vec_gelu_f32_amd_avx512bf16(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_f32_amd_avx512(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_f32_amd_avx2(const int n, float * y, const float * x);
@@ -549,7 +540,6 @@ static const struct VectorFuncs {
     typeof(ggml_vec_leaky_relu_f32) *ptr_ggml_vec_leaky_relu_f32;
     typeof(ggml_vec_hardswish_f32) *ptr_ggml_vec_hardswish_f32;
     typeof(ggml_vec_hardsigmoid_f32) *ptr_ggml_vec_hardsigmoid_f32;
-    typeof(ggml_vec_gelu_f16) *ptr_ggml_vec_gelu_f16;
     typeof(ggml_vec_gelu_f32) *ptr_ggml_vec_gelu_f32;
     typeof(ggml_vec_gelu_quick_f32) *ptr_ggml_vec_gelu_quick_f32;
     typeof(ggml_vec_silu_f32) *ptr_ggml_vec_silu_f32;
@@ -609,7 +599,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_avx512bf16;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_avx512bf16;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_avx512bf16;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_amd_avx512bf16;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_avx512bf16;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_avx512bf16;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_avx512bf16;
@@ -670,7 +659,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_avx512;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_avx512;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_avx512;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_amd_avx512;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_avx512;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_avx512;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_avx512;
@@ -731,7 +719,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_avx2;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_avx2;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_avx2;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_amd_avx2;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_avx2;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_avx2;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_avx2;
@@ -792,7 +779,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_f16c;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_f16c;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_f16c;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_amd_f16c;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_f16c;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_f16c;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_f16c;
@@ -853,7 +839,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_fma;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_fma;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_fma;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_amd_fma;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_fma;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_fma;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_fma;
@@ -914,7 +899,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_avx;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_avx;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_avx;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_amd_avx;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_avx;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_avx;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_avx;
@@ -975,7 +959,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_arm82;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_arm82;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_arm82;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_arm82;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_arm82;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_arm82;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_arm82;
@@ -1036,7 +1019,6 @@ static const struct VectorFuncs {
             ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_arm80;
             ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_arm80;
             ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_arm80;
-            ptr_ggml_vec_gelu_f16 = ggml_vec_gelu_f16_arm80;
             ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_arm80;
             ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_arm80;
             ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_arm80;
@@ -1219,10 +1201,6 @@ void ggml_vec_hardswish_f32 (const int n, float * y, const float * x) {
 
 void ggml_vec_hardsigmoid_f32 (const int n, float * y, const float * x) {
   return funcs.ptr_ggml_vec_hardsigmoid_f32(n, y, x);
-}
-
-void ggml_vec_gelu_f16(const int n, ggml_fp16_t * y, const ggml_fp16_t * x) {
-  return funcs.ptr_ggml_vec_gelu_f16(n, y, x);
 }
 
 void ggml_vec_gelu_f32(const int n, float * y, const float * x) {

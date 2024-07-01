@@ -40,7 +40,6 @@
 #define ggml_vec_leaky_relu_f32 ggml_vec_leaky_relu_f32_amd_f16c
 #define ggml_vec_hardswish_f32 ggml_vec_hardswish_f32_amd_f16c
 #define ggml_vec_hardsigmoid_f32 ggml_vec_hardsigmoid_f32_amd_f16c
-#define ggml_vec_gelu_f16 ggml_vec_gelu_f16_amd_f16c
 #define ggml_vec_gelu_f32 ggml_vec_gelu_f32_amd_f16c
 #define ggml_vec_gelu_quick_f32 ggml_vec_gelu_quick_f32_amd_f16c
 #define ggml_vec_silu_f32 ggml_vec_silu_f32_amd_f16c
