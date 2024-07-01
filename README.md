@@ -278,7 +278,12 @@ Windows users may need to change `./llamafile.exe` to `.\llamafile.exe`
 when running the above command.
 
 
-## Gotchas
+## Gotchas and troubleshooting
+
+On any platform, if your llamafile process is immediately killed, check
+if you have CrowdStrike and then ask to be whitelisted.
+
+### Mac
 
 On macOS with Apple Silicon you need to have Xcode Command Line Tools
 installed for llamafile to be able to bootstrap itself.
@@ -286,6 +291,14 @@ installed for llamafile to be able to bootstrap itself.
 If you use zsh and have trouble running llamafile, try saying `sh -c
 ./llamafile`. This is due to a bug that was fixed in zsh 5.9+. The same
 is the case for Python `subprocess`, old versions of Fish, etc.
+
+
+#### Mac error "... cannot be opened because the developer cannot be verified"
+
+1. Immediately launch System Settings, then go to Privacy & Security. llamafile should be listed at the bottom, with a button to Allow.
+2. If not, then change your command in the Terminal to be `sudo spctl --master-disable; [llama launch command]; sudo spctl --master-enable`. This is because `--master-disable` disables _all_ checking, so you need to turn it back on after quitting llama. 
+
+### Linux 
 
 On some Linux systems, you might get errors relating to `run-detectors`
 or WINE. This is due to `binfmt_misc` registrations. You can fix that by
@@ -299,6 +312,7 @@ sudo sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/regis
 sudo sh -c "echo ':APE-jart:M::jartsr::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
 ```
 
+### Windows
 As mentioned above, on Windows you may need to rename your llamafile by
 adding `.exe` to the filename.
 
@@ -320,13 +334,11 @@ In the instance of getting a `Permission Denied` on disabling interop through CL
 enabled=false
 ```
 
+### Raspberry Pi
 On Raspberry Pi, if you get "mmap error 12" then it means your kernel is
 configured with fewer than 48 bits of address space. You need to upgrade
 to RPI 5. You can still use RPI 4 if you either (1) rebuild your kernel,
 or (2) get your SDcard OS image directly from Ubuntu (don't use RPI OS).
-
-On any platform, if your llamafile process is immediately killed, check
-if you have CrowdStrike and then ask to be whitelisted.
 
 ## Supported OSes
 
