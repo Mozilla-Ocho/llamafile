@@ -80,6 +80,10 @@ void llamafile_schlep(const void *data, size_t size) {
     if (size < 128 * 1024 * 1024)
         return;
 
+    // don't bother if we're using a gpu
+    if (llamafile_has_gpu())
+        return;
+
     // don't bother if stderr isn't a terminal
     if (!isatty(2))
         return;
