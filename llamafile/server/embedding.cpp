@@ -24,9 +24,18 @@
 
 #include "llama.cpp/llama.h"
 
+#include "fastjson.h"
 #include "json.h"
 #include "log.h"
 #include "utils.h"
+
+struct EmbeddingParams
+{
+    bool add_special;
+    bool parse_special;
+    ctl::string_view prompt;
+    ctl::string content;
+};
 
 extern llama_model* g_model;
 
@@ -78,6 +87,52 @@ cleanup_llama_context(void* arg)
     llama_free((llama_context*)arg);
 }
 
+void
+cleanup_embedding_params(void* arg)
+{
+    delete (EmbeddingParams*)arg;
+}
+
+bool
+Client::get_embedding_params(EmbeddingParams* params)
+{
+    params->add_special = atob(or_empty(param("add_special")), true);
+    params->parse_special = atob(or_empty(param("parse_special")), false);
+
+    // get prompt
+    //
+    //   1. Allow GET "/tokenize?prompt=foo"
+    //   2. Allow POST {"content": "foo"} (application/json)
+    //   3. Allow POST "prompt=foo" (application/x-www-form-urlencoded)
+    //   3. Allow POST "foo" (text/plain)
+    //
+    ctl::optional<ctl::string_view> prompt = param("prompt");
+    if (prompt.has_value()) {
+        params->prompt = prompt.value();
+    } else if (HasHeader(kHttpContentType)) {
+        if (IsMimeType(HeaderData(kHttpContentType),
+                       HeaderLength(kHttpContentType),
+                       "text/plain")) {
+            params->prompt = payload;
+        } else if (IsMimeType(HeaderData(kHttpContentType),
+                              HeaderLength(kHttpContentType),
+                              "application/json")) {
+            ctl::pair<Json::Status, Json> json = Json::parse(payload);
+            if (json.first != Json::success)
+                return send_error(400, Json::StatusToString(json.first));
+            if (!json.second["content"].isString())
+                return send_error(400, "JSON missing \"content\" key");
+            params->content = ctl::move(json.second["content"].getString());
+            params->prompt = params->content;
+        } else {
+            return send_error(501, "Content Type Not Implemented");
+        }
+    } else {
+        params->prompt = payload;
+    }
+    return true;
+}
+
 bool
 Client::embedding()
 {
@@ -87,31 +142,11 @@ Client::embedding()
     if (!read_payload())
         return false;
 
-    // get prompt
-    //
-    //   1. Allow GET "/tokenize?prompt=foo"
-    //   2. Allow POST "prompt=foo" (application/x-www-form-urlencoded)
-    //   3. Allow POST "foo" (text/plain)
-    //
-    ctl::string_view input;
-    ctl::optional<ctl::string_view> prompt = param("prompt");
-    if (prompt.has_value()) {
-        input = prompt.value();
-    } else if (HasHeader(kHttpContentType)) {
-        if (IsMimeType(HeaderData(kHttpContentType),
-                       HeaderLength(kHttpContentType),
-                       "text/plain")) {
-            input = payload;
-        } else {
-            return send_error(501, "Content Type Not Implemented");
-        }
-    } else {
-        input = payload;
-    }
-
-    // get optional parameters
-    bool add_special = atob(or_empty(param("add_special")), true);
-    bool parse_special = atob(or_empty(param("parse_special")), false);
+    // get parameters
+    auto params = new EmbeddingParams;
+    defer_cleanup(cleanup_embedding_params, params);
+    if (!get_embedding_params(params))
+        return false;
 
     // setup statistics
     rusage rustart = {};
@@ -119,15 +154,15 @@ Client::embedding()
     timespec started = timespec_real();
 
     // turn text into tokens
-    auto toks = new ctl::vector<llama_token>(input.size() + 16);
+    auto toks = new ctl::vector<llama_token>(params->prompt.size() + 16);
     defer_cleanup(cleanup_token_vector, toks);
     int count = llama_tokenize(g_model,
-                               input.data(),
-                               input.size(),
+                               params->prompt.data(),
+                               params->prompt.size(),
                                &(*toks)[0],
                                toks->size(),
-                               add_special,
-                               parse_special);
+                               params->add_special,
+                               params->parse_special);
     if (count < 0) {
         LOG("llama_tokenize failed");
         return send_error(405);
@@ -193,10 +228,10 @@ Client::embedding()
     char* p = obuf.p;
     p = stpcpy(p, "{\r\n");
     p = stpcpy(p, "  \"add_special\": ");
-    p = encode_bool(p, add_special);
+    p = encode_bool(p, params->add_special);
     p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"parse_special\": ");
-    p = encode_bool(p, parse_special);
+    p = encode_bool(p, params->parse_special);
     p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"tokens_provided\": ");
     p = encode_json(p, toks->size());

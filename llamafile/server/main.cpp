@@ -22,7 +22,6 @@
 #include "llamafile/llamafile.h"
 #include "llamafile/version.h"
 
-#include "json.h"
 #include "log.h"
 #include "server.h"
 #include "signals.h"

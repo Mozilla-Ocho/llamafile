@@ -23,7 +23,7 @@
 
 #include "llama.cpp/llama.h"
 
-#include "json.h"
+#include "fastjson.h"
 #include "log.h"
 #include "utils.h"
 

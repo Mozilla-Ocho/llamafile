@@ -23,9 +23,15 @@ o/$(MODE)/llamafile/server/main:				\
 $(LLAMAFILE_SERVER_OBJS): llamafile/server/BUILD.mk
 $(LLAMAFILE_SERVER_OBJS): private CCFLAGS += -O
 
+o/$(MODE)/llamafile/server/fastjson_test:			\
+		o/$(MODE)/llamafile/server/fastjson_test.o	\
+		o/$(MODE)/llamafile/server/fastjson.o		\
+		o/$(MODE)/double-conversion/double-conversion.a	\
+
 o/$(MODE)/llamafile/server/json_test:				\
 		o/$(MODE)/llamafile/server/json_test.o		\
 		o/$(MODE)/llamafile/server/json.o		\
+		o/$(MODE)/llamafile/server/hextoint.o		\
 		o/$(MODE)/double-conversion/double-conversion.a	\
 
 .PHONY: o/$(MODE)/llamafile/server
