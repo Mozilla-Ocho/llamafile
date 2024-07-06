@@ -27,15 +27,13 @@
 #include "signals.h"
 #include "time.h"
 
-extern "C" void
-_pthread_decimate(void);
-
 Server* g_server;
 llama_model* g_model;
 
 int
 main(int argc, char* argv[])
 {
+    ShowCrashReports();
     llamafile_check_cpu();
     if (llamafile_has(argv, "--version")) {
         puts("llamafile-server v" LLAMAFILE_VERSION_STRING);
@@ -46,6 +44,10 @@ main(int argc, char* argv[])
     LoadZipArgs(&argc, &argv);
     llamafile_get_flags(argc, argv);
     time_init();
+
+    // we must disable the llama.cpp logger
+    // otherwise pthread_cancel() will cause deadlocks
+    FLAG_log_disable = true;
 
     // load model
     llama_model_params mparams = {
@@ -92,6 +94,6 @@ main(int argc, char* argv[])
 
     // quality assurance
     while (!pthread_orphan_np())
-        _pthread_decimate();
+        pthread_decimate_np();
     CheckForMemoryLeaks();
 }

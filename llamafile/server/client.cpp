@@ -18,6 +18,7 @@
 #include "client.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <string.h>
 #include <sys/uio.h>
@@ -215,10 +216,18 @@ Client::transport()
     return dispatch();
 }
 
+void
+Client::begin_response()
+{
+    cleanup();
+    pthread_testcancel();
+    should_send_error_if_canceled = false;
+}
+
 bool
 Client::send_error(int code, const char* reason)
 {
-    cleanup();
+    begin_response();
     if (!reason)
         reason = GetHttpReason(code);
     LOG("error %d %s", code, reason);
@@ -254,7 +263,7 @@ Client::start_response(char* p, int code, const char* reason)
 bool
 Client::send_response(char* p0, char* p, string_view content)
 {
-    cleanup();
+    begin_response();
 
     // append date header
     tm tm;
@@ -362,8 +371,29 @@ Client::read_payload()
     return true;
 }
 
+static void
+cancel_http_request(void* arg)
+{
+    Client* client = (Client*)arg;
+    if (client->should_send_error_if_canceled) {
+        fcntl(client->fd, F_SETFL, fcntl(client->fd, F_GETFL) | O_NONBLOCK);
+        client->send_error(503);
+    }
+}
+
 bool
 Client::dispatch()
+{
+    bool res;
+    should_send_error_if_canceled = true;
+    pthread_cleanup_push(cancel_http_request, this);
+    res = dispatcher();
+    pthread_cleanup_pop(false);
+    return res;
+}
+
+bool
+Client::dispatcher()
 {
     if (path() == "/tokenize")
         return tokenize();

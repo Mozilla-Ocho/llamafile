@@ -15,19 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "thread.h"
-
 #include <cosmo.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 
-#define WORKERS 10
-#define MATHS 10
+#define WORKERS 20
+#define MATHS 20
 
 atomic_int barrier;
 
 void *start_math(void *arg) {
+    long id = (long)arg;
     ++barrier;
+    if ((long)arg % 2 == 0)
+        return 0;
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
     pthread_testcancel();
     for (;;) {
@@ -35,21 +37,45 @@ void *start_math(void *arg) {
 }
 
 void *start_worker(void *arg) {
-    ++barrier;
-    pthread_t th[MATHS];
-    for (int i = 0; i < MATHS; ++i)
-        if (llamafile_thread_create(&th[i], 0, start_math, 0))
+    _Atomic(pthread_t) th[MATHS];
+    for (long i = 0; i < MATHS; ++i)
+        if (pthread_create((pthread_t *)&th[i], 0, start_math, (void *)i))
             _Exit(3);
-    for (int i = 0; i < MATHS; ++i)
-        if (pthread_join(th[i], 0))
-            _Exit(4);
+    pthread_cleanup_push(
+        [](void *arg) {
+            _Atomic(pthread_t) *th = (_Atomic(pthread_t) *)arg;
+            for (long i = 0; i < MATHS; ++i) {
+                pthread_t t;
+                if ((t = atomic_exchange(&th[i], 0))) {
+                    pthread_cancel(t);
+                    if (pthread_join(t, 0))
+                        _Exit(4);
+                }
+            }
+        },
+        th);
+    start_math(arg);
+    pthread_setcancelstate(PTHREAD_CANCEL_MASKED, 0);
+    for (long i = 0; i < MATHS; ++i) {
+        pthread_t t;
+        if ((t = atomic_exchange(&th[i], 0))) {
+            int err = pthread_join(t, 0);
+            if (err == ECANCELED) {
+                th[i] = t;
+                pthread_exit(PTHREAD_CANCELED);
+            }
+            if (err)
+                _Exit(4);
+        }
+    }
+    pthread_cleanup_pop(false);
     return 0;
 }
 
 int main() {
     pthread_t th[WORKERS];
-    for (int i = 0; i < WORKERS; ++i)
-        if (llamafile_thread_create(&th[i], 0, start_worker, 0))
+    for (long i = 0; i < WORKERS; ++i)
+        if (pthread_create(&th[i], 0, start_worker, (void *)i))
             _Exit(1);
     while (barrier < WORKERS * MATHS) {
     }

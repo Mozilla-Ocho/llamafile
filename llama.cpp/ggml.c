@@ -1636,7 +1636,7 @@ struct ggml_compute_state_shared {
 typedef pthread_t ggml_thread_t;
 
 struct ggml_compute_state {
-    ggml_thread_t thrd;
+    _Atomic(ggml_thread_t) thrd;
     int ith;
     struct ggml_compute_state_shared* shared;
     enum ggml_status ec;
@@ -19127,6 +19127,26 @@ static void print_graph(FILE *f, const struct ggml_cgraph *g, int n_threads) {
     }
 }
 
+
+struct ggml_compute_cleanup {
+    int n_threads;
+    struct ggml_compute_state * workers;
+};
+
+static void ggml_compute_canceled(void *arg) {
+    struct ggml_compute_cleanup *cleanup = arg;
+    clear_numa_thread_affinity();
+    for (int j = 1; j < cleanup->n_threads; j++) {
+        pthread_t t;
+        if ((t = atomic_exchange_explicit(&cleanup->workers[j].thrd, 0,
+                                          memory_order_relaxed))) {
+            pthread_cancel(t);
+            const int rc = ggml_thread_join(t, NULL);
+            GGML_ASSERT(rc == 0);
+        }
+    }
+}
+
 enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cplan * cplan) {
     {
         GGML_ASSERT(cplan);
@@ -19170,43 +19190,61 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     if (n_threads > 1) {
         for (int j = 1; j < n_threads; ++j) {
             workers[j] = (struct ggml_compute_state) {
-                .thrd   = 0,
+                .thrd = ATOMIC_VAR_INIT(0),
                 .ith = j,
                 .shared = &state_shared,
                 .ec = GGML_STATUS_SUCCESS,
                 .is_main_thread = false, // [jart]
             };
 
-            const int rc = ggml_thread_create(&workers[j].thrd, NULL, ggml_graph_compute_thread, &workers[j]);
+            const int rc = ggml_thread_create((pthread_t *)&workers[j].thrd, NULL,
+                                              ggml_graph_compute_thread, &workers[j]);
             GGML_ASSERT(rc == 0);
             UNUSED(rc);
         }
     }
+
+    int64_t perf_start_cycles;
+    int64_t perf_start_time_us;
+    enum ggml_status compute_status;
+    struct ggml_compute_cleanup cleanup = {n_threads, workers};
+    pthread_cleanup_push(ggml_compute_canceled, &cleanup);
 
     workers[0].ith = 0;
     workers[0].shared = &state_shared;
     workers[0].ec = GGML_STATUS_SUCCESS;
     workers[0].is_main_thread = true; // [jart]
 
-    const int64_t perf_start_cycles  = ggml_perf_cycles();
-    const int64_t perf_start_time_us = ggml_perf_time_us();
+    perf_start_cycles  = ggml_perf_cycles();
+    perf_start_time_us = ggml_perf_time_us();
 
     // this is a work thread too
     ggml_graph_compute_thread(&workers[0]);
-    enum ggml_status compute_status = workers[0].ec;
-
-    // don't leave affinity set on the main thread
-    clear_numa_thread_affinity();
+    compute_status = workers[0].ec;
 
     // join or kill thread pool
-    if (n_threads > 1) {
-        for (int j = 1; j < n_threads; j++) {
-            const int rc = ggml_thread_join(workers[j].thrd, NULL);
+    int cs;
+    pthread_setcancelstate(PTHREAD_CANCEL_MASKED, &cs);
+    for (int j = 1; j < n_threads; j++) {
+        pthread_t t;
+        if ((t = atomic_exchange_explicit(&workers[j].thrd, 0,
+                                          memory_order_relaxed))) {
+            const int rc = ggml_thread_join(t, NULL);
+            if (rc == ECANCELED) {
+                workers[j].thrd = t;
+                pthread_exit(PTHREAD_CANCELED);
+            }
             GGML_ASSERT(rc == 0);
             if (workers[j].ec != GGML_STATUS_SUCCESS)
                 compute_status = workers[j].ec;
         }
     }
+    pthread_setcancelstate(cs, 0);
+
+    // don't leave affinity set on the main thread
+    clear_numa_thread_affinity();
+
+    pthread_cleanup_pop(false);
 
 #ifdef LLAMAFILE_SYNC_REPORT
     opstart[cgraph->n_nodes] = rdtsc();

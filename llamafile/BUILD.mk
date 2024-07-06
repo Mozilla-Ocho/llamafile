@@ -120,7 +120,6 @@ o/$(MODE)/llamafile/tinyblas_cpu_mixmul_arm82.o: private TARGET_ARCH += -Xaarch6
 
 o/$(MODE)/llamafile/thread_test:			\
 		o/$(MODE)/llamafile/thread_test.o	\
-		o/$(MODE)/llamafile/thread.o		\
 		o/$(MODE)/llamafile/crash.o		\
 		o/$(MODE)/llamafile/dll3.o		\
 

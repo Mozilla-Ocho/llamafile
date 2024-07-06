@@ -49,6 +49,7 @@ struct Client
 {
     int fd = -1;
     bool close_connection = false;
+    bool should_send_error_if_canceled;
     size_t unread = 0;
     timespec message_started;
     HttpMessage msg;
@@ -72,10 +73,11 @@ struct Client
     bool read_request() __wur;
     bool read_content() __wur;
     bool send_continue() __wur;
+    void begin_response();
     bool send(const ctl::string_view) __wur;
     void defer_cleanup(void (*)(void*), void*);
+    bool send_error(int, const char* = nullptr);
     char* start_response(char*, int, const char* = nullptr);
-    bool send_error(int, const char* = nullptr) __wur;
     bool send_response(char*, char*, const ctl::string_view) __wur;
     bool send2(const ctl::string_view, const ctl::string_view) __wur;
     char* append_header(const ctl::string_view, const ctl::string_view);
@@ -87,5 +89,6 @@ struct Client
     bool dispatch() __wur;
     bool tokenize() __wur;
     bool embedding() __wur;
+    bool dispatcher() __wur;
     bool get_embedding_params(EmbeddingParams*);
 };

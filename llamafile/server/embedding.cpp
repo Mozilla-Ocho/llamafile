@@ -68,17 +68,23 @@ add_token_to_batch(struct llama_batch& batch,
 }
 
 void
-cleanup_llama_batch(void* arg)
+cleanup_float_vector(void* arg)
 {
-    llama_batch* batch = (llama_batch*)arg;
-    llama_batch_free(*batch);
-    delete batch;
+    delete (ctl::vector<float>*)arg;
 }
 
 void
 cleanup_token_vector(void* arg)
 {
     delete (ctl::vector<llama_token>*)arg;
+}
+
+void
+cleanup_llama_batch(void* arg)
+{
+    llama_batch* batch = (llama_batch*)arg;
+    llama_batch_free(*batch);
+    delete batch;
 }
 
 void
@@ -211,7 +217,8 @@ Client::embedding()
         LOG("llama_decode failed");
         return send_error(500);
     }
-    ctl::vector<float> embeddings(n_embd, 0);
+    auto embeddings = new ctl::vector<float>(n_embd, 0);
+    defer_cleanup(cleanup_float_vector, embeddings);
     for (int i = 0; i < batch->n_tokens; i++) {
         if (!batch->logits[i])
             continue;
@@ -221,7 +228,7 @@ Client::embedding()
             return send_error(500);
         }
         normalize_embeddings(
-          embd, &embeddings[0] + batch->seq_id[i][0] * n_embd, n_embd);
+          embd, embeddings->data() + batch->seq_id[i][0] * n_embd, n_embd);
     }
 
     // serialize tokens to json
@@ -240,12 +247,12 @@ Client::embedding()
     p = encode_json(p, count);
     p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"embedding\": [");
-    for (size_t i = 0; i < embeddings.size(); ++i) {
+    for (size_t i = 0; i < embeddings->size(); ++i) {
         if (i) {
             *p++ = ',';
             *p++ = ' ';
         }
-        p = encode_json(p, embeddings[i]);
+        p = encode_json(p, (*embeddings)[i]);
     }
     p = stpcpy(p, "]\r\n");
     p = stpcpy(p, "}\r\n");
