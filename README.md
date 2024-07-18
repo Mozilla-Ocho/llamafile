@@ -1,7 +1,7 @@
 # llamafile
 
 [![ci status](https://github.com/Mozilla-Ocho/llamafile/actions/workflows/ci.yml/badge.svg)](https://github.com/Mozilla-Ocho/llamafile/actions/workflows/ci.yml)<br/>
-[![](https://dcbadge.vercel.app/api/server/teDuGYVTB2)](https://discord.gg/teDuGYVTB2)<br/><br/>
+[![](https://dcbadge.vercel.app/api/server/YuMNeuKStr)](https://discord.gg/YuMNeuKStr)<br/><br/>
 
 <img src="llamafile/llamafile-640x640.png" width="320" height="320"
      alt="[line drawing of llama animal head in front of slightly open manilla folder filled with files]">
