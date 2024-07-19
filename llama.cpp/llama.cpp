@@ -58,6 +58,8 @@
 #include <sys/resource.h>
 #include <ctl/vector.h>
 
+#include "llamafile/server/threadlocal.h"
+
 #define LLAMA_ATTRIBUTE_FORMAT(...) __attribute__((__format__(__gnu_printf__, __VA_ARGS__)))
 
 #define LLAMA_MAX_NODES   8192
@@ -17328,16 +17330,17 @@ int32_t llama_decode(
 
     // [jart] pthread_cancel() safety
     llama_decoder * decoder = new llama_decoder;
-    pthread_cleanup_push(
-      [](void* arg) {
-          llama_decoder * decoder = (llama_decoder*)arg;
+    static ThreadLocal<llama_decoder> cleanup(
+      [](llama_decoder* decoder) {
           delete decoder;
-      },
-      decoder);
+      });
+    cleanup.set(decoder);
 
     ret = llama_decode_internal(*ctx, batch, decoder);
 
-    pthread_cleanup_pop(true);
+    // [jart] pthread_cancel() safety
+    cleanup.set(nullptr);
+    delete decoder;
 
     if (ret < 0) {
         LLAMA_LOG_ERROR("%s: failed to decode, ret = %d\n", __func__, ret);

@@ -21,10 +21,12 @@
 #include <exception>
 #include <pthread.h>
 
-#include "client.h"
 #include "llamafile/llamafile.h"
+
+#include "client.h"
 #include "log.h"
 #include "signals.h"
+#include "threadlocal.h"
 
 Worker::Worker(Server* server) : server(server)
 {
@@ -89,13 +91,6 @@ Worker::handle(void)
     }
 
     begin();
-    pthread_cleanup_push(
-      [](void* arg) {
-          Worker* worker = (Worker*)arg;
-          worker->client.close();
-          worker->end();
-      },
-      this);
 
     try {
         client.run();
@@ -105,7 +100,8 @@ Worker::handle(void)
         SLOG("caught unknown exception");
     }
 
-    pthread_cleanup_pop(true);
+    client.close();
+    end();
 }
 
 void
@@ -116,12 +112,14 @@ Worker::run()
     server->worker_count.fetch_add(1, std::memory_order_acq_rel);
     server->unlock();
 
-    pthread_cleanup_push(
-      [](void* arg) {
-          Worker* worker = (Worker*)arg;
-          worker->retire();
-      },
-      this);
+    static ThreadLocal<Worker> cleanup([](Worker* worker) {
+        if (worker->working) {
+            worker->client.close();
+            worker->end();
+        }
+        worker->retire();
+    });
+    cleanup.set(this);
 
     while (!server->terminated.load(std::memory_order_acquire)) {
         sigset_t mask;
@@ -136,5 +134,6 @@ Worker::run()
         handle();
     }
 
-    pthread_cleanup_pop(true);
+    cleanup.set(nullptr);
+    retire();
 }

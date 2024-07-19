@@ -30,6 +30,7 @@
 #include "llamafile/version.h"
 
 #include "log.h"
+#include "threadlocal.h"
 #include "time.h"
 
 #define STANDARD_RESPONSE_HEADERS \
@@ -38,6 +39,17 @@
     "Cache-Control: private; max-age=0\r\n"
 
 using namespace ctl;
+
+static void
+on_http_cancel(Client* client)
+{
+    if (client->should_send_error_if_canceled) {
+        fcntl(client->fd, F_SETFL, fcntl(client->fd, F_GETFL) | O_NONBLOCK);
+        client->send_error(503);
+    }
+}
+
+static ThreadLocal<Client> g_http_cancel(on_http_cancel);
 
 Client::Client()
   : cleanups(nullptr), ibuf(FLAG_http_ibuf_size), obuf(FLAG_http_obuf_size)
@@ -375,10 +387,6 @@ static void
 cancel_http_request(void* arg)
 {
     Client* client = (Client*)arg;
-    if (client->should_send_error_if_canceled) {
-        fcntl(client->fd, F_SETFL, fcntl(client->fd, F_GETFL) | O_NONBLOCK);
-        client->send_error(503);
-    }
 }
 
 bool
@@ -386,9 +394,9 @@ Client::dispatch()
 {
     bool res;
     should_send_error_if_canceled = true;
-    pthread_cleanup_push(cancel_http_request, this);
+    g_http_cancel.set(this);
     res = dispatcher();
-    pthread_cleanup_pop(false);
+    g_http_cancel.set(nullptr);
     return res;
 }
 

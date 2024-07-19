@@ -18,26 +18,30 @@
 #pragma once
 #include <pthread.h>
 
-template <typename T>
-struct ThreadLocal {
-
-    explicit ThreadLocal(void (*dtor)(T *value)) {
-        if (pthread_key_create(&key_, (void (*)(void *))dtor))
+template<typename T>
+struct ThreadLocal
+{
+    explicit ThreadLocal(void (*dtor)(T* value))
+    {
+        if (pthread_key_create(&key_, (void (*)(void*))dtor))
             __builtin_trap();
     }
 
-    ~ThreadLocal() {
+    ~ThreadLocal()
+    {
         if (pthread_key_delete(key_))
             __builtin_trap();
     }
 
-    void set(T *value) {
+    void set(T* value)
+    {
         if (pthread_setspecific(key_, value))
             __builtin_trap();
     }
 
-    T *get() {
-        return (T *)pthread_getspecific(key_);
+    T* get()
+    {
+        return (T*)pthread_getspecific(key_);
     }
 
   private:

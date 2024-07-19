@@ -36,7 +36,7 @@ main(int argc, char* argv[])
     ShowCrashReports();
     llamafile_check_cpu();
     if (llamafile_has(argv, "--version")) {
-        puts("llamafile-server v" LLAMAFILE_VERSION_STRING);
+        puts("llamafiler v" LLAMAFILE_VERSION_STRING);
         exit(0);
     }
 

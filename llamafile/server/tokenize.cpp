@@ -23,6 +23,7 @@
 
 #include "llama.cpp/llama.h"
 
+#include "cleanup.h"
 #include "fastjson.h"
 #include "log.h"
 #include "utils.h"
@@ -70,11 +71,12 @@ Client::tokenize()
     // turn text into tokens
     extern llama_model* g_model;
     int maxcount = input.size() + 16;
-    ctl::vector<llama_token> toks(maxcount);
+    auto toks = new ctl::vector<llama_token>(maxcount);
+    defer_cleanup(cleanup_token_vector, toks);
     int count = llama_tokenize(g_model,
                                input.data(),
                                input.size(),
-                               &toks[0],
+                               &(*toks)[0],
                                maxcount,
                                add_special,
                                parse_special);
@@ -82,11 +84,11 @@ Client::tokenize()
         SLOG("failed to tokenize");
         return send_error(405);
     }
-    toks.resize(count);
+    toks->resize(count);
 
     // serialize tokens to json
     char* p = obuf.p;
-    p = stpcpy(p, "{\r\n");
+    p = stpcpy(p, "{\n");
     p = stpcpy(p, "  \"add_special\": ");
     p = encode_bool(p, add_special);
     p = stpcpy(p, ",\n");
@@ -97,17 +99,17 @@ Client::tokenize()
     for (int i = 0; i < count; ++i) {
         if (i)
             *p++ = ',';
-        p = stpcpy(p, "\r\n    ");
+        p = stpcpy(p, "\n    ");
         char s[32];
-        int n = llama_token_to_piece(g_model, toks[i], s, sizeof(s), true);
+        int n = llama_token_to_piece(g_model, (*toks)[i], s, sizeof(s), true);
         if (n < 0) {
             SLOG("failed to turn token into string");
             return send_error(405);
         }
         p = encode_json(p, ctl::string_view(s, n));
     }
-    p = stpcpy(p, "\r\n  ]\r\n");
-    p = stpcpy(p, "}\r\n");
+    p = stpcpy(p, "\n  ]\n");
+    p = stpcpy(p, "}\n");
     ctl::string_view content(obuf.p, p - obuf.p);
 
     // collect statistics

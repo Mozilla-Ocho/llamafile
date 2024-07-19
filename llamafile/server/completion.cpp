@@ -49,18 +49,6 @@ struct CompletionResponse
 
 extern llama_model* g_model;
 
-void
-normalize_completions(const float* inp, float* out, int n)
-{
-    double sum = 0;
-    for (int i = 0; i < n; i++)
-        sum += inp[i] * inp[i];
-    sum = sqrt(sum);
-    const float norm = sum > 0 ? 1.f / sum : 0.f;
-    for (int i = 0; i < n; i++)
-        out[i] = inp[i] * norm;
-}
-
 static void
 add_token_to_batch(llama_batch& batch,
                    llama_token id,
@@ -266,32 +254,32 @@ Client::completion()
 
     // serialize tokens to json
     char* p = obuf.p;
-    p = stpcpy(p, "{\r\n");
+    p = stpcpy(p, "{\n");
     p = stpcpy(p, "  \"add_special\": ");
     p = encode_bool(p, params->add_special);
-    p = stpcpy(p, ",\r\n");
+    p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"parse_special\": ");
     p = encode_bool(p, params->parse_special);
-    p = stpcpy(p, ",\r\n");
+    p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"display_special\": ");
     p = encode_bool(p, params->display_special);
-    p = stpcpy(p, ",\r\n");
+    p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"tokens_provided\": ");
     p = encode_json(p, toks->size());
-    p = stpcpy(p, ",\r\n");
+    p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"tokens_used\": ");
     p = encode_json(p, count);
-    p = stpcpy(p, ",\r\n");
+    p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"prompt\": ");
     p = encode_json(p, response->prompt);
-    p = stpcpy(p, ",\r\n");
+    p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"content\": ");
     p = encode_json(p, response->content);
-    p = stpcpy(p, ",\r\n");
+    p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"stop\": ");
     p = encode_bool(p, response->stop);
-    p = stpcpy(p, "\r\n");
-    p = stpcpy(p, "}\r\n");
+    p = stpcpy(p, "\n");
+    p = stpcpy(p, "}\n");
     ctl::string_view content(obuf.p, p - obuf.p);
 
     // collect statistics

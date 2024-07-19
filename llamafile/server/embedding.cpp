@@ -211,7 +211,7 @@ Client::embedding()
 
     // serialize tokens to json
     char* p = obuf.p;
-    p = stpcpy(p, "{\r\n");
+    p = stpcpy(p, "{\n");
     p = stpcpy(p, "  \"add_special\": ");
     p = encode_bool(p, params->add_special);
     p = stpcpy(p, ",\n");
@@ -232,8 +232,8 @@ Client::embedding()
         }
         p = encode_json(p, (*embeddings)[i]);
     }
-    p = stpcpy(p, "]\r\n");
-    p = stpcpy(p, "}\r\n");
+    p = stpcpy(p, "]\n");
+    p = stpcpy(p, "}\n");
     ctl::string_view content(obuf.p, p - obuf.p);
 
     // collect statistics
