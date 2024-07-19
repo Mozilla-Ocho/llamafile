@@ -37,6 +37,7 @@
     SlicesEqualCase(S, strlen(S), HeaderData(H), HeaderLength(H))
 
 struct EmbeddingParams;
+struct CompletionParams;
 
 struct Cleanup
 {
@@ -88,7 +89,11 @@ struct Client
 
     bool dispatch() __wur;
     bool tokenize() __wur;
-    bool embedding() __wur;
     bool dispatcher() __wur;
+
+    bool embedding() __wur;
     bool get_embedding_params(EmbeddingParams*);
+
+    bool completion() __wur;
+    bool get_completion_params(CompletionParams*);
 };

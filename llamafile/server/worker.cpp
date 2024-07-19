@@ -46,7 +46,7 @@ Worker::begin()
     if (dll_is_empty(server->idle_workers)) {
         Dll* slowbro;
         if ((slowbro = dll_last(server->active_workers))) {
-            LOG("all threads active! dropping oldest client");
+            SLOG("all threads active! dropping oldest client");
             WORKER(slowbro)->kill();
         }
     }
@@ -84,7 +84,7 @@ void
 Worker::handle(void)
 {
     if ((client.fd = server->accept()) == -1) {
-        LOG("accept returned %m");
+        SLOG("accept returned %m");
         return;
     }
 
@@ -100,9 +100,9 @@ Worker::handle(void)
     try {
         client.run();
     } catch (const std::exception& e) {
-        LOG("caught %s", e.what());
+        SLOG("caught %s", e.what());
     } catch (...) {
-        LOG("caught unknown exception");
+        SLOG("caught unknown exception");
     }
 
     pthread_cleanup_pop(true);

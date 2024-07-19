@@ -84,13 +84,13 @@ main(int argc, char* argv[])
     signals_destroy();
 
     // shutdown server
-    LOG("shutdown");
+    SLOG("shutdown");
     g_server->shutdown();
     g_server->close();
     delete g_server;
     llama_free_model(g_model);
     time_destroy();
-    LOG("exit");
+    SLOG("exit");
 
     // quality assurance
     while (!pthread_orphan_np())

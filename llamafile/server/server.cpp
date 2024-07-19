@@ -146,7 +146,7 @@ Server::accept()
     }
 
     if (FLAG_verbose >= 2)
-        LOG("accept");
+        SLOG("accept");
     return clifd;
 }
 

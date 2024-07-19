@@ -30,12 +30,12 @@
 void
 print_listening_url(unsigned ip, int port)
 {
-    LOG("listen http://%hhu.%hhu.%hhu.%hhu:%hu",
-        ip >> 24,
-        ip >> 16,
-        ip >> 8,
-        ip,
-        port);
+    SLOG("listen http://%hhu.%hhu.%hhu.%hhu:%hu",
+         ip >> 24,
+         ip >> 16,
+         ip >> 8,
+         ip,
+         port);
 }
 
 int

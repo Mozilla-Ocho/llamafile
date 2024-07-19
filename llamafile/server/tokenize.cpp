@@ -79,7 +79,7 @@ Client::tokenize()
                                add_special,
                                parse_special);
     if (count < 0) {
-        LOG("failed to tokenize");
+        SLOG("failed to tokenize");
         return send_error(405);
     }
     toks.resize(count);
@@ -101,7 +101,7 @@ Client::tokenize()
         char s[32];
         int n = llama_token_to_piece(g_model, toks[i], s, sizeof(s), true);
         if (n < 0) {
-            LOG("failed to turn token into string");
+            SLOG("failed to turn token into string");
             return send_error(405);
         }
         p = encode_json(p, ctl::string_view(s, n));

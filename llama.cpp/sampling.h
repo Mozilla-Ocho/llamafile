@@ -86,8 +86,6 @@ struct llama_sampling_context {
     std::mt19937 rng;
 };
 
-#include "common.h"
-
 // Create a new sampling context instance.
 struct llama_sampling_context * llama_sampling_init(const struct llama_sampling_params & params);
 

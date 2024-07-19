@@ -43,17 +43,17 @@ static struct
 void
 on_termination_signal(int sig)
 {
-    LOG("%G", sig);
+    SLOG("%G", sig);
     g_server->terminate();
 }
 
 void
 on_crash_signal(int sig, siginfo_t* si, void* arg)
 {
-    LOG("crashed %G", sig);
+    SLOG("crashed %G", sig);
     char message[256];
     describe_crash(message, sizeof(message), sig, si, arg);
-    LOG("crashed %s", message);
+    SLOG("crashed %s", message);
     pthread_exit(PTHREAD_CANCELED);
 }
 

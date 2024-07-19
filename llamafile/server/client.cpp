@@ -54,7 +54,7 @@ Client::close()
     DestroyHttpMessage(&msg);
     if (fd != -1) {
         if (FLAG_verbose >= 2)
-            LOG("close");
+            SLOG("close");
         rc = ::close(fd);
         fd = -1;
     }
@@ -141,17 +141,17 @@ Client::read_request()
             return true;
         }
         if (inmsglen == -1) {
-            LOG("bad message %m");
+            SLOG("bad message %m");
             return false;
         }
         if (ibuf.n)
-            LOG("fragmented message with %zu bytes", ibuf.n);
+            SLOG("fragmented message with %zu bytes", ibuf.n);
         ssize_t got;
         got = read(fd, ibuf.p + ibuf.n, ibuf.c - ibuf.n);
         if (!got && ibuf.n)
-            LOG("unexpected eof after %zu bytes", ibuf.n);
+            SLOG("unexpected eof after %zu bytes", ibuf.n);
         if (got == -1 && (ibuf.n || (errno != EAGAIN && errno != ECONNRESET)))
-            LOG("read failed %m");
+            SLOG("read failed %m");
         if (got <= 0)
             return false;
         ibuf.n += got;
@@ -201,7 +201,7 @@ Client::transport()
     }
 
     if (FLAG_verbose >= 1)
-        LOG("get %#.*s", msg.uri.b - msg.uri.a, ibuf.p + msg.uri.a);
+        SLOG("get %#.*s", msg.uri.b - msg.uri.a, ibuf.p + msg.uri.a);
 
     if (msg.version >= 11)
         if (HeaderEqualCase(kHttpExpect, "100-continue"))
@@ -230,7 +230,7 @@ Client::send_error(int code, const char* reason)
     begin_response();
     if (!reason)
         reason = GetHttpReason(code);
-    LOG("error %d %s", code, reason);
+    SLOG("error %d %s", code, reason);
     char* p = start_response(obuf.p, code, reason);
     return send_response(obuf.p, p, string(reason) + "\r\n");
 }
@@ -300,7 +300,7 @@ Client::send(const string_view s)
     ssize_t sent;
     if ((sent = write(fd, s.data(), s.size())) != s.size()) {
         if (sent == -1 && errno != EAGAIN && errno != ECONNRESET)
-            LOG("write failed %m");
+            SLOG("write failed %m");
         return false;
     }
     return true;
@@ -317,7 +317,7 @@ Client::send2(const string_view s1, const string_view s2)
     iov[1].iov_len = s2.size();
     if ((sent = writev(fd, iov, 2)) != s1.size() + s2.size()) {
         if (sent == -1 && errno != EAGAIN && errno != ECONNRESET)
-            LOG("writev failed %m");
+            SLOG("writev failed %m");
         return false;
     }
     return true;
@@ -349,9 +349,9 @@ Client::read_payload()
         ssize_t got;
         if ((got = read(fd, ibuf.p + ibuf.n, ibuf.c - ibuf.n)) <= 0) {
             if (!got)
-                LOG("unexpected eof");
+                SLOG("unexpected eof");
             if (got == -1)
-                LOG("read failed %m");
+                SLOG("read failed %m");
             return false;
         }
         ibuf.n += got;
@@ -399,6 +399,8 @@ Client::dispatcher()
         return tokenize();
     if (path() == "/embedding")
         return embedding();
+    if (path() == "/completion")
+        return completion();
     return send_error(404);
 }
 

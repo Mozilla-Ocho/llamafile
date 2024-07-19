@@ -15,22 +15,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <libc/intrin/kprintf.h>
+#include "cleanup.h"
 
-#define SLOG(FMT, ...) \
-    kprintf("%s %s:%d %s " FMT "\n", \
-            get_log_timestamp(), \
-            __FILE__, \
-            __LINE__, \
-            get_thread_name(), \
-            ##__VA_ARGS__)
+#include <ctl/vector.h>
 
-const char*
-get_thread_name(void);
-
-char*
-get_log_timestamp(void);
+#include "llama.cpp/llama.h"
 
 void
-set_thread_name(const char*);
+cleanup_float_vector(void* arg)
+{
+    delete (ctl::vector<float>*)arg;
+}
+
+void
+cleanup_token_vector(void* arg)
+{
+    delete (ctl::vector<llama_token>*)arg;
+}
+
+void
+cleanup_llama_batch(void* arg)
+{
+    llama_batch* batch = (llama_batch*)arg;
+    llama_batch_free(*batch);
+    delete batch;
+}
+
+void
+cleanup_llama_context(void* arg)
+{
+    llama_free((llama_context*)arg);
+}

@@ -16,21 +16,15 @@
 // limitations under the License.
 
 #pragma once
-#include <libc/intrin/kprintf.h>
-
-#define SLOG(FMT, ...) \
-    kprintf("%s %s:%d %s " FMT "\n", \
-            get_log_timestamp(), \
-            __FILE__, \
-            __LINE__, \
-            get_thread_name(), \
-            ##__VA_ARGS__)
-
-const char*
-get_thread_name(void);
-
-char*
-get_log_timestamp(void);
 
 void
-set_thread_name(const char*);
+cleanup_float_vector(void*);
+
+void
+cleanup_token_vector(void*);
+
+void
+cleanup_llama_batch(void*);
+
+void
+cleanup_llama_context(void*);

@@ -20,7 +20,6 @@ LLAMAFILE_OBJS :=					\
 # this executable defines its own malloc(), free(), etc.
 # therefore we want to avoid it going inside the .a file
 LLAMAFILE_OBJS := $(filter-out o/$(MODE)/llamafile/zipalign.o,$(LLAMAFILE_OBJS))
-LLAMAFILE_OBJS := $(filter-out o/$(MODE)/llamafile/thread_test.o,$(LLAMAFILE_OBJS))
 
 include llamafile/server/BUILD.mk
 
@@ -51,7 +50,6 @@ o/$(MODE)/llamafile:					\
 		o/$(MODE)/llamafile/zipcheck		\
 		o/$(MODE)/llamafile/tokenize		\
 		o/$(MODE)/llamafile/addnl		\
-		o/$(MODE)/llamafile/thread_test.runs	\
 
 ################################################################################
 # microarchitectures
