@@ -245,6 +245,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         if (params.n_threads <= 0) {
             params.n_threads = std::thread::hardware_concurrency();
         }
+        FLAG_threads = params.n_threads; // [jart]
         return true;
     }
     if (arg == "-tb" || arg == "--threads-batch") {

@@ -59,6 +59,7 @@
 #include <ctl/vector.h>
 
 #include "llamafile/threadlocal.h"
+#include "llamafile/core_manager.h"
 
 #define LLAMA_ATTRIBUTE_FORMAT(...) __attribute__((__format__(__gnu_printf__, __VA_ARGS__)))
 
@@ -11167,6 +11168,15 @@ static void llama_graph_compute(
         llama_context & lctx,
           ggml_cgraph * gf,
                   int   n_threads) {
+
+    // [jart] resource management
+    n_threads = g_core_manager.acquire(1, n_threads);
+    static ThreadLocal<void> cleanup(
+      [](void* n_threads) {
+          g_core_manager.release((intptr_t)n_threads);
+      });
+    cleanup.set((void *)(intptr_t)n_threads);
+
 // #ifdef GGML_USE_METAL
     if (ggml_backend_is_metal(lctx.backend_metal)) {
         ggml_backend_metal_set_n_cb(lctx.backend_metal, n_threads);
@@ -11179,6 +11189,10 @@ static void llama_graph_compute(
     }
 
     ggml_backend_sched_graph_compute_async(lctx.sched, gf);
+
+    // [jart] resources management
+    cleanup.set(nullptr);
+    g_core_manager.release((intptr_t)n_threads);
 
     // fprintf(stderr, "splits: %d\n", ggml_backend_sched_get_n_splits(lctx.sched));
 }
