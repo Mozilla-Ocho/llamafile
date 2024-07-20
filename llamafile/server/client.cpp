@@ -27,10 +27,10 @@
 
 #include "llama.cpp/llama.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/threadlocal.h"
 #include "llamafile/version.h"
 
 #include "log.h"
-#include "threadlocal.h"
 #include "time.h"
 
 #define STANDARD_RESPONSE_HEADERS \

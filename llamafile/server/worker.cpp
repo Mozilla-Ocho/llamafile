@@ -22,11 +22,11 @@
 #include <pthread.h>
 
 #include "llamafile/llamafile.h"
+#include "llamafile/threadlocal.h"
 
 #include "client.h"
 #include "log.h"
 #include "signals.h"
-#include "threadlocal.h"
 
 Worker::Worker(Server* server) : server(server)
 {

@@ -26,6 +26,7 @@
 #include "cleanup.h"
 #include "fastjson.h"
 #include "log.h"
+#include "signals.h"
 #include "utils.h"
 
 bool

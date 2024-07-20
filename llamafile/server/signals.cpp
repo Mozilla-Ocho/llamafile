@@ -21,6 +21,7 @@
 #include <ucontext.h>
 
 #include "llamafile/crash.h"
+#include "llamafile/threadlocal.h"
 
 #include "log.h"
 #include "server.h"
@@ -82,11 +83,13 @@ signals_init(void)
     sigaction(SIGABRT, &sa, &old.sigabrt);
     sigaction(SIGTRAP, &sa, &old.sigtrap);
     sigaction(SIGFPE, &sa, &old.sigfpe);
-    sigaction(SIGBUS, &sa, &old.sigbus);
-    sigaction(SIGSEGV, &sa, &old.sigsegv);
     sigaction(SIGILL, &sa, &old.sigill);
     sigaction(SIGXCPU, &sa, &old.sigxcpu);
     sigaction(SIGXFSZ, &sa, &old.sigxfsz);
+
+    sa.sa_flags |= SA_ONSTACK;
+    sigaction(SIGBUS, &sa, &old.sigbus);
+    sigaction(SIGSEGV, &sa, &old.sigsegv);
 }
 
 void

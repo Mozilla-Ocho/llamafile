@@ -23,6 +23,8 @@
 #include <sys/auxv.h>
 #include <unistd.h>
 
+#include "llamafile/crash.h"
+
 #include "log.h"
 
 //
@@ -133,6 +135,7 @@ time_worker(void* arg)
     sigaddset(&ss, SIGUSR1);
     sigaddset(&ss, SIGALRM);
     pthread_sigmask(SIG_SETMASK, &ss, 0);
+    protect_against_stack_overflow();
     set_thread_name("localtime");
     for (;;) {
         sleep(10);

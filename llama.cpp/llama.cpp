@@ -58,7 +58,7 @@
 #include <sys/resource.h>
 #include <ctl/vector.h>
 
-#include "llamafile/server/threadlocal.h"
+#include "llamafile/threadlocal.h"
 
 #define LLAMA_ATTRIBUTE_FORMAT(...) __attribute__((__format__(__gnu_printf__, __VA_ARGS__)))
 
