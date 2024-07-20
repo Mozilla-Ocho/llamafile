@@ -36,6 +36,7 @@
 #define HeaderEqualCase(H, S) \
     SlicesEqualCase(S, strlen(S), HeaderData(H), HeaderLength(H))
 
+struct TokenizeParams;
 struct EmbeddingParams;
 struct CompletionParams;
 
@@ -88,8 +89,10 @@ struct Client
     ctl::optional<ctl::string_view> param(ctl::string_view);
 
     bool dispatch() __wur;
-    bool tokenize() __wur;
     bool dispatcher() __wur;
+
+    bool tokenize() __wur;
+    bool get_tokenize_params(TokenizeParams*);
 
     bool embedding() __wur;
     bool get_embedding_params(EmbeddingParams*);

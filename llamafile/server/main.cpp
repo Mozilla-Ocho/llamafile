@@ -23,6 +23,7 @@
 #include "llamafile/version.h"
 
 #include "log.h"
+#include "model.h"
 #include "server.h"
 #include "signals.h"
 #include "time.h"

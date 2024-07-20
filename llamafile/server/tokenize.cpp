@@ -17,6 +17,7 @@
 
 #include "client.h"
 
+#include <ctl/pair.h>
 #include <ctl/vector.h>
 #include <string.h>
 #include <sys/resource.h>
@@ -25,9 +26,63 @@
 
 #include "cleanup.h"
 #include "fastjson.h"
+#include "json.h"
 #include "log.h"
+#include "model.h"
 #include "signals.h"
 #include "utils.h"
+
+struct TokenizeParams
+{
+    bool add_special;
+    bool parse_special;
+    ctl::string_view prompt;
+    ctl::string content;
+};
+
+void
+cleanup_tokenize_params(void* arg)
+{
+    delete (TokenizeParams*)arg;
+}
+
+bool
+Client::get_tokenize_params(TokenizeParams* params)
+{
+    params->add_special = atob(or_empty(param("add_special")), true);
+    params->parse_special = atob(or_empty(param("parse_special")), false);
+    ctl::optional<ctl::string_view> prompt = param("prompt");
+    if (prompt.has_value()) {
+        params->prompt = prompt.value();
+    } else if (HasHeader(kHttpContentType)) {
+        if (IsMimeType(HeaderData(kHttpContentType),
+                       HeaderLength(kHttpContentType),
+                       "text/plain")) {
+            params->prompt = payload;
+        } else if (IsMimeType(HeaderData(kHttpContentType),
+                              HeaderLength(kHttpContentType),
+                              "application/json")) {
+            ctl::pair<Json::Status, Json> json = Json::parse(payload);
+            if (json.first != Json::success)
+                return send_error(400, Json::StatusToString(json.first));
+            if (!json.second.isObject())
+                return send_error(400, "JSON body must be an object");
+            if (!json.second["prompt"].isString())
+                return send_error(400, "JSON missing \"prompt\" key");
+            params->content = ctl::move(json.second["prompt"].getString());
+            params->prompt = params->content;
+            if (json.second["add_special"].isBool())
+                params->add_special = json.second["add_special"].getBool();
+            if (json.second["parse_special"].isBool())
+                params->parse_special = json.second["parse_special"].getBool();
+        } else {
+            return send_error(501, "Content Type Not Implemented");
+        }
+    } else {
+        params->prompt = payload;
+    }
+    return true;
+}
 
 bool
 Client::tokenize()
@@ -38,27 +93,11 @@ Client::tokenize()
     if (!read_payload())
         return false;
 
-    // get prompt
-    //
-    //   1. Allow GET "/tokenize?prompt=foo"
-    //   2. Allow POST "prompt=foo" (application/x-www-form-urlencoded)
-    //   3. Allow POST "foo" (text/plain)
-    //
-    ctl::string_view input;
-    ctl::optional<ctl::string_view> prompt = param("prompt");
-    if (prompt.has_value()) {
-        input = prompt.value();
-    } else if (HasHeader(kHttpContentType)) {
-        if (IsMimeType(HeaderData(kHttpContentType),
-                       HeaderLength(kHttpContentType),
-                       "text/plain")) {
-            input = payload;
-        } else {
-            return send_error(501, "Content Type Not Implemented");
-        }
-    } else {
-        input = payload;
-    }
+    // get parameters
+    auto params = new TokenizeParams;
+    defer_cleanup(cleanup_tokenize_params, params);
+    if (!get_tokenize_params(params))
+        return false;
 
     // get optional parameters
     bool add_special = atob(or_empty(param("add_special")), true);
@@ -70,19 +109,17 @@ Client::tokenize()
     timespec started = timespec_real();
 
     // turn text into tokens
-    extern llama_model* g_model;
-    int maxcount = input.size() + 16;
-    auto toks = new ctl::vector<llama_token>(maxcount);
+    auto toks = new ctl::vector<llama_token>(params->prompt.size() + 16);
     defer_cleanup(cleanup_token_vector, toks);
     int count = llama_tokenize(g_model,
-                               input.data(),
-                               input.size(),
+                               params->prompt.data(),
+                               params->prompt.size(),
                                &(*toks)[0],
-                               maxcount,
-                               add_special,
-                               parse_special);
+                               toks->size(),
+                               params->add_special,
+                               params->parse_special);
     if (count < 0) {
-        SLOG("failed to tokenize");
+        SLOG("llama_tokenize failed");
         return send_error(405);
     }
     toks->resize(count);

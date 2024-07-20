@@ -28,6 +28,7 @@
 #include "fastjson.h"
 #include "json.h"
 #include "log.h"
+#include "model.h"
 #include "utils.h"
 
 struct EmbeddingParams
@@ -37,8 +38,6 @@ struct EmbeddingParams
     ctl::string_view prompt;
     ctl::string content;
 };
-
-extern llama_model* g_model;
 
 void
 normalize_embeddings(const float* inp, float* out, int n)
@@ -79,15 +78,7 @@ Client::get_embedding_params(EmbeddingParams* params)
 {
     params->add_special = atob(or_empty(param("add_special")), true);
     params->parse_special = atob(or_empty(param("parse_special")), false);
-
-    // get prompt
-    //
-    //   1. Allow GET "/tokenize?prompt=foo"
-    //   2. Allow POST {"content": "foo"} (application/json)
-    //   3. Allow POST "prompt=foo" (application/x-www-form-urlencoded)
-    //   3. Allow POST "foo" (text/plain)
-    //
-    ctl::optional<ctl::string_view> prompt = param("prompt");
+    ctl::optional<ctl::string_view> prompt = param("content");
     if (prompt.has_value()) {
         params->prompt = prompt.value();
     } else if (HasHeader(kHttpContentType)) {
@@ -101,10 +92,16 @@ Client::get_embedding_params(EmbeddingParams* params)
             ctl::pair<Json::Status, Json> json = Json::parse(payload);
             if (json.first != Json::success)
                 return send_error(400, Json::StatusToString(json.first));
+            if (!json.second.isObject())
+                return send_error(400, "JSON body must be an object");
             if (!json.second["content"].isString())
                 return send_error(400, "JSON missing \"content\" key");
             params->content = ctl::move(json.second["content"].getString());
             params->prompt = params->content;
+            if (json.second["add_special"].isBool())
+                params->add_special = json.second["add_special"].getBool();
+            if (json.second["parse_special"].isBool())
+                params->parse_special = json.second["parse_special"].getBool();
         } else {
             return send_error(501, "Content Type Not Implemented");
         }

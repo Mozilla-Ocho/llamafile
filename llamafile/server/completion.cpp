@@ -29,6 +29,7 @@
 #include "fastjson.h"
 #include "json.h"
 #include "log.h"
+#include "model.h"
 #include "utils.h"
 
 struct CompletionParams
@@ -46,8 +47,6 @@ struct CompletionResponse
     ctl::string content;
     bool stop = false;
 };
-
-extern llama_model* g_model;
 
 static void
 add_token_to_batch(llama_batch& batch,
@@ -120,10 +119,19 @@ Client::get_completion_params(CompletionParams* params)
             ctl::pair<Json::Status, Json> json = Json::parse(payload);
             if (json.first != Json::success)
                 return send_error(400, Json::StatusToString(json.first));
+            if (!json.second.isObject())
+                return send_error(400, "JSON body must be an object");
             if (!json.second["prompt"].isString())
                 return send_error(400, "JSON missing \"prompt\" key");
             params->content = ctl::move(json.second["prompt"].getString());
             params->prompt = params->content;
+            if (json.second["add_special"].isBool())
+                params->add_special = json.second["add_special"].getBool();
+            if (json.second["parse_special"].isBool())
+                params->parse_special = json.second["parse_special"].getBool();
+            if (json.second["display_special"].isBool())
+                params->display_special =
+                  json.second["display_special"].getBool();
         } else {
             return send_error(501, "Content Type Not Implemented");
         }
