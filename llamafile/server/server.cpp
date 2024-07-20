@@ -21,7 +21,6 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <stdio.h>
-#include <sys/auxv.h>
 #include <sys/socket.h>
 #include <time.h>
 

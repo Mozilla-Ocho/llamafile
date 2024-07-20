@@ -212,7 +212,7 @@ static struct llamafile *llamafile_open_zip(const char *prog, const char *fname,
                 file->fname);
 
     // map the file into memory
-    long pagesz = sysconf(_SC_PAGESIZE);
+    long pagesz = sysconf(_SC_GRANSIZE);
     off_t mapoff = off & -pagesz;
     long skew = off - mapoff;
     file->mapsize = skew + file->size;

@@ -235,7 +235,7 @@
 #include "ggml-backend-impl.h"
 
 static const struct ggml_backend_api *g_backend;
-#define getenv g_backend->getenv
+// #define getenv g_backend->getenv // [jart] due to strace !!memory
 #define FLAG_log_disable (*g_backend->FLAG_log_disable)
 #define ggml_backend_register g_backend->ggml_backend_register
 #define ggml_is_quantized g_backend->ggml_is_quantized

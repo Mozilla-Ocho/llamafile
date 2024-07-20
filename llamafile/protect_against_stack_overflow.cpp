@@ -28,20 +28,23 @@
 // Your thread needs to have a guard page (default)
 // You also need SIGSEGV and SIGBUS handlers w/ SA_ONSTACK
 void protect_against_stack_overflow(void) {
-    static ThreadLocal<void> cleanup([](void *ptr) {
-        struct sigaltstack ss;
-        ss.ss_flags = SS_DISABLE;
-        ss.ss_size = 0;
-        ss.ss_sp = 0;
-        sigaltstack(&ss, 0);
-        free(ptr);
+    static ThreadLocal<struct sigaltstack> cleanup([](struct sigaltstack *ss) {
+        ss->ss_flags = SS_DISABLE;
+        if (!sigaltstack(ss, 0)) {
+            free(ss->ss_sp);
+            free(ss);
+        }
     });
-    struct sigaltstack ss;
-    ss.ss_flags = 0;
-    ss.ss_size = sysconf(_SC_MINSIGSTKSZ) + 16384;
-    if ((ss.ss_sp = malloc(ss.ss_size))) {
-        if (sigaltstack(&ss, 0))
-            __builtin_trap();
-        cleanup.set(ss.ss_sp);
+    struct sigaltstack *ss;
+    if ((ss = (struct sigaltstack *)malloc(sizeof(struct sigaltstack)))) {
+        ss->ss_flags = 0;
+        ss->ss_size = sysconf(_SC_MINSIGSTKSZ) + 16384;
+        if ((ss->ss_sp = malloc(ss->ss_size))) {
+            if (sigaltstack(ss, 0))
+                __builtin_trap();
+            cleanup.set(ss);
+        } else {
+            free(ss);
+        }
     }
 }

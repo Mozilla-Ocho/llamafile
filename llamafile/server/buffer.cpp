@@ -17,10 +17,10 @@
 
 #include "buffer.h"
 
-#include <sys/auxv.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
-static int pagesz = getauxval(AT_PAGESZ);
+static int pagesz = getpagesize();
 
 Buffer::Buffer(size_t capacity) noexcept
   : i(0)

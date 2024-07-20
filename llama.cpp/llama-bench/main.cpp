@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <vector>
 #include <tool/args/args.h>
-#include <sys/auxv.h>
 #include <stdatomic.h>
 #include <third_party/nsync/futex.internal.h>
 

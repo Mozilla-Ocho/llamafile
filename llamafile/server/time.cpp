@@ -20,7 +20,6 @@
 #include <atomic>
 #include <pthread.h>
 #include <signal.h>
-#include <sys/auxv.h>
 #include <unistd.h>
 
 #include "llamafile/crash.h"
@@ -150,8 +149,6 @@ time_init()
     update_time();
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 65536);
-    pthread_attr_setguardsize(&attr, getauxval(AT_PAGESZ));
     if (pthread_create(&g_time_thread, &attr, time_worker, 0))
         __builtin_trap();
     pthread_attr_destroy(&attr);

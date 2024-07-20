@@ -61,7 +61,6 @@ SOFTWARE.");
 #include <unistd.h>
 #include <cosmo.h>
 #include <threads.h>
-#include <sys/auxv.h>
 #include <libc/log/backtrace.internal.h>
 
 #include <pthread.h>
@@ -166,7 +165,7 @@ void ggml_print_backtrace(void) {
 #else
 inline static void * ggml_aligned_malloc(size_t size) {
     if (size == 0) {
-        GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_aligned_malloc!\n");
+        // GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_aligned_malloc!\n");
         return NULL;
     }
     void * aligned_memory = NULL;
@@ -203,7 +202,7 @@ inline static void * ggml_aligned_malloc(size_t size) {
 
 inline static void * ggml_malloc(size_t size) {
     if (size == 0) {
-        GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_malloc!\n");
+        // GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_malloc!\n");
         return NULL;
     }
     void * result = malloc(size);
@@ -217,7 +216,7 @@ inline static void * ggml_malloc(size_t size) {
 // calloc
 inline static void * ggml_calloc(size_t num, size_t size) {
     if (num == 0 || size == 0) {
-        GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_calloc!\n");
+        // GGML_PRINT("WARNING: Behavior may be unexpected when allocating 0 bytes for ggml_calloc!\n");
         return NULL;
     }
     void * result = calloc(num, size);
