@@ -30,6 +30,11 @@ CoreManager::CoreManager()
       mu_(PTHREAD_MUTEX_INITIALIZER) {
 }
 
+static void unlock_mutex(void *arg) {
+    pthread_mutex_t *mu = (pthread_mutex_t *)arg;
+    pthread_mutex_unlock(mu);
+}
+
 int CoreManager::acquire(int need, int greed) {
     unassert(need >= 1);
     unassert(greed >= need);
@@ -38,13 +43,14 @@ int CoreManager::acquire(int need, int greed) {
 
     while (got < need) {
         pthread_mutex_lock(&mu_);
+        pthread_cleanup_push(unlock_mutex, &mu_);
         if (used_ < total_) {
             ++got;
             ++used_;
         } else {
             pthread_cond_wait(&cv_, &mu_);
         }
-        pthread_mutex_unlock(&mu_);
+        pthread_cleanup_pop(true);
     }
 
     while (got < greed) {
