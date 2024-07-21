@@ -19,6 +19,7 @@
 #include "utils.h"
 
 #include <cosmo.h>
+#include <ctype.h>
 #include <stdckdint.h>
 
 #include "double-conversion/double-to-string.h"

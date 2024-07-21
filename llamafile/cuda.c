@@ -23,6 +23,7 @@
 #include "llamafile/x.h"
 #include <assert.h>
 #include <cosmo.h>
+#include <ctype.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <libgen.h>
