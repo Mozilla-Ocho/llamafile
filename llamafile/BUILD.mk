@@ -94,7 +94,6 @@ o/$(MODE)/llamafile:					\
 # - HWCAP_ASIMDDP       +dotprod  (e.g. m1, rpi5)  __ARM_FEATURE_DOTPROD
 #
 
-o/$(MODE)/llamafile/sgemm.o: private CXXFLAGS += -Os
 o/$(MODE)/llamafile/iqk_mul_mat_amd_avx2.o: private TARGET_ARCH += -Xx86_64-mtune=skylake -Xx86_64-mavx2 -Xx86_64-mfma -Xx86_64-mf16c
 o/$(MODE)/llamafile/iqk_mul_mat_amd_zen4.o: private TARGET_ARCH += -Xx86_64-mtune=skylake -Xx86_64-mavx2 -Xx86_64-mfma -Xx86_64-mf16c -Xx86_64-mavx512f -Xx86_64-mavx512vl -Xx86_64-mavx512vnni -Xx86_64-mavx512bw -Xx86_64-mavx512dq
 o/$(MODE)/llamafile/iqk_mul_mat_arm82.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+dotprod+fp16
@@ -112,6 +111,32 @@ o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_zen4.o: private TARGET_ARCH += -Xx86_
 o/$(MODE)/llamafile/tinyblas_cpu_mixmul_amd_zen4.o: private TARGET_ARCH += -Xx86_64-mtune=znver4 -Xx86_64-mf16c -Xx86_64-mfma -Xx86_64-mavx2 -Xx86_64-mavx512f -Xx86_64-mavx512vl -Xx86_64-mavx512vnni -Xx86_64-mavx512bf16
 o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+dotprod+fp16
 o/$(MODE)/llamafile/tinyblas_cpu_mixmul_arm82.o: private TARGET_ARCH += -Xaarch64-march=armv8.2-a+dotprod+fp16
+
+o/$(MODE)/llamafile/sgemm.o: private CXXFLAGS += -Os
+
+o/$(MODE)/llamafile/sgemm_matmul_test.o			\
+o/$(MODE)/llamafile/sgemm_sss_test.o			\
+o/$(MODE)/llamafile/sgemm_vecdot_test.o			\
+o/$(MODE)/llamafile/iqk_mul_mat_amd_avx2.o		\
+o/$(MODE)/llamafile/iqk_mul_mat_amd_zen4.o		\
+o/$(MODE)/llamafile/iqk_mul_mat_arm82.o			\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_amd_avx2.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_amd_avx512f.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_amd_avx.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_amd_avxvnni.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_amd_fma.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_amd_zen4.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_arm80.o		\
+o/$(MODE)/llamafile/tinyblas_cpu_mixmul_arm82.o		\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_avx2.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_avx512f.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_avx.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_avxvnni.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_fma.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_zen4.o	\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm80.o		\
+o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o:		\
+		private CCFLAGS += -O3
 
 ################################################################################
 # testing

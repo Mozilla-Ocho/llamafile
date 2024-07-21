@@ -32,20 +32,26 @@ $(LLAMA_CPP_OBJS): private				\
 			-DGGML_MULTIPLATFORM		\
 			-DGGML_USE_LLAMAFILE
 
-o/$(MODE)/llama.cpp/common.o				\
-o/$(MODE)/llama.cpp/llama.o: private			\
-		CCFLAGS += -O
+o/$(MODE)/llama.cpp/ggml-vector-amd-avx2.o \
+o/$(MODE)/llama.cpp/ggml-vector-amd-avx512bf16.o \
+o/$(MODE)/llama.cpp/ggml-vector-amd-avx512.o \
+o/$(MODE)/llama.cpp/ggml-vector-amd-avx.o \
+o/$(MODE)/llama.cpp/ggml-vector-amd-f16c.o \
+o/$(MODE)/llama.cpp/ggml-vector-amd-fma.o \
+o/$(MODE)/llama.cpp/ggml-vector-arm80.o \
+o/$(MODE)/llama.cpp/ggml-vector-arm82.o: \
+		private CCFLAGS += -O3
 
 o/$(MODE)/llama.cpp/ggml-alloc.o			\
 o/$(MODE)/llama.cpp/ggml-backend.o			\
 o/$(MODE)/llama.cpp/grammar-parser.o			\
 o/$(MODE)/llama.cpp/json-schema-to-grammar.o		\
-o/$(MODE)/llama.cpp/llama.o				\
+o/$(MODE)/llama.cpp/vector.o				\
 o/$(MODE)/llama.cpp/unicode.o				\
 o/$(MODE)/llama.cpp/sampling.o				\
 o/$(MODE)/llama.cpp/ggml-alloc.o			\
-o/$(MODE)/llama.cpp/common.o: private			\
-		CCFLAGS += -Os
+o/$(MODE)/llama.cpp/common.o:				\
+		private CCFLAGS += -Os
 
 o/$(MODE)/llama.cpp/ggml-quants.o: private CXXFLAGS += -Os
 o/$(MODE)/llama.cpp/ggml-quants-amd-avx.o: private TARGET_ARCH += -Xx86_64-mtune=sandybridge

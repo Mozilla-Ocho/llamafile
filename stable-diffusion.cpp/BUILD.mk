@@ -35,7 +35,6 @@ o/$(MODE)/stable-diffusion.cpp/main:					\
 		o/$(MODE)/stb/stb.a
 
 $(STABLE_DIFFUSION_CPP_OBJS): stable-diffusion.cpp/BUILD.mk
-$(STABLE_DIFFUSION_CPP_OBJS): private CFLAGS += -O
 
 .PHONY: o/$(MODE)/stable-diffusion.cpp
 o/$(MODE)/stable-diffusion.cpp:						\

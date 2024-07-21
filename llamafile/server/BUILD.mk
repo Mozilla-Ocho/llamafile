@@ -21,7 +21,6 @@ o/$(MODE)/llamafile/server/main:				\
 		o/$(MODE)/stb/stb.a				\
 
 $(LLAMAFILE_SERVER_OBJS): llamafile/server/BUILD.mk
-$(LLAMAFILE_SERVER_OBJS): private CCFLAGS += -O
 
 o/$(MODE)/llamafile/server/fastjson_test:			\
 		o/$(MODE)/llamafile/server/fastjson_test.o	\
