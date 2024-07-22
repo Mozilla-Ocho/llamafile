@@ -12,9 +12,11 @@ FUNCS.append(('ggml_validate_row_data', 'bool ggml_validate_row_data(enum ggml_t
 # END SPECIAL FUNCTIONS
 
 ARCHS = (
-  ('amd_avx512', '__x86_64__', ('FMA', 'F16C', 'AVX2', 'AVX512F')),
-  ('amd_avx2', '__x86_64__', ('FMA', 'F16C', 'AVX2')),
-  ('amd_avx', '__x86_64__', ()),
+  ('amd_avx512', '__x86_64__', ('FMA', 'F16C', 'AVX', 'AVX2', 'AVX512F')),
+  ('amd_avx2', '__x86_64__', ('FMA', 'F16C', 'AVX', 'AVX2')),
+  ('amd_avx', '__x86_64__', ('AVX',)),
+  ('amd_ssse3', '__x86_64__', ('SSSE3',)),
+  ('amd_k8', '__x86_64__', ()),
   ('arm80', '__aarch64__', ()),
 )
 
@@ -57,6 +59,6 @@ with open('llama.cpp/ggml-quants.cpp', 'w') as f:
     proto = proto.replace(';', '')
     args = [s.split(' ')[-1] for s in re.search(r'(?<=\().*(?=\))', proto).group(0).split(',')]
     f.write(proto + ' {\n')
-    f.write('  return funcs.ptr_%s(%s);\n' % (func, args))
+    f.write('  return funcs.ptr_%s(%s);\n' % (func, ", ".join(args)))
     f.write('}\n')
     f.write('\n')

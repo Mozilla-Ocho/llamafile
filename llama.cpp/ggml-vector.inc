@@ -589,7 +589,7 @@ static inline void __sse_f16x4_store(ggml_fp16_t *x, __m128 y) {
 #define GGML_F32Cx4             __m128
 #define GGML_F32Cx4_ZERO        _mm_setzero_ps()
 #define GGML_F32Cx4_SET1(x)     _mm_set1_ps(x)
-#define GGML_F32Cx4_LOAD(x)     __sse_f16x4_load(x)
+#define GGML_F32Cx4_LOAD(x)     __sse_f16x4_load((void *)(x))
 #define GGML_F32Cx4_STORE(x, y) __sse_f16x4_store(x, y)
 #define GGML_F32Cx4_FMA         GGML_F32x4_FMA
 #define GGML_F32Cx4_ADD         _mm_add_ps

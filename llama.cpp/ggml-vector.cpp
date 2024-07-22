@@ -9,6 +9,8 @@ extern "C" void ggml_fp16_to_fp32_row_amd_avx2(const ggml_fp16_t * x, float * y,
 extern "C" void ggml_fp16_to_fp32_row_amd_f16c(const ggml_fp16_t * x, float * y, int64_t n);
 extern "C" void ggml_fp16_to_fp32_row_amd_fma(const ggml_fp16_t * x, float * y, int64_t n);
 extern "C" void ggml_fp16_to_fp32_row_amd_avx(const ggml_fp16_t * x, float * y, int64_t n);
+extern "C" void ggml_fp16_to_fp32_row_amd_ssse3(const ggml_fp16_t * x, float * y, int64_t n);
+extern "C" void ggml_fp16_to_fp32_row_amd_k8(const ggml_fp16_t * x, float * y, int64_t n);
 extern "C" void ggml_fp16_to_fp32_row_arm82(const ggml_fp16_t * x, float * y, int64_t n);
 extern "C" void ggml_fp16_to_fp32_row_arm80(const ggml_fp16_t * x, float * y, int64_t n);
 
@@ -18,6 +20,8 @@ extern "C" void ggml_fp32_to_fp16_row_amd_avx2(const float * x, ggml_fp16_t * y,
 extern "C" void ggml_fp32_to_fp16_row_amd_f16c(const float * x, ggml_fp16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_fp16_row_amd_fma(const float * x, ggml_fp16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_fp16_row_amd_avx(const float * x, ggml_fp16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp16_row_amd_ssse3(const float * x, ggml_fp16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp16_row_amd_k8(const float * x, ggml_fp16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_fp16_row_arm82(const float * x, ggml_fp16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_fp16_row_arm80(const float * x, ggml_fp16_t * y, int64_t n);
 
@@ -27,6 +31,8 @@ extern "C" void ggml_bf16_to_fp32_row_amd_avx2(const ggml_bf16_t * x, float * y,
 extern "C" void ggml_bf16_to_fp32_row_amd_f16c(const ggml_bf16_t * x, float * y, int64_t n);
 extern "C" void ggml_bf16_to_fp32_row_amd_fma(const ggml_bf16_t * x, float * y, int64_t n);
 extern "C" void ggml_bf16_to_fp32_row_amd_avx(const ggml_bf16_t * x, float * y, int64_t n);
+extern "C" void ggml_bf16_to_fp32_row_amd_ssse3(const ggml_bf16_t * x, float * y, int64_t n);
+extern "C" void ggml_bf16_to_fp32_row_amd_k8(const ggml_bf16_t * x, float * y, int64_t n);
 extern "C" void ggml_bf16_to_fp32_row_arm82(const ggml_bf16_t * x, float * y, int64_t n);
 extern "C" void ggml_bf16_to_fp32_row_arm80(const ggml_bf16_t * x, float * y, int64_t n);
 
@@ -36,6 +42,8 @@ extern "C" void ggml_fp32_to_bf16_row_amd_avx2(const float * x, ggml_bf16_t * y,
 extern "C" void ggml_fp32_to_bf16_row_amd_f16c(const float * x, ggml_bf16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_bf16_row_amd_fma(const float * x, ggml_bf16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_bf16_row_amd_avx(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_amd_ssse3(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_amd_k8(const float * x, ggml_bf16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_bf16_row_arm82(const float * x, ggml_bf16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_bf16_row_arm80(const float * x, ggml_bf16_t * y, int64_t n);
 
@@ -45,6 +53,8 @@ extern "C" void ggml_vec_dot_f32_amd_avx2(int n, float * restrict s, size_t bs, 
 extern "C" void ggml_vec_dot_f32_amd_f16c(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_amd_fma(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_amd_avx(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_ssse3(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_k8(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_arm82(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_arm80(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
 
@@ -54,6 +64,8 @@ extern "C" void ggml_vec_dot_f16_amd_avx2(int n, float * restrict s, size_t bs, 
 extern "C" void ggml_vec_dot_f16_amd_f16c(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f16_amd_fma(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f16_amd_avx(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_ssse3(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_k8(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f16_arm82(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f16_arm80(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
 
@@ -63,6 +75,8 @@ extern "C" void ggml_vec_dot_bf16_amd_avx2(int n, float * restrict s, size_t bs,
 extern "C" void ggml_vec_dot_bf16_amd_f16c(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_bf16_amd_fma(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_bf16_amd_avx(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_ssse3(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_k8(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_bf16_arm82(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_bf16_arm80(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
 
@@ -72,6 +86,8 @@ extern "C" void ggml_vec_dot_f16_unroll_amd_avx2(const int n, const int xs, floa
 extern "C" void ggml_vec_dot_f16_unroll_amd_f16c(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
 extern "C" void ggml_vec_dot_f16_unroll_amd_fma(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
 extern "C" void ggml_vec_dot_f16_unroll_amd_avx(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_ssse3(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_k8(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
 extern "C" void ggml_vec_dot_f16_unroll_arm82(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
 extern "C" void ggml_vec_dot_f16_unroll_arm80(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
 
@@ -81,6 +97,8 @@ extern "C" void ggml_vec_mad_f32_unroll_amd_avx2(const int n, const int xs, cons
 extern "C" void ggml_vec_mad_f32_unroll_amd_f16c(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
 extern "C" void ggml_vec_mad_f32_unroll_amd_fma(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
 extern "C" void ggml_vec_mad_f32_unroll_amd_avx(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_ssse3(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_k8(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
 extern "C" void ggml_vec_mad_f32_unroll_arm82(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
 extern "C" void ggml_vec_mad_f32_unroll_arm80(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
 
@@ -90,6 +108,8 @@ extern "C" void ggml_vec_set_i8_amd_avx2(const int n, int8_t * x, const int8_t v
 extern "C" void ggml_vec_set_i8_amd_f16c(const int n, int8_t * x, const int8_t v);
 extern "C" void ggml_vec_set_i8_amd_fma(const int n, int8_t * x, const int8_t v);
 extern "C" void ggml_vec_set_i8_amd_avx(const int n, int8_t * x, const int8_t v);
+extern "C" void ggml_vec_set_i8_amd_ssse3(const int n, int8_t * x, const int8_t v);
+extern "C" void ggml_vec_set_i8_amd_k8(const int n, int8_t * x, const int8_t v);
 extern "C" void ggml_vec_set_i8_arm82(const int n, int8_t * x, const int8_t v);
 extern "C" void ggml_vec_set_i8_arm80(const int n, int8_t * x, const int8_t v);
 
@@ -99,6 +119,8 @@ extern "C" void ggml_vec_set_i16_amd_avx2(const int n, int16_t * x, const int16_
 extern "C" void ggml_vec_set_i16_amd_f16c(const int n, int16_t * x, const int16_t v);
 extern "C" void ggml_vec_set_i16_amd_fma(const int n, int16_t * x, const int16_t v);
 extern "C" void ggml_vec_set_i16_amd_avx(const int n, int16_t * x, const int16_t v);
+extern "C" void ggml_vec_set_i16_amd_ssse3(const int n, int16_t * x, const int16_t v);
+extern "C" void ggml_vec_set_i16_amd_k8(const int n, int16_t * x, const int16_t v);
 extern "C" void ggml_vec_set_i16_arm82(const int n, int16_t * x, const int16_t v);
 extern "C" void ggml_vec_set_i16_arm80(const int n, int16_t * x, const int16_t v);
 
@@ -108,6 +130,8 @@ extern "C" void ggml_vec_set_i32_amd_avx2(const int n, int32_t * x, const int32_
 extern "C" void ggml_vec_set_i32_amd_f16c(const int n, int32_t * x, const int32_t v);
 extern "C" void ggml_vec_set_i32_amd_fma(const int n, int32_t * x, const int32_t v);
 extern "C" void ggml_vec_set_i32_amd_avx(const int n, int32_t * x, const int32_t v);
+extern "C" void ggml_vec_set_i32_amd_ssse3(const int n, int32_t * x, const int32_t v);
+extern "C" void ggml_vec_set_i32_amd_k8(const int n, int32_t * x, const int32_t v);
 extern "C" void ggml_vec_set_i32_arm82(const int n, int32_t * x, const int32_t v);
 extern "C" void ggml_vec_set_i32_arm80(const int n, int32_t * x, const int32_t v);
 
@@ -117,6 +141,8 @@ extern "C" void ggml_vec_set_f16_amd_avx2(const int n, ggml_fp16_t * x, const in
 extern "C" void ggml_vec_set_f16_amd_f16c(const int n, ggml_fp16_t * x, const int32_t v);
 extern "C" void ggml_vec_set_f16_amd_fma(const int n, ggml_fp16_t * x, const int32_t v);
 extern "C" void ggml_vec_set_f16_amd_avx(const int n, ggml_fp16_t * x, const int32_t v);
+extern "C" void ggml_vec_set_f16_amd_ssse3(const int n, ggml_fp16_t * x, const int32_t v);
+extern "C" void ggml_vec_set_f16_amd_k8(const int n, ggml_fp16_t * x, const int32_t v);
 extern "C" void ggml_vec_set_f16_arm82(const int n, ggml_fp16_t * x, const int32_t v);
 extern "C" void ggml_vec_set_f16_arm80(const int n, ggml_fp16_t * x, const int32_t v);
 
@@ -126,6 +152,8 @@ extern "C" void ggml_vec_set_bf16_amd_avx2(const int n, ggml_bf16_t * x, const g
 extern "C" void ggml_vec_set_bf16_amd_f16c(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
 extern "C" void ggml_vec_set_bf16_amd_fma(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
 extern "C" void ggml_vec_set_bf16_amd_avx(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
+extern "C" void ggml_vec_set_bf16_amd_ssse3(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
+extern "C" void ggml_vec_set_bf16_amd_k8(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
 extern "C" void ggml_vec_set_bf16_arm82(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
 extern "C" void ggml_vec_set_bf16_arm80(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
 
@@ -135,6 +163,8 @@ extern "C" void ggml_vec_add_f32_amd_avx2 (const int n, float * z, const float *
 extern "C" void ggml_vec_add_f32_amd_f16c (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_add_f32_amd_fma (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_add_f32_amd_avx (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_add_f32_amd_ssse3 (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_add_f32_amd_k8 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_add_f32_arm82 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_add_f32_arm80 (const int n, float * z, const float * x, const float * y);
 
@@ -144,6 +174,8 @@ extern "C" void ggml_vec_add1_f32_amd_avx2(const int n, float * z, const float *
 extern "C" void ggml_vec_add1_f32_amd_f16c(const int n, float * z, const float * x, const float   v);
 extern "C" void ggml_vec_add1_f32_amd_fma(const int n, float * z, const float * x, const float   v);
 extern "C" void ggml_vec_add1_f32_amd_avx(const int n, float * z, const float * x, const float   v);
+extern "C" void ggml_vec_add1_f32_amd_ssse3(const int n, float * z, const float * x, const float   v);
+extern "C" void ggml_vec_add1_f32_amd_k8(const int n, float * z, const float * x, const float   v);
 extern "C" void ggml_vec_add1_f32_arm82(const int n, float * z, const float * x, const float   v);
 extern "C" void ggml_vec_add1_f32_arm80(const int n, float * z, const float * x, const float   v);
 
@@ -153,6 +185,8 @@ extern "C" void ggml_vec_acc_f32_amd_avx2 (const int n, float * y, const float *
 extern "C" void ggml_vec_acc_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_acc_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_acc_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_acc_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_acc_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_acc_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_acc_f32_arm80 (const int n, float * y, const float * x);
 
@@ -162,6 +196,8 @@ extern "C" void ggml_vec_acc1_f32_amd_avx2(const int n, float * y, const float  
 extern "C" void ggml_vec_acc1_f32_amd_f16c(const int n, float * y, const float   v);
 extern "C" void ggml_vec_acc1_f32_amd_fma(const int n, float * y, const float   v);
 extern "C" void ggml_vec_acc1_f32_amd_avx(const int n, float * y, const float   v);
+extern "C" void ggml_vec_acc1_f32_amd_ssse3(const int n, float * y, const float   v);
+extern "C" void ggml_vec_acc1_f32_amd_k8(const int n, float * y, const float   v);
 extern "C" void ggml_vec_acc1_f32_arm82(const int n, float * y, const float   v);
 extern "C" void ggml_vec_acc1_f32_arm80(const int n, float * y, const float   v);
 
@@ -171,6 +207,8 @@ extern "C" void ggml_vec_sub_f32_amd_avx2 (const int n, float * z, const float *
 extern "C" void ggml_vec_sub_f32_amd_f16c (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_sub_f32_amd_fma (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_sub_f32_amd_avx (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_sub_f32_amd_ssse3 (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_sub_f32_amd_k8 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_sub_f32_arm82 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_sub_f32_arm80 (const int n, float * z, const float * x, const float * y);
 
@@ -180,6 +218,8 @@ extern "C" void ggml_vec_set_f32_amd_avx2 (const int n, float * x, const float  
 extern "C" void ggml_vec_set_f32_amd_f16c (const int n, float * x, const float   v);
 extern "C" void ggml_vec_set_f32_amd_fma (const int n, float * x, const float   v);
 extern "C" void ggml_vec_set_f32_amd_avx (const int n, float * x, const float   v);
+extern "C" void ggml_vec_set_f32_amd_ssse3 (const int n, float * x, const float   v);
+extern "C" void ggml_vec_set_f32_amd_k8 (const int n, float * x, const float   v);
 extern "C" void ggml_vec_set_f32_arm82 (const int n, float * x, const float   v);
 extern "C" void ggml_vec_set_f32_arm80 (const int n, float * x, const float   v);
 
@@ -189,6 +229,8 @@ extern "C" void ggml_vec_cpy_f32_amd_avx2 (const int n, float * y, const float *
 extern "C" void ggml_vec_cpy_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_cpy_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_cpy_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_cpy_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_cpy_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_cpy_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_cpy_f32_arm80 (const int n, float * y, const float * x);
 
@@ -198,6 +240,8 @@ extern "C" void ggml_vec_neg_f32_amd_avx2 (const int n, float * y, const float *
 extern "C" void ggml_vec_neg_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_neg_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_neg_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_neg_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_neg_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_neg_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_neg_f32_arm80 (const int n, float * y, const float * x);
 
@@ -207,6 +251,8 @@ extern "C" void ggml_vec_mul_f32_amd_avx2 (const int n, float * z, const float *
 extern "C" void ggml_vec_mul_f32_amd_f16c (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_mul_f32_amd_fma (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_mul_f32_amd_avx (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_mul_f32_amd_ssse3 (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_mul_f32_amd_k8 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_mul_f32_arm82 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_mul_f32_arm80 (const int n, float * z, const float * x, const float * y);
 
@@ -216,6 +262,8 @@ extern "C" void ggml_vec_div_f32_amd_avx2 (const int n, float * z, const float *
 extern "C" void ggml_vec_div_f32_amd_f16c (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_div_f32_amd_fma (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_div_f32_amd_avx (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_div_f32_amd_ssse3 (const int n, float * z, const float * x, const float * y);
+extern "C" void ggml_vec_div_f32_amd_k8 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_div_f32_arm82 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_div_f32_arm80 (const int n, float * z, const float * x, const float * y);
 
@@ -225,6 +273,8 @@ extern "C" void ggml_vec_scale_f32_amd_avx2(const int n, float * y, const float 
 extern "C" void ggml_vec_scale_f32_amd_f16c(const int n, float * y, const float   v);
 extern "C" void ggml_vec_scale_f32_amd_fma(const int n, float * y, const float   v);
 extern "C" void ggml_vec_scale_f32_amd_avx(const int n, float * y, const float   v);
+extern "C" void ggml_vec_scale_f32_amd_ssse3(const int n, float * y, const float   v);
+extern "C" void ggml_vec_scale_f32_amd_k8(const int n, float * y, const float   v);
 extern "C" void ggml_vec_scale_f32_arm82(const int n, float * y, const float   v);
 extern "C" void ggml_vec_scale_f32_arm80(const int n, float * y, const float   v);
 
@@ -234,6 +284,8 @@ extern "C" void ggml_vec_scale_f16_amd_avx2(const int n, ggml_fp16_t * y, const 
 extern "C" void ggml_vec_scale_f16_amd_f16c(const int n, ggml_fp16_t * y, const float v);
 extern "C" void ggml_vec_scale_f16_amd_fma(const int n, ggml_fp16_t * y, const float v);
 extern "C" void ggml_vec_scale_f16_amd_avx(const int n, ggml_fp16_t * y, const float v);
+extern "C" void ggml_vec_scale_f16_amd_ssse3(const int n, ggml_fp16_t * y, const float v);
+extern "C" void ggml_vec_scale_f16_amd_k8(const int n, ggml_fp16_t * y, const float v);
 extern "C" void ggml_vec_scale_f16_arm82(const int n, ggml_fp16_t * y, const float v);
 extern "C" void ggml_vec_scale_f16_arm80(const int n, ggml_fp16_t * y, const float v);
 
@@ -243,6 +295,8 @@ extern "C" void ggml_vec_mad_f32_amd_avx2(const int n, float * restrict y, const
 extern "C" void ggml_vec_mad_f32_amd_f16c(const int n, float * restrict y, const float * restrict x, const float v);
 extern "C" void ggml_vec_mad_f32_amd_fma(const int n, float * restrict y, const float * restrict x, const float v);
 extern "C" void ggml_vec_mad_f32_amd_avx(const int n, float * restrict y, const float * restrict x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_ssse3(const int n, float * restrict y, const float * restrict x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_k8(const int n, float * restrict y, const float * restrict x, const float v);
 extern "C" void ggml_vec_mad_f32_arm82(const int n, float * restrict y, const float * restrict x, const float v);
 extern "C" void ggml_vec_mad_f32_arm80(const int n, float * restrict y, const float * restrict x, const float v);
 
@@ -252,6 +306,8 @@ extern "C" void ggml_vec_mad_f16_amd_avx2(const int n, ggml_fp16_t * restrict y,
 extern "C" void ggml_vec_mad_f16_amd_f16c(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
 extern "C" void ggml_vec_mad_f16_amd_fma(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
 extern "C" void ggml_vec_mad_f16_amd_avx(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_ssse3(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_k8(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
 extern "C" void ggml_vec_mad_f16_arm82(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
 extern "C" void ggml_vec_mad_f16_arm80(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
 
@@ -261,6 +317,8 @@ extern "C" void ggml_vec_norm_f32_amd_avx2 (const int n, float * s, const float 
 extern "C" void ggml_vec_norm_f32_amd_f16c (const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_f32_amd_fma (const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_f32_amd_avx (const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_f32_amd_ssse3 (const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_f32_amd_k8 (const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_f32_arm82 (const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_f32_arm80 (const int n, float * s, const float * x);
 
@@ -270,6 +328,8 @@ extern "C" void ggml_vec_sqr_f32_amd_avx2  (const int n, float * y, const float 
 extern "C" void ggml_vec_sqr_f32_amd_f16c  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqr_f32_amd_fma  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqr_f32_amd_avx  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sqr_f32_amd_ssse3  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sqr_f32_amd_k8  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqr_f32_arm82  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqr_f32_arm80  (const int n, float * y, const float * x);
 
@@ -279,6 +339,8 @@ extern "C" void ggml_vec_sqrt_f32_amd_avx2 (const int n, float * y, const float 
 extern "C" void ggml_vec_sqrt_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqrt_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqrt_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sqrt_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sqrt_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqrt_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sqrt_f32_arm80 (const int n, float * y, const float * x);
 
@@ -288,6 +350,8 @@ extern "C" void ggml_vec_log_f32_amd_avx2  (const int n, float * y, const float 
 extern "C" void ggml_vec_log_f32_amd_f16c  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_log_f32_amd_fma  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_log_f32_amd_avx  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_log_f32_amd_ssse3  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_log_f32_amd_k8  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_log_f32_arm82  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_log_f32_arm80  (const int n, float * y, const float * x);
 
@@ -297,6 +361,8 @@ extern "C" void ggml_vec_abs_f32_amd_avx2  (const int n, float * y, const float 
 extern "C" void ggml_vec_abs_f32_amd_f16c  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_abs_f32_amd_fma  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_abs_f32_amd_avx  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_abs_f32_amd_ssse3  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_abs_f32_amd_k8  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_abs_f32_arm82  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_abs_f32_arm80  (const int n, float * y, const float * x);
 
@@ -306,6 +372,8 @@ extern "C" void ggml_vec_sgn_f32_amd_avx2  (const int n, float * y, const float 
 extern "C" void ggml_vec_sgn_f32_amd_f16c  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sgn_f32_amd_fma  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sgn_f32_amd_avx  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sgn_f32_amd_ssse3  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sgn_f32_amd_k8  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sgn_f32_arm82  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sgn_f32_arm80  (const int n, float * y, const float * x);
 
@@ -315,6 +383,8 @@ extern "C" void ggml_vec_step_f32_amd_avx2 (const int n, float * y, const float 
 extern "C" void ggml_vec_step_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_step_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_step_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_step_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_step_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_step_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_step_f32_arm80 (const int n, float * y, const float * x);
 
@@ -324,6 +394,8 @@ extern "C" void ggml_vec_tanh_f32_amd_avx2 (const int n, float * y, const float 
 extern "C" void ggml_vec_tanh_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_tanh_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_tanh_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_tanh_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_tanh_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_tanh_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_tanh_f32_arm80 (const int n, float * y, const float * x);
 
@@ -333,6 +405,8 @@ extern "C" void ggml_vec_elu_f32_amd_avx2  (const int n, float * y, const float 
 extern "C" void ggml_vec_elu_f32_amd_f16c  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_elu_f32_amd_fma  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_elu_f32_amd_avx  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_elu_f32_amd_ssse3  (const int n, float * y, const float * x);
+extern "C" void ggml_vec_elu_f32_amd_k8  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_elu_f32_arm82  (const int n, float * y, const float * x);
 extern "C" void ggml_vec_elu_f32_arm80  (const int n, float * y, const float * x);
 
@@ -342,6 +416,8 @@ extern "C" void ggml_vec_relu_f32_amd_avx2 (const int n, float * y, const float 
 extern "C" void ggml_vec_relu_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_relu_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_relu_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_relu_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_relu_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_relu_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_relu_f32_arm80 (const int n, float * y, const float * x);
 
@@ -351,6 +427,8 @@ extern "C" void ggml_vec_leaky_relu_f32_amd_avx2 (const int n, float * y, const 
 extern "C" void ggml_vec_leaky_relu_f32_amd_f16c (const int n, float * y, const float * x, const float ns);
 extern "C" void ggml_vec_leaky_relu_f32_amd_fma (const int n, float * y, const float * x, const float ns);
 extern "C" void ggml_vec_leaky_relu_f32_amd_avx (const int n, float * y, const float * x, const float ns);
+extern "C" void ggml_vec_leaky_relu_f32_amd_ssse3 (const int n, float * y, const float * x, const float ns);
+extern "C" void ggml_vec_leaky_relu_f32_amd_k8 (const int n, float * y, const float * x, const float ns);
 extern "C" void ggml_vec_leaky_relu_f32_arm82 (const int n, float * y, const float * x, const float ns);
 extern "C" void ggml_vec_leaky_relu_f32_arm80 (const int n, float * y, const float * x, const float ns);
 
@@ -360,6 +438,8 @@ extern "C" void ggml_vec_hardswish_f32_amd_avx2 (const int n, float * y, const f
 extern "C" void ggml_vec_hardswish_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardswish_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardswish_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_hardswish_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_hardswish_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardswish_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardswish_f32_arm80 (const int n, float * y, const float * x);
 
@@ -369,6 +449,8 @@ extern "C" void ggml_vec_hardsigmoid_f32_amd_avx2 (const int n, float * y, const
 extern "C" void ggml_vec_hardsigmoid_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardsigmoid_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardsigmoid_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_hardsigmoid_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_hardsigmoid_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardsigmoid_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_hardsigmoid_f32_arm80 (const int n, float * y, const float * x);
 
@@ -378,6 +460,8 @@ extern "C" void ggml_vec_gelu_f32_amd_avx2(const int n, float * y, const float *
 extern "C" void ggml_vec_gelu_f32_amd_f16c(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_f32_amd_fma(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_f32_amd_avx(const int n, float * y, const float * x);
+extern "C" void ggml_vec_gelu_f32_amd_ssse3(const int n, float * y, const float * x);
+extern "C" void ggml_vec_gelu_f32_amd_k8(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_f32_arm82(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_f32_arm80(const int n, float * y, const float * x);
 
@@ -387,6 +471,8 @@ extern "C" void ggml_vec_gelu_quick_f32_amd_avx2(const int n, float * y, const f
 extern "C" void ggml_vec_gelu_quick_f32_amd_f16c(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_quick_f32_amd_fma(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_quick_f32_amd_avx(const int n, float * y, const float * x);
+extern "C" void ggml_vec_gelu_quick_f32_amd_ssse3(const int n, float * y, const float * x);
+extern "C" void ggml_vec_gelu_quick_f32_amd_k8(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_quick_f32_arm82(const int n, float * y, const float * x);
 extern "C" void ggml_vec_gelu_quick_f32_arm80(const int n, float * y, const float * x);
 
@@ -396,6 +482,8 @@ extern "C" void ggml_vec_silu_f32_amd_avx2(const int n, float * y, const float *
 extern "C" void ggml_vec_silu_f32_amd_f16c(const int n, float * y, const float * x);
 extern "C" void ggml_vec_silu_f32_amd_fma(const int n, float * y, const float * x);
 extern "C" void ggml_vec_silu_f32_amd_avx(const int n, float * y, const float * x);
+extern "C" void ggml_vec_silu_f32_amd_ssse3(const int n, float * y, const float * x);
+extern "C" void ggml_vec_silu_f32_amd_k8(const int n, float * y, const float * x);
 extern "C" void ggml_vec_silu_f32_arm82(const int n, float * y, const float * x);
 extern "C" void ggml_vec_silu_f32_arm80(const int n, float * y, const float * x);
 
@@ -405,6 +493,8 @@ extern "C" float ggml_silu_backward_f32_amd_avx2(float x, float dy);
 extern "C" float ggml_silu_backward_f32_amd_f16c(float x, float dy);
 extern "C" float ggml_silu_backward_f32_amd_fma(float x, float dy);
 extern "C" float ggml_silu_backward_f32_amd_avx(float x, float dy);
+extern "C" float ggml_silu_backward_f32_amd_ssse3(float x, float dy);
+extern "C" float ggml_silu_backward_f32_amd_k8(float x, float dy);
 extern "C" float ggml_silu_backward_f32_arm82(float x, float dy);
 extern "C" float ggml_silu_backward_f32_arm80(float x, float dy);
 
@@ -414,6 +504,8 @@ extern "C" void ggml_vec_silu_backward_f32_amd_avx2(const int n, float * dx, con
 extern "C" void ggml_vec_silu_backward_f32_amd_f16c(const int n, float * dx, const float * x, const float * dy);
 extern "C" void ggml_vec_silu_backward_f32_amd_fma(const int n, float * dx, const float * x, const float * dy);
 extern "C" void ggml_vec_silu_backward_f32_amd_avx(const int n, float * dx, const float * x, const float * dy);
+extern "C" void ggml_vec_silu_backward_f32_amd_ssse3(const int n, float * dx, const float * x, const float * dy);
+extern "C" void ggml_vec_silu_backward_f32_amd_k8(const int n, float * dx, const float * x, const float * dy);
 extern "C" void ggml_vec_silu_backward_f32_arm82(const int n, float * dx, const float * x, const float * dy);
 extern "C" void ggml_vec_silu_backward_f32_arm80(const int n, float * dx, const float * x, const float * dy);
 
@@ -423,6 +515,8 @@ extern "C" void ggml_vec_sum_f32_amd_avx2(const int n, float * s, const float * 
 extern "C" void ggml_vec_sum_f32_amd_f16c(const int n, float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_amd_fma(const int n, float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_amd_avx(const int n, float * s, const float * x);
+extern "C" void ggml_vec_sum_f32_amd_ssse3(const int n, float * s, const float * x);
+extern "C" void ggml_vec_sum_f32_amd_k8(const int n, float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_arm82(const int n, float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_arm80(const int n, float * s, const float * x);
 
@@ -432,6 +526,8 @@ extern "C" void ggml_vec_sum_f32_ggf_amd_avx2(const int n, ggml_float * s, const
 extern "C" void ggml_vec_sum_f32_ggf_amd_f16c(const int n, ggml_float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_ggf_amd_fma(const int n, ggml_float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_ggf_amd_avx(const int n, ggml_float * s, const float * x);
+extern "C" void ggml_vec_sum_f32_ggf_amd_ssse3(const int n, ggml_float * s, const float * x);
+extern "C" void ggml_vec_sum_f32_ggf_amd_k8(const int n, ggml_float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_ggf_arm82(const int n, ggml_float * s, const float * x);
 extern "C" void ggml_vec_sum_f32_ggf_arm80(const int n, ggml_float * s, const float * x);
 
@@ -441,6 +537,8 @@ extern "C" void ggml_vec_sum_f16_ggf_amd_avx2(const int n, float * s, const ggml
 extern "C" void ggml_vec_sum_f16_ggf_amd_f16c(const int n, float * s, const ggml_fp16_t * x);
 extern "C" void ggml_vec_sum_f16_ggf_amd_fma(const int n, float * s, const ggml_fp16_t * x);
 extern "C" void ggml_vec_sum_f16_ggf_amd_avx(const int n, float * s, const ggml_fp16_t * x);
+extern "C" void ggml_vec_sum_f16_ggf_amd_ssse3(const int n, float * s, const ggml_fp16_t * x);
+extern "C" void ggml_vec_sum_f16_ggf_amd_k8(const int n, float * s, const ggml_fp16_t * x);
 extern "C" void ggml_vec_sum_f16_ggf_arm82(const int n, float * s, const ggml_fp16_t * x);
 extern "C" void ggml_vec_sum_f16_ggf_arm80(const int n, float * s, const ggml_fp16_t * x);
 
@@ -450,6 +548,8 @@ extern "C" void ggml_vec_sum_bf16_ggf_amd_avx2(const int n, float * s, const ggm
 extern "C" void ggml_vec_sum_bf16_ggf_amd_f16c(const int n, float * s, const ggml_bf16_t * x);
 extern "C" void ggml_vec_sum_bf16_ggf_amd_fma(const int n, float * s, const ggml_bf16_t * x);
 extern "C" void ggml_vec_sum_bf16_ggf_amd_avx(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_amd_ssse3(const int n, float * s, const ggml_bf16_t * x);
+extern "C" void ggml_vec_sum_bf16_ggf_amd_k8(const int n, float * s, const ggml_bf16_t * x);
 extern "C" void ggml_vec_sum_bf16_ggf_arm82(const int n, float * s, const ggml_bf16_t * x);
 extern "C" void ggml_vec_sum_bf16_ggf_arm80(const int n, float * s, const ggml_bf16_t * x);
 
@@ -459,6 +559,8 @@ extern "C" void ggml_vec_max_f32_amd_avx2(const int n, float * s, const float * 
 extern "C" void ggml_vec_max_f32_amd_f16c(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_amd_fma(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_amd_avx(const int n, float * s, const float * x);
+extern "C" void ggml_vec_max_f32_amd_ssse3(const int n, float * s, const float * x);
+extern "C" void ggml_vec_max_f32_amd_k8(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_arm82(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_arm80(const int n, float * s, const float * x);
 
@@ -468,6 +570,8 @@ extern "C" void ggml_vec_argmax_f32_amd_avx2(const int n, int * s, const float *
 extern "C" void ggml_vec_argmax_f32_amd_f16c(const int n, int * s, const float * x);
 extern "C" void ggml_vec_argmax_f32_amd_fma(const int n, int * s, const float * x);
 extern "C" void ggml_vec_argmax_f32_amd_avx(const int n, int * s, const float * x);
+extern "C" void ggml_vec_argmax_f32_amd_ssse3(const int n, int * s, const float * x);
+extern "C" void ggml_vec_argmax_f32_amd_k8(const int n, int * s, const float * x);
 extern "C" void ggml_vec_argmax_f32_arm82(const int n, int * s, const float * x);
 extern "C" void ggml_vec_argmax_f32_arm80(const int n, int * s, const float * x);
 
@@ -477,6 +581,8 @@ extern "C" ggml_float ggml_vec_soft_max_f32_amd_avx2(const int n, float * y, con
 extern "C" ggml_float ggml_vec_soft_max_f32_amd_f16c(const int n, float * y, const float * x, float max);
 extern "C" ggml_float ggml_vec_soft_max_f32_amd_fma(const int n, float * y, const float * x, float max);
 extern "C" ggml_float ggml_vec_soft_max_f32_amd_avx(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_ssse3(const int n, float * y, const float * x, float max);
+extern "C" ggml_float ggml_vec_soft_max_f32_amd_k8(const int n, float * y, const float * x, float max);
 extern "C" ggml_float ggml_vec_soft_max_f32_arm82(const int n, float * y, const float * x, float max);
 extern "C" ggml_float ggml_vec_soft_max_f32_arm80(const int n, float * y, const float * x, float max);
 
@@ -486,6 +592,8 @@ extern "C" void ggml_vec_norm_inv_f32_amd_avx2(const int n, float * s, const flo
 extern "C" void ggml_vec_norm_inv_f32_amd_f16c(const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_inv_f32_amd_fma(const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_inv_f32_amd_avx(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_amd_ssse3(const int n, float * s, const float * x);
+extern "C" void ggml_vec_norm_inv_f32_amd_k8(const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_inv_f32_arm82(const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_inv_f32_arm80(const int n, float * s, const float * x);
 
@@ -495,6 +603,8 @@ extern "C" void ggml_vec_sigmoid_f32_amd_avx2 (const int n, float * y, const flo
 extern "C" void ggml_vec_sigmoid_f32_amd_f16c (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sigmoid_f32_amd_fma (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sigmoid_f32_amd_avx (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_amd_ssse3 (const int n, float * y, const float * x);
+extern "C" void ggml_vec_sigmoid_f32_amd_k8 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sigmoid_f32_arm82 (const int n, float * y, const float * x);
 extern "C" void ggml_vec_sigmoid_f32_arm80 (const int n, float * y, const float * x);
 
@@ -737,7 +847,7 @@ static const struct VectorFuncs {
         }
 #endif
 #ifdef __x86_64__
-        if (X86_HAVE(F16C)) {
+        if (X86_HAVE(AVX) && X86_HAVE(F16C)) {
             ptr_ggml_fp16_to_fp32_row = ggml_fp16_to_fp32_row_amd_f16c;
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_f16c;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_f16c;
@@ -797,7 +907,7 @@ static const struct VectorFuncs {
         }
 #endif
 #ifdef __x86_64__
-        if (X86_HAVE(FMA)) {
+        if (X86_HAVE(AVX) && X86_HAVE(FMA)) {
             ptr_ggml_fp16_to_fp32_row = ggml_fp16_to_fp32_row_amd_fma;
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_fma;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_fma;
@@ -857,7 +967,7 @@ static const struct VectorFuncs {
         }
 #endif
 #ifdef __x86_64__
-        if (1) {
+        if (X86_HAVE(AVX)) {
             ptr_ggml_fp16_to_fp32_row = ggml_fp16_to_fp32_row_amd_avx;
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_avx;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx;
@@ -913,6 +1023,126 @@ static const struct VectorFuncs {
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx;
             ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_avx;
             ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_avx;
+            return;
+        }
+#endif
+#ifdef __x86_64__
+        if (X86_HAVE(SSSE3)) {
+            ptr_ggml_fp16_to_fp32_row = ggml_fp16_to_fp32_row_amd_ssse3;
+            ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_ssse3;
+            ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_ssse3;
+            ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_ssse3;
+            ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_ssse3;
+            ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_ssse3;
+            ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_ssse3;
+            ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_ssse3;
+            ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_ssse3;
+            ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_ssse3;
+            ptr_ggml_vec_set_i16 = ggml_vec_set_i16_amd_ssse3;
+            ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_ssse3;
+            ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_ssse3;
+            ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_ssse3;
+            ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_ssse3;
+            ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_ssse3;
+            ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_ssse3;
+            ptr_ggml_vec_acc1_f32 = ggml_vec_acc1_f32_amd_ssse3;
+            ptr_ggml_vec_sub_f32 = ggml_vec_sub_f32_amd_ssse3;
+            ptr_ggml_vec_set_f32 = ggml_vec_set_f32_amd_ssse3;
+            ptr_ggml_vec_cpy_f32 = ggml_vec_cpy_f32_amd_ssse3;
+            ptr_ggml_vec_neg_f32 = ggml_vec_neg_f32_amd_ssse3;
+            ptr_ggml_vec_mul_f32 = ggml_vec_mul_f32_amd_ssse3;
+            ptr_ggml_vec_div_f32 = ggml_vec_div_f32_amd_ssse3;
+            ptr_ggml_vec_scale_f32 = ggml_vec_scale_f32_amd_ssse3;
+            ptr_ggml_vec_scale_f16 = ggml_vec_scale_f16_amd_ssse3;
+            ptr_ggml_vec_mad_f32 = ggml_vec_mad_f32_amd_ssse3;
+            ptr_ggml_vec_mad_f16 = ggml_vec_mad_f16_amd_ssse3;
+            ptr_ggml_vec_norm_f32 = ggml_vec_norm_f32_amd_ssse3;
+            ptr_ggml_vec_sqr_f32 = ggml_vec_sqr_f32_amd_ssse3;
+            ptr_ggml_vec_sqrt_f32 = ggml_vec_sqrt_f32_amd_ssse3;
+            ptr_ggml_vec_log_f32 = ggml_vec_log_f32_amd_ssse3;
+            ptr_ggml_vec_abs_f32 = ggml_vec_abs_f32_amd_ssse3;
+            ptr_ggml_vec_sgn_f32 = ggml_vec_sgn_f32_amd_ssse3;
+            ptr_ggml_vec_step_f32 = ggml_vec_step_f32_amd_ssse3;
+            ptr_ggml_vec_tanh_f32 = ggml_vec_tanh_f32_amd_ssse3;
+            ptr_ggml_vec_elu_f32 = ggml_vec_elu_f32_amd_ssse3;
+            ptr_ggml_vec_relu_f32 = ggml_vec_relu_f32_amd_ssse3;
+            ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_ssse3;
+            ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_ssse3;
+            ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_ssse3;
+            ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_ssse3;
+            ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_ssse3;
+            ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_ssse3;
+            ptr_ggml_silu_backward_f32 = ggml_silu_backward_f32_amd_ssse3;
+            ptr_ggml_vec_silu_backward_f32 = ggml_vec_silu_backward_f32_amd_ssse3;
+            ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_ssse3;
+            ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_ssse3;
+            ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_ssse3;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_ssse3;
+            ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_ssse3;
+            ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_ssse3;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_ssse3;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_ssse3;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_ssse3;
+            return;
+        }
+#endif
+#ifdef __x86_64__
+        if (1) {
+            ptr_ggml_fp16_to_fp32_row = ggml_fp16_to_fp32_row_amd_k8;
+            ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_k8;
+            ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_k8;
+            ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_k8;
+            ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_k8;
+            ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_k8;
+            ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_k8;
+            ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_k8;
+            ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_k8;
+            ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_k8;
+            ptr_ggml_vec_set_i16 = ggml_vec_set_i16_amd_k8;
+            ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_k8;
+            ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_k8;
+            ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_k8;
+            ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_k8;
+            ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_k8;
+            ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_k8;
+            ptr_ggml_vec_acc1_f32 = ggml_vec_acc1_f32_amd_k8;
+            ptr_ggml_vec_sub_f32 = ggml_vec_sub_f32_amd_k8;
+            ptr_ggml_vec_set_f32 = ggml_vec_set_f32_amd_k8;
+            ptr_ggml_vec_cpy_f32 = ggml_vec_cpy_f32_amd_k8;
+            ptr_ggml_vec_neg_f32 = ggml_vec_neg_f32_amd_k8;
+            ptr_ggml_vec_mul_f32 = ggml_vec_mul_f32_amd_k8;
+            ptr_ggml_vec_div_f32 = ggml_vec_div_f32_amd_k8;
+            ptr_ggml_vec_scale_f32 = ggml_vec_scale_f32_amd_k8;
+            ptr_ggml_vec_scale_f16 = ggml_vec_scale_f16_amd_k8;
+            ptr_ggml_vec_mad_f32 = ggml_vec_mad_f32_amd_k8;
+            ptr_ggml_vec_mad_f16 = ggml_vec_mad_f16_amd_k8;
+            ptr_ggml_vec_norm_f32 = ggml_vec_norm_f32_amd_k8;
+            ptr_ggml_vec_sqr_f32 = ggml_vec_sqr_f32_amd_k8;
+            ptr_ggml_vec_sqrt_f32 = ggml_vec_sqrt_f32_amd_k8;
+            ptr_ggml_vec_log_f32 = ggml_vec_log_f32_amd_k8;
+            ptr_ggml_vec_abs_f32 = ggml_vec_abs_f32_amd_k8;
+            ptr_ggml_vec_sgn_f32 = ggml_vec_sgn_f32_amd_k8;
+            ptr_ggml_vec_step_f32 = ggml_vec_step_f32_amd_k8;
+            ptr_ggml_vec_tanh_f32 = ggml_vec_tanh_f32_amd_k8;
+            ptr_ggml_vec_elu_f32 = ggml_vec_elu_f32_amd_k8;
+            ptr_ggml_vec_relu_f32 = ggml_vec_relu_f32_amd_k8;
+            ptr_ggml_vec_leaky_relu_f32 = ggml_vec_leaky_relu_f32_amd_k8;
+            ptr_ggml_vec_hardswish_f32 = ggml_vec_hardswish_f32_amd_k8;
+            ptr_ggml_vec_hardsigmoid_f32 = ggml_vec_hardsigmoid_f32_amd_k8;
+            ptr_ggml_vec_gelu_f32 = ggml_vec_gelu_f32_amd_k8;
+            ptr_ggml_vec_gelu_quick_f32 = ggml_vec_gelu_quick_f32_amd_k8;
+            ptr_ggml_vec_silu_f32 = ggml_vec_silu_f32_amd_k8;
+            ptr_ggml_silu_backward_f32 = ggml_silu_backward_f32_amd_k8;
+            ptr_ggml_vec_silu_backward_f32 = ggml_vec_silu_backward_f32_amd_k8;
+            ptr_ggml_vec_sum_f32 = ggml_vec_sum_f32_amd_k8;
+            ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_k8;
+            ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_k8;
+            ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_k8;
+            ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_k8;
+            ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_k8;
+            ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_k8;
+            ptr_ggml_vec_norm_inv_f32 = ggml_vec_norm_inv_f32_amd_k8;
+            ptr_ggml_vec_sigmoid_f32 = ggml_vec_sigmoid_f32_amd_k8;
             return;
         }
 #endif
