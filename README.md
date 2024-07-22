@@ -322,13 +322,37 @@ that limit, so it'll work on Windows, but with larger models like
 WizardCoder 13B, you need to store the weights in a separate file. An
 example is provided above; see "Using llamafile with external weights."
 
-On WSL, it's recommended that the WIN32 interop feature be disabled:
+On WSL, there are many possible gotchas. One thing that helps solve them
+completely is this:
+
+```
+[Unit]
+Description=cosmopolitan APE binfmt service
+After=wsl-binfmt.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "echo ':APE:M::MZqFpD::/usr/bin/ape:' >/proc/sys/fs/binfmt_misc/register"
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Put that in `/etc/systemd/system/cosmo-binfmt.service`.
+
+Then run `sudo systemctl enable cosmo-binfmt`.
+
+Another thing that's helped WSL users who experience issues, is to
+disable the WIN32 interop feature:
 
 ```sh
 sudo sh -c "echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop"
 ```
 
-In the instance of getting a `Permission Denied` on disabling interop through CLI, it can be permanently disabled by adding the following in `/etc/wsl.conf`
+In the instance of getting a `Permission Denied` on disabling interop
+through CLI, it can be permanently disabled by adding the following in
+`/etc/wsl.conf`
+
 ```sh
 [interop]
 enabled=false
