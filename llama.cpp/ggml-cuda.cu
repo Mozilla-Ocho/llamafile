@@ -558,7 +558,7 @@ static __device__ void no_device_code(
 #define NO_DEVICE_CODE //GGML_ASSERT(false && "NO_DEVICE_CODE not valid in host code.")
 #endif // __CUDA_ARCH__
 
-static __device__ __forceinline__ float warp_reduce_sum(float x) {
+__device__ __forceinline__ float warp_reduce_sum(float x) {
 #pragma unroll
     for (int mask = 16; mask > 0; mask >>= 1) {
         x += __shfl_xor_sync(0xffffffff, x, mask, 32);
@@ -566,7 +566,7 @@ static __device__ __forceinline__ float warp_reduce_sum(float x) {
     return x;
 }
 
-static __device__ __forceinline__ float2 warp_reduce_sum(float2 a) {
+__device__ __forceinline__ float2 warp_reduce_sum(float2 a) {
 #pragma unroll
     for (int mask = 16; mask > 0; mask >>= 1) {
         a.x += __shfl_xor_sync(0xffffffff, a.x, mask, 32);
@@ -575,7 +575,7 @@ static __device__ __forceinline__ float2 warp_reduce_sum(float2 a) {
     return a;
 }
 
-static __device__ __forceinline__ half2 warp_reduce_sum(half2 a) {
+__device__ __forceinline__ half2 warp_reduce_sum(half2 a) {
 #if FP16_AVAILABLE
 
 #if defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)
@@ -600,7 +600,7 @@ static __device__ __forceinline__ half2 warp_reduce_sum(half2 a) {
 #endif // FP16_AVAILABLE
 }
 
-static __device__ __forceinline__ float warp_reduce_max(float x) {
+__device__ __forceinline__ float warp_reduce_max(float x) {
 #pragma unroll
     for (int mask = 16; mask > 0; mask >>= 1) {
         x = fmaxf(x, __shfl_xor_sync(0xffffffff, x, mask, 32));
@@ -643,7 +643,7 @@ static __device__ __forceinline__ half2 ggml_cuda_hmax2(const half2 a, const hal
 #endif // !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__))
 }
 
-static __device__ __forceinline__ half2 warp_reduce_max(half2 x) {
+__device__ __forceinline__ half2 warp_reduce_max(half2 x) {
 #if !(defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)) && __CUDA_ARCH__ >= CC_PASCAL
 #pragma unroll
    for (int mask = 16; mask > 0; mask >>= 1) {
@@ -13522,7 +13522,6 @@ GGML_CALL static enum ggml_status ggml_backend_cuda_graph_compute(ggml_backend_t
 }
 
 GGML_CALL static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, const ggml_tensor * op) {
-    ggml_backend_cuda_context * cuda_ctx = (ggml_backend_cuda_context *) backend->context;
     switch (op->op) {
         case GGML_OP_UNARY:
             switch (ggml_get_unary_op(op)) {
@@ -13660,6 +13659,7 @@ GGML_CALL static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, cons
             if (op->src[0]->ne[0] == 64 || op->src[0]->ne[0] == 128) {
                 return true;
             }
+            ggml_backend_cuda_context * cuda_ctx = (ggml_backend_cuda_context *) backend->context;
             return ggml_cuda_info().devices[cuda_ctx->device].cc >= CC_VOLTA;
 #endif // defined(GGML_USE_HIPBLAS) && defined(__HIP_PLATFORM_AMD__)
         default:
@@ -13710,6 +13710,7 @@ GGML_CALL static void ggml_backend_cuda_event_record(ggml_backend_event_t event)
 
 GGML_CALL static void ggml_backend_cuda_event_wait(ggml_backend_t backend, ggml_backend_event_t event) {
     ggml_backend_cuda_context * cuda_ctx = (ggml_backend_cuda_context *)backend->context;
+    (void)cuda_ctx;
 
     if (ggml_backend_is_cuda(event->backend)) {
         CUDA_CHECK(cudaStreamWaitEvent(cuda_ctx->stream(), (cudaEvent_t)event->context, 0));
@@ -13850,4 +13851,12 @@ GGML_API GGML_CALL int ggml_backend_cuda_reg_devices() {
         ggml_backend_register(name, ggml_backend_reg_cuda_init, ggml_backend_cuda_buffer_type(i), (void *) (intptr_t) i);
     }
     return device_count;
+
+    // squash some annoying msvc warnings
+    (void)exit_;
+    (void)fast_fp16_available;
+    (void)fp16_mma_available;
+    (void)ggml_cuda_hmax;
+    (void)set_ggml_graph_node_properties;
+    (void)ggml_graph_node_has_matching_properties;
 }

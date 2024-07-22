@@ -66,8 +66,8 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
         (FLAG_flash_attn ? "-DTEHFLASH" : "-DGGML_MINIMIZE_CODE_SIZE")
 
 #define NVCC_FLAGS \
-    "-std=c++11", "-O3", "--shared", "--use_fast_math", "--forward-unknown-to-host-compiler", \
-        "--compiler-options", \
+    (!IsWindows() ? "-std=c++11" : "-DIGNORE123"), "-O3", "--shared", "--use_fast_math", \
+        "--forward-unknown-to-host-compiler", "--compiler-options", \
         (!IsWindows() \
              ? (!IsAarch64() \
                     ? "-fPIC -O3 -march=native -mtune=native -std=c++11 -Wno-unused-function " \

@@ -261,7 +261,7 @@
         if (!(x)) { \
             fflush(stdout); \
             fprintf(stderr, "GGML_ASSERT: %s:%d: %s\n", __FILE__, __LINE__, #x); \
-            __builtin_trap(); \
+            abort(); \
         } \
     } while (0)
 
