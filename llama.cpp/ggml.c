@@ -18886,11 +18886,6 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
     return 0;
 }
 
-static thread_ret_t ggml_graph_compute_thread_callback(void * data) {
-    protect_against_stack_overflow(); // [jart]
-    return ggml_graph_compute_thread(data);
-}
-
 struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph * cgraph, int n_threads) {
     if (n_threads <= 0) {
         n_threads = GGML_DEFAULT_N_THREADS;
@@ -19202,8 +19197,13 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
                 .is_main_thread = false, // [jart]
             };
 
-            const int rc = ggml_thread_create((pthread_t *)&workers[j].thrd, NULL,
-                                              ggml_graph_compute_thread_callback, &workers[j]);
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setguardsize(&attr, sysconf(_SC_PAGESIZE));
+            pthread_attr_setsigaltstacksize_np(&attr, sysconf(_SC_MINSIGSTKSZ) + 16384);
+            const int rc = ggml_thread_create((pthread_t *)&workers[j].thrd, &attr,
+                                              ggml_graph_compute_thread, &workers[j]);
+            pthread_attr_destroy(&attr);
             GGML_ASSERT(rc == 0);
             UNUSED(rc);
         }

@@ -9,7 +9,6 @@ struct StackFrame;
 
 char *describe_crash(char *, size_t, int, siginfo_t *, void *);
 char *describe_backtrace(char *, size_t, const struct StackFrame *);
-void protect_against_stack_overflow(void);
 
 #ifdef __cplusplus
 }

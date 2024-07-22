@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "llamafile/crash.h"
 #include "llamafile/llamafile.h"
@@ -90,7 +91,6 @@ Server::close()
 void*
 worker_thread(void* arg)
 {
-    protect_against_stack_overflow();
     Worker* worker = (Worker*)arg;
     worker->run();
     return 0;
@@ -104,7 +104,9 @@ Server::spawn()
     pthread_attr_t attr;
     worker = new Worker(this);
     pthread_attr_init(&attr);
+    pthread_attr_setguardsize(&attr, sysconf(_SC_PAGESIZE));
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_attr_setsigaltstacksize_np(&attr, sysconf(_SC_MINSIGSTKSZ) + 16384);
     if ((err = pthread_create(&worker->th, &attr, worker_thread, worker)))
         delete worker;
     pthread_attr_destroy(&attr);
