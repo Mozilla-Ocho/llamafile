@@ -9709,6 +9709,7 @@ static __device__ void rope_yarn(
     }
     *cos_theta = cosf(theta) * mscale;
     *sin_theta = sinf(theta) * mscale;
+    (void)ggml_cuda_hmax;
 }
 
 // rope == RoPE == rotary positional embedding
@@ -13856,7 +13857,6 @@ GGML_API GGML_CALL int ggml_backend_cuda_reg_devices() {
     (void)exit_;
     (void)fast_fp16_available;
     (void)fp16_mma_available;
-    (void)ggml_cuda_hmax;
     (void)set_ggml_graph_node_properties;
     (void)ggml_graph_node_has_matching_properties;
 }
