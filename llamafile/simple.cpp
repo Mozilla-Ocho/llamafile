@@ -32,7 +32,6 @@ static bool eval_tokens(struct llama_context *ctx_llama, std::vector<llama_token
         int n_eval = (int)tokens.size() - i;
         if (n_eval > n_batch)
             n_eval = n_batch;
-        printf("llama_decode n_eval=%d n_past=%d\n", n_eval, *n_past);
         if (llama_decode(ctx_llama, llama_batch_get_one(&tokens[i], n_eval, *n_past, 0)))
             return false; // probably ran out of context
         *n_past += n_eval;
