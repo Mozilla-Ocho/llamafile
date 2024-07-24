@@ -16,8 +16,6 @@
 #include <unistd.h>
 #include <vector>
 #include <tool/args/args.h>
-#include <stdatomic.h>
-#include <third_party/nsync/futex.internal.h>
 
 #include "llamafile/version.h"
 #include "llama.cpp/llama.h"
@@ -35,6 +33,9 @@ static std::vector<llama_token> * g_input_tokens;
 static std::ostringstream       * g_output_ss;
 static std::vector<llama_token> * g_output_tokens;
 static bool is_interacting = false;
+
+extern "C" int nsync_futex_wake_(int *, int, char);
+extern "C" int nsync_futex_wait_(int *, int, char, const struct timespec *);
 
 static bool file_exists(const std::string &path) {
     std::ifstream f(path.c_str());
@@ -92,7 +93,7 @@ static void write_logfile(
     fclose(logfile);
 }
 
-static atomic_int is_killed;
+static int is_killed;
 
 static void *safe_sigint_handler(void *arg) {
     while (!is_killed)

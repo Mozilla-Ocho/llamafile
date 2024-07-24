@@ -23,6 +23,7 @@
 #include <fenv.h>
 #include <libc/calls/struct/aarch64.internal.h>
 #include <libc/calls/struct/ucontext.internal.h>
+#include <pthread.h>
 #include <signal.h>
 #include <termios.h>
 #include <ucontext.h>
@@ -204,12 +205,12 @@ static void setup_sigfpe(void) {
 }
 
 int llamafile_trapping_enabled(int delta) {
-    static _Atomic(uint32_t) once;
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
     bool was_enabled = g_enabled > 0;
     bool is_enabled = (g_enabled += delta) > 0;
     feclearexcept(FE_ALL_EXCEPT);
     if (is_enabled && !was_enabled) {
-        cosmo_once(&once, setup_sigfpe);
+        pthread_once(&once, setup_sigfpe);
         feenableexcept(TRAPS);
     }
     if (!is_enabled && was_enabled) {

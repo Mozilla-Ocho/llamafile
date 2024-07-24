@@ -1,6 +1,7 @@
 #include <cosmo.h>
 #include <sys/auxv.h>
 #include <libc/sysv/consts/hwcap.h>
+#define restrict
 #include "ggml-vector.h"
 
 extern "C" void ggml_fp16_to_fp32_row_amd_avx512bf16(const ggml_fp16_t * x, float * y, int64_t n);
