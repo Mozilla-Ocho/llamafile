@@ -1567,7 +1567,8 @@ void ggml_once(atomic_uint * once, void init(void)) {
 }
 
 int ggml_delay(int backoff) {
-    if (backoff < 12) {
+#if 0
+    if (backoff < 7) {
         volatile int i;
         for (i = 0; i != 1 << backoff; i++) {
         }
@@ -1575,6 +1576,7 @@ int ggml_delay(int backoff) {
     } else {
         pthread_yield_np();
     }
+#endif
     return backoff;
 }
 
@@ -1587,9 +1589,9 @@ void ggml_syncthreads(struct ggml_barrier * b, int nth) {
         atomic_store_explicit(&b->phase, phase + 1, memory_order_release);
     } else {
         int backoff = 0;
-        while (atomic_load_explicit(&b->phase, memory_order_acquire) == phase) {
-            backoff = ggml_delay(backoff);
-        }
+        while (atomic_load_explicit(&b->phase, memory_order_acquire) == phase)
+            while (atomic_load_explicit(&b->phase, memory_order_relaxed) == phase)
+                backoff = ggml_delay(backoff);
     }
     sync_wait_end();
 }
@@ -18682,7 +18684,11 @@ static void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_comput
     while (true) {
         * node_n = atomic_load_explicit(&state->shared->node_n, memory_order_acquire);
         if (* node_n != last_node_n) break;
-        backoff = ggml_delay(backoff);
+        while (true) {
+            * node_n = atomic_load_explicit(&state->shared->node_n, memory_order_relaxed);
+            if (* node_n != last_node_n) break;
+            backoff = ggml_delay(backoff);
+        }
     }
     sync_wait_end();
 }
@@ -18696,7 +18702,11 @@ static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_co
     while (true) {
         * task_phase = atomic_load_explicit(&state->shared->node_task, memory_order_acquire);
         if (* task_phase != last_task_phase) break;
-        backoff = ggml_delay(backoff);
+        while (true) {
+            * task_phase = atomic_load_explicit(&state->shared->node_task, memory_order_relaxed);
+            if (* task_phase != last_task_phase) break;
+            backoff = ggml_delay(backoff);
+        }
     }
     sync_wait_end();
 }

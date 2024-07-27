@@ -142,6 +142,9 @@ int main(int argc, char *argv[]) {
     if (optind == argc)
         Die(prog, "missing output argument");
 
+    // use idle scheduling priority
+    verynice();
+
     // open output file
     int zfd;
     ssize_t zsize;
@@ -257,6 +260,7 @@ int main(int argc, char *argv[]) {
         const char *path = argv[i];
         if ((fd = open(path, O_RDONLY)) == -1)
             DieSys(path);
+        posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 
         // get information about file
         uint64_t size;
@@ -315,6 +319,7 @@ int main(int argc, char *argv[]) {
             // read chunk
             if ((rc = pread(fd, iobuf, Min(size, CHUNK), i)) <= 0)
                 DieSys(path);
+            posix_fadvise(fd, i, Min(size, CHUNK), POSIX_FADV_DONTNEED);
             crc = crc32(crc, iobuf, rc);
             if (!flag_level) {
                 // write uncompressed chunk to output

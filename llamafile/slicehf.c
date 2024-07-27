@@ -26,6 +26,8 @@
 
 #define MAX_SIZE (50L * 1000 * 1000 * 1000)
 
+static char in_path_noext[PATH_MAX + 1];
+
 static wontreturn void Die(const char *thing, const char *reason) {
     tinyprint(2, thing, ": ", reason, "\n", NULL);
     exit(1);
@@ -37,9 +39,19 @@ static wontreturn void DieSys(const char *thing) {
 }
 
 void slicehf(const char *in_path) {
+
+    off_t in_off = 0;
     int in_fd = open(in_path, O_RDONLY);
     if (in_fd == -1)
         DieSys(in_path);
+    posix_fadvise(in_fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+
+    // split file extension
+    char *ext;
+    strlcpy(in_path_noext, in_path, sizeof(in_path_noext));
+    if (!(ext = strrchr(in_path_noext, '.')) || strchr(ext, '/'))
+        Die(in_path, "file missing extension");
+    *ext++ = '\0';
 
     struct stat st;
     if (fstat(in_fd, &st) == -1)
@@ -55,17 +67,19 @@ void slicehf(const char *in_path) {
         long amount = MIN(total, MAX_SIZE);
         total -= amount;
         char out_path[PATH_MAX];
-        snprintf(out_path, PATH_MAX, "%s.cat%d", in_path, item++);
+        snprintf(out_path, PATH_MAX, "%s.cat%d.%s", in_path_noext, item++, ext);
+        off_t out_off = 0;
         int out_fd = open(out_path, O_WRONLY | O_TRUNC | O_CREAT, 0644);
         if (out_fd == -1)
             DieSys(out_path);
         while (amount) {
-            long chunk = MIN(amount, 65536);
-            long copied = copy_file_range(in_fd, 0, out_fd, 0, chunk, 0);
+            long chunk = MIN(amount, 2097152);
+            long copied = copy_file_range(in_fd, &in_off, out_fd, &out_off, chunk, 0);
             if (copied == -1)
                 DieSys(out_path);
             if (!copied)
                 Die(in_path, "unexpected eof");
+            posix_fadvise(in_fd, in_off - copied, copied, POSIX_FADV_DONTNEED);
             amount -= copied;
         }
         close(out_fd);
@@ -75,7 +89,10 @@ void slicehf(const char *in_path) {
 }
 
 int main(int argc, char *argv[]) {
-    for (int i = 1; i < argc; ++i) {
+
+    // use idle scheduling priority
+    verynice();
+
+    for (int i = 1; i < argc; ++i)
         slicehf(argv[i]);
-    }
 }

@@ -3590,7 +3590,7 @@ static std::string llama_model_ftype_name(llama_ftype ftype) {
     }
 }
 
-static const char * llama_model_type_name(e_model type) {
+static const char * llama_model_type_name(char *buf, size_t size, e_model type) {
     switch (type) {
         case MODEL_22M:    return "22M";
         case MODEL_33M:    return "33M";
@@ -3622,7 +3622,9 @@ static const char * llama_model_type_name(e_model type) {
         case MODEL_8x7B:   return "8x7B";
         case MODEL_8x22B:  return "8x22B";
         case MODEL_16x12B: return "16x12B";
-        default:           return "?B";
+        default:
+            snprintf(buf, size, "?%d", type);
+            return buf;
     }
 }
 
@@ -4554,6 +4556,7 @@ static void llm_load_print_meta(llama_model_loader & ml, llama_model & model) {
     const auto & vocab   = model.vocab;
 
     const char * rope_scaling_type = LLAMA_ROPE_SCALING_TYPES.at(hparams.rope_scaling_type_train);
+    char buf[64];
 
     // hparams
     LLAMA_LOG_INFO("%s: format           = %s\n",     __func__, llama_file_version_name(ml.fver));
@@ -4593,7 +4596,7 @@ static void llm_load_print_meta(llama_model_loader & ml, llama_model & model) {
     LLAMA_LOG_INFO("%s: ssm_d_inner      = %u\n",     __func__, hparams.ssm_d_inner);
     LLAMA_LOG_INFO("%s: ssm_d_state      = %u\n",     __func__, hparams.ssm_d_state);
     LLAMA_LOG_INFO("%s: ssm_dt_rank      = %u\n",     __func__, hparams.ssm_dt_rank);
-    LLAMA_LOG_INFO("%s: model type       = %s\n",     __func__, llama_model_type_name(model.type));
+    LLAMA_LOG_INFO("%s: model type       = %s\n",     __func__, llama_model_type_name(buf, sizeof(buf), model.type));
     LLAMA_LOG_INFO("%s: model ftype      = %s\n",     __func__, llama_model_ftype_name(model.ftype).c_str());
     if (ml.n_elements >= 1e12) {
         LLAMA_LOG_INFO("%s: model params     = %.2f T\n", __func__, ml.n_elements*1e-12);
@@ -15976,9 +15979,10 @@ int32_t llama_model_meta_val_str_by_index(const struct llama_model * model, int3
 }
 
 int32_t llama_model_desc(const struct llama_model * model, char * buf, size_t buf_size) {
+    char buf2[64];
     return snprintf(buf, buf_size, "%s %s %s",
             llama_model_arch_name(model->arch),
-            llama_model_type_name(model->type),
+            llama_model_type_name(buf2, sizeof(buf2), model->type),
             llama_model_ftype_name(model->ftype).c_str());
 }
 
