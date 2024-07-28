@@ -35,6 +35,7 @@ extern int FLAG_split_mode;
 extern int FLAG_threads;
 extern int FLAG_ubatch;
 extern int FLAG_verbose;
+extern int FLAG_warmup;
 extern int FLAG_workers;
 
 struct llamafile;

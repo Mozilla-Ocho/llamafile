@@ -2597,6 +2597,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             params.use_mmap = false;
         }
+        else if (arg == "--no-warmup")
+        {
+            params.warmup = false;
+        }
         else if (arg == "--numa") {
             if (++i >= argc) {
                 invalid_param = true;

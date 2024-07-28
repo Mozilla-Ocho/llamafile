@@ -53,6 +53,7 @@ int FLAG_split_mode = LLAMA_SPLIT_MODE_LAYER;
 int FLAG_threads;
 int FLAG_ubatch = 512;
 int FLAG_verbose = 0;
+int FLAG_warmup = true;
 int FLAG_workers;
 
 int cpu_get_num_math();
@@ -205,6 +206,11 @@ void llamafile_get_flags(int argc, char **argv) {
             if (i == argc)
                 missing("--flash-attn");
             FLAG_flash_attn = true;
+            continue;
+        }
+
+        if (!strcmp(flag, "--no-warmup")) {
+            FLAG_warmup = false;
             continue;
         }
 

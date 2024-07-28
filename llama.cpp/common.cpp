@@ -997,6 +997,11 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         params.use_mmap = false;
         return true;
     }
+    if (arg == "--no-warmup") {
+        params.warmup = false;
+        FLAG_warmup = false;
+        return true;
+    }
     if (arg == "--numa") {
         if (++i >= argc) {
             invalid_param = true;

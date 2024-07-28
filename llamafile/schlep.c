@@ -71,6 +71,10 @@ static void FormatPercent(char sbuf[static 8], double x) {
  */
 void llamafile_schlep(const void *data, size_t size) {
 
+    // avoid warmup
+    if (!FLAG_warmup)
+        return;
+
     // don't bother if logging is disabled
     if (FLAG_log_disable)
         return;
