@@ -90,6 +90,13 @@ static void GetDosLocalTime(int64_t utcunixts, uint16_t *out_time, uint16_t *out
     *out_date = DOS_DATE(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 }
 
+static int NormalizeMode(int mode) {
+    int res = mode & S_IFMT;
+    if (mode & 0111)
+        res |= 0111;
+    return res | 0644;
+}
+
 int main(int argc, char *argv[]) {
 
     if (llamafile_has(argv, "-h") || llamafile_has(argv, "-help") ||
@@ -402,7 +409,7 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE16(p, 0); // comment length
         p = ZIP_WRITE16(p, 0); // disk number start
         p = ZIP_WRITE16(p, kZipIattrBinary);
-        p = ZIP_WRITE32(p, st.st_mode << 16); // external file attributes
+        p = ZIP_WRITE32(p, NormalizeMode(st.st_mode) << 16); // external file attributes
         p = ZIP_WRITE32(p, 0xffffffffu); // lfile offset
         p = mempcpy(p, name, namlen);
 
