@@ -136,7 +136,7 @@ o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_fma.o	\
 o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_zen4.o	\
 o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm80.o		\
 o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o:		\
-		private CCFLAGS += -O3
+		private CCFLAGS += -O3 -fopenmp
 
 ################################################################################
 # testing
@@ -162,6 +162,9 @@ o/$(MODE)/llamafile/sgemm_matmul_test:			\
 o/$(MODE)/llamafile/sgemm_vecdot_test:			\
 		o/$(MODE)/llamafile/sgemm_vecdot_test.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a
+
+o/$(MODE)/llamafile/sgemm_vecdot_test:			\
+		private LDFLAGS += -fopenmp
 
 o/$(MODE)/llamafile/%.o: llamafile/%.cu llamafile/BUILD.mk
 	@mkdir -p $(@D)
