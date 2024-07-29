@@ -20,6 +20,8 @@
 #include <cmath>
 #include <unistd.h>
 
+int cpu_get_num_math();
+
 namespace {
 namespace ansiBLAS {
 
@@ -133,7 +135,7 @@ void sgemm(int m, int n, int k, //
            const float *A, int lda, //
            const float *B, int ldb, //
            float *C, int ldc) {
-    int nth = sysconf(_SC_NPROCESSORS_ONLN);
+    static int nth = cpu_get_num_math();
 #pragma omp parallel for
     for (int ith = 0; ith < nth; ++ith) {
         ansiBLAS tb{k, A, lda, B, ldb, C, ldc, ith, nth};

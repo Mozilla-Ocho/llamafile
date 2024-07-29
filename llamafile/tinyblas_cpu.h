@@ -32,10 +32,8 @@
 // have excellent performance[1] for matrices that fit in the CPU cache
 // without imposing any overhead such as cache filling or malloc calls.
 //
-// This implementation does not guarantee any upper bound with rounding
-// errors, which grow along with k. Our goal's to maximally exploit the
-// hardware for performance, and then use whatever resources remain for
-// improving numerical accuracy.
+// With the F32, F16, and BF16 data types, the accumulation of roundoff
+// errors will only grow logarithmically, thanks to the ruler function.
 //
 // [1] J. Tunney, ‘LLaMA Now Goes Faster on CPUs’, Mar. 2024. [Online].
 //     Available: https://justine.lol/matmul/. [Accessed: 29-Mar-2024].
@@ -51,6 +49,7 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 
+#define CHUNK 8
 #define ROW_ALIGN 64
 #define MATRIX_ALIGN 4096
 #define MAX_ALIGN 4096
@@ -434,170 +433,93 @@ class tinyBLAS {
         long mc, nc, mp, np;
 
 #if VECTOR_REGISTERS == 32
-        if (!FLAG_precise) {
-            switch ((MIN(m - m0, 5) << 4) | MIN(n - n0, 5)) {
-            case 0x55:
-                mc = 5;
-                nc = 5;
-                gemm<5, 5, false>(m0, m, n0, n);
-                break;
-            case 0x54:
-            case 0x53:
-            case 0x52:
-            case 0x45:
-            case 0x44:
-            case 0x43:
-            case 0x42:
-            case 0x35:
-            case 0x34:
-            case 0x33:
-            case 0x32:
-            case 0x25:
-            case 0x24:
-            case 0x23:
-            case 0x22:
-                mc = 2;
-                nc = 2;
-                gemm<2, 2, false>(m0, m, n0, n);
-                break;
-            case 0x51:
-            case 0x41:
-            case 0x31:
-            case 0x21:
-                mc = 2;
-                nc = 1;
-                gemm<2, 1, false>(m0, m, n0, n);
-                break;
-            case 0x15:
-            case 0x14:
-            case 0x13:
-            case 0x12:
-                mc = 1;
-                nc = 2;
-                gemm<1, 2, false>(m0, m, n0, n);
-                break;
-            case 0x11:
-                mc = 1;
-                nc = 1;
-                gemm<1, 1, false>(m0, m, n0, n);
-                break;
-            default:
-                return;
-            }
-        } else {
-            switch ((MIN(m - m0, 4) << 4) | MIN(n - n0, 3)) {
-            case 0x43:
-                mc = 4;
-                nc = 3;
-                gemm<4, 3, true>(m0, m, n0, n);
-                break;
-            case 0x42:
-            case 0x33:
-            case 0x32:
-            case 0x23:
-            case 0x22:
-                mc = 2;
-                nc = 2;
-                gemm<2, 2, true>(m0, m, n0, n);
-                break;
-            case 0x41:
-            case 0x31:
-            case 0x21:
-                mc = 2;
-                nc = 1;
-                gemm<2, 1, true>(m0, m, n0, n);
-                break;
-            case 0x13:
-            case 0x12:
-                mc = 1;
-                nc = 2;
-                gemm<1, 2, true>(m0, m, n0, n);
-                break;
-            case 0x11:
-                mc = 1;
-                nc = 1;
-                gemm<1, 1, true>(m0, m, n0, n);
-                break;
-            default:
-                return;
-            }
+        switch ((MIN(m - m0, 5) << 4) | MIN(n - n0, 5)) {
+        case 0x55:
+            mc = 5;
+            nc = 5;
+            gemm<5, 5>(m0, m, n0, n);
+            break;
+        case 0x54:
+        case 0x53:
+        case 0x52:
+        case 0x45:
+        case 0x44:
+        case 0x43:
+        case 0x42:
+        case 0x35:
+        case 0x34:
+        case 0x33:
+        case 0x32:
+        case 0x25:
+        case 0x24:
+        case 0x23:
+        case 0x22:
+            mc = 2;
+            nc = 2;
+            gemm<2, 2>(m0, m, n0, n);
+            break;
+        case 0x51:
+        case 0x41:
+        case 0x31:
+        case 0x21:
+            mc = 2;
+            nc = 1;
+            gemm<2, 1>(m0, m, n0, n);
+            break;
+        case 0x15:
+        case 0x14:
+        case 0x13:
+        case 0x12:
+            mc = 1;
+            nc = 2;
+            gemm<1, 2>(m0, m, n0, n);
+            break;
+        case 0x11:
+            mc = 1;
+            nc = 1;
+            gemm<1, 1>(m0, m, n0, n);
+            break;
+        default:
+            return;
         }
 #endif
 
 #if VECTOR_REGISTERS == 16
-        if (!FLAG_precise) {
-            switch ((MIN(m - m0, 4) << 4) | MIN(n - n0, 3)) {
-            case 0x43:
-                mc = 4;
-                nc = 3;
-                gemm<4, 3, false>(m0, m, n0, n);
-                break;
-            case 0x42:
-            case 0x33:
-            case 0x32:
-            case 0x23:
-            case 0x22:
-                mc = 2;
-                nc = 2;
-                gemm<2, 2, false>(m0, m, n0, n);
-                break;
-            case 0x41:
-            case 0x31:
-            case 0x21:
-                mc = 2;
-                nc = 1;
-                gemm<2, 1, false>(m0, m, n0, n);
-                break;
-            case 0x13:
-            case 0x12:
-                mc = 1;
-                nc = 2;
-                gemm<1, 2, false>(m0, m, n0, n);
-                break;
-            case 0x11:
-                mc = 1;
-                nc = 1;
-                gemm<1, 1, false>(m0, m, n0, n);
-                break;
-            default:
-                return;
-            }
-        } else {
-            switch ((MIN(m - m0, 3) << 4) | MIN(n - n0, 2)) {
-            case 0x32:
-                mc = 3;
-                nc = 2;
-                gemm<3, 2, true>(m0, m, n0, n);
-                break;
-            case 0x23:
-                mc = 2;
-                nc = 3;
-                gemm<2, 3, true>(m0, m, n0, n);
-                break;
-            case 0x22:
-                mc = 2;
-                nc = 2;
-                gemm<2, 2, true>(m0, m, n0, n);
-                break;
-            case 0x31:
-            case 0x21:
-                mc = 2;
-                nc = 1;
-                gemm<2, 1, true>(m0, m, n0, n);
-                break;
-            case 0x12:
-                mc = 1;
-                nc = 2;
-                gemm<1, 2, true>(m0, m, n0, n);
-                break;
-            case 0x11:
-                mc = 1;
-                nc = 1;
-                gemm<1, 1, true>(m0, m, n0, n);
-                break;
-            default:
-                return;
-            }
+        switch ((MIN(m - m0, 4) << 4) | MIN(n - n0, 3)) {
+        case 0x43:
+            mc = 4;
+            nc = 3;
+            gemm<4, 3>(m0, m, n0, n);
+            break;
+        case 0x42:
+        case 0x33:
+        case 0x32:
+        case 0x23:
+        case 0x22:
+            mc = 2;
+            nc = 2;
+            gemm<2, 2>(m0, m, n0, n);
+            break;
+        case 0x41:
+        case 0x31:
+        case 0x21:
+            mc = 2;
+            nc = 1;
+            gemm<2, 1>(m0, m, n0, n);
+            break;
+        case 0x13:
+        case 0x12:
+            mc = 1;
+            nc = 2;
+            gemm<1, 2>(m0, m, n0, n);
+            break;
+        case 0x11:
+            mc = 1;
+            nc = 1;
+            gemm<1, 1>(m0, m, n0, n);
+            break;
+        default:
+            return;
         }
 #endif
 
@@ -607,8 +529,9 @@ class tinyBLAS {
         mnpack(m0, m, np, n);
     }
 
-    template <int RM, int RN, int PRECISE>
+    template <int RM, int RN>
     NOINLINE void gemm(long m0, long m, long n0, long n) {
+        D stack[bsr(k / CHUNK + 1) + 1][RN][RM];
         long ytiles = RM > 1 ? (m - m0) / RM : 1;
         long xtiles = RN > 1 ? (n - n0) / RN : 1;
         long tiles = xtiles * ytiles;
@@ -620,26 +543,61 @@ class tinyBLAS {
         for (long job = start; job < end; ++job) {
             long ii = m0 + job / xtiles * RM;
             long jj = n0 + job % xtiles * RN;
-            D Cv[RN][RM] = {};
-            D Ce[RN][RM] = {};
-            for (long l = 0; l < k; l += KN)
+
+            size_t chunk, sp = 0;
+            int i, j, rule, step = 2;
+            for (chunk = 0; chunk + KN * CHUNK * 4 <= k; chunk += KN * CHUNK * 4, step += 2, ++sp) {
+
+                D Cv[RN][RM] = {};
+                for (long l = 0; l < KN * CHUNK * 4; l += KN)
 #pragma GCC unroll 100
-                for (int j = 0; j < RN; ++j)
+                    for (j = 0; j < RN; ++j)
 #pragma GCC unroll 100
-                    for (int i = 0; i < RM; ++i)
-                        if (PRECISE)
-                            Cv[j][i] = madder(load<V>(INDEX(A, lda, ii + i, l)), //
-                                              load<V>(INDEX(B, ldb, jj + j, l)), //
-                                              Cv[j][i], &Ce[j][i]);
-                        else
-                            Cv[j][i] = madd(load<V>(INDEX(A, lda, ii + i, l)), //
-                                            load<V>(INDEX(B, ldb, jj + j, l)), //
+                        for (i = 0; i < RM; ++i)
+                            Cv[j][i] = madd(load<V>(INDEX(A, lda, ii + i, chunk + l)), //
+                                            load<V>(INDEX(B, ldb, jj + j, chunk + l)), //
                                             Cv[j][i]);
+
+                for (rule = bsr(step & -step); --rule;)
+                    for (--sp, j = 0; j < RN; ++j)
+                        for (i = 0; i < RM; ++i)
+                            Cv[j][i] += stack[sp][j][i];
+
+                for (j = 0; j < RN; ++j)
+                    for (i = 0; i < RM; ++i)
+                        stack[sp][j][i] = Cv[j][i];
+            }
+
+            D Cv[RN][RM] = {};
+            for (; chunk + KN <= k; chunk += KN)
 #pragma GCC unroll 100
-            for (int j = 0; j < RN; ++j)
+                for (j = 0; j < RN; ++j)
 #pragma GCC unroll 100
-                for (int i = 0; i < RM; ++i)
-                    store(INDEX(C, ldc, jj + j, ii + i), hsum(Cv[j][i]));
+                    for (i = 0; i < RM; ++i)
+                        Cv[j][i] = madd(load<V>(INDEX(A, lda, ii + i, chunk)), //
+                                        load<V>(INDEX(B, ldb, jj + j, chunk)), //
+                                        Cv[j][i]);
+
+            while (sp--)
+                for (j = 0; j < RN; ++j)
+                    for (i = 0; i < RM; ++i)
+                        Cv[j][i] += stack[sp][j][i];
+
+            float Cf[RN][RM];
+            for (j = 0; j < RN; ++j)
+                for (i = 0; i < RM; ++i)
+                    Cf[j][i] = hsum(Cv[j][i]);
+
+            for (; chunk < k; ++chunk)
+                for (j = 0; j < RN; ++j)
+                    for (i = 0; i < RM; ++i)
+                        Cf[j][i] = fmaf(load<float>(INDEX(A, lda, ii + i, chunk)), //
+                                        load<float>(INDEX(B, ldb, jj + j, chunk)), //
+                                        Cf[j][i]);
+
+            for (j = 0; j < RN; ++j)
+                for (i = 0; i < RM; ++i)
+                    store(INDEX(C, ldc, jj + j, ii + i), Cf[j][i]);
         }
     }
 

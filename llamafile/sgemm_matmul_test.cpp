@@ -29,10 +29,12 @@
 #define ITERATIONS 30
 #define ALLOC(n) (float *)memalign(4096, sizeof(float) * (n))
 
+int cpu_get_num_math();
+
 void llamafile_sgemm_openmp(long m, long n, long k, const void *A, long lda, const void *B,
                             long ldb, void *C, long ldc, int task, int Atype, int Btype, int Ctype,
                             int precision) {
-    int nth = sysconf(_SC_NPROCESSORS_ONLN);
+    static int nth = cpu_get_num_math();
 #pragma omp parallel for
     for (int ith = 0; ith < nth; ++ith) {
         bool res = llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype,
@@ -44,7 +46,7 @@ void llamafile_sgemm_openmp(long m, long n, long k, const void *A, long lda, con
 int test(void) {
     int m = 256;
     int n = 500;
-    int k = 32768 * 2;
+    int k = 260000;
     int lda = ROUNDUP(k, 16);
     int ldb = ROUNDUP(k, 16);
     int ldc = ROUNDUP(m, 16);
@@ -63,12 +65,15 @@ int test(void) {
     BENCH(llamafile_sgemm_openmp(m, n, k, A, lda, B, ldb, C, ldc, GGML_TASK_TYPE_COMPUTE,
                                  GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
 
+    int flips = 0;
     double err_sum = 0;
     long long err_worst = 0;
     for (int i = 0; i < m; ++i)
         for (int j = 0; j < n; ++j) {
             float g = G[ldc * j + i];
             float c = C[ldc * j + i];
+            if (signbit(g) != signbit(c))
+                ++flips;
             if (flt::isnan(g)) {
                 fprintf(stderr, "%s:%err: found nan in reference matrix: i=%err j=%err\n", __FILE__,
                         __LINE__, i, j);
@@ -90,8 +95,9 @@ int test(void) {
         }
 
     double err_avg = err_sum / (m * n);
-    fprintf(stderr, "%9g ulp average\n", err_avg);
-    fprintf(stderr, "%9lld ulp worst\n", err_worst);
+    fprintf(stderr, "%12g ulp average\n", err_avg);
+    fprintf(stderr, "%12lld ulp worst\n", err_worst);
+    fprintf(stderr, "%12d flips\n", flips);
 
     // using one accumulator
     //    87015 us gemm
@@ -125,15 +131,17 @@ int test(void) {
 int main(int argc, char *argv[]) {
     int rc;
 
-    llamafile_trapping_enabled(+1);
+    // llamafile_trapping_enabled(+1);
 
-    printf("\nFLAG_precise = false;\n");
-    FLAG_precise = false;
+    printf("\n");
     if ((rc = test()))
         return rc;
 
-    printf("\nFLAG_precise = true;\n");
-    FLAG_precise = true;
+    printf("\n");
+    if ((rc = test()))
+        return rc;
+
+    printf("\n");
     if ((rc = test()))
         return rc;
 }

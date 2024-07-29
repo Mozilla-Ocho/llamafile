@@ -16,5 +16,5 @@
             x; \
             __asm__ volatile("" ::: "memory"); \
         } \
-        printf("%9lld us %s\n", (micros() - start + ITERATIONS - 1) / ITERATIONS, #x); \
+        printf("%12lld us %s\n", (micros() - start + ITERATIONS - 1) / ITERATIONS, #x); \
     } while (0)

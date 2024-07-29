@@ -28,10 +28,12 @@
 #define ITERATIONS 5
 #define ALLOC(n) (float *)memalign(4096, sizeof(float) * (n))
 
+int cpu_get_num_math();
+
 void llamafile_sgemm_openmp(long m, long n, long k, const void *A, long lda, const void *B,
                             long ldb, void *C, long ldc, int task, int Atype, int Btype, int Ctype,
                             int precision) {
-    int nth = sysconf(_SC_NPROCESSORS_ONLN);
+    static int nth = cpu_get_num_math();
 #pragma omp parallel for
     for (int ith = 0; ith < nth; ++ith) {
         bool res = llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype,
@@ -44,7 +46,7 @@ int test(void) {
     float tolerance = 2e-5;
     int m = 510;
     int n = 513;
-    int k = 512 * 8;
+    int k = 260000;
     int lda = ROUNDUP(k, 16);
     int ldb = ROUNDUP(k, 16);
     int ldc = ROUNDUP(m, 16);
@@ -60,8 +62,8 @@ int test(void) {
     randomize(k, n, B, ldb);
 
     BENCH(ansiBLAS::sgemm(m, n, k, A, lda, B, ldb, G, ldc));
-    BENCH(llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1, GGML_TASK_TYPE_COMPUTE,
-                          GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
+    BENCH(llamafile_sgemm_openmp(m, n, k, A, lda, B, ldb, C, ldc, GGML_TASK_TYPE_COMPUTE,
+                                 GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
 
     double err_sum = 0;
     long long err_worst = 0;
@@ -104,15 +106,17 @@ int test(void) {
 int main(int argc, char *argv[]) {
     int rc;
 
-    llamafile_trapping_enabled(+1);
+    // llamafile_trapping_enabled(+1);
 
-    printf("\nFLAG_precise = false;\n");
-    FLAG_precise = false;
+    printf("\n");
     if ((rc = test()))
         return rc;
 
-    printf("\nFLAG_precise = true;\n");
-    FLAG_precise = true;
+    printf("\n");
+    if ((rc = test()))
+        return rc;
+
+    printf("\n");
     if ((rc = test()))
         return rc;
 }

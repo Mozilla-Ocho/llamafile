@@ -19209,6 +19209,7 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
 
             pthread_attr_t attr;
             pthread_attr_init(&attr);
+            pthread_attr_setstacksize(&attr, 128 * 1024);
             pthread_attr_setguardsize(&attr, sysconf(_SC_PAGESIZE));
             pthread_attr_setsigaltstacksize_np(&attr, sysconf(_SC_MINSIGSTKSZ) + 16384);
             const int rc = ggml_thread_create((pthread_t *)&workers[j].thrd, &attr,
