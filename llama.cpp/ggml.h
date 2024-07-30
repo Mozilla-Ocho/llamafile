@@ -378,6 +378,9 @@ extern "C" {
         GGML_TYPE_F64     = 28,
         GGML_TYPE_IQ1_M   = 29,
         GGML_TYPE_BF16    = 30,
+        GGML_TYPE_Q4_0_4_4 = 31,
+        GGML_TYPE_Q4_0_4_8 = 32,
+        GGML_TYPE_Q4_0_8_8 = 33,
         GGML_TYPE_COUNT,
     };
 
@@ -419,6 +422,9 @@ extern "C" {
         GGML_FTYPE_MOSTLY_IQ4_XS  = 22, // except 1d tensors
         GGML_FTYPE_MOSTLY_IQ1_M   = 23, // except 1d tensors
         GGML_FTYPE_MOSTLY_BF16    = 24, // except 1d tensors
+        GGML_FTYPE_MOSTLY_Q4_0_4_4 = 25, // except 1d tensors
+        GGML_FTYPE_MOSTLY_Q4_0_4_8 = 26, // except 1d tensors
+        GGML_FTYPE_MOSTLY_Q4_0_8_8 = 27, // except 1d tensors
     };
 
     // available tensor operations:
@@ -1014,12 +1020,13 @@ extern "C" {
             struct ggml_tensor  * a,
             struct ggml_tensor  * b);
 
-    // concat a and b on dim 2
+    // concat a and b along dim
     // used in stable-diffusion
     GGML_API struct ggml_tensor * ggml_concat(
             struct ggml_context * ctx,
             struct ggml_tensor  * a,
-            struct ggml_tensor  * b);
+            struct ggml_tensor  * b,
+            int                   dim);
 
     GGML_API struct ggml_tensor * ggml_abs(
             struct ggml_context * ctx,
@@ -1129,6 +1136,13 @@ extern "C" {
     GGML_API struct ggml_tensor * ggml_hardsigmoid(
             struct ggml_context * ctx,
             struct ggml_tensor  * a);
+
+    // normalize along rows
+    GGML_API struct ggml_tensor * ggml_norm_ext(
+            struct ggml_context * ctx,
+            struct ggml_tensor  * a,
+            float                 eps,
+            bool                  sub_mean);
 
     // normalize along rows
     GGML_API struct ggml_tensor * ggml_norm(
@@ -2417,6 +2431,7 @@ extern "C" {
     GGML_API int ggml_cpu_has_avx512_bf16(void);
     GGML_API int ggml_cpu_has_fma        (void);
     GGML_API int ggml_cpu_has_neon       (void);
+    GGML_API int ggml_cpu_has_sve        (void);
     GGML_API int ggml_cpu_has_arm_fma    (void);
     GGML_API int ggml_cpu_has_metal      (void);
     GGML_API int ggml_cpu_has_f16c       (void);
@@ -2446,20 +2461,31 @@ extern "C" {
 #endif
     typedef void (*ggml_to_float_t)  (const void  * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
     typedef void (*ggml_from_float_t)(const float * GGML_RESTRICT x, void  * GGML_RESTRICT y, int64_t k);
-    typedef void (*ggml_vec_dot_t)   (int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT x, size_t bx,
-                                      const void * GGML_RESTRICT y, size_t by, int nrc);
+    typedef void (*ggml_from_float_to_mat_t)
+                                     (const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t nr, int64_t k, int64_t bs);
+    typedef void (*ggml_vec_dot_t)  (int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT x, size_t bx,
+                                       const void * GGML_RESTRICT y, size_t by, int nrc);
+    typedef void (*ggml_gemv_t)     (int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT x,
+                                       const void * GGML_RESTRICT y, int nr, int nc);
+    typedef void (*ggml_gemm_t)     (int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT x,
+                                       const void * GGML_RESTRICT y, int nr, int nc);
 
     typedef struct {
-        const char      * type_name;
-        int               blck_size;
-        size_t            type_size;
-        bool              is_quantized;
-        ggml_to_float_t   to_float;
-        ggml_from_float_t from_float;
-        ggml_from_float_t from_float_reference;
-        ggml_vec_dot_t    vec_dot;
-        enum ggml_type    vec_dot_type;
-        int64_t           nrows; // number of rows to process simultaneously;
+        const char             * type_name;
+        int64_t                  blck_size;
+        int64_t                  blck_size_interleave; // interleave elements in blocks
+        size_t                   type_size;
+        bool                     is_quantized;
+        ggml_to_float_t          to_float;
+        ggml_from_float_t        from_float;
+        ggml_from_float_t        from_float_reference;
+        ggml_from_float_to_mat_t from_float_to_mat;
+        ggml_vec_dot_t           vec_dot;
+        enum ggml_type           vec_dot_type;
+        int64_t                  nrows; // number of rows to process simultaneously
+        int64_t                  ncols; // number of columns to process simultaneously
+        ggml_gemv_t              gemv;
+        ggml_gemm_t              gemm;
     } ggml_type_traits_t;
 
     GGML_API ggml_type_traits_t ggml_internal_get_type_traits(enum ggml_type type);

@@ -24,6 +24,7 @@
 
 #include "llama.cpp/ggml.h"
 #include "stable-diffusion.h"
+
 #include "stb/stb_image_resize.h"
 
 bool ends_with(const std::string& str, const std::string& ending) {
@@ -409,6 +410,10 @@ const char* sd_get_system_info() {
     return buffer;
 }
 
+const char* sd_type_name(enum sd_type_t type) {
+    return ggml_type_name((ggml_type)type);
+}
+
 sd_image_f32_t sd_image_t_to_sd_image_f32_t(sd_image_t image) {
     sd_image_f32_t converted_image;
     converted_image.width   = image.width;
@@ -556,4 +561,111 @@ sd_image_f32_t clip_preprocess(sd_image_f32_t image, int size) {
     }
 
     return result;
+}
+
+// Ref: https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/cad87bf4e3e0b0a759afa94e933527c3123d59bc/modules/prompt_parser.py#L345
+//
+// Parses a string with attention tokens and returns a list of pairs: text and its associated weight.
+// Accepted tokens are:
+//   (abc) - increases attention to abc by a multiplier of 1.1
+//   (abc:3.12) - increases attention to abc by a multiplier of 3.12
+//   [abc] - decreases attention to abc by a multiplier of 1.1
+//   \( - literal character '('
+//   \[ - literal character '['
+//   \) - literal character ')'
+//   \] - literal character ']'
+//   \\ - literal character '\'
+//   anything else - just text
+//
+// >>> parse_prompt_attention('normal text')
+// [['normal text', 1.0]]
+// >>> parse_prompt_attention('an (important) word')
+// [['an ', 1.0], ['important', 1.1], [' word', 1.0]]
+// >>> parse_prompt_attention('(unbalanced')
+// [['unbalanced', 1.1]]
+// >>> parse_prompt_attention('\(literal\]')
+// [['(literal]', 1.0]]
+// >>> parse_prompt_attention('(unnecessary)(parens)')
+// [['unnecessaryparens', 1.1]]
+// >>> parse_prompt_attention('a (((house:1.3)) [on] a (hill:0.5), sun, (((sky))).')
+// [['a ', 1.0],
+//  ['house', 1.5730000000000004],
+//  [' ', 1.1],
+//  ['on', 1.0],
+//  [' a ', 1.1],
+//  ['hill', 0.55],
+//  [', sun, ', 1.1],
+//  ['sky', 1.4641000000000006],
+//  ['.', 1.1]]
+std::vector<std::pair<std::string, float>> parse_prompt_attention(const std::string& text) {
+    std::vector<std::pair<std::string, float>> res;
+    std::vector<int> round_brackets;
+    std::vector<int> square_brackets;
+
+    float round_bracket_multiplier  = 1.1f;
+    float square_bracket_multiplier = 1 / 1.1f;
+
+    std::regex re_attention(R"(\\\(|\\\)|\\\[|\\\]|\\\\|\\|\(|\[|:([+-]?[.\d]+)\)|\)|\]|[^\\()\[\]:]+|:)");
+    std::regex re_break(R"(\s*\bBREAK\b\s*)");
+
+    auto multiply_range = [&](int start_position, float multiplier) {
+        for (int p = start_position; p < res.size(); ++p) {
+            res[p].second *= multiplier;
+        }
+    };
+
+    std::smatch m;
+    std::string remaining_text = text;
+
+    while (std::regex_search(remaining_text, m, re_attention)) {
+        std::string text   = m[0];
+        std::string weight = m[1];
+
+        if (text == "(") {
+            round_brackets.push_back((int)res.size());
+        } else if (text == "[") {
+            square_brackets.push_back((int)res.size());
+        } else if (!weight.empty()) {
+            if (!round_brackets.empty()) {
+                multiply_range(round_brackets.back(), std::stof(weight));
+                round_brackets.pop_back();
+            }
+        } else if (text == ")" && !round_brackets.empty()) {
+            multiply_range(round_brackets.back(), round_bracket_multiplier);
+            round_brackets.pop_back();
+        } else if (text == "]" && !square_brackets.empty()) {
+            multiply_range(square_brackets.back(), square_bracket_multiplier);
+            square_brackets.pop_back();
+        } else if (text == "\\(") {
+            res.push_back({text.substr(1), 1.0f});
+        } else {
+            res.push_back({text, 1.0f});
+        }
+
+        remaining_text = m.suffix();
+    }
+
+    for (int pos : round_brackets) {
+        multiply_range(pos, round_bracket_multiplier);
+    }
+
+    for (int pos : square_brackets) {
+        multiply_range(pos, square_bracket_multiplier);
+    }
+
+    if (res.empty()) {
+        res.push_back({"", 1.0f});
+    }
+
+    int i = 0;
+    while (i + 1 < res.size()) {
+        if (res[i].second == res[i + 1].second) {
+            res[i].first += res[i + 1].first;
+            res.erase(res.begin() + i + 1);
+        } else {
+            ++i;
+        }
+    }
+
+    return res;
 }

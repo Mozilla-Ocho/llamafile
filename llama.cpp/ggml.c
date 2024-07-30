@@ -37,6 +37,7 @@ SOFTWARE.");
 #include "ggml-metal.h"
 #include "ggml-cuda.h"
 #include "ggml-vector.h"
+#include "ggml-aarch64.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/log.h"
 #include "llamafile/debug.h"
@@ -701,6 +702,54 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
         .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_bf16,
         .vec_dot_type             = GGML_TYPE_BF16,
         .nrows                    = 1,
+    },
+    [GGML_TYPE_Q4_0_4_4] = {
+        .type_name                = "q4_0_4x4",
+        .blck_size                = QK4_0,
+        .blck_size_interleave     = 4,
+        .type_size                = sizeof(block_q4_0),
+        .is_quantized             = true,
+        .to_float                 = NULL,
+        .from_float               = NULL,
+        .from_float_reference     = NULL,
+        .vec_dot                  = NULL,
+        .vec_dot_type             = GGML_TYPE_Q8_0,
+        .nrows                    = 1,
+        .ncols                    = 4,
+        .gemv                     = ggml_gemv_q4_0_4x4_q8_0,
+        .gemm                     = ggml_gemm_q4_0_4x4_q8_0,
+    },
+    [GGML_TYPE_Q4_0_4_8] = {
+        .type_name                = "q4_0_4x8",
+        .blck_size                = QK4_0,
+        .blck_size_interleave     = 8,
+        .type_size                = sizeof(block_q4_0),
+        .is_quantized             = true,
+        .to_float                 = NULL,
+        .from_float               = NULL,
+        .from_float_reference     = NULL,
+        .vec_dot                  = NULL,
+        .vec_dot_type             = GGML_TYPE_Q8_0,
+        .nrows                    = 1,
+        .ncols                    = 4,
+        .gemv                     = ggml_gemv_q4_0_4x8_q8_0,
+        .gemm                     = ggml_gemm_q4_0_4x8_q8_0,
+    },
+    [GGML_TYPE_Q4_0_8_8] = {
+        .type_name                = "q4_0_8x8",
+        .blck_size                = QK4_0,
+        .blck_size_interleave     = 8,
+        .type_size                = sizeof(block_q4_0),
+        .is_quantized             = true,
+        .to_float                 = NULL,
+        .from_float               = NULL,
+        .from_float_reference     = NULL,
+        .vec_dot                  = NULL,
+        .vec_dot_type             = GGML_TYPE_Q8_0,
+        .nrows                    = 1,
+        .ncols                    = 8,
+        .gemv                     = ggml_gemv_q4_0_8x8_q8_0,
+        .gemm                     = ggml_gemm_q4_0_8x8_q8_0,
     }
 };
 
@@ -1567,7 +1616,7 @@ void ggml_once(atomic_uint * once, void init(void)) {
 }
 
 int ggml_delay(int backoff) {
-#if 0
+#if 1
     if (backoff < 7) {
         volatile int i;
         for (i = 0; i != 1 << backoff; i++) {
@@ -3884,10 +3933,21 @@ struct ggml_tensor * ggml_repeat_back(
 // ggml_concat
 
 struct ggml_tensor * ggml_concat(
-    struct ggml_context* ctx,
-    struct ggml_tensor* a,
-    struct ggml_tensor* b) {
-    GGML_ASSERT(a->ne[0] == b->ne[0] && a->ne[1] == b->ne[1] && a->ne[3] == b->ne[3]);
+    struct ggml_context * ctx,
+    struct ggml_tensor * a,
+    struct ggml_tensor * b,
+    int dim) {
+    GGML_ASSERT(dim >= 0 && dim < GGML_MAX_DIMS);
+
+    int64_t ne[GGML_MAX_DIMS];
+    for (int d = 0; d < GGML_MAX_DIMS; ++d) {
+        if (d == dim) {
+            ne[d] = a->ne[d] + b->ne[d];
+            continue;
+        }
+        GGML_ASSERT(a->ne[d] == b->ne[d]);
+        ne[d] = a->ne[d];
+    }
 
     bool is_node = false;
 
@@ -3895,7 +3955,9 @@ struct ggml_tensor * ggml_concat(
         is_node = true;
     }
 
-    struct ggml_tensor * result = ggml_new_tensor_4d(ctx, a->type, a->ne[0], a->ne[1], a->ne[2] + b->ne[2], a->ne[3]);
+    struct ggml_tensor * result = ggml_new_tensor(ctx, a->type, GGML_MAX_DIMS, ne);
+
+    ggml_set_op_params_i32(result, 0, dim);
 
     result->op = GGML_OP_CONCAT;
     result->grad = is_node ? ggml_dup_tensor(ctx, result) : NULL;
@@ -4123,17 +4185,20 @@ static struct ggml_tensor * ggml_norm_impl(
         struct ggml_context * ctx,
         struct ggml_tensor  * a,
         float eps,
+        bool sub_mean,
         bool inplace) {
     bool is_node = false;
 
     if (!inplace && (a->grad)) {
-        GGML_ASSERT(false); // TODO: implement backward
+        __builtin_trap(); // TODO: implement backward
         is_node = true;
     }
 
     struct ggml_tensor * result = inplace ? ggml_view_tensor(ctx, a) : ggml_dup_tensor(ctx, a);
 
-    ggml_set_op_params(result, &eps, sizeof(eps));
+    float params[2] = {eps, 0};
+    memcpy((char*)&params[1], &sub_mean, sizeof(sub_mean));
+    ggml_set_op_params(result, &params, sizeof(params));
 
     result->op   = GGML_OP_NORM;
     result->grad = is_node ? ggml_dup_tensor(ctx, result) : NULL;
@@ -4142,18 +4207,34 @@ static struct ggml_tensor * ggml_norm_impl(
     return result;
 }
 
+struct ggml_tensor * ggml_norm_ext(
+        struct ggml_context * ctx,
+        struct ggml_tensor  * a,
+        float eps,
+        bool sub_mean) {
+    return ggml_norm_impl(ctx, a, eps, sub_mean, false);
+}
+
+struct ggml_tensor * ggml_norm_ext_inplace(
+        struct ggml_context * ctx,
+        struct ggml_tensor  * a,
+        float eps,
+        bool sub_mean) {
+    return ggml_norm_impl(ctx, a, eps, sub_mean, true);
+}
+
 struct ggml_tensor * ggml_norm(
         struct ggml_context * ctx,
         struct ggml_tensor  * a,
         float eps) {
-    return ggml_norm_impl(ctx, a, eps, false);
+    return ggml_norm_impl(ctx, a, eps, true, false);
 }
 
 struct ggml_tensor * ggml_norm_inplace(
         struct ggml_context * ctx,
         struct ggml_tensor  * a,
         float eps) {
-    return ggml_norm_impl(ctx, a, eps, true);
+    return ggml_norm_impl(ctx, a, eps, true, true);
 }
 
 // ggml_rms_norm
@@ -9981,10 +10062,6 @@ static void ggml_compute_forward_concat_f32(
     const struct ggml_tensor * src0 = dst->src[0];
     const struct ggml_tensor * src1 = dst->src[1];
 
-    if (params->type == GGML_TASK_TYPE_INIT || params->type == GGML_TASK_TYPE_FINALIZE) {
-        return;
-    }
-
     GGML_ASSERT(src0->nb[0] == sizeof(float));
 
     const int ith = params->ith;
@@ -9997,26 +10074,29 @@ static void ggml_compute_forward_concat_f32(
     GGML_ASSERT(nb00 == sizeof(float));
     GGML_ASSERT(nb10 == sizeof(float));
 
+    const int32_t dim = ggml_get_op_params_i32(dst, 0);
+
+    GGML_ASSERT(dim >= 0 && dim < 4);
+
+    int64_t o[4] = {0, 0, 0, 0};
+    o[dim] = src0->ne[dim];
+
+    const float * x;
+
+    // TODO: smarter multi-theading
     for (int i3 = 0; i3 < ne3; i3++) {
         for (int i2 = ith; i2 < ne2; i2 += nth) {
-            if (i2 < ne02) { // src0
-                for (int i1 = 0; i1 < ne1; i1++) {
-                    for (int i0 = 0; i0 < ne0; i0++) {
-                        const float * x = (float *)((char *) src0->data + i0 * nb00 + i1 * nb01 + i2 * nb02 + i3 * nb03);
-
-                        float * y = (float *)((char *)dst->data + i0 * nb0 + i1 * nb1 + i2 * nb2 + i3 * nb3);
-                        *y = *x;
+            for (int i1 = 0; i1 < ne1; i1++) {
+                for (int i0 = 0; i0 < ne0; i0++) {
+                    if (i0 < ne00 && i1 < ne01 && i2 < ne02 && i3 < ne03) {
+                        x = (const float *) ((const char *)src0->data + (i0       )*nb00 + (i1       )*nb01 + (i2       )*nb02 + (i3       )*nb03);
+                    } else {
+                        x = (const float *) ((const char *)src1->data + (i0 - o[0])*nb10 + (i1 - o[1])*nb11 + (i2 - o[2])*nb12 + (i3 - o[3])*nb13);
                     }
-                }
-            } // src1
-            else {
-                for (int i1 = 0; i1 < ne1; i1++) {
-                    for (int i0 = 0; i0 < ne0; i0++) {
-                        const float * x = (float *)((char *) src1->data + i0 * nb10 + i1 * nb11 + (i2 - ne02) * nb12 + i3 * nb13);
 
-                        float * y = (float *)((char *)dst->data + i0 * nb0 + i1 * nb1 + i2 * nb2 + i3 * nb3);
-                        *y = *x;
-                    }
+                    float * y = (float *)((char *)dst->data + i0*nb0 + i1*nb1 + i2*nb2 + i3*nb3);
+
+                    *y = *x;
                 }
             }
         }
@@ -10024,8 +10104,8 @@ static void ggml_compute_forward_concat_f32(
 }
 
 static void ggml_compute_forward_concat(
-    const struct ggml_compute_params* params,
-    struct ggml_tensor* dst) {
+    const struct ggml_compute_params * params,
+    struct ggml_tensor * dst) {
 
     const struct ggml_tensor * src0 = dst->src[0];
 
@@ -10037,8 +10117,8 @@ static void ggml_compute_forward_concat(
             } break;
         default:
             {
-                GGML_ASSERT(false);
-            } break;
+                __builtin_trap();
+            }
     }
 }
 
@@ -10805,6 +10885,7 @@ static void ggml_compute_forward_hardsigmoid(
 
 // ggml_compute_forward_norm
 
+__target_clones("avx512f,avx2")
 static void ggml_compute_forward_norm_f32(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -10812,10 +10893,6 @@ static void ggml_compute_forward_norm_f32(
     const struct ggml_tensor * src0 = dst->src[0];
 
     GGML_ASSERT(ggml_are_same_shape(src0, dst));
-
-    if (params->type == GGML_TASK_TYPE_INIT || params->type == GGML_TASK_TYPE_FINALIZE) {
-        return;
-    }
 
     GGML_ASSERT(src0->nb[0] == sizeof(float));
 
@@ -10825,7 +10902,9 @@ static void ggml_compute_forward_norm_f32(
     GGML_TENSOR_UNARY_OP_LOCALS
 
     float eps;
+    bool sub_mean;
     memcpy(&eps, dst->op_params, sizeof(float));
+    memcpy(&sub_mean, (char*)dst->op_params + sizeof(float), sizeof(bool));
 
     GGML_ASSERT(eps > 0.0f);
 
@@ -10835,18 +10914,26 @@ static void ggml_compute_forward_norm_f32(
             for (int64_t i01 = ith; i01 < ne01; i01 += nth) {
                 const float * x = (float *) ((char *) src0->data + i01*nb01 + i02*nb02 + i03*nb03);
 
-                ggml_float sum = 0.0;
-                for (int64_t i00 = 0; i00 < ne00; i00++) {
-                    sum += (ggml_float)x[i00];
-                }
+                float mean = 0.0f;
+                if (sub_mean) {
+                    ggml_float sum = 0.0;
+                    for (int64_t i00 = 0; i00 < ne00; i00++) {
+                        sum += (ggml_float)x[i00];
+                    }
 
-                float mean = sum/ne00;
+                    mean = sum/ne00;
+                }
 
                 float * y = (float *) ((char *) dst->data + i01*nb1 + i02*nb2 + i03*nb3);
 
                 ggml_float sum2 = 0.0;
                 for (int64_t i00 = 0; i00 < ne00; i00++) {
-                    float v = x[i00] - mean;
+                    float v;
+                    if (sub_mean) {
+                       v = x[i00] - mean;
+                    } else {
+                       v = x[i00];
+                    }
                     y[i00] = v;
                     sum2 += (ggml_float)(v*v);
                 }
@@ -10873,8 +10960,8 @@ static void ggml_compute_forward_norm(
             } break;
         default:
             {
-                GGML_ASSERT(false);
-            } break;
+                __builtin_trap();
+            }
     }
 }
 
@@ -22279,6 +22366,14 @@ int ggml_cpu_has_fma(void) {
 
 int ggml_cpu_has_neon(void) {
 #if defined(__ARM_NEON)
+    return 1;
+#else
+    return 0;
+#endif
+}
+
+int ggml_cpu_has_sve(void) {
+#if defined(__ARM_FEATURE_SVE)
     return 1;
 #else
     return 0;

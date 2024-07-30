@@ -22,6 +22,7 @@ enum SDVersion {
     VERSION_2_x,
     VERSION_XL,
     VERSION_SVD,
+    VERSION_3_2B,
     VERSION_COUNT,
 };
 
@@ -143,7 +144,6 @@ public:
     bool init_from_file(const std::string& file_path, const std::string& prefix = "");
     SDVersion get_sd_version();
     ggml_type get_sd_wtype();
-    std::string load_merges();
     bool load_tensors(on_new_tensor_cb_t on_new_tensor_cb, ggml_backend_t backend);
     bool load_tensors(std::map<std::string, struct ggml_tensor*>& tensors,
                       ggml_backend_t backend,
@@ -151,5 +151,8 @@ public:
     bool save_to_gguf_file(const std::string& file_path, ggml_type type);
     int64_t get_params_mem_size(ggml_backend_t backend, ggml_type type = GGML_TYPE_COUNT);
     ~ModelLoader() = default;
+
+    static std::string load_merges();
+    static std::string load_t5_tokenizer_json();
 };
 #endif  // __MODEL_H__

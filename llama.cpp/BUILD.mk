@@ -32,6 +32,7 @@ $(LLAMA_CPP_OBJS): private				\
 			-DGGML_MULTIPLATFORM		\
 			-DGGML_USE_LLAMAFILE
 
+o/$(MODE)/llama.cpp/ggml.o \
 o/$(MODE)/llama.cpp/ggml-vector-amd-avx2.o \
 o/$(MODE)/llama.cpp/ggml-vector-amd-avx512bf16.o \
 o/$(MODE)/llama.cpp/ggml-vector-amd-avx512.o \

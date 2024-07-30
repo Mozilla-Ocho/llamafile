@@ -279,26 +279,11 @@ public:
         int64_t n_context = context->ne[1];
         int64_t inner_dim = d_head * n_head;
 
-        auto q = to_q->forward(ctx, x);                                 // [N, n_token, inner_dim]
-        q      = ggml_reshape_4d(ctx, q, d_head, n_head, n_token, n);   // [N, n_token, n_head, d_head]
-        q      = ggml_cont(ctx, ggml_permute(ctx, q, 0, 2, 1, 3));      // [N, n_head, n_token, d_head]
-        q      = ggml_reshape_3d(ctx, q, d_head, n_token, n_head * n);  // [N * n_head, n_token, d_head]
+        auto q = to_q->forward(ctx, x);        // [N, n_token, inner_dim]
+        auto k = to_k->forward(ctx, context);  // [N, n_context, inner_dim]
+        auto v = to_v->forward(ctx, context);  // [N, n_context, inner_dim]
 
-        auto k = to_k->forward(ctx, context);                             // [N, n_context, inner_dim]
-        k      = ggml_reshape_4d(ctx, k, d_head, n_head, n_context, n);   // [N, n_context, n_head, d_head]
-        k      = ggml_cont(ctx, ggml_permute(ctx, k, 0, 2, 1, 3));        // [N, n_head, n_context, d_head]
-        k      = ggml_reshape_3d(ctx, k, d_head, n_context, n_head * n);  // [N * n_head, n_context, d_head]
-
-        auto v = to_v->forward(ctx, context);                             // [N, n_context, inner_dim]
-        v      = ggml_reshape_4d(ctx, v, d_head, n_head, n_context, n);   // [N, n_context, n_head, d_head]
-        v      = ggml_cont(ctx, ggml_permute(ctx, v, 1, 2, 0, 3));        // [N, n_head, d_head, n_context]
-        v      = ggml_reshape_3d(ctx, v, n_context, d_head, n_head * n);  // [N * n_head, d_head, n_context]
-
-        auto kqv = ggml_nn_attention(ctx, q, k, v, false);  // [N * n_head, n_token, d_head]
-        kqv      = ggml_reshape_4d(ctx, kqv, d_head, n_token, n_head, n);
-        kqv      = ggml_cont(ctx, ggml_permute(ctx, kqv, 0, 2, 1, 3));  // [N, n_token, n_head, d_head]
-
-        x = ggml_reshape_3d(ctx, kqv, d_head * n_head, n_token, n);  // [N, n_token, inner_dim]
+        x = ggml_nn_attention_ext(ctx, q, k, v, n_head, NULL, false);  // [N, n_token, inner_dim]
 
         x = to_out_0->forward(ctx, x);  // [N, n_token, query_dim]
         return x;

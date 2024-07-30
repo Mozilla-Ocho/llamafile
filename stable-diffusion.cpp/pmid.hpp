@@ -64,7 +64,7 @@ public:
         auto prompt_embeds0 = ggml_cont(ctx, ggml_permute(ctx, prompt_embeds, 2, 0, 1, 3));
         auto id_embeds0     = ggml_cont(ctx, ggml_permute(ctx, id_embeds, 2, 0, 1, 3));
         // concat is along dim 2
-        auto stacked_id_embeds = ggml_concat(ctx, prompt_embeds0, id_embeds0);
+        auto stacked_id_embeds = ggml_concat(ctx, prompt_embeds0, id_embeds0, 2);
         stacked_id_embeds      = ggml_cont(ctx, ggml_permute(ctx, stacked_id_embeds, 1, 2, 0, 3));
 
         // stacked_id_embeds = mlp1.forward(ctx, stacked_id_embeds);
@@ -102,12 +102,12 @@ public:
 
         stacked_id_embeds = ggml_cont(ctx, ggml_permute(ctx, stacked_id_embeds, 0, 2, 1, 3));
         if (left && right) {
-            stacked_id_embeds = ggml_concat(ctx, left, stacked_id_embeds);
-            stacked_id_embeds = ggml_concat(ctx, stacked_id_embeds, right);
+            stacked_id_embeds = ggml_concat(ctx, left, stacked_id_embeds, 2);
+            stacked_id_embeds = ggml_concat(ctx, stacked_id_embeds, right, 2);
         } else if (left) {
-            stacked_id_embeds = ggml_concat(ctx, left, stacked_id_embeds);
+            stacked_id_embeds = ggml_concat(ctx, left, stacked_id_embeds, 2);
         } else if (right) {
-            stacked_id_embeds = ggml_concat(ctx, stacked_id_embeds, right);
+            stacked_id_embeds = ggml_concat(ctx, stacked_id_embeds, right, 2);
         }
         stacked_id_embeds                         = ggml_cont(ctx, ggml_permute(ctx, stacked_id_embeds, 0, 2, 1, 3));
         class_tokens_mask                         = ggml_cont(ctx, ggml_transpose(ctx, class_tokens_mask));
@@ -146,7 +146,7 @@ struct PhotoMakerIDEncoderBlock : public CLIPVisionModelProjection {
         id_embeds   = ggml_cont(ctx, ggml_permute(ctx, id_embeds, 2, 0, 1, 3));
         id_embeds_2 = ggml_cont(ctx, ggml_permute(ctx, id_embeds_2, 2, 0, 1, 3));
 
-        id_embeds = ggml_concat(ctx, id_embeds, id_embeds_2);  // [batch_size, seq_length, 1, 2048] check whether concat at dim 2 is right
+        id_embeds = ggml_concat(ctx, id_embeds, id_embeds_2, 2);  // [batch_size, seq_length, 1, 2048] check whether concat at dim 2 is right
         id_embeds = ggml_cont(ctx, ggml_permute(ctx, id_embeds, 1, 2, 0, 3));
 
         struct ggml_tensor* updated_prompt_embeds = fuse_module->forward(ctx,
@@ -159,7 +159,7 @@ struct PhotoMakerIDEncoderBlock : public CLIPVisionModelProjection {
     }
 };
 
-struct PhotoMakerIDEncoder : public GGMLModule {
+struct PhotoMakerIDEncoder : public GGMLRunner {
 public:
     SDVersion version = VERSION_XL;
     PhotoMakerIDEncoderBlock id_encoder;
@@ -176,7 +176,7 @@ public:
 
 public:
     PhotoMakerIDEncoder(ggml_backend_t backend, ggml_type wtype, SDVersion version = VERSION_XL, float sty = 20.f)
-        : GGMLModule(backend, wtype),
+        : GGMLRunner(backend, wtype),
           version(version),
           style_strength(sty) {
         id_encoder.init(params_ctx, wtype);
@@ -287,8 +287,8 @@ public:
             return build_graph(id_pixel_values, prompt_embeds, class_tokens_mask);
         };
 
-        // GGMLModule::compute(get_graph, n_threads, updated_prompt_embeds);
-        GGMLModule::compute(get_graph, n_threads, true, updated_prompt_embeds, output_ctx);
+        // GGMLRunner::compute(get_graph, n_threads, updated_prompt_embeds);
+        GGMLRunner::compute(get_graph, n_threads, true, updated_prompt_embeds, output_ctx);
     }
 };
 

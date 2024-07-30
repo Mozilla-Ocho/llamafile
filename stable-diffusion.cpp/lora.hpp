@@ -5,7 +5,7 @@
 
 #define LORA_GRAPH_SIZE 10240
 
-struct LoraModel : public GGMLModule {
+struct LoraModel : public GGMLRunner {
     float multiplier = 1.0f;
     std::map<std::string, struct ggml_tensor*> lora_tensors;
     std::string file_path;
@@ -17,7 +17,7 @@ struct LoraModel : public GGMLModule {
               ggml_type wtype,
               const std::string& file_path = "",
               const std::string& prefix    = "")
-        : file_path(file_path), GGMLModule(backend, wtype) {
+        : file_path(file_path), GGMLRunner(backend, wtype) {
         if (!model_loader.init_from_file(file_path, prefix)) {
             load_failed = true;
         }
@@ -182,7 +182,7 @@ struct LoraModel : public GGMLModule {
         auto get_graph = [&]() -> struct ggml_cgraph* {
             return build_lora_graph(model_tensors);
         };
-        GGMLModule::compute(get_graph, n_threads, true);
+        GGMLRunner::compute(get_graph, n_threads, true);
     }
 };
 

@@ -183,7 +183,7 @@ public:
     }
 };
 
-struct TinyAutoEncoder : public GGMLModule {
+struct TinyAutoEncoder : public GGMLRunner {
     TAESD taesd;
     bool decode_only = false;
 
@@ -192,7 +192,7 @@ struct TinyAutoEncoder : public GGMLModule {
                     bool decoder_only = true)
         : decode_only(decoder_only),
           taesd(decode_only),
-          GGMLModule(backend, wtype) {
+          GGMLRunner(backend, wtype) {
         taesd.init(params_ctx, wtype);
     }
 
@@ -244,7 +244,7 @@ struct TinyAutoEncoder : public GGMLModule {
             return build_graph(z, decode_graph);
         };
 
-        GGMLModule::compute(get_graph, n_threads, false, output, output_ctx);
+        GGMLRunner::compute(get_graph, n_threads, false, output, output_ctx);
     }
 };
 

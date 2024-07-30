@@ -306,7 +306,7 @@ public:
     }
 };
 
-struct ControlNet : public GGMLModule {
+struct ControlNet : public GGMLRunner {
     SDVersion version = VERSION_1_x;
     ControlNetBlock control_net;
 
@@ -319,7 +319,7 @@ struct ControlNet : public GGMLModule {
     ControlNet(ggml_backend_t backend,
                ggml_type wtype,
                SDVersion version = VERSION_1_x)
-        : GGMLModule(backend, wtype), control_net(version) {
+        : GGMLRunner(backend, wtype), control_net(version) {
         control_net.init(params_ctx, wtype);
     }
 
@@ -426,7 +426,7 @@ struct ControlNet : public GGMLModule {
             return build_graph(x, hint, timesteps, context, y);
         };
 
-        GGMLModule::compute(get_graph, n_threads, false, output, output_ctx);
+        GGMLRunner::compute(get_graph, n_threads, false, output, output_ctx);
         guided_hint_cached = true;
     }
 
