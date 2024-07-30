@@ -13966,6 +13966,7 @@ static void ggml_compute_forward_im2col_f32(
 // src0: kernel [OC, IC, KH, KW]
 // src1: image [N, IC, IH, IW]
 // dst:  result [N, OH, OW, IC*KH*KW]
+__target_clones("avx512f,avx2")
 static void ggml_compute_forward_im2col_f16(
         const struct ggml_compute_params * params,
               struct ggml_tensor * dst) {
