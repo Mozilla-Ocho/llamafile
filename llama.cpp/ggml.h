@@ -337,6 +337,7 @@ extern "C" {
 
     // google brain half-precision bfloat16
     typedef struct { uint16_t bits; } ggml_bf16_t;
+    GGML_API ggml_bf16_t ggml_make_bf16(uint16_t);
     GGML_API ggml_bf16_t ggml_fp32_to_bf16(float);
     GGML_API float       ggml_bf16_to_fp32(ggml_bf16_t);  // consider just doing << 16
     GGML_API void        ggml_bf16_to_fp32_row(const ggml_bf16_t *, float *, int64_t);
@@ -381,6 +382,8 @@ extern "C" {
         GGML_TYPE_Q4_0_4_4 = 31,
         GGML_TYPE_Q4_0_4_8 = 32,
         GGML_TYPE_Q4_0_8_8 = 33,
+        GGML_TYPE_Q4_B     = 34,
+        GGML_TYPE_Q8_B     = 35,
         GGML_TYPE_COUNT,
     };
 
@@ -425,6 +428,8 @@ extern "C" {
         GGML_FTYPE_MOSTLY_Q4_0_4_4 = 25, // except 1d tensors
         GGML_FTYPE_MOSTLY_Q4_0_4_8 = 26, // except 1d tensors
         GGML_FTYPE_MOSTLY_Q4_0_8_8 = 27, // except 1d tensors
+        GGML_FTYPE_MOSTLY_Q4_B     = 28, // except 1d tensors
+        GGML_FTYPE_MOSTLY_Q8_B     = 29, // except 1d tensors
     };
 
     // available tensor operations:

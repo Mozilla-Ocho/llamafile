@@ -17,6 +17,13 @@ extern "C" void quantize_row_q4_1_reference_amd_ssse3(const float * GGML_RESTRIC
 extern "C" void quantize_row_q4_1_reference_amd_k8(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q4_1_reference_arm80(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
 
+extern "C" void quantize_row_q4_B_reference_amd_avx512(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_reference_amd_avx2(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_reference_amd_avx(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_reference_amd_k8(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_reference_arm80(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+
 extern "C" void quantize_row_q5_0_reference_amd_avx512(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q5_0_reference_amd_avx2(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q5_0_reference_amd_avx(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
@@ -44,6 +51,13 @@ extern "C" void quantize_row_q8_1_reference_amd_avx(const float * GGML_RESTRICT 
 extern "C" void quantize_row_q8_1_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q8_1_reference_amd_k8(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q8_1_reference_arm80(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
+
+extern "C" void quantize_row_q8_B_reference_amd_avx512(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_reference_amd_avx2(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_reference_amd_avx(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_reference_amd_k8(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_reference_arm80(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
 
 extern "C" void quantize_row_q2_K_reference_amd_avx512(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q2_K_reference_amd_avx2(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
@@ -136,6 +150,13 @@ extern "C" void quantize_row_q4_1_amd_ssse3(const float * GGML_RESTRICT x, void 
 extern "C" void quantize_row_q4_1_amd_k8(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q4_1_arm80(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 
+extern "C" void quantize_row_q4_B_amd_avx512(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_amd_avx2(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_amd_avx(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_amd_ssse3(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_amd_k8(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_B_arm80(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+
 extern "C" void quantize_row_q5_0_amd_avx512(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q5_0_amd_avx2(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q5_0_amd_avx(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
@@ -156,6 +177,13 @@ extern "C" void quantize_row_q8_0_amd_avx(const float * GGML_RESTRICT x, void * 
 extern "C" void quantize_row_q8_0_amd_ssse3(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q8_0_amd_k8(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q8_0_arm80(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+
+extern "C" void quantize_row_q8_B_amd_avx512(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_amd_avx2(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_amd_avx(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_amd_ssse3(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_amd_k8(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_B_arm80(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 
 extern "C" void quantize_row_q8_1_amd_avx512(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q8_1_amd_avx2(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
@@ -255,6 +283,13 @@ extern "C" void dequantize_row_q4_1_amd_ssse3(const block_q4_1 * GGML_RESTRICT x
 extern "C" void dequantize_row_q4_1_amd_k8(const block_q4_1 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 extern "C" void dequantize_row_q4_1_arm80(const block_q4_1 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 
+extern "C" void dequantize_row_q4_B_amd_avx512(const block_q4_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q4_B_amd_avx2(const block_q4_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q4_B_amd_avx(const block_q4_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q4_B_amd_ssse3(const block_q4_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q4_B_amd_k8(const block_q4_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q4_B_arm80(const block_q4_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+
 extern "C" void dequantize_row_q5_0_amd_avx512(const block_q5_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 extern "C" void dequantize_row_q5_0_amd_avx2(const block_q5_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 extern "C" void dequantize_row_q5_0_amd_avx(const block_q5_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
@@ -275,6 +310,13 @@ extern "C" void dequantize_row_q8_0_amd_avx(const block_q8_0 * GGML_RESTRICT x, 
 extern "C" void dequantize_row_q8_0_amd_ssse3(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 extern "C" void dequantize_row_q8_0_amd_k8(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 extern "C" void dequantize_row_q8_0_arm80(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+
+extern "C" void dequantize_row_q8_B_amd_avx512(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q8_B_amd_avx2(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q8_B_amd_avx(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q8_B_amd_ssse3(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q8_B_amd_k8(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
+extern "C" void dequantize_row_q8_B_arm80(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 
 extern "C" void dequantize_row_q2_K_amd_avx512(const block_q2_K * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
 extern "C" void dequantize_row_q2_K_amd_avx2(const block_q2_K * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k);
@@ -415,6 +457,20 @@ extern "C" void ggml_vec_dot_q8_0_q8_0_amd_avx(int n, float * GGML_RESTRICT s, s
 extern "C" void ggml_vec_dot_q8_0_q8_0_amd_ssse3(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
 extern "C" void ggml_vec_dot_q8_0_q8_0_amd_k8(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
 extern "C" void ggml_vec_dot_q8_0_q8_0_arm80(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+
+extern "C" void ggml_vec_dot_q4_B_q8_B_amd_avx512(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q4_B_q8_B_amd_avx2(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q4_B_q8_B_amd_avx(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q4_B_q8_B_amd_ssse3(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q4_B_q8_B_amd_k8(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q4_B_q8_B_arm80(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+
+extern "C" void ggml_vec_dot_q8_B_q8_B_amd_avx512(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q8_B_q8_B_amd_avx2(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q8_B_q8_B_amd_avx(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q8_B_q8_B_amd_ssse3(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q8_B_q8_B_amd_k8(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+extern "C" void ggml_vec_dot_q8_B_q8_B_arm80(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
 
 extern "C" void ggml_vec_dot_q2_K_q8_K_amd_avx512(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
 extern "C" void ggml_vec_dot_q2_K_q8_K_amd_avx2(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
@@ -626,6 +682,13 @@ extern "C" size_t quantize_q4_1_amd_ssse3(const float * GGML_RESTRICT src, void 
 extern "C" size_t quantize_q4_1_amd_k8(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
 extern "C" size_t quantize_q4_1_arm80(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
 
+extern "C" size_t quantize_q4_B_amd_avx512(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q4_B_amd_avx2(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q4_B_amd_avx(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q4_B_amd_ssse3(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q4_B_amd_k8(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q4_B_arm80(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+
 extern "C" size_t quantize_q5_0_amd_avx512(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
 extern "C" size_t quantize_q5_0_amd_avx2(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
 extern "C" size_t quantize_q5_0_amd_avx(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
@@ -646,6 +709,13 @@ extern "C" size_t quantize_q8_0_amd_avx(const float * GGML_RESTRICT src, void * 
 extern "C" size_t quantize_q8_0_amd_ssse3(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
 extern "C" size_t quantize_q8_0_amd_k8(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
 extern "C" size_t quantize_q8_0_arm80(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+
+extern "C" size_t quantize_q8_B_amd_avx512(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q8_B_amd_avx2(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q8_B_amd_avx(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q8_B_amd_ssse3(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q8_B_amd_k8(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
+extern "C" size_t quantize_q8_B_arm80(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix);
 
 extern "C" void iq2xs_init_impl_amd_avx512(enum ggml_type type);
 extern "C" void iq2xs_init_impl_amd_avx2(enum ggml_type type);
@@ -685,10 +755,12 @@ extern "C" bool ggml_validate_row_data_arm80(enum ggml_type type, const void * d
 static const struct QuantFuncs {
     typeof(quantize_row_q4_0_reference) *ptr_quantize_row_q4_0_reference;
     typeof(quantize_row_q4_1_reference) *ptr_quantize_row_q4_1_reference;
+    typeof(quantize_row_q4_B_reference) *ptr_quantize_row_q4_B_reference;
     typeof(quantize_row_q5_0_reference) *ptr_quantize_row_q5_0_reference;
     typeof(quantize_row_q5_1_reference) *ptr_quantize_row_q5_1_reference;
     typeof(quantize_row_q8_0_reference) *ptr_quantize_row_q8_0_reference;
     typeof(quantize_row_q8_1_reference) *ptr_quantize_row_q8_1_reference;
+    typeof(quantize_row_q8_B_reference) *ptr_quantize_row_q8_B_reference;
     typeof(quantize_row_q2_K_reference) *ptr_quantize_row_q2_K_reference;
     typeof(quantize_row_q3_K_reference) *ptr_quantize_row_q3_K_reference;
     typeof(quantize_row_q4_K_reference) *ptr_quantize_row_q4_K_reference;
@@ -702,9 +774,11 @@ static const struct QuantFuncs {
     typeof(quantize_row_iq2_s_reference) *ptr_quantize_row_iq2_s_reference;
     typeof(quantize_row_q4_0) *ptr_quantize_row_q4_0;
     typeof(quantize_row_q4_1) *ptr_quantize_row_q4_1;
+    typeof(quantize_row_q4_B) *ptr_quantize_row_q4_B;
     typeof(quantize_row_q5_0) *ptr_quantize_row_q5_0;
     typeof(quantize_row_q5_1) *ptr_quantize_row_q5_1;
     typeof(quantize_row_q8_0) *ptr_quantize_row_q8_0;
+    typeof(quantize_row_q8_B) *ptr_quantize_row_q8_B;
     typeof(quantize_row_q8_1) *ptr_quantize_row_q8_1;
     typeof(quantize_row_q2_K) *ptr_quantize_row_q2_K;
     typeof(quantize_row_q3_K) *ptr_quantize_row_q3_K;
@@ -719,9 +793,11 @@ static const struct QuantFuncs {
     typeof(quantize_row_iq2_s) *ptr_quantize_row_iq2_s;
     typeof(dequantize_row_q4_0) *ptr_dequantize_row_q4_0;
     typeof(dequantize_row_q4_1) *ptr_dequantize_row_q4_1;
+    typeof(dequantize_row_q4_B) *ptr_dequantize_row_q4_B;
     typeof(dequantize_row_q5_0) *ptr_dequantize_row_q5_0;
     typeof(dequantize_row_q5_1) *ptr_dequantize_row_q5_1;
     typeof(dequantize_row_q8_0) *ptr_dequantize_row_q8_0;
+    typeof(dequantize_row_q8_B) *ptr_dequantize_row_q8_B;
     typeof(dequantize_row_q2_K) *ptr_dequantize_row_q2_K;
     typeof(dequantize_row_q3_K) *ptr_dequantize_row_q3_K;
     typeof(dequantize_row_q4_K) *ptr_dequantize_row_q4_K;
@@ -742,6 +818,8 @@ static const struct QuantFuncs {
     typeof(ggml_vec_dot_q5_0_q8_0) *ptr_ggml_vec_dot_q5_0_q8_0;
     typeof(ggml_vec_dot_q5_1_q8_1) *ptr_ggml_vec_dot_q5_1_q8_1;
     typeof(ggml_vec_dot_q8_0_q8_0) *ptr_ggml_vec_dot_q8_0_q8_0;
+    typeof(ggml_vec_dot_q4_B_q8_B) *ptr_ggml_vec_dot_q4_B_q8_B;
+    typeof(ggml_vec_dot_q8_B_q8_B) *ptr_ggml_vec_dot_q8_B_q8_B;
     typeof(ggml_vec_dot_q2_K_q8_K) *ptr_ggml_vec_dot_q2_K_q8_K;
     typeof(ggml_vec_dot_q3_K_q8_K) *ptr_ggml_vec_dot_q3_K_q8_K;
     typeof(ggml_vec_dot_q4_K_q8_K) *ptr_ggml_vec_dot_q4_K_q8_K;
@@ -772,9 +850,11 @@ static const struct QuantFuncs {
     typeof(quantize_q6_K) *ptr_quantize_q6_K;
     typeof(quantize_q4_0) *ptr_quantize_q4_0;
     typeof(quantize_q4_1) *ptr_quantize_q4_1;
+    typeof(quantize_q4_B) *ptr_quantize_q4_B;
     typeof(quantize_q5_0) *ptr_quantize_q5_0;
     typeof(quantize_q5_1) *ptr_quantize_q5_1;
     typeof(quantize_q8_0) *ptr_quantize_q8_0;
+    typeof(quantize_q8_B) *ptr_quantize_q8_B;
     typeof(iq2xs_init_impl) *ptr_iq2xs_init_impl;
     typeof(iq2xs_free_impl) *ptr_iq2xs_free_impl;
     typeof(iq3xs_init_impl) *ptr_iq3xs_init_impl;
@@ -786,10 +866,12 @@ static const struct QuantFuncs {
         if (X86_HAVE(FMA) && X86_HAVE(F16C) && X86_HAVE(AVX) && X86_HAVE(AVX2) && X86_HAVE(AVX512F)) {
             ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_avx512;
             ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_avx512;
+            ptr_quantize_row_q4_B_reference = quantize_row_q4_B_reference_amd_avx512;
             ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_avx512;
             ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_avx512;
             ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_avx512;
             ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_avx512;
+            ptr_quantize_row_q8_B_reference = quantize_row_q8_B_reference_amd_avx512;
             ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_avx512;
             ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_avx512;
             ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_avx512;
@@ -803,9 +885,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_avx512;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_avx512;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_avx512;
+            ptr_quantize_row_q4_B = quantize_row_q4_B_amd_avx512;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_avx512;
             ptr_quantize_row_q5_1 = quantize_row_q5_1_amd_avx512;
             ptr_quantize_row_q8_0 = quantize_row_q8_0_amd_avx512;
+            ptr_quantize_row_q8_B = quantize_row_q8_B_amd_avx512;
             ptr_quantize_row_q8_1 = quantize_row_q8_1_amd_avx512;
             ptr_quantize_row_q2_K = quantize_row_q2_K_amd_avx512;
             ptr_quantize_row_q3_K = quantize_row_q3_K_amd_avx512;
@@ -820,9 +904,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s = quantize_row_iq2_s_amd_avx512;
             ptr_dequantize_row_q4_0 = dequantize_row_q4_0_amd_avx512;
             ptr_dequantize_row_q4_1 = dequantize_row_q4_1_amd_avx512;
+            ptr_dequantize_row_q4_B = dequantize_row_q4_B_amd_avx512;
             ptr_dequantize_row_q5_0 = dequantize_row_q5_0_amd_avx512;
             ptr_dequantize_row_q5_1 = dequantize_row_q5_1_amd_avx512;
             ptr_dequantize_row_q8_0 = dequantize_row_q8_0_amd_avx512;
+            ptr_dequantize_row_q8_B = dequantize_row_q8_B_amd_avx512;
             ptr_dequantize_row_q2_K = dequantize_row_q2_K_amd_avx512;
             ptr_dequantize_row_q3_K = dequantize_row_q3_K_amd_avx512;
             ptr_dequantize_row_q4_K = dequantize_row_q4_K_amd_avx512;
@@ -843,6 +929,8 @@ static const struct QuantFuncs {
             ptr_ggml_vec_dot_q5_0_q8_0 = ggml_vec_dot_q5_0_q8_0_amd_avx512;
             ptr_ggml_vec_dot_q5_1_q8_1 = ggml_vec_dot_q5_1_q8_1_amd_avx512;
             ptr_ggml_vec_dot_q8_0_q8_0 = ggml_vec_dot_q8_0_q8_0_amd_avx512;
+            ptr_ggml_vec_dot_q4_B_q8_B = ggml_vec_dot_q4_B_q8_B_amd_avx512;
+            ptr_ggml_vec_dot_q8_B_q8_B = ggml_vec_dot_q8_B_q8_B_amd_avx512;
             ptr_ggml_vec_dot_q2_K_q8_K = ggml_vec_dot_q2_K_q8_K_amd_avx512;
             ptr_ggml_vec_dot_q3_K_q8_K = ggml_vec_dot_q3_K_q8_K_amd_avx512;
             ptr_ggml_vec_dot_q4_K_q8_K = ggml_vec_dot_q4_K_q8_K_amd_avx512;
@@ -873,9 +961,11 @@ static const struct QuantFuncs {
             ptr_quantize_q6_K = quantize_q6_K_amd_avx512;
             ptr_quantize_q4_0 = quantize_q4_0_amd_avx512;
             ptr_quantize_q4_1 = quantize_q4_1_amd_avx512;
+            ptr_quantize_q4_B = quantize_q4_B_amd_avx512;
             ptr_quantize_q5_0 = quantize_q5_0_amd_avx512;
             ptr_quantize_q5_1 = quantize_q5_1_amd_avx512;
             ptr_quantize_q8_0 = quantize_q8_0_amd_avx512;
+            ptr_quantize_q8_B = quantize_q8_B_amd_avx512;
             ptr_iq2xs_init_impl = iq2xs_init_impl_amd_avx512;
             ptr_iq2xs_free_impl = iq2xs_free_impl_amd_avx512;
             ptr_iq3xs_init_impl = iq3xs_init_impl_amd_avx512;
@@ -888,10 +978,12 @@ static const struct QuantFuncs {
         if (X86_HAVE(FMA) && X86_HAVE(F16C) && X86_HAVE(AVX) && X86_HAVE(AVX2)) {
             ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_avx2;
             ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_avx2;
+            ptr_quantize_row_q4_B_reference = quantize_row_q4_B_reference_amd_avx2;
             ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_avx2;
             ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_avx2;
             ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_avx2;
             ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_avx2;
+            ptr_quantize_row_q8_B_reference = quantize_row_q8_B_reference_amd_avx2;
             ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_avx2;
             ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_avx2;
             ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_avx2;
@@ -905,9 +997,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_avx2;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_avx2;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_avx2;
+            ptr_quantize_row_q4_B = quantize_row_q4_B_amd_avx2;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_avx2;
             ptr_quantize_row_q5_1 = quantize_row_q5_1_amd_avx2;
             ptr_quantize_row_q8_0 = quantize_row_q8_0_amd_avx2;
+            ptr_quantize_row_q8_B = quantize_row_q8_B_amd_avx2;
             ptr_quantize_row_q8_1 = quantize_row_q8_1_amd_avx2;
             ptr_quantize_row_q2_K = quantize_row_q2_K_amd_avx2;
             ptr_quantize_row_q3_K = quantize_row_q3_K_amd_avx2;
@@ -922,9 +1016,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s = quantize_row_iq2_s_amd_avx2;
             ptr_dequantize_row_q4_0 = dequantize_row_q4_0_amd_avx2;
             ptr_dequantize_row_q4_1 = dequantize_row_q4_1_amd_avx2;
+            ptr_dequantize_row_q4_B = dequantize_row_q4_B_amd_avx2;
             ptr_dequantize_row_q5_0 = dequantize_row_q5_0_amd_avx2;
             ptr_dequantize_row_q5_1 = dequantize_row_q5_1_amd_avx2;
             ptr_dequantize_row_q8_0 = dequantize_row_q8_0_amd_avx2;
+            ptr_dequantize_row_q8_B = dequantize_row_q8_B_amd_avx2;
             ptr_dequantize_row_q2_K = dequantize_row_q2_K_amd_avx2;
             ptr_dequantize_row_q3_K = dequantize_row_q3_K_amd_avx2;
             ptr_dequantize_row_q4_K = dequantize_row_q4_K_amd_avx2;
@@ -945,6 +1041,8 @@ static const struct QuantFuncs {
             ptr_ggml_vec_dot_q5_0_q8_0 = ggml_vec_dot_q5_0_q8_0_amd_avx2;
             ptr_ggml_vec_dot_q5_1_q8_1 = ggml_vec_dot_q5_1_q8_1_amd_avx2;
             ptr_ggml_vec_dot_q8_0_q8_0 = ggml_vec_dot_q8_0_q8_0_amd_avx2;
+            ptr_ggml_vec_dot_q4_B_q8_B = ggml_vec_dot_q4_B_q8_B_amd_avx2;
+            ptr_ggml_vec_dot_q8_B_q8_B = ggml_vec_dot_q8_B_q8_B_amd_avx2;
             ptr_ggml_vec_dot_q2_K_q8_K = ggml_vec_dot_q2_K_q8_K_amd_avx2;
             ptr_ggml_vec_dot_q3_K_q8_K = ggml_vec_dot_q3_K_q8_K_amd_avx2;
             ptr_ggml_vec_dot_q4_K_q8_K = ggml_vec_dot_q4_K_q8_K_amd_avx2;
@@ -975,9 +1073,11 @@ static const struct QuantFuncs {
             ptr_quantize_q6_K = quantize_q6_K_amd_avx2;
             ptr_quantize_q4_0 = quantize_q4_0_amd_avx2;
             ptr_quantize_q4_1 = quantize_q4_1_amd_avx2;
+            ptr_quantize_q4_B = quantize_q4_B_amd_avx2;
             ptr_quantize_q5_0 = quantize_q5_0_amd_avx2;
             ptr_quantize_q5_1 = quantize_q5_1_amd_avx2;
             ptr_quantize_q8_0 = quantize_q8_0_amd_avx2;
+            ptr_quantize_q8_B = quantize_q8_B_amd_avx2;
             ptr_iq2xs_init_impl = iq2xs_init_impl_amd_avx2;
             ptr_iq2xs_free_impl = iq2xs_free_impl_amd_avx2;
             ptr_iq3xs_init_impl = iq3xs_init_impl_amd_avx2;
@@ -990,10 +1090,12 @@ static const struct QuantFuncs {
         if (X86_HAVE(AVX)) {
             ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_avx;
             ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_avx;
+            ptr_quantize_row_q4_B_reference = quantize_row_q4_B_reference_amd_avx;
             ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_avx;
             ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_avx;
             ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_avx;
             ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_avx;
+            ptr_quantize_row_q8_B_reference = quantize_row_q8_B_reference_amd_avx;
             ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_avx;
             ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_avx;
             ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_avx;
@@ -1007,9 +1109,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_avx;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_avx;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_avx;
+            ptr_quantize_row_q4_B = quantize_row_q4_B_amd_avx;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_avx;
             ptr_quantize_row_q5_1 = quantize_row_q5_1_amd_avx;
             ptr_quantize_row_q8_0 = quantize_row_q8_0_amd_avx;
+            ptr_quantize_row_q8_B = quantize_row_q8_B_amd_avx;
             ptr_quantize_row_q8_1 = quantize_row_q8_1_amd_avx;
             ptr_quantize_row_q2_K = quantize_row_q2_K_amd_avx;
             ptr_quantize_row_q3_K = quantize_row_q3_K_amd_avx;
@@ -1024,9 +1128,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s = quantize_row_iq2_s_amd_avx;
             ptr_dequantize_row_q4_0 = dequantize_row_q4_0_amd_avx;
             ptr_dequantize_row_q4_1 = dequantize_row_q4_1_amd_avx;
+            ptr_dequantize_row_q4_B = dequantize_row_q4_B_amd_avx;
             ptr_dequantize_row_q5_0 = dequantize_row_q5_0_amd_avx;
             ptr_dequantize_row_q5_1 = dequantize_row_q5_1_amd_avx;
             ptr_dequantize_row_q8_0 = dequantize_row_q8_0_amd_avx;
+            ptr_dequantize_row_q8_B = dequantize_row_q8_B_amd_avx;
             ptr_dequantize_row_q2_K = dequantize_row_q2_K_amd_avx;
             ptr_dequantize_row_q3_K = dequantize_row_q3_K_amd_avx;
             ptr_dequantize_row_q4_K = dequantize_row_q4_K_amd_avx;
@@ -1047,6 +1153,8 @@ static const struct QuantFuncs {
             ptr_ggml_vec_dot_q5_0_q8_0 = ggml_vec_dot_q5_0_q8_0_amd_avx;
             ptr_ggml_vec_dot_q5_1_q8_1 = ggml_vec_dot_q5_1_q8_1_amd_avx;
             ptr_ggml_vec_dot_q8_0_q8_0 = ggml_vec_dot_q8_0_q8_0_amd_avx;
+            ptr_ggml_vec_dot_q4_B_q8_B = ggml_vec_dot_q4_B_q8_B_amd_avx;
+            ptr_ggml_vec_dot_q8_B_q8_B = ggml_vec_dot_q8_B_q8_B_amd_avx;
             ptr_ggml_vec_dot_q2_K_q8_K = ggml_vec_dot_q2_K_q8_K_amd_avx;
             ptr_ggml_vec_dot_q3_K_q8_K = ggml_vec_dot_q3_K_q8_K_amd_avx;
             ptr_ggml_vec_dot_q4_K_q8_K = ggml_vec_dot_q4_K_q8_K_amd_avx;
@@ -1077,9 +1185,11 @@ static const struct QuantFuncs {
             ptr_quantize_q6_K = quantize_q6_K_amd_avx;
             ptr_quantize_q4_0 = quantize_q4_0_amd_avx;
             ptr_quantize_q4_1 = quantize_q4_1_amd_avx;
+            ptr_quantize_q4_B = quantize_q4_B_amd_avx;
             ptr_quantize_q5_0 = quantize_q5_0_amd_avx;
             ptr_quantize_q5_1 = quantize_q5_1_amd_avx;
             ptr_quantize_q8_0 = quantize_q8_0_amd_avx;
+            ptr_quantize_q8_B = quantize_q8_B_amd_avx;
             ptr_iq2xs_init_impl = iq2xs_init_impl_amd_avx;
             ptr_iq2xs_free_impl = iq2xs_free_impl_amd_avx;
             ptr_iq3xs_init_impl = iq3xs_init_impl_amd_avx;
@@ -1092,10 +1202,12 @@ static const struct QuantFuncs {
         if (X86_HAVE(SSSE3)) {
             ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_ssse3;
             ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_ssse3;
+            ptr_quantize_row_q4_B_reference = quantize_row_q4_B_reference_amd_ssse3;
             ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_ssse3;
             ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_ssse3;
             ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_ssse3;
             ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_ssse3;
+            ptr_quantize_row_q8_B_reference = quantize_row_q8_B_reference_amd_ssse3;
             ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_ssse3;
             ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_ssse3;
             ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_ssse3;
@@ -1109,9 +1221,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_ssse3;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_ssse3;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_ssse3;
+            ptr_quantize_row_q4_B = quantize_row_q4_B_amd_ssse3;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_ssse3;
             ptr_quantize_row_q5_1 = quantize_row_q5_1_amd_ssse3;
             ptr_quantize_row_q8_0 = quantize_row_q8_0_amd_ssse3;
+            ptr_quantize_row_q8_B = quantize_row_q8_B_amd_ssse3;
             ptr_quantize_row_q8_1 = quantize_row_q8_1_amd_ssse3;
             ptr_quantize_row_q2_K = quantize_row_q2_K_amd_ssse3;
             ptr_quantize_row_q3_K = quantize_row_q3_K_amd_ssse3;
@@ -1126,9 +1240,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s = quantize_row_iq2_s_amd_ssse3;
             ptr_dequantize_row_q4_0 = dequantize_row_q4_0_amd_ssse3;
             ptr_dequantize_row_q4_1 = dequantize_row_q4_1_amd_ssse3;
+            ptr_dequantize_row_q4_B = dequantize_row_q4_B_amd_ssse3;
             ptr_dequantize_row_q5_0 = dequantize_row_q5_0_amd_ssse3;
             ptr_dequantize_row_q5_1 = dequantize_row_q5_1_amd_ssse3;
             ptr_dequantize_row_q8_0 = dequantize_row_q8_0_amd_ssse3;
+            ptr_dequantize_row_q8_B = dequantize_row_q8_B_amd_ssse3;
             ptr_dequantize_row_q2_K = dequantize_row_q2_K_amd_ssse3;
             ptr_dequantize_row_q3_K = dequantize_row_q3_K_amd_ssse3;
             ptr_dequantize_row_q4_K = dequantize_row_q4_K_amd_ssse3;
@@ -1149,6 +1265,8 @@ static const struct QuantFuncs {
             ptr_ggml_vec_dot_q5_0_q8_0 = ggml_vec_dot_q5_0_q8_0_amd_ssse3;
             ptr_ggml_vec_dot_q5_1_q8_1 = ggml_vec_dot_q5_1_q8_1_amd_ssse3;
             ptr_ggml_vec_dot_q8_0_q8_0 = ggml_vec_dot_q8_0_q8_0_amd_ssse3;
+            ptr_ggml_vec_dot_q4_B_q8_B = ggml_vec_dot_q4_B_q8_B_amd_ssse3;
+            ptr_ggml_vec_dot_q8_B_q8_B = ggml_vec_dot_q8_B_q8_B_amd_ssse3;
             ptr_ggml_vec_dot_q2_K_q8_K = ggml_vec_dot_q2_K_q8_K_amd_ssse3;
             ptr_ggml_vec_dot_q3_K_q8_K = ggml_vec_dot_q3_K_q8_K_amd_ssse3;
             ptr_ggml_vec_dot_q4_K_q8_K = ggml_vec_dot_q4_K_q8_K_amd_ssse3;
@@ -1179,9 +1297,11 @@ static const struct QuantFuncs {
             ptr_quantize_q6_K = quantize_q6_K_amd_ssse3;
             ptr_quantize_q4_0 = quantize_q4_0_amd_ssse3;
             ptr_quantize_q4_1 = quantize_q4_1_amd_ssse3;
+            ptr_quantize_q4_B = quantize_q4_B_amd_ssse3;
             ptr_quantize_q5_0 = quantize_q5_0_amd_ssse3;
             ptr_quantize_q5_1 = quantize_q5_1_amd_ssse3;
             ptr_quantize_q8_0 = quantize_q8_0_amd_ssse3;
+            ptr_quantize_q8_B = quantize_q8_B_amd_ssse3;
             ptr_iq2xs_init_impl = iq2xs_init_impl_amd_ssse3;
             ptr_iq2xs_free_impl = iq2xs_free_impl_amd_ssse3;
             ptr_iq3xs_init_impl = iq3xs_init_impl_amd_ssse3;
@@ -1194,10 +1314,12 @@ static const struct QuantFuncs {
         if (1) {
             ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_k8;
             ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_k8;
+            ptr_quantize_row_q4_B_reference = quantize_row_q4_B_reference_amd_k8;
             ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_k8;
             ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_k8;
             ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_k8;
             ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_k8;
+            ptr_quantize_row_q8_B_reference = quantize_row_q8_B_reference_amd_k8;
             ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_k8;
             ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_k8;
             ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_k8;
@@ -1211,9 +1333,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_k8;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_k8;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_k8;
+            ptr_quantize_row_q4_B = quantize_row_q4_B_amd_k8;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_k8;
             ptr_quantize_row_q5_1 = quantize_row_q5_1_amd_k8;
             ptr_quantize_row_q8_0 = quantize_row_q8_0_amd_k8;
+            ptr_quantize_row_q8_B = quantize_row_q8_B_amd_k8;
             ptr_quantize_row_q8_1 = quantize_row_q8_1_amd_k8;
             ptr_quantize_row_q2_K = quantize_row_q2_K_amd_k8;
             ptr_quantize_row_q3_K = quantize_row_q3_K_amd_k8;
@@ -1228,9 +1352,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s = quantize_row_iq2_s_amd_k8;
             ptr_dequantize_row_q4_0 = dequantize_row_q4_0_amd_k8;
             ptr_dequantize_row_q4_1 = dequantize_row_q4_1_amd_k8;
+            ptr_dequantize_row_q4_B = dequantize_row_q4_B_amd_k8;
             ptr_dequantize_row_q5_0 = dequantize_row_q5_0_amd_k8;
             ptr_dequantize_row_q5_1 = dequantize_row_q5_1_amd_k8;
             ptr_dequantize_row_q8_0 = dequantize_row_q8_0_amd_k8;
+            ptr_dequantize_row_q8_B = dequantize_row_q8_B_amd_k8;
             ptr_dequantize_row_q2_K = dequantize_row_q2_K_amd_k8;
             ptr_dequantize_row_q3_K = dequantize_row_q3_K_amd_k8;
             ptr_dequantize_row_q4_K = dequantize_row_q4_K_amd_k8;
@@ -1251,6 +1377,8 @@ static const struct QuantFuncs {
             ptr_ggml_vec_dot_q5_0_q8_0 = ggml_vec_dot_q5_0_q8_0_amd_k8;
             ptr_ggml_vec_dot_q5_1_q8_1 = ggml_vec_dot_q5_1_q8_1_amd_k8;
             ptr_ggml_vec_dot_q8_0_q8_0 = ggml_vec_dot_q8_0_q8_0_amd_k8;
+            ptr_ggml_vec_dot_q4_B_q8_B = ggml_vec_dot_q4_B_q8_B_amd_k8;
+            ptr_ggml_vec_dot_q8_B_q8_B = ggml_vec_dot_q8_B_q8_B_amd_k8;
             ptr_ggml_vec_dot_q2_K_q8_K = ggml_vec_dot_q2_K_q8_K_amd_k8;
             ptr_ggml_vec_dot_q3_K_q8_K = ggml_vec_dot_q3_K_q8_K_amd_k8;
             ptr_ggml_vec_dot_q4_K_q8_K = ggml_vec_dot_q4_K_q8_K_amd_k8;
@@ -1281,9 +1409,11 @@ static const struct QuantFuncs {
             ptr_quantize_q6_K = quantize_q6_K_amd_k8;
             ptr_quantize_q4_0 = quantize_q4_0_amd_k8;
             ptr_quantize_q4_1 = quantize_q4_1_amd_k8;
+            ptr_quantize_q4_B = quantize_q4_B_amd_k8;
             ptr_quantize_q5_0 = quantize_q5_0_amd_k8;
             ptr_quantize_q5_1 = quantize_q5_1_amd_k8;
             ptr_quantize_q8_0 = quantize_q8_0_amd_k8;
+            ptr_quantize_q8_B = quantize_q8_B_amd_k8;
             ptr_iq2xs_init_impl = iq2xs_init_impl_amd_k8;
             ptr_iq2xs_free_impl = iq2xs_free_impl_amd_k8;
             ptr_iq3xs_init_impl = iq3xs_init_impl_amd_k8;
@@ -1296,10 +1426,12 @@ static const struct QuantFuncs {
         if (1) {
             ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_arm80;
             ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_arm80;
+            ptr_quantize_row_q4_B_reference = quantize_row_q4_B_reference_arm80;
             ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_arm80;
             ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_arm80;
             ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_arm80;
             ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_arm80;
+            ptr_quantize_row_q8_B_reference = quantize_row_q8_B_reference_arm80;
             ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_arm80;
             ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_arm80;
             ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_arm80;
@@ -1313,9 +1445,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_arm80;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_arm80;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_arm80;
+            ptr_quantize_row_q4_B = quantize_row_q4_B_arm80;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_arm80;
             ptr_quantize_row_q5_1 = quantize_row_q5_1_arm80;
             ptr_quantize_row_q8_0 = quantize_row_q8_0_arm80;
+            ptr_quantize_row_q8_B = quantize_row_q8_B_arm80;
             ptr_quantize_row_q8_1 = quantize_row_q8_1_arm80;
             ptr_quantize_row_q2_K = quantize_row_q2_K_arm80;
             ptr_quantize_row_q3_K = quantize_row_q3_K_arm80;
@@ -1330,9 +1464,11 @@ static const struct QuantFuncs {
             ptr_quantize_row_iq2_s = quantize_row_iq2_s_arm80;
             ptr_dequantize_row_q4_0 = dequantize_row_q4_0_arm80;
             ptr_dequantize_row_q4_1 = dequantize_row_q4_1_arm80;
+            ptr_dequantize_row_q4_B = dequantize_row_q4_B_arm80;
             ptr_dequantize_row_q5_0 = dequantize_row_q5_0_arm80;
             ptr_dequantize_row_q5_1 = dequantize_row_q5_1_arm80;
             ptr_dequantize_row_q8_0 = dequantize_row_q8_0_arm80;
+            ptr_dequantize_row_q8_B = dequantize_row_q8_B_arm80;
             ptr_dequantize_row_q2_K = dequantize_row_q2_K_arm80;
             ptr_dequantize_row_q3_K = dequantize_row_q3_K_arm80;
             ptr_dequantize_row_q4_K = dequantize_row_q4_K_arm80;
@@ -1353,6 +1489,8 @@ static const struct QuantFuncs {
             ptr_ggml_vec_dot_q5_0_q8_0 = ggml_vec_dot_q5_0_q8_0_arm80;
             ptr_ggml_vec_dot_q5_1_q8_1 = ggml_vec_dot_q5_1_q8_1_arm80;
             ptr_ggml_vec_dot_q8_0_q8_0 = ggml_vec_dot_q8_0_q8_0_arm80;
+            ptr_ggml_vec_dot_q4_B_q8_B = ggml_vec_dot_q4_B_q8_B_arm80;
+            ptr_ggml_vec_dot_q8_B_q8_B = ggml_vec_dot_q8_B_q8_B_arm80;
             ptr_ggml_vec_dot_q2_K_q8_K = ggml_vec_dot_q2_K_q8_K_arm80;
             ptr_ggml_vec_dot_q3_K_q8_K = ggml_vec_dot_q3_K_q8_K_arm80;
             ptr_ggml_vec_dot_q4_K_q8_K = ggml_vec_dot_q4_K_q8_K_arm80;
@@ -1383,9 +1521,11 @@ static const struct QuantFuncs {
             ptr_quantize_q6_K = quantize_q6_K_arm80;
             ptr_quantize_q4_0 = quantize_q4_0_arm80;
             ptr_quantize_q4_1 = quantize_q4_1_arm80;
+            ptr_quantize_q4_B = quantize_q4_B_arm80;
             ptr_quantize_q5_0 = quantize_q5_0_arm80;
             ptr_quantize_q5_1 = quantize_q5_1_arm80;
             ptr_quantize_q8_0 = quantize_q8_0_arm80;
+            ptr_quantize_q8_B = quantize_q8_B_arm80;
             ptr_iq2xs_init_impl = iq2xs_init_impl_arm80;
             ptr_iq2xs_free_impl = iq2xs_free_impl_arm80;
             ptr_iq3xs_init_impl = iq3xs_init_impl_arm80;
@@ -1405,6 +1545,10 @@ void quantize_row_q4_1_reference(const float * GGML_RESTRICT x, block_q4_1 * GGM
   return funcs.ptr_quantize_row_q4_1_reference(x, y, k);
 }
 
+void quantize_row_q4_B_reference(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q4_B_reference(x, y, k);
+}
+
 void quantize_row_q5_0_reference(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k) {
   return funcs.ptr_quantize_row_q5_0_reference(x, y, k);
 }
@@ -1419,6 +1563,10 @@ void quantize_row_q8_0_reference(const float * GGML_RESTRICT x, block_q8_0 * GGM
 
 void quantize_row_q8_1_reference(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k) {
   return funcs.ptr_quantize_row_q8_1_reference(x, y, k);
+}
+
+void quantize_row_q8_B_reference(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q8_B_reference(x, y, k);
 }
 
 void quantize_row_q2_K_reference(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k) {
@@ -1473,6 +1621,10 @@ void quantize_row_q4_1(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, in
   return funcs.ptr_quantize_row_q4_1(x, y, k);
 }
 
+void quantize_row_q4_B(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q4_B(x, y, k);
+}
+
 void quantize_row_q5_0(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k) {
   return funcs.ptr_quantize_row_q5_0(x, y, k);
 }
@@ -1483,6 +1635,10 @@ void quantize_row_q5_1(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, in
 
 void quantize_row_q8_0(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k) {
   return funcs.ptr_quantize_row_q8_0(x, y, k);
+}
+
+void quantize_row_q8_B(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q8_B(x, y, k);
 }
 
 void quantize_row_q8_1(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k) {
@@ -1541,6 +1697,10 @@ void dequantize_row_q4_1(const block_q4_1 * GGML_RESTRICT x, float * GGML_RESTRI
   return funcs.ptr_dequantize_row_q4_1(x, y, k);
 }
 
+void dequantize_row_q4_B(const block_q4_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_dequantize_row_q4_B(x, y, k);
+}
+
 void dequantize_row_q5_0(const block_q5_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k) {
   return funcs.ptr_dequantize_row_q5_0(x, y, k);
 }
@@ -1551,6 +1711,10 @@ void dequantize_row_q5_1(const block_q5_1 * GGML_RESTRICT x, float * GGML_RESTRI
 
 void dequantize_row_q8_0(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k) {
   return funcs.ptr_dequantize_row_q8_0(x, y, k);
+}
+
+void dequantize_row_q8_B(const block_q8_0 * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_dequantize_row_q8_B(x, y, k);
 }
 
 void dequantize_row_q2_K(const block_q2_K * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k) {
@@ -1631,6 +1795,14 @@ void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
 
 void ggml_vec_dot_q8_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
   return funcs.ptr_ggml_vec_dot_q8_0_q8_0(n, s, bs, vx, bx, vy, by, nrc);
+}
+
+void ggml_vec_dot_q4_B_q8_B(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+  return funcs.ptr_ggml_vec_dot_q4_B_q8_B(n, s, bs, vx, bx, vy, by, nrc);
+}
+
+void ggml_vec_dot_q8_B_q8_B(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+  return funcs.ptr_ggml_vec_dot_q8_B_q8_B(n, s, bs, vx, bx, vy, by, nrc);
 }
 
 void ggml_vec_dot_q2_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
@@ -1753,6 +1925,10 @@ size_t quantize_q4_1(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, 
   return funcs.ptr_quantize_q4_1(src, dst, nrows, n_per_row, imatrix);
 }
 
+size_t quantize_q4_B(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix) {
+  return funcs.ptr_quantize_q4_B(src, dst, nrows, n_per_row, imatrix);
+}
+
 size_t quantize_q5_0(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix) {
   return funcs.ptr_quantize_q5_0(src, dst, nrows, n_per_row, imatrix);
 }
@@ -1763,6 +1939,10 @@ size_t quantize_q5_1(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, 
 
 size_t quantize_q8_0(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix) {
   return funcs.ptr_quantize_q8_0(src, dst, nrows, n_per_row, imatrix);
+}
+
+size_t quantize_q8_B(const float * GGML_RESTRICT src, void * GGML_RESTRICT dst, int64_t nrows, int64_t n_per_row, const float * imatrix) {
+  return funcs.ptr_quantize_q8_B(src, dst, nrows, n_per_row, imatrix);
 }
 
 void iq2xs_init_impl(enum ggml_type type) {

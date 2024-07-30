@@ -24,6 +24,7 @@ struct quant_option {
 static const std::vector<struct quant_option> QUANT_OPTIONS = {
     { "Q4_0",   LLAMA_FTYPE_MOSTLY_Q4_0,   " 3.56G, +0.2166 ppl @ LLaMA-v1-7B", },
     { "Q4_1",   LLAMA_FTYPE_MOSTLY_Q4_1,   " 3.90G, +0.1585 ppl @ LLaMA-v1-7B", },
+    { "Q4_B",   LLAMA_FTYPE_MOSTLY_Q4_B,   " 3.56G, 5.9624 +/- 0.03348 ppl @ LLaMA-v2-7B", },
     { "Q5_0",   LLAMA_FTYPE_MOSTLY_Q5_0,   " 4.33G, +0.0683 ppl @ LLaMA-v1-7B", },
     { "Q5_1",   LLAMA_FTYPE_MOSTLY_Q5_1,   " 4.70G, +0.0349 ppl @ LLaMA-v1-7B", },
     { "IQ2_XXS",LLAMA_FTYPE_MOSTLY_IQ2_XXS," 2.06 bpw quantization",            },
@@ -52,6 +53,7 @@ static const std::vector<struct quant_option> QUANT_OPTIONS = {
     { "Q5_K_M", LLAMA_FTYPE_MOSTLY_Q5_K_M, " 4.45G, +0.0122 ppl @ LLaMA-v1-7B", },
     { "Q6_K",   LLAMA_FTYPE_MOSTLY_Q6_K,   " 5.15G, +0.0008 ppl @ LLaMA-v1-7B", },
     { "Q8_0",   LLAMA_FTYPE_MOSTLY_Q8_0,   " 6.70G, +0.0004 ppl @ LLaMA-v1-7B", },
+    { "Q8_B",   LLAMA_FTYPE_MOSTLY_Q8_B,   " 6.70G, 5.8011 +/- 0.03239 ppl @ LLaMA-v1-7B", },
     { "F16",    LLAMA_FTYPE_MOSTLY_F16,    "14.00G, -0.0020 ppl @ Mistral-7B", },
     { "BF16",   LLAMA_FTYPE_MOSTLY_BF16,   "14.00G, -0.0050 ppl @ Mistral-7B", },
     { "F32",    LLAMA_FTYPE_ALL_F32,       "26.00G              @ 7B", },

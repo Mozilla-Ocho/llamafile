@@ -1,10 +1,12 @@
 #ifdef __x86_64__
 #define quantize_row_q4_0_reference quantize_row_q4_0_reference_amd_k8
 #define quantize_row_q4_1_reference quantize_row_q4_1_reference_amd_k8
+#define quantize_row_q4_B_reference quantize_row_q4_B_reference_amd_k8
 #define quantize_row_q5_0_reference quantize_row_q5_0_reference_amd_k8
 #define quantize_row_q5_1_reference quantize_row_q5_1_reference_amd_k8
 #define quantize_row_q8_0_reference quantize_row_q8_0_reference_amd_k8
 #define quantize_row_q8_1_reference quantize_row_q8_1_reference_amd_k8
+#define quantize_row_q8_B_reference quantize_row_q8_B_reference_amd_k8
 #define quantize_row_q2_K_reference quantize_row_q2_K_reference_amd_k8
 #define quantize_row_q3_K_reference quantize_row_q3_K_reference_amd_k8
 #define quantize_row_q4_K_reference quantize_row_q4_K_reference_amd_k8
@@ -18,9 +20,11 @@
 #define quantize_row_iq2_s_reference quantize_row_iq2_s_reference_amd_k8
 #define quantize_row_q4_0 quantize_row_q4_0_amd_k8
 #define quantize_row_q4_1 quantize_row_q4_1_amd_k8
+#define quantize_row_q4_B quantize_row_q4_B_amd_k8
 #define quantize_row_q5_0 quantize_row_q5_0_amd_k8
 #define quantize_row_q5_1 quantize_row_q5_1_amd_k8
 #define quantize_row_q8_0 quantize_row_q8_0_amd_k8
+#define quantize_row_q8_B quantize_row_q8_B_amd_k8
 #define quantize_row_q8_1 quantize_row_q8_1_amd_k8
 #define quantize_row_q2_K quantize_row_q2_K_amd_k8
 #define quantize_row_q3_K quantize_row_q3_K_amd_k8
@@ -35,9 +39,11 @@
 #define quantize_row_iq2_s quantize_row_iq2_s_amd_k8
 #define dequantize_row_q4_0 dequantize_row_q4_0_amd_k8
 #define dequantize_row_q4_1 dequantize_row_q4_1_amd_k8
+#define dequantize_row_q4_B dequantize_row_q4_B_amd_k8
 #define dequantize_row_q5_0 dequantize_row_q5_0_amd_k8
 #define dequantize_row_q5_1 dequantize_row_q5_1_amd_k8
 #define dequantize_row_q8_0 dequantize_row_q8_0_amd_k8
+#define dequantize_row_q8_B dequantize_row_q8_B_amd_k8
 #define dequantize_row_q2_K dequantize_row_q2_K_amd_k8
 #define dequantize_row_q3_K dequantize_row_q3_K_amd_k8
 #define dequantize_row_q4_K dequantize_row_q4_K_amd_k8
@@ -58,6 +64,8 @@
 #define ggml_vec_dot_q5_0_q8_0 ggml_vec_dot_q5_0_q8_0_amd_k8
 #define ggml_vec_dot_q5_1_q8_1 ggml_vec_dot_q5_1_q8_1_amd_k8
 #define ggml_vec_dot_q8_0_q8_0 ggml_vec_dot_q8_0_q8_0_amd_k8
+#define ggml_vec_dot_q4_B_q8_B ggml_vec_dot_q4_B_q8_B_amd_k8
+#define ggml_vec_dot_q8_B_q8_B ggml_vec_dot_q8_B_q8_B_amd_k8
 #define ggml_vec_dot_q2_K_q8_K ggml_vec_dot_q2_K_q8_K_amd_k8
 #define ggml_vec_dot_q3_K_q8_K ggml_vec_dot_q3_K_q8_K_amd_k8
 #define ggml_vec_dot_q4_K_q8_K ggml_vec_dot_q4_K_q8_K_amd_k8
@@ -88,9 +96,11 @@
 #define quantize_q6_K quantize_q6_K_amd_k8
 #define quantize_q4_0 quantize_q4_0_amd_k8
 #define quantize_q4_1 quantize_q4_1_amd_k8
+#define quantize_q4_B quantize_q4_B_amd_k8
 #define quantize_q5_0 quantize_q5_0_amd_k8
 #define quantize_q5_1 quantize_q5_1_amd_k8
 #define quantize_q8_0 quantize_q8_0_amd_k8
+#define quantize_q8_B quantize_q8_B_amd_k8
 #define iq2xs_init_impl iq2xs_init_impl_amd_k8
 #define iq2xs_free_impl iq2xs_free_impl_amd_k8
 #define iq3xs_init_impl iq3xs_init_impl_amd_k8
