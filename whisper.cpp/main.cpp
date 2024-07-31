@@ -14,6 +14,9 @@
 #include <vector>
 #include <cstring>
 
+#include "llamafile/llamafile.h"
+#include "llamafile/debug.h"
+
 #if defined(_MSC_VER)
 #pragma warning(disable: 4244 4267) // possible loss of data
 #endif
@@ -28,11 +31,11 @@ static void replace_all(std::string & s, const std::string & search, const std::
     }
 }
 
-int32_t get_num_physical_cores();
+int cpu_get_num_math();
 
 // command-line parameters
 struct whisper_params {
-    int32_t n_threads     = std::min(4, get_num_physical_cores());
+    int32_t n_threads     = cpu_get_num_math();
     int32_t n_processors  = 1;
     int32_t offset_t_ms   = 0;
     int32_t offset_n      = 0;
@@ -72,7 +75,6 @@ struct whisper_params {
     bool print_progress  = false;
     bool no_timestamps   = false;
     bool log_score       = false;
-    bool use_gpu         = true;
     bool flash_attn      = false;
 
     std::string language  = "en";
@@ -122,6 +124,33 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
             continue;
         }
 
+        if (arg == "--log-disable") {
+            FLAG_log_disable = true;
+        } else if (arg == "--trap") {
+            FLAG_trap = true;
+            FLAG_unsecure = true; // for better backtraces
+            llamafile_trapping_enabled(+1);
+        } else if (arg == "--unsecure") {
+            FLAG_unsecure = true;
+        } else if (arg == "--nocompile") {
+            FLAG_nocompile = true;
+        } else if (arg == "--recompile") {
+            FLAG_recompile = true;
+        } else if (arg == "--tinyblas") {
+            FLAG_tinyblas = true;  // undocumented
+        } else if (arg == "--gpu") {
+            if (++i >= argc) {
+                fprintf(stderr, "error: missing --gpu flag value\n");
+                exit(1);
+            }
+            FLAG_gpu = llamafile_gpu_parse(argv[i]);
+            if (FLAG_gpu == LLAMAFILE_GPU_ERROR) {
+                fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
+                exit(1);
+            }
+            return true;
+        } else
+
         if (arg == "-h" || arg == "--help") {
             whisper_print_usage(argc, argv, params);
             exit(0);
@@ -157,7 +186,7 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
         else if (arg == "-oj"   || arg == "--output-json")     { params.output_jsn      = true; }
         else if (arg == "-ojf"  || arg == "--output-json-full"){ params.output_jsn_full = params.output_jsn = true; }
         else if (arg == "-of"   || arg == "--output-file")     { params.fname_out.emplace_back(argv[++i]); }
-        else if (arg == "-np"   || arg == "--no-prints")       { params.no_prints       = true; }
+        else if (arg == "-np"   || arg == "--no-prints")       { params.no_prints       = true; FLAG_log_disable = true; }
         else if (arg == "-ps"   || arg == "--print-special")   { params.print_special   = true; }
         else if (arg == "-pc"   || arg == "--print-colors")    { params.print_colors    = true; }
         else if (arg == "-pp"   || arg == "--print-progress")  { params.print_progress  = true; }
@@ -170,7 +199,7 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
         else if (arg == "-oved" || arg == "--ov-e-device")     { params.openvino_encode_device = argv[++i]; }
         else if (arg == "-dtw"  || arg == "--dtw")             { params.dtw             = argv[++i]; }
         else if (arg == "-ls"   || arg == "--log-score")       { params.log_score       = true; }
-        else if (arg == "-ng"   || arg == "--no-gpu")          { params.use_gpu         = false; }
+        else if (arg == "-ng"   || arg == "--no-gpu")          { FLAG_gpu = LLAMAFILE_GPU_DISABLE; }
         else if (arg == "-fa"   || arg == "--flash-attn")      { params.flash_attn      = true; }
         else if (                  arg == "--suppress-regex")  { params.suppress_regex  = argv[++i]; }
         else if (                  arg == "--grammar")         { params.grammar         = argv[++i]; }
@@ -236,7 +265,7 @@ static void whisper_print_usage(int /*argc*/, char ** argv, const whisper_params
     fprintf(stderr, "  -oved D,   --ov-e-device DNAME [%-7s] the OpenVINO device used for encode inference\n",  params.openvino_encode_device.c_str());
     fprintf(stderr, "  -dtw MODEL --dtw MODEL         [%-7s] compute token-level timestamps\n",                 params.dtw.c_str());
     fprintf(stderr, "  -ls,       --log-score         [%-7s] log best decoder scores of tokens\n",              params.log_score?"true":"false");
-    fprintf(stderr, "  -ng,       --no-gpu            [%-7s] disable GPU\n",                                    params.use_gpu ? "false" : "true");
+    fprintf(stderr, "  -ng,       --no-gpu            [%-7s] disable GPU\n",                                    FLAG_gpu == LLAMAFILE_GPU_DISABLE ? "false" : "true");
     fprintf(stderr, "  -fa,       --flash-attn        [%-7s] flash attention\n",                                params.flash_attn ? "true" : "false");
     fprintf(stderr, "  --suppress-regex REGEX         [%-7s] regular expression matching tokens to suppress\n", params.suppress_regex.c_str());
     fprintf(stderr, "  --grammar GRAMMAR              [%-7s] GBNF grammar to guide decoding\n",                 params.grammar.c_str());
@@ -983,7 +1012,6 @@ int main(int argc, char ** argv) {
 
     struct whisper_context_params cparams = whisper_context_default_params();
 
-    cparams.use_gpu    = params.use_gpu;
     cparams.flash_attn = params.flash_attn;
 
     if (!params.dtw.empty()) {

@@ -79,7 +79,6 @@ struct whisper_params {
     bool print_realtime  = false;
     bool print_progress  = false;
     bool no_timestamps   = false;
-    bool use_gpu         = true;
     bool flash_attn      = false;
 
     std::string language        = "en";
@@ -184,7 +183,7 @@ bool whisper_params_parse(int argc, char ** argv, whisper_params & params, serve
         else if (arg == "-m"    || arg == "--model")           { params.model           = argv[++i]; }
         else if (arg == "-oved" || arg == "--ov-e-device")     { params.openvino_encode_device = argv[++i]; }
         else if (arg == "-dtw"  || arg == "--dtw")             { params.dtw             = argv[++i]; }
-        else if (arg == "-ng"   || arg == "--no-gpu")          { params.use_gpu         = false; }
+        else if (arg == "-ng"   || arg == "--no-gpu")          { FLAG_gpu = LLAMAFILE_GPU_DISABLE; }
         else if (arg == "-fa"   || arg == "--flash-attn")      { params.flash_attn      = true; }
         // server params
         else if (                  arg == "--port")            { sparams.port        = std::stoi(argv[++i]); }
@@ -194,6 +193,22 @@ bool whisper_params_parse(int argc, char ** argv, whisper_params & params, serve
         else if (                  arg == "--convert")         { sparams.ffmpeg_converter     = true; }
         else if (                  arg == "--recompile")       { FLAG_recompile = true; }
         else if (                  arg == "--nocompile")       { FLAG_nocompile = true; }
+        else if (                  arg == "--tinyblas")        { FLAG_tinyblas = true; }
+        else if (                  arg == "--unsecure")        { FLAG_unsecure = true; }
+
+        else if (arg == "--gpu") {
+            if (++i >= argc) {
+                fprintf(stderr, "error: missing --gpu flag value\n");
+                exit(1);
+            }
+            FLAG_gpu = llamafile_gpu_parse(argv[i]);
+            if (FLAG_gpu == LLAMAFILE_GPU_ERROR) {
+                fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
+                exit(1);
+            }
+            return true;
+        }
+
         else {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
             whisper_print_usage(argc, argv, params, sparams);
@@ -515,7 +530,6 @@ int main(int argc, char ** argv) {
     // whisper init
     struct whisper_context_params cparams = whisper_context_default_params();
 
-    cparams.use_gpu    = params.use_gpu;
     cparams.flash_attn = params.flash_attn;
 
     if (!params.dtw.empty()) {

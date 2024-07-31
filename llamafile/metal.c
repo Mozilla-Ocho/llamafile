@@ -74,6 +74,7 @@ static struct Metal {
     typeof(ggml_backend_metal_set_n_cb) *backend_set_n_cb;
     typeof(ggml_backend_metal_log_set_callback) *log_set_callback;
     typeof(ggml_backend_reg_metal_init) *reg_init;
+    typeof(ggml_backend_metal_supports_family) *supports_family;
 } ggml_metal;
 
 static const char *Dlerror(void) {
@@ -217,6 +218,7 @@ static bool LinkMetal(const char *dso) {
     ok &= !!(ggml_metal.backend_set_n_cb = cosmo_dlsym(lib, "ggml_backend_metal_set_n_cb"));
     ok &= !!(ggml_metal.log_set_callback = cosmo_dlsym(lib, "ggml_backend_metal_log_set_callback"));
     ok &= !!(ggml_metal.reg_init = cosmo_dlsym(lib, "ggml_backend_reg_metal_init"));
+    ok &= !!(ggml_metal.supports_family = cosmo_dlsym(lib, "ggml_backend_metal_supports_family"));
     if (!ok) {
         tinylog(Dlerror(), ": not all symbols could be imported\n", NULL);
         return false;
@@ -317,4 +319,10 @@ ggml_backend_t ggml_backend_reg_metal_init(const char *params, void *user_data) 
     if (!llamafile_has_metal())
         return 0;
     return ggml_metal.reg_init(params, user_data);
+}
+
+bool ggml_backend_metal_supports_family(ggml_backend_t backend, int family) {
+    if (!llamafile_has_metal())
+        return 0;
+    return ggml_metal.supports_family(backend, family);
 }

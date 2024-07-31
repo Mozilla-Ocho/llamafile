@@ -2,6 +2,9 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "whisper.h"
 
+#define GGML_USE_CUDA
+#define GGML_USE_METAL
+
 #ifdef GGML_USE_METAL
 #include "llama.cpp/ggml-metal.h"
 #endif
@@ -14,6 +17,8 @@
 #include "llama.cpp/ggml.h"
 #include "llama.cpp/ggml-alloc.h"
 #include "llama.cpp/ggml-backend.h"
+
+#include "llamafile/llamafile.h"
 
 #include "whisper-mel.hpp"
 
@@ -208,7 +213,8 @@ static bool ggml_graph_compute_helper(
 // and X_1 and Y_1 are the remaining views. X_1 and Y_1 end up being small matrices that can be processed with more
 // general-purpose kernels
 //
-static struct ggml_tensor * ggml_mul_mat_pad(struct ggml_context * ctx, struct ggml_tensor * x, struct ggml_tensor * y, int pad = 32) {
+static struct ggml_tensor * ggml_mul_mat_pad(struct ggml_context * ctx, struct ggml_tensor * x, struct ggml_tensor * y) {
+    int pad = 32;
     // use padding only if dimension 0 is at least 8 times larger than the padding
     // else we won't get much benefit from the optimization
     const int n_pad_req = 8;
@@ -231,7 +237,7 @@ static struct ggml_tensor * ggml_mul_mat_pad(struct ggml_context * ctx, struct g
 // TODO: check if other platforms can benefit from this optimization
 // TODO: CUDA is currently broken - seems ggml_mul_mat does not handle views correctly
 #if defined(GGML_USE_METAL)
-#define ggml_mul_mat ggml_mul_mat_pad
+#define ggml_mul_mat (llamafile_has_metal() ? ggml_mul_mat_pad : ggml_mul_mat)
 #endif
 
 // available whisper models
@@ -1067,18 +1073,18 @@ static void whisper_kv_cache_seq_cp(
 }
 
 static uint32_t whisper_kv_cache_get_padding(const struct whisper_context & wctx) {
-    if (!wctx.params.flash_attn || !wctx.params.use_gpu) {
+    if (!wctx.params.flash_attn) {
         return 1u;
     }
 
 #ifdef GGML_USE_METAL
-    if (wctx.params.use_gpu) {
+    if (llamafile_has_metal()) {
         return 32u;
     }
 #endif
 
 #ifdef GGML_USE_CUDA
-    if (wctx.params.use_gpu) {
+    if (llamafile_has_cuda()) {
         return 256u;
     }
 #endif
@@ -1221,7 +1227,7 @@ static ggml_backend_t whisper_backend_init_gpu(const whisper_context_params & pa
     ggml_backend_t result = NULL;
 
 #ifdef GGML_USE_CUDA
-    if (params.use_gpu) {
+    if (llamafile_has_cuda()) {
         WHISPER_LOG_INFO("%s: using CUDA backend\n", __func__);
         result = ggml_backend_cuda_init(params.gpu_device);
         if (!result) {
@@ -1231,7 +1237,7 @@ static ggml_backend_t whisper_backend_init_gpu(const whisper_context_params & pa
 #endif
 
 #ifdef GGML_USE_METAL
-    if (params.use_gpu) {
+    if (!result && llamafile_has_metal()) {
         WHISPER_LOG_INFO("%s: using Metal backend\n", __func__);
         ggml_backend_metal_log_set_callback(g_state.log_callback, g_state.log_callback_user_data);
         result = ggml_backend_metal_init();
@@ -1299,14 +1305,14 @@ static std::vector<ggml_backend_t> whisper_backend_init(const whisper_context_pa
 static ggml_backend_buffer_type_t whisper_default_buffer_type(const whisper_context_params & params) {
     ggml_backend_buffer_type_t result = nullptr;
 
-    params.use_gpu || (result = ggml_backend_cpu_buffer_type());
-
 #ifdef GGML_USE_CUDA
-    result || (result = ggml_backend_cuda_buffer_type(params.gpu_device));
+    if (!result && llamafile_has_cuda())
+        result = ggml_backend_cuda_buffer_type(params.gpu_device);
 #endif
 
 #ifdef GGML_USE_METAL
-    result || (result = ggml_backend_metal_buffer_type());
+    if (!result && llamafile_has_metal())
+        result = ggml_backend_metal_buffer_type();
 #endif
 
 #ifdef GGML_USE_SYCL
@@ -1317,7 +1323,8 @@ static ggml_backend_buffer_type_t whisper_default_buffer_type(const whisper_cont
     result || (result = ggml_backend_vk_buffer_type(params.gpu_device));
 #endif
 
-    result || (result = ggml_backend_cpu_buffer_type());
+    if (!result)
+        result = ggml_backend_cpu_buffer_type();
 
     return result;
 }
@@ -3585,7 +3592,6 @@ int whisper_ctx_init_openvino_encoder(
 
 struct whisper_context_params whisper_context_default_params() {
     struct whisper_context_params result = {
-        /*.use_gpu              =*/ true,
         /*.flash_attn           =*/ false,
         /*.gpu_device           =*/ 0,
 
@@ -3690,7 +3696,8 @@ struct whisper_context * whisper_init_with_params_no_state(struct whisper_model_
         params.dtw_token_timestamps = false;
     }
 
-    WHISPER_LOG_INFO("%s: use gpu    = %d\n", __func__, params.use_gpu);
+    WHISPER_LOG_INFO("%s: cuda gpu   = %d\n", __func__, llamafile_has_cuda());
+    WHISPER_LOG_INFO("%s: metal gpu  = %d\n", __func__, llamafile_has_metal());
     WHISPER_LOG_INFO("%s: flash attn = %d\n", __func__, params.flash_attn);
     WHISPER_LOG_INFO("%s: gpu_device = %d\n", __func__, params.gpu_device);
     WHISPER_LOG_INFO("%s: dtw        = %d\n", __func__, params.dtw_token_timestamps);
@@ -7444,6 +7451,8 @@ static void whisper_log_internal(ggml_log_level level, const char * format, ...)
 static void whisper_log_callback_default(ggml_log_level level, const char * text, void * user_data) {
     (void) level;
     (void) user_data;
+    if (FLAG_log_disable)
+        return;
     fputs(text, stderr);
     fflush(stderr);
 }
