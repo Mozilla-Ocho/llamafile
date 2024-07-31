@@ -1,7 +1,6 @@
 #include <cosmo.h>
 #include <sys/auxv.h>
 #include <libc/sysv/consts/hwcap.h>
-#define restrict
 #include "ggml-vector.h"
 
 extern "C" void ggml_fp16_to_fp32_row_amd_avx512bf16(const ggml_fp16_t * x, float * y, int64_t n);
@@ -48,60 +47,60 @@ extern "C" void ggml_fp32_to_bf16_row_amd_k8(const float * x, ggml_bf16_t * y, i
 extern "C" void ggml_fp32_to_bf16_row_arm82(const float * x, ggml_bf16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_bf16_row_arm80(const float * x, ggml_bf16_t * y, int64_t n);
 
-extern "C" void ggml_vec_dot_f32_amd_avx512bf16(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_amd_avx512(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_amd_avx2(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_amd_f16c(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_amd_fma(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_amd_avx(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_amd_ssse3(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_amd_k8(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_arm82(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f32_arm80(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_avx512bf16(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_avx512(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_avx2(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_f16c(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_fma(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_avx(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_ssse3(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_amd_k8(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_arm82(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f32_arm80(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
 
-extern "C" void ggml_vec_dot_f16_amd_avx512bf16(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_amd_avx512(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_amd_avx2(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_amd_f16c(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_amd_fma(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_amd_avx(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_amd_ssse3(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_amd_k8(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_arm82(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_f16_arm80(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_avx512bf16(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_avx512(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_avx2(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_f16c(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_fma(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_avx(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_ssse3(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_amd_k8(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_arm82(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_f16_arm80(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
 
-extern "C" void ggml_vec_dot_bf16_amd_avx512bf16(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_amd_avx512(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_amd_avx2(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_amd_f16c(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_amd_fma(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_amd_avx(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_amd_ssse3(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_amd_k8(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_arm82(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
-extern "C" void ggml_vec_dot_bf16_arm80(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_avx512bf16(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_avx512(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_avx2(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_f16c(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_fma(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_avx(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_ssse3(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_amd_k8(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_arm82(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_bf16_arm80(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
 
-extern "C" void ggml_vec_dot_f16_unroll_amd_avx512bf16(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_amd_avx512(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_amd_avx2(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_amd_f16c(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_amd_fma(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_amd_avx(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_amd_ssse3(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_amd_k8(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_arm82(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
-extern "C" void ggml_vec_dot_f16_unroll_arm80(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_avx512bf16(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_avx512(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_avx2(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_f16c(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_fma(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_avx(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_ssse3(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_amd_k8(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_arm82(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
+extern "C" void ggml_vec_dot_f16_unroll_arm80(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
 
-extern "C" void ggml_vec_mad_f32_unroll_amd_avx512bf16(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_amd_avx512(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_amd_avx2(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_amd_f16c(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_amd_fma(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_amd_avx(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_amd_ssse3(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_amd_k8(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_arm82(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
-extern "C" void ggml_vec_mad_f32_unroll_arm80(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_avx512bf16(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_avx512(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_avx2(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_f16c(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_fma(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_avx(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_ssse3(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_amd_k8(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_arm82(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
+extern "C" void ggml_vec_mad_f32_unroll_arm80(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv);
 
 extern "C" void ggml_vec_set_i8_amd_avx512bf16(const int n, int8_t * x, const int8_t v);
 extern "C" void ggml_vec_set_i8_amd_avx512(const int n, int8_t * x, const int8_t v);
@@ -290,27 +289,27 @@ extern "C" void ggml_vec_scale_f16_amd_k8(const int n, ggml_fp16_t * y, const fl
 extern "C" void ggml_vec_scale_f16_arm82(const int n, ggml_fp16_t * y, const float v);
 extern "C" void ggml_vec_scale_f16_arm80(const int n, ggml_fp16_t * y, const float v);
 
-extern "C" void ggml_vec_mad_f32_amd_avx512bf16(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_amd_avx512(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_amd_avx2(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_amd_f16c(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_amd_fma(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_amd_avx(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_amd_ssse3(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_amd_k8(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_arm82(const int n, float * restrict y, const float * restrict x, const float v);
-extern "C" void ggml_vec_mad_f32_arm80(const int n, float * restrict y, const float * restrict x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_avx512bf16(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_avx512(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_avx2(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_f16c(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_fma(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_avx(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_ssse3(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_amd_k8(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_arm82(const int n, float * y, const float * x, const float v);
+extern "C" void ggml_vec_mad_f32_arm80(const int n, float * y, const float * x, const float v);
 
-extern "C" void ggml_vec_mad_f16_amd_avx512bf16(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_amd_avx512(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_amd_avx2(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_amd_f16c(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_amd_fma(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_amd_avx(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_amd_ssse3(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_amd_k8(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_arm82(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
-extern "C" void ggml_vec_mad_f16_arm80(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_avx512bf16(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_avx512(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_avx2(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_f16c(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_fma(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_avx(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_ssse3(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_amd_k8(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_arm82(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
+extern "C" void ggml_vec_mad_f16_arm80(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v);
 
 extern "C" void ggml_vec_norm_f32_amd_avx512bf16 (const int n, float * s, const float * x);
 extern "C" void ggml_vec_norm_f32_amd_avx512 (const int n, float * s, const float * x);
@@ -1286,23 +1285,23 @@ void ggml_fp32_to_bf16_row(const float * x, ggml_bf16_t * y, int64_t n) {
   return funcs.ptr_ggml_fp32_to_bf16_row(x, y, n);
 }
 
-void ggml_vec_dot_f32(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc) {
+void ggml_vec_dot_f32(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc) {
   return funcs.ptr_ggml_vec_dot_f32(n, s, bs, x, bx, y, by, nrc);
 }
 
-void ggml_vec_dot_f16(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc) {
+void ggml_vec_dot_f16(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc) {
   return funcs.ptr_ggml_vec_dot_f16(n, s, bs, x, bx, y, by, nrc);
 }
 
-void ggml_vec_dot_bf16(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc) {
+void ggml_vec_dot_bf16(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc) {
   return funcs.ptr_ggml_vec_dot_bf16(n, s, bs, x, bx, y, by, nrc);
 }
 
-void ggml_vec_dot_f16_unroll(const int n, const int xs, float * restrict s, void * restrict xv, ggml_fp16_t * restrict y) {
+void ggml_vec_dot_f16_unroll(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y) {
   return funcs.ptr_ggml_vec_dot_f16_unroll(n, xs, s, xv, y);
 }
 
-void ggml_vec_mad_f32_unroll(const int n, const int xs, const int vs, float * restrict y, const float * restrict xv, const float * restrict vv) {
+void ggml_vec_mad_f32_unroll(const int n, const int xs, const int vs, float * y, const float * xv, const float * vv) {
   return funcs.ptr_ggml_vec_mad_f32_unroll(n, xs, vs, y, xv, vv);
 }
 
@@ -1374,11 +1373,11 @@ void ggml_vec_scale_f16(const int n, ggml_fp16_t * y, const float v) {
   return funcs.ptr_ggml_vec_scale_f16(n, y, v);
 }
 
-void ggml_vec_mad_f32(const int n, float * restrict y, const float * restrict x, const float v) {
+void ggml_vec_mad_f32(const int n, float * y, const float * x, const float v) {
   return funcs.ptr_ggml_vec_mad_f32(n, y, x, v);
 }
 
-void ggml_vec_mad_f16(const int n, ggml_fp16_t * restrict y, const ggml_fp16_t * restrict x, const float v) {
+void ggml_vec_mad_f16(const int n, ggml_fp16_t * y, const ggml_fp16_t * x, const float v) {
   return funcs.ptr_ggml_vec_mad_f16(n, y, x, v);
 }
 

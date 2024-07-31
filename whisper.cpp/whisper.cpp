@@ -1,5 +1,6 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
+#include "llama.cpp/ggml-vector.h"
 #include "whisper.h"
 
 #define GGML_USE_CUDA
@@ -5119,12 +5120,7 @@ static void whisper_process_logits(
         // populate the logprobs array (log_softmax)
         {
             const float logit_max = *std::max_element(logits.begin(), logits.end());
-            float logsumexp = 0.0f;
-            for (int i = 0; i < n_logits; ++i) {
-                if (logits[i] > -INFINITY) {
-                    logsumexp += expf(logits[i] - logit_max);
-                }
-            }
+            float logsumexp = ggml_vec_soft_max_f32(n_logits, 0, logits.data(), logit_max); // [jart]
             logsumexp = logf(logsumexp) + logit_max;
 
             for (int i = 0; i < n_logits; ++i) {
@@ -5142,13 +5138,10 @@ static void whisper_process_logits(
             // logsumexp over timestamps
             float timestamp_logprob = -INFINITY;
             {
-                float logsumexp = 0.0f;
                 const float logprob_max = *std::max_element(logprobs.begin() + vocab.token_beg, logprobs.end());
-                for (int i = vocab.token_beg; i < n_logits; ++i) {
-                    if (logprobs[i] > -INFINITY) {
-                        logsumexp += expf(logprobs[i] - logprob_max);
-                    }
-                }
+                float logsumexp = ggml_vec_soft_max_f32(n_logits - vocab.token_beg, 0,
+                                                        &logprobs[vocab.token_beg],
+                                                        logprob_max); // [jart]
                 if (logsumexp > 0.0f) {
                     timestamp_logprob = logf(logsumexp) + logprob_max;
                 }
@@ -5170,12 +5163,7 @@ static void whisper_process_logits(
                     // populate the logprobs array (log_softmax)
                     {
                         const float logit_max = *std::max_element(logits.begin(), logits.end());
-                        float logsumexp = 0.0f;
-                        for (int i = 0; i < n_logits; ++i) {
-                            if (logits[i] > -INFINITY) {
-                                logsumexp += expf(logits[i] - logit_max);
-                            }
-                        }
+                        float logsumexp = ggml_vec_soft_max_f32(n_logits, 0, logits.data(), logit_max); // [jart]
                         logsumexp = logf(logsumexp) + logit_max;
 
                         for (int i = 0; i < n_logits; ++i) {
@@ -5192,15 +5180,7 @@ static void whisper_process_logits(
     }
 
     // compute probs
-    {
-        for (int i = 0; i < n_logits; ++i) {
-            if (logits[i] == -INFINITY) {
-                probs[i] = 0.0f;
-            } else {
-                probs[i] = expf(logprobs[i]);
-            }
-        }
-    }
+    ggml_vec_soft_max_f32(n_logits, &probs[0], logprobs.data(), 0); // [jart]
 
 #if 0
     // print first 100 logits - token string : logit
