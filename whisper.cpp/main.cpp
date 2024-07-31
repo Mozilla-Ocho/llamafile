@@ -939,6 +939,9 @@ static void cb_log_disable(enum ggml_log_level , const char * , void * ) { }
 int main(int argc, char ** argv) {
     whisper_params params;
 
+    // [jart] disable GPU by default (pass `--gpu auto` to enable it)
+    FLAG_gpu = LLAMAFILE_GPU_DISABLE;
+
     // If the only argument starts with "@", read arguments line-by-line
     // from the given file.
     std::vector<std::string> vec_args;

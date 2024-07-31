@@ -505,6 +505,9 @@ int main(int argc, char ** argv) {
 
     std::mutex whisper_mutex;
 
+    // [jart] disable GPU by default (pass `--gpu auto` to enable it)
+    FLAG_gpu = LLAMAFILE_GPU_DISABLE;
+
     LoadZipArgs(&argc, &argv);
 
     if (whisper_params_parse(argc, argv, params, sparams) == false) {
