@@ -14,6 +14,7 @@ include build/rules.mk
 include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
 include stable-diffusion.cpp/BUILD.mk
+include whisper.cpp/BUILD.mk
 include double-conversion/BUILD.mk
 include stb/BUILD.mk
 
@@ -22,6 +23,8 @@ include stb/BUILD.mk
 .PHONY: o/$(MODE)/
 o/$(MODE)/:	o/$(MODE)/llamafile					\
 		o/$(MODE)/llama.cpp					\
+		o/$(MODE)/stable-diffusion.cpp					\
+		o/$(MODE)/whisper.cpp					\
 		o/$(MODE)/stb						\
 		o/$(MODE)/depend.test
 

@@ -294,7 +294,7 @@ struct llamafile *llamafile_open_gguf(const char *fname, const char *mode) {
         errno = EIO;
         return 0;
     }
-    if (ZIP_READ32(buf) == ZIP_READ32("GGUF")) {
+    if (ZIP_READ32(buf) == ZIP_READ32("GGUF") || ZIP_READ32(buf) == ZIP_READ32("ggml")) {
         errno = EINVAL;
         return file;
     }
@@ -310,6 +310,16 @@ FILE *llamafile_fp(struct llamafile *file) {
 
 size_t llamafile_size(struct llamafile *file) {
     return file->size;
+}
+
+size_t llamafile_position(struct llamafile *file) {
+    return file->position;
+}
+
+bool llamafile_eof(struct llamafile *file) {
+    if (file->fp)
+        return feof(file->fp);
+    return file->position >= file->size;
 }
 
 void *llamafile_content(struct llamafile *file) {

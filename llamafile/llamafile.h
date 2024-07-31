@@ -47,6 +47,8 @@ bool llamafile_seek(struct llamafile *, size_t, int);
 void *llamafile_content(struct llamafile *);
 size_t llamafile_tell(struct llamafile *);
 size_t llamafile_size(struct llamafile *);
+size_t llamafile_position(struct llamafile *);
+bool llamafile_eof(struct llamafile *file);
 FILE *llamafile_fp(struct llamafile *);
 void llamafile_ref(struct llamafile *);
 void llamafile_unref(struct llamafile *);
