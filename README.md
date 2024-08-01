@@ -372,7 +372,7 @@ stock install:
 
 - Linux 2.6.18+ (i.e. every distro since RHEL5 c. 2007)
 - Darwin (macOS) 23.1.0+ [1] (GPU is only supported on ARM64)
-- Windows 8+ (AMD64 only)
+- Windows 10+ (AMD64 only)
 - FreeBSD 13+
 - NetBSD 9.2+ (AMD64 only)
 - OpenBSD 7+ (AMD64 only)
@@ -391,10 +391,11 @@ llamafile supports the following CPUs:
 
 - **AMD64** microprocessors must have AVX. Otherwise llamafile will
   print an error and refuse to run. This means that if you have an Intel
-  CPU, it needs to be Intel Sandybridge or newer (circa 2011+), and if
-  you have an AMD CPU, then it needs to be Bulldozer or newer (circa
-  2011+). Support for AVX512, AVX2, FMA, F16C, and VNNI are
-  conditionally enabled at runtime if you have a newer CPU.
+  CPU, it needs to be Intel Core or newer (circa 2006+), and if you have
+  an AMD CPU, then it needs to be K8 or newer (circa 2003+). Support for
+  AVX512, AVX2, FMA, F16C, and VNNI are conditionally enabled at runtime
+  if you have a newer CPU. For example, Zen4 has very good AVX512 that
+  can speed up BF16 llamafiles.
 
 - **ARM64** microprocessors must have ARMv8a+. This means everything
   from Apple Silicon to 64-bit Raspberry Pis will work, provided your
