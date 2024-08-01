@@ -480,11 +480,11 @@ int main(int argc, char ** argv) {
         LOG_TEE("\n");
     }
 
-    struct sigaction sa;
+    struct sigaction sa, oldsa;
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGINT, &sa, &oldsa);
 
     if (params.interactive) {
         LOG_TEE("%s: interactive mode on.\n", __func__);
@@ -1012,6 +1012,8 @@ int main(int argc, char ** argv) {
             is_interacting = true;
         }
     }
+
+    sigaction(SIGINT, &oldsa, 0);
 
     // [jart] ensure trailing newline
     printf("\n");
