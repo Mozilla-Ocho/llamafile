@@ -1600,7 +1600,6 @@ int ggml_delay(int backoff) {
 
 // creates barrier and blocks until all threads call this
 void ggml_syncthreads(struct ggml_barrier * b, int nth) {
-    llamafile_trace_begin("syncthreads");
     unsigned phase = atomic_load_explicit(&b->phase, memory_order_relaxed);
     if (atomic_fetch_add_explicit(&b->count, 1, memory_order_acq_rel) + 1 == nth) {
         atomic_store_explicit(&b->count, 0, memory_order_relaxed);
@@ -1611,7 +1610,6 @@ void ggml_syncthreads(struct ggml_barrier * b, int nth) {
             while (atomic_load_explicit(&b->phase, memory_order_relaxed) == phase)
                 backoff = ggml_delay(backoff);
     }
-    llamafile_trace_end("syncthreads");
 }
 
 //
@@ -11468,7 +11466,6 @@ UseGgmlGemm1:;
         assert(params->wsize >= ne11*ne12*ne13*row_size);
         GGML_ASSERT(src1->type == GGML_TYPE_F32);
 
-        llamafile_trace_begin(ggml_type_name(vec_dot_type));
         unsigned chore = 0; // [jart] need for speed
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
@@ -11480,7 +11477,6 @@ UseGgmlGemm1:;
                 }
             }
         }
-        llamafile_trace_end(ggml_type_name(vec_dot_type));
 
         ggml_syncthreads(params->barrier, params->nth);
     }
