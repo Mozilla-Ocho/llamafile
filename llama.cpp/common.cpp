@@ -183,6 +183,10 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     if (arg == "--cli") {
         return true;
     }
+    if (arg == "--trace") {
+        FLAG_trace = true;
+        return true;
+    }
     if (arg == "--fast") {
         FLAG_precise = false;
         return true;

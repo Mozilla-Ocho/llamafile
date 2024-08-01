@@ -219,6 +219,8 @@ void parse_args(int argc, const char** argv, SDParams& params) {
             FLAG_precise = false;
         } else if (arg == "--precise") {
             FLAG_precise = true;
+        } else if (arg == "--trace") {
+            FLAG_trace = true;
         } else if (arg == "--trap") {
             FLAG_trap = true;
             FLAG_unsecure = true; // for better backtraces

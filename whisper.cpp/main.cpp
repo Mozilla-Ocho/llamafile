@@ -126,6 +126,8 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
 
         if (arg == "--log-disable") {
             FLAG_log_disable = true;
+        } else if (arg == "--trace") {
+            FLAG_trace = true;
         } else if (arg == "--trap") {
             FLAG_trap = true;
             FLAG_unsecure = true; // for better backtraces
@@ -938,6 +940,8 @@ static void cb_log_disable(enum ggml_log_level , const char * , void * ) { }
 
 int main(int argc, char ** argv) {
     whisper_params params;
+
+    ShowCrashReports();
 
     // [jart] disable GPU by default (pass `--gpu auto` to enable it)
     FLAG_gpu = LLAMAFILE_GPU_DISABLE;

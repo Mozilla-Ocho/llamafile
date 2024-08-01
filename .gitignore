@@ -7,5 +7,6 @@
 /cosmocc
 /perf.data
 /perf.data.old
+/trace.json
 
 /*.log

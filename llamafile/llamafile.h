@@ -13,6 +13,7 @@ extern bool FLAG_nocompile;
 extern bool FLAG_precise;
 extern bool FLAG_recompile;
 extern bool FLAG_tinyblas;
+extern bool FLAG_trace;
 extern bool FLAG_trap;
 extern bool FLAG_unsecure;
 extern const char *FLAG_file;

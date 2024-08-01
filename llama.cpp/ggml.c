@@ -2,7 +2,6 @@
 // vi: set et ft=c ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
 #define GGML_USE_LLAMAFILE 1
-// #define LLAMAFILE_SYNC_REPORT
 
 __notice(ggml_notice, "\
 llama.cpp (MIT License)\n\
@@ -44,6 +43,7 @@ SOFTWARE.");
 #include "llamafile/sgemm.h"
 #include "llamafile/thread.h"
 #include "llamafile/crash.h"
+#include "llamafile/trace.h"
 
 #include <alloca.h>
 #include <assert.h>
@@ -1565,35 +1565,6 @@ static inline void __lsx_f16x4_store(ggml_fp16_t *x, __m128 y) {
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
-// SYNCHRONIZATION MEASUREMENTS
-
-int cycles[5000][100];
-_Atomic(unsigned long) opstart[5000];
-_Atomic(unsigned long) absolute_start;
-
-static thread_local struct {
-    unsigned long work_cycles;
-    unsigned long wait_cycles;
-    unsigned long stamp;
-} g_sync;
-
-static void sync_wait_start(void) {
-#ifdef LLAMAFILE_SYNC_REPORT
-    unsigned long now = rdtsc();
-    g_sync.work_cycles += now - g_sync.stamp;
-    g_sync.stamp = now;
-#endif
-}
-
-static void sync_wait_end(void) {
-#ifdef LLAMAFILE_SYNC_REPORT
-    unsigned long now = rdtsc();
-    g_sync.wait_cycles += now - g_sync.stamp;
-    g_sync.stamp = now;
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // SYNCHRONIZATION PRIMITIVES
 
 struct ggml_barrier {
@@ -1616,7 +1587,6 @@ void ggml_once(atomic_uint * once, void init(void)) {
 }
 
 int ggml_delay(int backoff) {
-#if 1
     if (backoff < 7) {
         volatile int i;
         for (i = 0; i != 1 << backoff; i++) {
@@ -1625,13 +1595,12 @@ int ggml_delay(int backoff) {
     } else {
         pthread_yield_np();
     }
-#endif
     return backoff;
 }
 
 // creates barrier and blocks until all threads call this
 void ggml_syncthreads(struct ggml_barrier * b, int nth) {
-    sync_wait_start();
+    llamafile_trace_begin("syncthreads");
     unsigned phase = atomic_load_explicit(&b->phase, memory_order_relaxed);
     if (atomic_fetch_add_explicit(&b->count, 1, memory_order_acq_rel) + 1 == nth) {
         atomic_store_explicit(&b->count, 0, memory_order_relaxed);
@@ -1642,7 +1611,7 @@ void ggml_syncthreads(struct ggml_barrier * b, int nth) {
             while (atomic_load_explicit(&b->phase, memory_order_relaxed) == phase)
                 backoff = ggml_delay(backoff);
     }
-    sync_wait_end();
+    llamafile_trace_end("syncthreads");
 }
 
 //
@@ -11499,6 +11468,7 @@ UseGgmlGemm1:;
         assert(params->wsize >= ne11*ne12*ne13*row_size);
         GGML_ASSERT(src1->type == GGML_TYPE_F32);
 
+        llamafile_trace_begin(ggml_type_name(vec_dot_type));
         unsigned chore = 0; // [jart] need for speed
         for (int64_t i13 = 0; i13 < ne13; ++i13) {
             for (int64_t i12 = 0; i12 < ne12; ++i12) {
@@ -11510,6 +11480,7 @@ UseGgmlGemm1:;
                 }
             }
         }
+        llamafile_trace_end(ggml_type_name(vec_dot_type));
 
         ggml_syncthreads(params->barrier, params->nth);
     }
@@ -16682,14 +16653,7 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
         return;
     }
 
-#ifdef LLAMAFILE_SYNC_REPORT
-    long start = rdtsc();
-    unsigned long old = 0;
-    atomic_compare_exchange_strong_explicit(&opstart[llamafile_debug_op_index],
-                                            &old, start,
-                                            memory_order_relaxed,
-                                            memory_order_relaxed);
-#endif
+    llamafile_trace_begin(ggml_op_desc(tensor));
 
     switch (tensor->op) {
         case GGML_OP_DUP:
@@ -17024,10 +16988,7 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
             } break;
     }
 
-#ifdef LLAMAFILE_SYNC_REPORT
-    long end = rdtsc();
-    cycles[llamafile_debug_op_index][params->ith] += end - start;
-#endif
+    llamafile_trace_end(ggml_op_desc(tensor));
 
 #ifdef LLAMAFILE_DEBUG
     llamafile_trapping_restore();
@@ -18768,7 +18729,6 @@ static void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_comput
     const int last_node_n = * node_n;
     int backoff = 0;
 
-    sync_wait_start();
     while (true) {
         * node_n = atomic_load_explicit(&state->shared->node_n, memory_order_acquire);
         if (* node_n != last_node_n) break;
@@ -18778,7 +18738,6 @@ static void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_comput
             backoff = ggml_delay(backoff);
         }
     }
-    sync_wait_end();
 }
 
 static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_compute_state * state, const bool do_yield) {
@@ -18786,7 +18745,6 @@ static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_co
     const int last_task_phase = * task_phase;
     int backoff = 0;
 
-    sync_wait_start();
     while (true) {
         * task_phase = atomic_load_explicit(&state->shared->node_task, memory_order_acquire);
         if (* task_phase != last_task_phase) break;
@@ -18796,7 +18754,6 @@ static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_co
             backoff = ggml_delay(backoff);
         }
     }
-    sync_wait_end();
 }
 
 static thread_ret_t ggml_graph_compute_thread(void * data) {
@@ -18818,14 +18775,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
     }
 #endif
 
-#ifdef LLAMAFILE_SYNC_REPORT
-    g_sync.stamp = rdtsc();
-    unsigned long old = 0;
-    atomic_compare_exchange_strong_explicit(&absolute_start,
-                                            &old, g_sync.stamp,
-                                            memory_order_relaxed,
-                                            memory_order_relaxed);
-#endif
+    llamafile_trace_set_tid(state->ith);
 
     int ct; // [jart] enable instant math cancelation
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &ct);
@@ -18839,7 +18789,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
             return 0;
         }
 
-        if (atomic_fetch_sub(&state->shared->n_active, 1) == 1) {
+        if (atomic_fetch_sub(&state->shared->n_active, 1) == n_threads) {
             // all other threads are finished and spinning
             // do finalize and init here so we don't have synchronize again
             struct ggml_compute_params params = {
@@ -18852,7 +18802,7 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
             };
 
 #ifdef LLAMAFILE_DEBUG
-        llamafile_debug_op_index = node_n;
+            llamafile_debug_op_index = node_n;
 #endif
 
             if (node_n != -1) {
@@ -18909,12 +18859,19 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
 
             task_phase = GGML_TASK_TYPE_INIT;
 
+            int backoff = 0;
+            while (atomic_load(&state->shared->n_active)) {
+                backoff = ggml_delay(backoff);
+            }
+
             atomic_store_explicit(&state->shared->n_active,  n_threads,  memory_order_release);
             atomic_store_explicit(&state->shared->node_n,    node_n,     memory_order_release);
             atomic_store_explicit(&state->shared->node_task, task_phase, memory_order_release);
         } else {
+            llamafile_trace_begin("sync #1");
             ggml_graph_compute_thread_sync_node(&node_n,     state, false);
             ggml_graph_compute_thread_sync_task(&task_phase, state, false);
+            llamafile_trace_end("sync #1");
         }
 
         // check if we should stop
@@ -18952,8 +18909,10 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
                 //       since it is not clear what is the best approach, it should potentially become user-configurable
                 //       ref: https://github.com/ggerganov/ggml/issues/291
                 // UPD:  adding the do_yield flag seems to resolve the issue universally
+                llamafile_trace_begin("sync #2");
                 const bool do_yield = node_n < 0 || cgraph->nodes[node_n]->op == GGML_OP_MUL_MAT;
                 ggml_graph_compute_thread_sync_task(&task_phase, state, do_yield);
+                llamafile_trace_end("sync #2");
             }
         }
 
@@ -18968,18 +18927,13 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
             atomic_store_explicit(&state->shared->node_task, task_phase, memory_order_release);
         }
         else {
+            llamafile_trace_begin("sync #3");
             ggml_graph_compute_thread_sync_task(&task_phase, state, false);
+            llamafile_trace_end("sync #3");
         }
     }
 
     pthread_setcanceltype(ct, 0); // [jart]
-
-#ifdef LLAMAFILE_SYNC_REPORT
-    g_sync.work_cycles += rdtsc() - g_sync.stamp;
-    double total = g_sync.work_cycles + g_sync.wait_cycles;
-    int workpercent = g_sync.work_cycles / total * 100.5;
-    fprintf(stderr, "SYNC %03d %3d%% working\n", state->ith, workpercent);
-#endif
 
     return 0;
 }
@@ -19259,10 +19213,6 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     // die before launching the threads
     pthread_testcancel(); // [jart]
 
-#ifdef LLAMAFILE_SYNC_REPORT
-    fprintf(stderr, "\n");
-#endif
-
     const int n_threads = cplan->n_threads;
 
     struct ggml_compute_state_shared state_shared = {
@@ -19349,37 +19299,6 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     clear_numa_thread_affinity();
 
     pthread_cleanup_pop(false);
-
-#ifdef LLAMAFILE_SYNC_REPORT
-    opstart[cgraph->n_nodes] = rdtsc();
-    static int lol;
-    if (++lol == 2) {
-        const char *path = "/tmp/cgraph.txt";
-        FILE *f = fopen(path, "w");
-        if (!f) {
-            const char *help;
-            if (errno == EPERM) {
-                help = " (you need to pass the --unsecure flag)";
-            } else {
-                help = "";
-            }
-            fprintf(stderr, "%s: %s%s\n", path, strerror(errno), help);
-            exit(1);
-        }
-        print_graph(f, cgraph, cplan->n_threads);
-        fclose(f);
-        fprintf(stderr, "\n");
-    }
-    for (int i = 0; i < cgraph->n_nodes; ++i) {
-        fprintf(stderr, "OP %-11s %12ld %4d", describe_vertex(cgraph->nodes[i]), opstart[i + 1] - opstart[i], i);
-        for (int j = 0; j < n_threads; ++j) {
-            fprintf(stderr, " %10d", cycles[i][j]);
-        }
-        fprintf(stderr, "\n");
-    }
-    memset(opstart, 0, sizeof(opstart));
-    memset(cycles, 0, sizeof(cycles));
-#endif
 
     // performance stats (graph)
     {

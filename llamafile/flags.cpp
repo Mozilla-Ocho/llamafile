@@ -33,6 +33,7 @@ bool FLAG_nocompile = false;
 bool FLAG_precise = false;
 bool FLAG_recompile = false;
 bool FLAG_tinyblas = false;
+bool FLAG_trace = false;
 bool FLAG_unsecure = false;
 const char *FLAG_file = nullptr;
 const char *FLAG_listen = "0.0.0.0:8080";
@@ -219,6 +220,11 @@ void llamafile_get_flags(int argc, char **argv) {
 
         if (!strcmp(flag, "--fast")) {
             FLAG_precise = false;
+            continue;
+        }
+
+        if (!strcmp(flag, "--trace")) {
+            FLAG_trace = true;
             continue;
         }
 
