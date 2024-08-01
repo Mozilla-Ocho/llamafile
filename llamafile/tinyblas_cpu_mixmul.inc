@@ -288,6 +288,7 @@ class MixMul {
         case GGML_TASK_TYPE_COMPUTE:
             assert(!(cols % BS));
             assert(!(weights->nb[1] % sizeof(TA)));
+            // TODO(jart): parallelize this loop
             for (int expert = 0; expert < experts; ++expert) {
                 BLAS tb{cols / BS,
                         (const TA *)((const char *)weights->data + expert * weights->nb[2]),

@@ -330,7 +330,7 @@ size_t llamafile_tell(struct llamafile *file) {
     if (!file->fp)
         return file->position;
     long ret = ftell(file->fp);
-    unassert(ret != -1); // shouldn't fail because we seeked earlier
+    npassert(ret != -1); // shouldn't fail because we seeked earlier
     return (size_t)ret;
 }
 

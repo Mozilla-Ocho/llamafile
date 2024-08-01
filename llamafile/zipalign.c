@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
             case Z_MEM_ERROR:
                 DieOom();
             default:
-                unassert(!"deflateInit2() called with invalid parameters");
+                npassert(!"deflateInit2() called with invalid parameters");
             }
         }
 
@@ -345,7 +345,7 @@ int main(int argc, char *argv[]) {
                     case Z_MEM_ERROR:
                         DieOom();
                     case Z_STREAM_ERROR:
-                        unassert(!"deflate() stream error");
+                        npassert(!"deflate() stream error");
                     default:
                         break;
                     }
@@ -357,7 +357,7 @@ int main(int argc, char *argv[]) {
             }
         }
         if (flag_level)
-            unassert(deflateEnd(&zs) == Z_OK);
+            npassert(deflateEnd(&zs) == Z_OK);
 
         // write local file header
         uint8_t *lochdr = Malloc(hdrlen);
@@ -381,7 +381,7 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE64(p, size); // uncompressed size
         p = ZIP_WRITE64(p, compsize); // compressed size
 
-        unassert(p == lochdr + hdrlen);
+        npassert(p == lochdr + hdrlen);
         if (pwrite(zfd, lochdr, hdrlen, zsize) != hdrlen)
             DieSys(zpath);
         free(lochdr);
@@ -418,7 +418,7 @@ int main(int argc, char *argv[]) {
         p = ZIP_WRITE64(p, size); // uncompressed size
         p = ZIP_WRITE64(p, compsize); // compressed size
         p = ZIP_WRITE64(p, zsize); // lfile offset
-        unassert(p == cdirhdr + hdrlen);
+        npassert(p == cdirhdr + hdrlen);
 
         // finish up
         ++cnt;
@@ -461,7 +461,7 @@ int main(int argc, char *argv[]) {
     p = ZIP_WRITE32(p, cdirsize); // size of central directory
     p = ZIP_WRITE32(p, 0xffffffffu); // offset of central directory
     p = ZIP_WRITE16(p, 0); // comment length
-    unassert(p == eocd + sizeof(eocd));
+    npassert(p == eocd + sizeof(eocd));
     if (pwrite(zfd, eocd, sizeof(eocd), zsize + cdirsize) != sizeof(eocd))
         DieSys(zpath);
 

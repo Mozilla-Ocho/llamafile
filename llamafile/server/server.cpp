@@ -38,10 +38,10 @@ Server::Server(int fd) : fd(fd)
 
 Server::~Server()
 {
-    unassert(fd == -1);
-    unassert(!worker_count.load(std::memory_order_relaxed));
-    unassert(dll_is_empty(active_workers));
-    unassert(dll_is_empty(idle_workers));
+    npassert(fd == -1);
+    npassert(!worker_count.load(std::memory_order_relaxed));
+    npassert(dll_is_empty(active_workers));
+    npassert(dll_is_empty(idle_workers));
     pthread_mutex_destroy(&lock_);
     pthread_cond_destroy(&cond_);
 }

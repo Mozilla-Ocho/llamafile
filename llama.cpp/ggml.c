@@ -44,6 +44,7 @@ SOFTWARE.");
 #include "llamafile/thread.h"
 #include "llamafile/crash.h"
 #include "llamafile/trace.h"
+#include "llamafile/pool.h"
 
 #include <alloca.h>
 #include <assert.h>
@@ -1651,7 +1652,7 @@ struct ggml_compute_state_shared {
     void* abort_callback_data;
 };
 
-typedef pthread_t ggml_thread_t;
+typedef llamafile_task_t ggml_thread_t;
 
 struct ggml_compute_state {
     _Atomic(ggml_thread_t) thrd;
@@ -13302,6 +13303,7 @@ GGML_CALL void ggml_rope_yarn_corr_dims(
     dims[1] = MIN(n_dims - 1, end);
 }
 
+__target_clones("avx2") // [jart]
 static void ggml_compute_forward_rope_f32(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst,
@@ -18355,10 +18357,11 @@ typedef int ggml_lock_t;
 
 #define GGML_LOCK_INITIALIZER 0
 
-typedef pthread_t ggml_thread_t;
+typedef llamafile_task_t ggml_thread_t;
 
-#define ggml_thread_create llamafile_thread_create // [jart]
-#define ggml_thread_join   pthread_join
+#define ggml_thread_create llamafile_task_create // [jart]
+#define ggml_thread_cancel llamafile_task_cancel
+#define ggml_thread_join   llamafile_task_join
 
 #else
 
@@ -18382,10 +18385,11 @@ typedef int ggml_lock_t;
 
 #define GGML_LOCK_INITIALIZER 0
 
-typedef pthread_t ggml_thread_t;
+typedef llamafile_task_t ggml_thread_t;
 
-#define ggml_thread_create pthread_create
-#define ggml_thread_join   pthread_join
+#define ggml_thread_create llamafile_task_create // [jart]
+#define ggml_thread_cancel llamafile_task_cancel
+#define ggml_thread_join   llamafile_task_join
 
 #endif
 
@@ -18484,6 +18488,7 @@ static int ggml_get_n_tasks(struct ggml_tensor * node, int n_threads, int n_cur_
     switch (node->op) {
         case GGML_OP_CPY:
         case GGML_OP_DUP:
+        case GGML_OP_CONT: // [jart] don't move me
         case GGML_OP_ADD:
         case GGML_OP_ADD1:
         case GGML_OP_ACC:
@@ -18568,7 +18573,6 @@ static int ggml_get_n_tasks(struct ggml_tensor * node, int n_threads, int n_cur_
             } break;
         case GGML_OP_SCALE:
         case GGML_OP_SET:
-        case GGML_OP_CONT:
         case GGML_OP_RESHAPE:
         case GGML_OP_VIEW:
         case GGML_OP_PERMUTE:
@@ -19185,10 +19189,10 @@ static void ggml_compute_canceled(void *arg) {
     struct ggml_compute_cleanup *cleanup = arg;
     clear_numa_thread_affinity();
     for (int j = 1; j < cleanup->n_threads; j++) {
-        pthread_t t;
+        ggml_thread_t t;
         if ((t = atomic_exchange_explicit(&cleanup->workers[j].thrd, 0,
                                           memory_order_relaxed))) {
-            pthread_cancel(t);
+            ggml_thread_cancel(t);
             const int rc = ggml_thread_join(t, NULL);
             GGML_ASSERT(rc == 0);
         }
@@ -19241,14 +19245,8 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
                 .is_main_thread = false, // [jart]
             };
 
-            pthread_attr_t attr;
-            pthread_attr_init(&attr);
-            pthread_attr_setstacksize(&attr, 128 * 1024);
-            pthread_attr_setguardsize(&attr, sysconf(_SC_PAGESIZE));
-            pthread_attr_setsigaltstacksize_np(&attr, sysconf(_SC_MINSIGSTKSZ) + 16384);
-            const int rc = ggml_thread_create((pthread_t *)&workers[j].thrd, &attr,
+            const int rc = ggml_thread_create((ggml_thread_t *)&workers[j].thrd,
                                               ggml_graph_compute_thread, &workers[j]);
-            pthread_attr_destroy(&attr);
             GGML_ASSERT(rc == 0);
             UNUSED(rc);
         }
@@ -19276,7 +19274,7 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     int cs;
     pthread_setcancelstate(PTHREAD_CANCEL_MASKED, &cs);
     for (int j = 1; j < n_threads; j++) {
-        pthread_t t;
+        ggml_thread_t t;
         if ((t = atomic_exchange_explicit(&workers[j].thrd, 0,
                                           memory_order_relaxed))) {
             const int rc = ggml_thread_join(t, NULL);

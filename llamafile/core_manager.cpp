@@ -36,8 +36,8 @@ static void unlock_mutex(void *arg) {
 }
 
 int CoreManager::acquire(int need, int greed) {
-    unassert(need >= 1);
-    unassert(greed >= need);
+    npassert(need >= 1);
+    npassert(greed >= need);
 
     int got = 0;
 
@@ -80,5 +80,5 @@ void CoreManager::release(int count) {
     }
     pthread_cond_signal(&cv_);
     pthread_mutex_unlock(&mu_);
-    unassert(ok);
+    npassert(ok);
 }

@@ -42,14 +42,16 @@ o/$(MODE)/llamafile/tokenize:				\
 		o/$(MODE)/llama.cpp/llama.cpp.a
 
 .PHONY: o/$(MODE)/llamafile
-o/$(MODE)/llamafile:					\
-		$(LLAMAFILE_OBJS)			\
-		o/$(MODE)/llamafile/server		\
-		o/$(MODE)/llamafile/simple		\
-		o/$(MODE)/llamafile/zipalign		\
-		o/$(MODE)/llamafile/zipcheck		\
-		o/$(MODE)/llamafile/tokenize		\
-		o/$(MODE)/llamafile/addnl		\
+o/$(MODE)/llamafile:						\
+		$(LLAMAFILE_OBJS)				\
+		o/$(MODE)/llamafile/server			\
+		o/$(MODE)/llamafile/simple			\
+		o/$(MODE)/llamafile/zipalign			\
+		o/$(MODE)/llamafile/zipcheck			\
+		o/$(MODE)/llamafile/tokenize			\
+		o/$(MODE)/llamafile/addnl			\
+		o/$(MODE)/llamafile/pool_test.runs		\
+		o/$(MODE)/llamafile/pool_cancel_test.runs	\
 
 ################################################################################
 # microarchitectures
@@ -140,6 +142,16 @@ o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o:		\
 
 ################################################################################
 # testing
+
+o/$(MODE)/llamafile/pool_test:				\
+		o/$(MODE)/llamafile/pool_test.o		\
+		o/$(MODE)/llamafile/crash.o		\
+		o/$(MODE)/llamafile/pool.o		\
+
+o/$(MODE)/llamafile/pool_cancel_test:			\
+		o/$(MODE)/llamafile/pool_cancel_test.o	\
+		o/$(MODE)/llamafile/crash.o		\
+		o/$(MODE)/llamafile/pool.o		\
 
 o/$(MODE)/llamafile/thread_test:			\
 		o/$(MODE)/llamafile/thread_test.o	\

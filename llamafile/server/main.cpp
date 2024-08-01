@@ -20,6 +20,7 @@
 
 #include "llama.cpp/llama.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/pool.h"
 #include "llamafile/version.h"
 
 #include "log.h"
@@ -75,7 +76,7 @@ main(int argc, char* argv[])
     set_thread_name("server");
     g_server = new Server(create_listening_socket(FLAG_listen));
     for (int i = 0; i < FLAG_workers; ++i)
-        unassert(!g_server->spawn());
+        npassert(!g_server->spawn());
 
     // run server
     signals_init();
@@ -94,6 +95,7 @@ main(int argc, char* argv[])
     SLOG("exit");
 
     // quality assurance
+    llamafile_task_shutdown();
     while (!pthread_orphan_np())
         pthread_decimate_np();
     CheckForMemoryLeaks();

@@ -42,7 +42,7 @@ Worker::kill()
 void
 Worker::begin()
 {
-    unassert(!working);
+    npassert(!working);
     server->lock();
     dll_remove(&server->idle_workers, &elem);
     if (dll_is_empty(server->idle_workers)) {
@@ -60,7 +60,7 @@ Worker::begin()
 void
 Worker::end()
 {
-    unassert(working);
+    npassert(working);
     server->lock();
     dll_remove(&server->active_workers, &elem);
     working = false;
