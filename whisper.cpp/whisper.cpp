@@ -2774,7 +2774,7 @@ static bool whisper_decode_internal(
         whisper_context & wctx,
           whisper_state & wstate,
     const whisper_batch & batch,
-              const int   n_threads,
+                    int   n_threads,
                    bool   save_alignment_heads_QKs,
     ggml_abort_callback   abort_callback,
                    void * abort_callback_data) {
@@ -2865,6 +2865,11 @@ static bool whisper_decode_internal(
         }
 
         logits = gf->nodes[gf->n_nodes - 1];
+
+        if (batch.n_tokens < 16) {
+            if (n_threads > 20)
+                n_threads = 20;
+        }
 
         if (!ggml_graph_compute_helper(sched, gf, n_threads)) {
             return false;
