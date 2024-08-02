@@ -139,7 +139,8 @@ Client::tokenize()
             *p++ = ',';
         p = stpcpy(p, "\n    ");
         char s[32];
-        int n = llama_token_to_piece(g_model, (*toks)[i], s, sizeof(s), true);
+        int n =
+          llama_token_to_piece(g_model, (*toks)[i], s, sizeof(s), false, true);
         if (n < 0) {
             SLOG("failed to turn token into string");
             return send_error(405);

@@ -46,8 +46,8 @@ namespace {
 
 template <typename TC>
 bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                          TC *C, long ldc, int ith, int nth, int task, int Atype, int Btype,
-                          int Ctype, int precision) {
+                          TC *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype,
+                          int precision) {
 
     switch (Atype) {
 
@@ -57,17 +57,17 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 #if defined(__AVX512F__)
         tinyBLAS<0, 16, __m512, __m512, float, float, TC> tb{
             k, (const float *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__AVX__) || defined(__AVX2__)
         tinyBLAS<0, 8, __m256, __m256, float, float, TC> tb{
             k, (const float *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_NEON)
         tinyBLAS<0, 4, float32x4_t, float32x4_t, float, float, TC> tb{
             k, (const float *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return NOT_SUPPORTED;
@@ -79,7 +79,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         if (Btype == GGML_TYPE_F32 && n < 2) {
             tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, float, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tb.matmul(m, n);
             return true;
         }
         if (Btype == GGML_TYPE_F32)
@@ -89,32 +89,32 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         if (n > 1) {
             tinyBLAS<0, 32, __m512, __m512bh, ggml_bf16_t, ggml_bf16_t, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const ggml_bf16_t *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tb.matmul(m, n);
             return true;
         } else {
             tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, ggml_bf16_t, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const ggml_bf16_t *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tb.matmul(m, n);
             return true;
         }
 #elif defined(__AVX512F__)
         tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, float, TC> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__AVX2__)
         if (Btype != GGML_TYPE_F32)
             return NOT_SUPPORTED;
         tinyBLAS<0, 8, __m256, __m256, ggml_bf16_t, float, TC> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
         if (Btype != GGML_TYPE_F32)
             return NOT_SUPPORTED;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_bf16_t, float, TC> tb{
             k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return NOT_SUPPORTED;
@@ -126,7 +126,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         if (Btype == GGML_TYPE_F32 && n < 2) {
             tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, float, TC> tb{
                 k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tb.matmul(m, n);
             return true;
         }
         if (Btype == GGML_TYPE_F32)
@@ -135,14 +135,14 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
             return NOT_SUPPORTED;
         tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, ggml_fp16_t, TC> tb{
             k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
         if (X86_CHECK(F16C)) {
             if (Btype == GGML_TYPE_F32 && n < 2) {
                 tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, TC> tb{
                     k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-                tb.matmul(m, n, task);
+                tb.matmul(m, n);
                 return true;
             }
             if (Btype == GGML_TYPE_F32)
@@ -151,7 +151,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
                 return NOT_SUPPORTED;
             tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, ggml_fp16_t, TC> tb{
                 k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tb.matmul(m, n);
             return true;
         } else {
             return NOT_SUPPORTED;
@@ -159,13 +159,13 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 #elif defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && !defined(_MSC_VER)
         if (n < 2)
             // TODO(jart): Why is ggml_vec_dot_f16_unroll() so fast at matvec?
-            return NOT_SUPPORTED;
+            return NOT_PROFITABLE;
         if (precision == GGML_PREC_F32) {
             if (Btype != GGML_TYPE_F32)
                 return NOT_SUPPORTED;
             tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_fp16_t, float, TC> tb{
                 k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tb.matmul(m, n);
             return true;
         } else {
             if (Btype == GGML_TYPE_F32)
@@ -174,18 +174,18 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
                 return NOT_SUPPORTED;
             tinyBLAS<0, 8, float16x8_t, float16x8_t, ggml_fp16_t, ggml_fp16_t, TC> tb{
                 k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n, task);
+            tb.matmul(m, n);
             return true;
         }
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
         if (n < 2 && !FLAG_precise)
             // TODO(jart): Why is ggml_vec_dot_f16_unroll() so fast at matvec?
-            return NOT_SUPPORTED;
+            return NOT_PROFITABLE;
         if (Btype != GGML_TYPE_F32)
             return NOT_SUPPORTED;
         tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_fp16_t, float, TC> tb{
             k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return NOT_SUPPORTED;
@@ -200,12 +200,12 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 #if defined(__AVX2__) || defined(__AVX512F__)
         tinyBLAS_Q0_AVX2<0, block_q8_0, block_q8_0, TC> tb{
             k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
         tinyBLAS_Q0_ARM<0, block_q8_0, block_q8_0, TC> tb{
             k, (const block_q8_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return NOT_SUPPORTED;
@@ -220,12 +220,12 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 #if defined(__AVX2__) || defined(__AVX512F__)
         tinyBLAS_Q0_AVX2<0, block_q4_0, block_q8_0, TC> tb{
             k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #elif defined(__ARM_FEATURE_DOTPROD)
         tinyBLAS_Q0_ARM<0, block_q4_0, block_q8_0, TC> tb{
             k, (const block_q4_0 *)A, lda, (const block_q8_0 *)B, ldb, C, ldc, ith, nth};
-        tb.matmul(m, n, task);
+        tb.matmul(m, n);
         return true;
 #else
         return NOT_SUPPORTED;
@@ -286,7 +286,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
  * @return true if this function was able to service the matmul request
  */
 bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                     void *C, long ldc, int ith, int nth, int task, int Atype, int Btype, int Ctype,
+                     void *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype,
                      int precision) {
 
     assert(m >= 0);
@@ -302,11 +302,15 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 #if defined(__x86_64__)
     if (X86_CHECK(AVX2) && X86_CHECK(FMA)) {
         if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
+            if (n < 2)
+                return NOT_PROFITABLE;
             if (iqk_mul_mat(m, n, k * QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
                 return true;
             }
         }
         if ((Btype == GGML_TYPE_Q8_0 || Btype == GGML_TYPE_Q8_1) && Ctype == GGML_TYPE_F32) {
+            if (n < 2)
+                return NOT_PROFITABLE;
             assert(QK8_0 == QK8_1 == QK4_0 == QK4_1 == QK5_0 == QK5_1 == 32);
             if (iqk_mul_mat(m, n, k * QK8_0, Atype, A, B, (float *)C, ldc, ith, nth)) {
                 return true;
@@ -315,11 +319,15 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     }
 #elif defined __aarch64__ && defined __ARM_FEATURE_DOTPROD && !defined _MSC_VER
     if (Btype == GGML_TYPE_Q8_K && Ctype == GGML_TYPE_F32) {
+        if (n < 2)
+            return NOT_PROFITABLE;
         if (iqk_mul_mat(m, n, k * QK_K, Atype, A, B, (float *)C, ldc, ith, nth)) {
             return true;
         }
     }
     if ((Btype == GGML_TYPE_Q8_0 || Btype == GGML_TYPE_Q8_1) && Ctype == GGML_TYPE_F32) {
+        if (n < 2)
+            return NOT_PROFITABLE;
         assert(QK8_0 == QK8_1 == QK4_0 == QK4_1 == QK5_0 == QK5_1 == 32);
         if (iqk_mul_mat(m, n, k * QK8_0, Atype, A, B, (float *)C, ldc, ith, nth)) {
             return true;
@@ -330,7 +338,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
 
     switch (Ctype) {
     case GGML_TYPE_F32:
-        return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (float *)C, ldc, ith, nth, task, Atype,
+        return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (float *)C, ldc, ith, nth, Atype,
                                     Btype, Ctype, precision);
     default:
         return NOT_SUPPORTED;

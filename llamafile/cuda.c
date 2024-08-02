@@ -67,7 +67,8 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 
 #define NVCC_FLAGS \
     (!IsWindows() ? "-std=c++11" : "-DIGNORE123"), "-O3", "--shared", "--use_fast_math", \
-        "--forward-unknown-to-host-compiler", "--compiler-options", \
+        "-Xcudafe", "--diag_suppress=177", "--forward-unknown-to-host-compiler", \
+        "--compiler-options", \
         (!IsWindows() \
              ? (!IsAarch64() \
                     ? "-fPIC -O3 -march=native -mtune=native -std=c++11 -Wno-unused-function " \
@@ -822,12 +823,12 @@ static bool import_cuda_impl(void) {
         llamafile_get_app_dir(dso, PATH_MAX);
         strlcat(dso, "ggml-rocm.", PATH_MAX);
         strlcat(dso, GetDsoExtension(), PATH_MAX);
-        if (FLAG_nocompile) {
+        if (FLAG_nocompile || !FLAG_recompile) {
             if ((FileExists(dso) || extract_cuda_dso(dso, "ggml-rocm")) &&
                 link_cuda_dso(dso, library_path)) {
                 ggml_cuda.has_amd_gpu = true;
                 return true;
-            } else {
+            } else if (FLAG_nocompile) {
                 goto TryNvidia;
             }
         }
@@ -905,9 +906,16 @@ TryNvidia:
         llamafile_get_app_dir(dso, PATH_MAX);
         strlcat(dso, "ggml-cuda.", PATH_MAX);
         strlcat(dso, GetDsoExtension(), PATH_MAX);
-        if (FLAG_nocompile)
-            return ((FileExists(dso) || extract_cuda_dso(dso, "ggml-cuda")) &&
-                    link_cuda_dso(dso, library_path));
+        if (FLAG_nocompile || !FLAG_recompile) {
+            printf("FLAG_nocompile %d\n", FLAG_nocompile);
+            printf("FLAG_recompile %d\n", FLAG_recompile);
+            if ((FileExists(dso) || extract_cuda_dso(dso, "ggml-cuda")) &&
+                link_cuda_dso(dso, library_path)) {
+                return true;
+            } else if (FLAG_nocompile) {
+                return false;
+            }
+        }
 
         // Check if DSO is already compiled.
         if (!needs_rebuild && !FLAG_recompile) {
@@ -924,8 +932,9 @@ TryNvidia:
         }
 
         // Try building CUDA from source with mighty cuBLAS.
-        if (compiler_path && compile_nvidia(compiler_path, dso, src))
+        if (compiler_path && compile_nvidia(compiler_path, dso, src)) {
             return link_cuda_dso(dso, library_path);
+        }
 
         // Try extracting prebuilt tinyBLAS DSO from PKZIP.
         if (extract_cuda_dso(dso, "ggml-cuda"))

@@ -279,32 +279,26 @@ class MixMul {
     bool mixmat() {
         if (cols % KN)
             return false;
-        switch (params->type) {
-        case GGML_TASK_TYPE_INIT:
-            if (thought->type != ggml_type_trait<TB>::id)
-                quantize_thought(ggml_type_trait<TB>::id);
-            build_row_pointers(ggml_type_trait<TB>::id);
-            return true;
-        case GGML_TASK_TYPE_COMPUTE:
-            assert(!(cols % BS));
-            assert(!(weights->nb[1] % sizeof(TA)));
-            // TODO(jart): parallelize this loop
-            for (int expert = 0; expert < experts; ++expert) {
-                BLAS tb{cols / BS,
-                        (const TA *)((const char *)weights->data + expert * weights->nb[2]),
-                        (long)(weights->nb[1] / sizeof(TA)),
-                        (const TB *)(rowptr_thought_ + expert * tokens * thinkers),
-                        0,
-                        (TC *)(rowptr_result_ + expert * tokens * thinkers),
-                        0,
-                        params->ith,
-                        params->nth};
-                tb.matmul(rows, rowptr_count_[expert], GGML_TASK_TYPE_COMPUTE);
-            }
-            return true;
-        default:
-            return true;
+        if (thought->type != ggml_type_trait<TB>::id)
+            quantize_thought(ggml_type_trait<TB>::id);
+        build_row_pointers(ggml_type_trait<TB>::id);
+        ggml_barrier(params->shared);
+        assert(!(cols % BS));
+        assert(!(weights->nb[1] % sizeof(TA)));
+        // TODO(jart): parallelize this loop
+        for (int expert = 0; expert < experts; ++expert) {
+            BLAS tb{cols / BS,
+                    (const TA *)((const char *)weights->data + expert * weights->nb[2]),
+                    (long)(weights->nb[1] / sizeof(TA)),
+                    (const TB *)(rowptr_thought_ + expert * tokens * thinkers),
+                    0,
+                    (TC *)(rowptr_result_ + expert * tokens * thinkers),
+                    0,
+                    params->ith,
+                    params->nth};
+            tb.matmul(rows, rowptr_count_[expert]);
         }
+        return true;
     }
 
     void build_row_pointers(ggml_type vec_dot_type) {

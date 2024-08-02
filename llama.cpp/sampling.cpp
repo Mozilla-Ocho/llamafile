@@ -4,8 +4,6 @@
 #define LLAMA_API_INTERNAL
 #include "sampling.h"
 #include <random>
-#include <cosmo.h>
-#include "common.h"
 
 struct llama_sampling_context * llama_sampling_init(const struct llama_sampling_params & params) {
     struct llama_sampling_context * result = new llama_sampling_context();
@@ -19,23 +17,27 @@ struct llama_sampling_context * llama_sampling_init(const struct llama_sampling_
 
         // will be empty (default) if there are parse errors
         if (result->parsed_grammar.rules.empty()) {
-            kprintf("%s: failed to parse grammar\n", __func__);
+            fprintf(stderr, "%s: failed to parse grammar\n", __func__);
             delete result;
             return nullptr;
         }
 
         // Ensure that there is a "root" node.
         if (result->parsed_grammar.symbol_ids.find("root") == result->parsed_grammar.symbol_ids.end()) {
-            kprintf("%s: grammar does not contain a 'root' symbol\n", __func__);
+            fprintf(stderr, "%s: grammar does not contain a 'root' symbol\n", __func__);
             delete result;
             return nullptr;
         }
 
         std::vector<const llama_grammar_element *> grammar_rules(result->parsed_grammar.c_rules());
 
-        result->grammar = llama_grammar_init(
+        struct llama_grammar * grammar = llama_grammar_init(
                 grammar_rules.data(),
                 grammar_rules.size(), result->parsed_grammar.symbol_ids.at("root"));
+        if (grammar == nullptr) {
+            throw std::runtime_error("Failed to initialize llama_grammar");
+        }
+        result->grammar = grammar;
     }
 
     result->prev.resize(params.n_prev);
@@ -64,9 +66,13 @@ void llama_sampling_reset(llama_sampling_context * ctx) {
     if (!ctx->parsed_grammar.rules.empty()) {
         std::vector<const llama_grammar_element *> grammar_rules(ctx->parsed_grammar.c_rules());
 
-        ctx->grammar = llama_grammar_init(
+        struct llama_grammar * grammar = llama_grammar_init(
                 grammar_rules.data(),
                 grammar_rules.size(), ctx->parsed_grammar.symbol_ids.at("root"));
+        if (grammar == nullptr) {
+            throw std::runtime_error("Failed to initialize llama_grammar");
+        }
+        ctx->grammar = grammar;
     }
 
     std::fill(ctx->prev.begin(), ctx->prev.end(), 0);
@@ -130,7 +136,7 @@ std::string llama_sampling_order_print(const llama_sampling_params & params) {
     std::string result = "CFG -> Penalties ";
     if (params.mirostat == 0) {
         for (auto sampler_type : params.samplers_sequence) {
-            const auto sampler_type_name = sampler_type_to_name_string(sampler_type);
+            const auto sampler_type_name = llama_sampling_type_to_str(sampler_type);
             if (!sampler_type_name.empty()) {
                 result += "-> " + sampler_type_name + " ";
             }
@@ -140,6 +146,87 @@ std::string llama_sampling_order_print(const llama_sampling_params & params) {
     }
 
     return result;
+}
+
+std::string llama_sampling_type_to_str(llama_sampler_type sampler_type) {
+    switch (sampler_type) {
+        case llama_sampler_type::TOP_K:       return "top_k";
+        case llama_sampler_type::TFS_Z:       return "tfs_z";
+        case llama_sampler_type::TYPICAL_P:   return "typical_p";
+        case llama_sampler_type::TOP_P:       return "top_p";
+        case llama_sampler_type::MIN_P:       return "min_p";
+        case llama_sampler_type::TEMPERATURE: return "temperature";
+        default : return "";
+    }
+}
+
+std::vector<llama_sampler_type> llama_sampling_types_from_names(const std::vector<std::string> & names, bool allow_alt_names) {
+    std::unordered_map<std::string, llama_sampler_type> sampler_canonical_name_map {
+        {"top_k",       llama_sampler_type::TOP_K},
+        {"top_p",       llama_sampler_type::TOP_P},
+        {"typical_p",   llama_sampler_type::TYPICAL_P},
+        {"min_p",       llama_sampler_type::MIN_P},
+        {"tfs_z",       llama_sampler_type::TFS_Z},
+        {"temperature", llama_sampler_type::TEMPERATURE}
+    };
+
+    // since samplers names are written multiple ways
+    // make it ready for both system names and input names
+    std::unordered_map<std::string, llama_sampler_type> sampler_alt_name_map {
+        {"top-k",       llama_sampler_type::TOP_K},
+        {"top-p",       llama_sampler_type::TOP_P},
+        {"nucleus",     llama_sampler_type::TOP_P},
+        {"typical-p",   llama_sampler_type::TYPICAL_P},
+        {"typical",     llama_sampler_type::TYPICAL_P},
+        {"min-p",       llama_sampler_type::MIN_P},
+        {"tfs-z",       llama_sampler_type::TFS_Z},
+        {"tfs",         llama_sampler_type::TFS_Z},
+        {"temp",        llama_sampler_type::TEMPERATURE}
+    };
+
+    std::vector<llama_sampler_type> sampler_types;
+    sampler_types.reserve(names.size());
+    for (const auto & name : names)
+    {
+        auto sampler_item = sampler_canonical_name_map.find(name);
+        if (sampler_item != sampler_canonical_name_map.end())
+        {
+            sampler_types.push_back(sampler_item->second);
+        }
+        else
+        {
+            if (allow_alt_names)
+            {
+                sampler_item = sampler_alt_name_map.find(name);
+                if (sampler_item != sampler_alt_name_map.end())
+                {
+                    sampler_types.push_back(sampler_item->second);
+                }
+            }
+        }
+    }
+    return sampler_types;
+}
+
+std::vector<llama_sampler_type> llama_sampling_types_from_chars(const std::string & names_string) {
+    std::unordered_map<char, llama_sampler_type> sampler_name_map {
+        {'k', llama_sampler_type::TOP_K},
+        {'p', llama_sampler_type::TOP_P},
+        {'y', llama_sampler_type::TYPICAL_P},
+        {'m', llama_sampler_type::MIN_P},
+        {'f', llama_sampler_type::TFS_Z},
+        {'t', llama_sampler_type::TEMPERATURE}
+    };
+
+    std::vector<llama_sampler_type> sampler_types;
+    sampler_types.reserve(names_string.size());
+    for (const auto & c : names_string) {
+        const auto sampler_item = sampler_name_map.find(c);
+        if (sampler_item != sampler_name_map.end()) {
+            sampler_types.push_back(sampler_item->second);
+        }
+    }
+    return sampler_types;
 }
 
 // no reasons to expose this function in header
@@ -198,8 +285,6 @@ static llama_token llama_sampling_sample_impl(
         GGML_ASSERT(!original_logits.empty());
     }
     llama_token id = 0;
-    // Get a pointer to the logits
-    float * logits = llama_get_logits_ith(ctx_main, idx);
 
     if (temp < 0.0) {
         // greedy sampling, with probs
@@ -240,12 +325,15 @@ static llama_token llama_sampling_sample_impl(
     }
 
     if (ctx_sampling->grammar != NULL && !is_resampling) {
+        // Get a pointer to the logits
+        float * logits = llama_get_logits_ith(ctx_main, idx);
+
         // Create an array with a single token data element for the sampled id
         llama_token_data single_token_data = {id, logits[id], 0.0f};
         llama_token_data_array single_token_data_array = { &single_token_data, 1, false };
 
         // Apply grammar constraints to the single token
-        llama_sample_grammar(ctx_main, &single_token_data_array, ctx_sampling->grammar);
+        llama_grammar_sample(ctx_sampling->grammar, ctx_main, &single_token_data_array);
 
         // Check if the token is valid according to the grammar by seeing if its logit has been set to -INFINITY
         bool is_valid = single_token_data_array.data[0].logit != -INFINITY;
@@ -293,7 +381,7 @@ static llama_token_data_array llama_sampling_prepare_impl(
     if (ctx_sampling->grammar != NULL && !apply_grammar) {
         GGML_ASSERT(original_logits != NULL);
         // Only make a copy of the original logits if we are not applying grammar checks, not sure if I actually have to do this.
-        *original_logits = {logits, logits + llama_n_vocab(llama_get_model(ctx_main))};
+        *original_logits = {logits, logits + n_vocab};
     }
 
     // apply params.logit_bias map
@@ -306,10 +394,10 @@ static llama_token_data_array llama_sampling_prepare_impl(
         llama_sample_apply_guidance(ctx_main, logits, logits_guidance, params.cfg_scale);
     }
 
-    cur.clear();
+    cur.resize(n_vocab);
 
     for (llama_token token_id = 0; token_id < n_vocab; token_id++) {
-        cur.emplace_back(llama_token_data{token_id, logits[token_id], 0.0f});
+        cur[token_id] = llama_token_data{token_id, logits[token_id], 0.0f};
     }
 
     llama_token_data_array cur_p = { cur.data(), cur.size(), false };
@@ -336,7 +424,7 @@ static llama_token_data_array llama_sampling_prepare_impl(
 
     // apply grammar checks before sampling logic
     if (apply_grammar && ctx_sampling->grammar != NULL) {
-        llama_sample_grammar(ctx_main, &cur_p, ctx_sampling->grammar);
+        llama_grammar_sample(ctx_sampling->grammar, ctx_main, &cur_p);
     }
 
     return cur_p;
@@ -370,6 +458,6 @@ void llama_sampling_accept(
     ctx_sampling->prev.push_back(id);
 
     if (ctx_sampling->grammar != NULL && apply_grammar) {
-        llama_grammar_accept_token(ctx_main, ctx_sampling->grammar, id);
+        llama_grammar_accept_token(ctx_sampling->grammar, ctx_main, id);
     }
 }

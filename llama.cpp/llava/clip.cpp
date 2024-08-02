@@ -1,16 +1,24 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
-
 // NOTE: This is modified from clip.cpp only for LLaVA,
 // so there might be still unnecessary artifacts hanging around
 // I'll gradually clean and extend it
+// Note: Even when using identical normalized image inputs (see normalize_image_u8_to_f32()) we have a significant difference in resulting embeddings compared to pytorch
+#include "clip.h"
+#include "llama.cpp/log.h"
+#include "llama.cpp/ggml.h"
+#include "llama.cpp/ggml-alloc.h"
+#include "llama.cpp/ggml-backend.h"
+#include "llama.cpp/ggml-cuda.h"
+#include "llama.cpp/ggml-metal.h"
+
+#include "stb/stb_image.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <regex>
 #include <stdexcept>
@@ -18,13 +26,6 @@
 #include <sstream>
 #include <cinttypes>
 #include <limits>
-#include "llama.cpp/log.h"
-#include "llama.cpp/ggml-backend.h"
-#include "llama.cpp/llava/clip.h"
-#include "llama.cpp/ggml-metal.h"
-#include "llama.cpp/ggml-cuda.h"
-#include "llama.cpp/ggml.h"
-#include "stb/stb_image.h"
 
 //#define CLIP_DEBUG_FUNCTIONS
 
@@ -142,7 +143,6 @@ static int get_key_idx(const gguf_context * ctx, const char * key) {
     if (i == -1) {
         // [jart] don't log to console errors that aren't errors
         LOG("%s: note: key %s not found in file\n", __func__, key);
-        throw std::runtime_error(format("Missing required key: %s", key));
     }
 
     return i;
@@ -860,7 +860,7 @@ static ggml_cgraph * clip_image_build_graph(clip_ctx * ctx, const clip_image_f32
             embeddings = peg_0;
         }
         else {
-            GGML_ASSERT(false);
+            GGML_ABORT("fatal error");
         }
     }
 
@@ -1000,6 +1000,27 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         LOG_TEE("%s: CLIP using CPU backend\n", __func__);
     }
 
+#ifdef GGML_USE_CUDA
+    new_clip->backend = ggml_backend_cuda_init(0);
+    LOG_TEE("%s: CLIP using CUDA backend\n", __func__);
+#endif
+
+#ifdef GGML_USE_METAL
+    new_clip->backend = ggml_backend_metal_init();
+    LOG_TEE("%s: CLIP using Metal backend\n", __func__);
+#endif
+
+#ifdef GGML_USE_CANN
+    new_clip->backend = ggml_backend_cann_init(0);
+    LOG_TEE("%s: CLIP using CANN backend\n", __func__);
+#endif
+
+
+    if (!new_clip->backend) {
+        new_clip->backend = ggml_backend_cpu_init();
+        LOG_TEE("%s: CLIP using CPU backend\n", __func__);
+    }
+
     // model size and capabilities
     {
         int idx = get_key_idx(ctx, KEY_HAS_TEXT_ENC);
@@ -1114,20 +1135,20 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             }
             if (n < 32)
                 hparams.image_grid_pinpoints[n] = 0;
-        } catch (std::runtime_error & e) {
+        } catch (std::runtime_error & /*e*/) {
             hparams.image_grid_pinpoints[0]=0;
         }
 
         try {
             int idx = get_key_idx(ctx, KEY_MM_PATCH_MERGE_TYPE);
             strcpy(hparams.mm_patch_merge_type, gguf_get_val_str(ctx, idx));
-        } catch (std::runtime_error & e) {
+        } catch (std::runtime_error & /*e*/) {
             strcpy(hparams.mm_patch_merge_type, "flat");
         }
 
         try {
             hparams.image_crop_resolution = get_u32(ctx, KEY_IMAGE_CROP_RESOLUTION); // llava-1.6
-        } catch(const std::exception& e) {
+        } catch(const std::exception& /*e*/) {
             hparams.image_crop_resolution = hparams.image_size;
         }
 
@@ -1166,7 +1187,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         try {
             vision_model.class_embedding  = get_tensor(new_clip->ctx_data, TN_CLASS_EMBD);
             new_clip->has_class_embedding = true;
-        } catch (const std::exception& e) {
+        } catch (const std::exception& /*e*/) {
             new_clip->has_class_embedding = false;
         }
 
@@ -1174,7 +1195,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             vision_model.pre_ln_w  = get_tensor(new_clip->ctx_data, format(TN_LN_PRE, "v", "weight"));
             vision_model.pre_ln_b  = get_tensor(new_clip->ctx_data, format(TN_LN_PRE, "v", "bias"));
             new_clip->has_pre_norm = true;
-        } catch (std::exception & e) {
+        } catch (std::exception & /*e*/) {
             new_clip->has_pre_norm = false;
         }
 
@@ -1182,21 +1203,21 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             vision_model.post_ln_w  = get_tensor(new_clip->ctx_data, format(TN_LN_POST, "v", "weight"));
             vision_model.post_ln_b  = get_tensor(new_clip->ctx_data, format(TN_LN_POST, "v", "bias"));
             new_clip->has_post_norm = true;
-        } catch (std::exception & e) {
+        } catch (std::exception & /*e*/) {
             new_clip->has_post_norm = false;
         }
 
         try {
             vision_model.patch_bias = get_tensor(new_clip->ctx_data, TN_PATCH_BIAS);
             new_clip->has_patch_bias = true;
-        } catch (std::exception & e) {
+        } catch (std::exception & /*e*/) {
             new_clip->has_patch_bias = false;
         }
 
         try {
             vision_model.patch_embeddings    = get_tensor(new_clip->ctx_data, TN_PATCH_EMBD);
             vision_model.position_embeddings = get_tensor(new_clip->ctx_data, format(TN_POS_EMBD, "v"));
-        } catch(const std::exception& e) {
+        } catch(const std::exception& /*e*/) {
             LOG_TEE("%s: failed to load vision model tensors\n", __func__);
         }
 
@@ -1208,26 +1229,26 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
                 // Yi-type llava
                 vision_model.mm_1_w = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 1, "weight"));
                 vision_model.mm_1_b = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 1, "bias"));
-            } catch (std::runtime_error & e) {  }
+            } catch (std::runtime_error & /*e*/) { }
             try {
                 // missing in Yi-type llava
                 vision_model.mm_2_w              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 2, "weight"));
                 vision_model.mm_2_b              = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 2, "bias"));
-            } catch (std::runtime_error & e) {  }
+            } catch (std::runtime_error & /*e*/) { }
             try {
                 // Yi-type llava
                 vision_model.mm_3_w = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 3, "weight"));
                 vision_model.mm_3_b = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 3, "bias"));
-            } catch (std::runtime_error & e) {  }
+            } catch (std::runtime_error & /*e*/) { }
             try {
                 // Yi-type llava
                 vision_model.mm_4_w = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 4, "weight"));
                 vision_model.mm_4_b = get_tensor(new_clip->ctx_data, format(TN_LLAVA_PROJ, 4, "bias"));
-            } catch (std::runtime_error & e) {  }
+            } catch (std::runtime_error & /*e*/) { }
             try {
                 vision_model.image_newline = get_tensor(new_clip->ctx_data, TN_IMAGE_NEWLINE);
                 // LOG_TEE("%s: image_newline tensor (llava-1.6) found\n", __func__);
-            } catch (std::runtime_error & e) {  }
+            } catch (std::runtime_error & /*e*/) { }
         } else if (new_clip->proj_type == PROJECTOR_TYPE_LDP) {
             // MobileVLM projection
             vision_model.mm_model_mlp_1_w               = get_tensor(new_clip->ctx_data, format(TN_MVLM_PROJ_MLP, 1, "weight"));

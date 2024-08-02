@@ -317,7 +317,7 @@ static size_t quantize_q4_0_nr_bl(const float * restrict src, void * restrict ds
         for (int64_t x = 0; x < nb; x++) {
 
             for (int i  = 0; i < nrows_interleaved; i++ ) {
-                quantize_row_q4_0_reference(src + b + i * n_per_row + x * QK4_0, (block_q4_0 *) dst_tmp + i, QK4_0);
+                quantize_row_q4_0_ref(src + b + i * n_per_row + x * QK4_0, (block_q4_0 *) dst_tmp + i, QK4_0);
             }
 
             if (nrows_interleaved == 8) {

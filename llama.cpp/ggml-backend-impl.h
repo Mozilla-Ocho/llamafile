@@ -19,13 +19,15 @@ extern "C" {
 
     struct ggml_backend_buffer_type_i {
         const char *          (*GGML_CALL get_name)        (ggml_backend_buffer_type_t buft);
+        // allocate a buffer of this type
         ggml_backend_buffer_t (*GGML_CALL alloc_buffer)    (ggml_backend_buffer_type_t buft, size_t size);
-        size_t                (*GGML_CALL get_alignment)   (ggml_backend_buffer_type_t buft); // tensor alignment
-        size_t                (*GGML_CALL get_max_size)    (ggml_backend_buffer_type_t buft); // allocation max size
-        size_t                (*GGML_CALL get_alloc_size)  (ggml_backend_buffer_type_t buft, const struct ggml_tensor * tensor); // data size needed to allocate the tensor, including padding
-        bool                  (*GGML_CALL supports_backend)(ggml_backend_buffer_type_t buft, ggml_backend_t backend); // check if the buffer type is usable by the backend
+        // tensor alignment
+        size_t                (*GGML_CALL get_alignment)   (ggml_backend_buffer_type_t buft);
+        // max buffer size that can be allocated
+        size_t                (*GGML_CALL get_max_size)    (ggml_backend_buffer_type_t buft);
+        // data size needed to allocate the tensor, including padding
+        size_t                (*GGML_CALL get_alloc_size)  (ggml_backend_buffer_type_t buft, const struct ggml_tensor * tensor);
         // check if tensor data is in host memory
-        // should be equivalent to supports_backend(buft, ggml_backend_cpu_init())
         bool                  (*GGML_CALL is_host)         (ggml_backend_buffer_type_t buft);
     };
 
@@ -94,16 +96,22 @@ extern "C" {
         void (*GGML_CALL synchronize)(ggml_backend_t backend);
 
         // compute graph with a plan (not used currently)
+        // create a new plan for a graph
         ggml_backend_graph_plan_t (*GGML_CALL graph_plan_create) (ggml_backend_t backend, const struct ggml_cgraph * cgraph);
         void                      (*GGML_CALL graph_plan_free)   (ggml_backend_t backend, ggml_backend_graph_plan_t plan);
+        // update the plan with a new graph - this should be faster than creating a new plan when the graph has the same topology
+        void                      (*GGML_CALL graph_plan_update) (ggml_backend_t backend, ggml_backend_graph_plan_t plan, const struct ggml_cgraph * cgraph);
+        // compute the graph with the plan
+        enum ggml_status          (*GGML_CALL graph_plan_compute)(ggml_backend_t backend, ggml_backend_graph_plan_t plan);
 
-        // compute graph with a plan
-        enum ggml_status (*GGML_CALL graph_plan_compute)(ggml_backend_t backend, ggml_backend_graph_plan_t plan);
         // compute graph without a plan (async)
         enum ggml_status (*GGML_CALL graph_compute)     (ggml_backend_t backend, struct ggml_cgraph * cgraph);
 
-        // check if the backend supports an operation
+        // check if the backend can compute an operation
         bool (*GGML_CALL supports_op)(ggml_backend_t backend, const struct ggml_tensor * op);
+
+        // check if the backend can use tensors allocated in a buffer type
+        bool (*GGML_CALL supports_buft)(ggml_backend_t backend, ggml_backend_buffer_type_t buft);
 
         // check if the backend wants to run an operation, even if the weights are allocated in a CPU buffer
         // these should be expensive operations with large batch sizes that may benefit from running on this backend
@@ -111,10 +119,14 @@ extern "C" {
         bool (*GGML_CALL offload_op)(ggml_backend_t backend, const struct ggml_tensor * op);
 
         // (optional) event synchronization
+        // create a new event that can record events on this backend instance
         ggml_backend_event_t (*GGML_CALL event_new)         (ggml_backend_t backend);
         void                 (*GGML_CALL event_free)        (ggml_backend_event_t event);
+        // record an event on the backend instance that created it
         void                 (*GGML_CALL event_record)      (ggml_backend_event_t event);
+        // wait for an event on on a different backend instance
         void                 (*GGML_CALL event_wait)        (ggml_backend_t backend, ggml_backend_event_t event);
+        // block until an event is recorded
         void                 (*GGML_CALL event_synchronize) (ggml_backend_event_t event);
     };
 
@@ -163,7 +175,7 @@ extern "C" {
         void (*GGML_CALL ggml_backend_tensor_set)(struct ggml_tensor *, const void *, size_t, size_t);
         bool (*GGML_CALL ggml_is_quantized)(enum ggml_type);
         size_t (*GGML_CALL ggml_type_size)(enum ggml_type);
-        int (*GGML_CALL ggml_blck_size)(enum ggml_type);
+        int64_t (*GGML_CALL ggml_blck_size)(enum ggml_type);
         bool (*GGML_CALL ggml_is_transposed)(const struct ggml_tensor *);
         size_t (*GGML_CALL ggml_nbytes)(const struct ggml_tensor *);
         enum ggml_unary_op (*GGML_CALL ggml_get_unary_op)(const struct ggml_tensor *);
@@ -180,7 +192,11 @@ extern "C" {
         bool (*GGML_CALL ggml_backend_buffer_is_host)(ggml_backend_buffer_t);
         bool (*GGML_CALL ggml_guid_matches)(ggml_guid_t, ggml_guid_t);
         bool (*GGML_CALL ggml_is_empty)(const struct ggml_tensor *);
+        enum ggml_backend_buffer_usage (*GGML_CALL ggml_backend_buffer_get_usage)(ggml_backend_buffer_t);
         bool (*GGML_CALL ggml_are_same_shape)(const struct ggml_tensor *, const struct ggml_tensor *);
+        void (*GGML_CALL ggml_abort)(const char *, int, const char *, ...);
+        bool (*GGML_CALL ggml_is_contiguous_1)(const struct ggml_tensor *);
+        bool (*GGML_CALL ggml_is_contiguous_2)(const struct ggml_tensor *);
     };
 
 #ifdef  __cplusplus

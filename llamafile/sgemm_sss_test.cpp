@@ -31,13 +31,13 @@
 int cpu_get_num_math();
 
 void llamafile_sgemm_openmp(long m, long n, long k, const void *A, long lda, const void *B,
-                            long ldb, void *C, long ldc, int task, int Atype, int Btype, int Ctype,
+                            long ldb, void *C, long ldc, int Atype, int Btype, int Ctype,
                             int precision) {
     static int nth = cpu_get_num_math();
 #pragma omp parallel for
     for (int ith = 0; ith < nth; ++ith) {
-        bool res = llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, task, Atype, Btype,
-                                   Ctype, precision);
+        bool res = llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, ith, nth, Atype, Btype, Ctype,
+                                   precision);
         assert(res);
     }
 }
@@ -62,8 +62,8 @@ int test(void) {
     randomize(k, n, B, ldb);
 
     BENCH(ansiBLAS::sgemm(m, n, k, A, lda, B, ldb, G, ldc));
-    BENCH(llamafile_sgemm_openmp(m, n, k, A, lda, B, ldb, C, ldc, GGML_TASK_TYPE_COMPUTE,
-                                 GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32, GGML_PREC_DEFAULT));
+    BENCH(llamafile_sgemm_openmp(m, n, k, A, lda, B, ldb, C, ldc, GGML_TYPE_F32, GGML_TYPE_F32,
+                                 GGML_TYPE_F32, GGML_PREC_DEFAULT));
 
     double err_sum = 0;
     long long err_worst = 0;

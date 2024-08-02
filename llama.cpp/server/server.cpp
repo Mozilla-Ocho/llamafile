@@ -786,7 +786,7 @@ struct llama_server_context
                     sampler_names.emplace_back(sampler_name);
                 }
             }
-            slot->sparams.samplers_sequence = sampler_types_from_names(sampler_names, false);
+            slot->sparams.samplers_sequence = llama_sampling_types_from_names(sampler_names, false);
         }
         else
         {
@@ -1155,7 +1155,7 @@ struct llama_server_context
         std::vector<std::string> samplers_sequence;
         for (const auto &sampler_type : slot.sparams.samplers_sequence)
         {
-            samplers_sequence.emplace_back(sampler_type_to_name_string(sampler_type));
+            samplers_sequence.emplace_back(llama_sampling_type_to_str(sampler_type));
         }
 
         return json {
@@ -2525,15 +2525,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
             params.lora_adapter.emplace_back(lora_adapter, std::stof(argv[i]));
             params.use_mmap = false;
         }
-        else if (arg == "--lora-base")
-        {
-            if (++i >= argc)
-            {
-                invalid_param = true;
-                break;
-            }
-            params.lora_base = argv[i];
-        }
         else if (arg == "-v" || arg == "--verbose")
         {
 #if SERVER_VERBOSE != 1
@@ -2721,16 +2712,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 break;
             }
             sparams.chat_template = argv[i];
-        } else if (arg == "--override-kv") {
-            if (++i >= argc) {
-                invalid_param = true;
-                break;
-            }
-            if (!parse_kv_override(argv[i], params.kv_overrides)) {
-                fprintf(stderr, "error: Invalid type for KV override: %s\n", argv[i]);
-                invalid_param = true;
-                break;
-            }
         } else {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
             exit(1);

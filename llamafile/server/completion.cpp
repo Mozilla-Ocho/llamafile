@@ -68,12 +68,20 @@ static ctl::string
 token_to_piece(const struct llama_context* ctx, llama_token token, bool special)
 {
     ctl::vector<char> result(8, 0);
-    const int n_tokens = llama_token_to_piece(
-      llama_get_model(ctx), token, result.data(), result.size(), special);
+    const int n_tokens = llama_token_to_piece(llama_get_model(ctx),
+                                              token,
+                                              result.data(),
+                                              result.size(),
+                                              false,
+                                              special);
     if (n_tokens < 0) {
         result.resize(-n_tokens);
-        int check = llama_token_to_piece(
-          llama_get_model(ctx), token, result.data(), result.size(), special);
+        int check = llama_token_to_piece(llama_get_model(ctx),
+                                         token,
+                                         result.data(),
+                                         result.size(),
+                                         false,
+                                         special);
         GGML_ASSERT(check == -n_tokens);
     } else {
         result.resize(n_tokens);

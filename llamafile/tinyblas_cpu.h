@@ -71,6 +71,7 @@
 #else
 #define NOT_SUPPORTED false
 #endif
+#define NOT_PROFITABLE false
 #define WANT_QUANTIZATION false
 
 namespace {
@@ -423,9 +424,8 @@ class tinyBLAS {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n, int task) {
-        if (task == GGML_TASK_TYPE_COMPUTE)
-            mnpack(0, m, 0, n);
+    void matmul(long m, long n) {
+        mnpack(0, m, 0, n);
     }
 
   private:
@@ -624,9 +624,8 @@ class tinyBLAS_Q0_ARM {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n, int task) {
-        if (task == GGML_TASK_TYPE_COMPUTE)
-            mnpack(0, m, 0, n);
+    void matmul(long m, long n) {
+        mnpack(0, m, 0, n);
     }
 
   private:
@@ -786,9 +785,8 @@ class tinyBLAS_Q0_AVX2 {
         : A(A), B(B), C(C), k(k), lda(lda), ldb(ldb), ldc(ldc), ith(ith), nth(nth) {
     }
 
-    void matmul(long m, long n, int task) {
-        if (task == GGML_TASK_TYPE_COMPUTE)
-            mnpack(0, m, 0, n);
+    void matmul(long m, long n) {
+        mnpack(0, m, 0, n);
     }
 
   private:

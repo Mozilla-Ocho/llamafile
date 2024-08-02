@@ -40,7 +40,7 @@ static atomic_int g_count;
 static thread_local int g_id;
 static thread_local int g_ids;
 static thread_local int g_tid;
-static struct TraceEvent g_events[10000000];
+static struct TraceEvent g_events[1000000];
 
 static int llamafile_trace_oom(void) {
     if (atomic_load_explicit(&g_oom, memory_order_relaxed))

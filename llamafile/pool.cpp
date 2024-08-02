@@ -109,7 +109,6 @@ static void *llamafile_thread_worker(void *arg) {
         pthread_cond_signal(&thread->task->cv);
         pthread_mutex_unlock(&thread->task->mu);
 
-        pthread_cleanup_push(unlock_mutex, &thread->mu);
         pthread_mutex_lock(&thread->mu);
         thread->task = nullptr;
         idle_push(thread);
@@ -118,7 +117,7 @@ static void *llamafile_thread_worker(void *arg) {
             if (err == ECANCELED)
                 break;
         }
-        pthread_cleanup_pop(true);
+        pthread_mutex_unlock(&thread->mu);
         pthread_setcancelstate(PTHREAD_CANCEL_DEFERRED, 0);
     } while (err != ECANCELED);
 

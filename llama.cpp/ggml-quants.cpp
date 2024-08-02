@@ -3,124 +3,124 @@
 #include <libc/sysv/consts/hwcap.h>
 #include "ggml-quants.h"
 
-extern "C" void quantize_row_q4_0_reference_amd_avx512(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_0_reference_amd_avx2(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_0_reference_amd_avx(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_0_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_0_reference_amd_k8(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_0_reference_arm80(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_0_ref_amd_avx512(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_0_ref_amd_avx2(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_0_ref_amd_avx(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_0_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_0_ref_amd_k8(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_0_ref_arm80(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q4_1_reference_amd_avx512(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_1_reference_amd_avx2(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_1_reference_amd_avx(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_1_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_1_reference_amd_k8(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_1_reference_arm80(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_1_ref_amd_avx512(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_1_ref_amd_avx2(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_1_ref_amd_avx(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_1_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_1_ref_amd_k8(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_1_ref_arm80(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q5_0_reference_amd_avx512(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_0_reference_amd_avx2(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_0_reference_amd_avx(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_0_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_0_reference_amd_k8(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_0_reference_arm80(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_0_ref_amd_avx512(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_0_ref_amd_avx2(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_0_ref_amd_avx(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_0_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_0_ref_amd_k8(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_0_ref_arm80(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q5_1_reference_amd_avx512(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_1_reference_amd_avx2(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_1_reference_amd_avx(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_1_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_1_reference_amd_k8(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_1_reference_arm80(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_1_ref_amd_avx512(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_1_ref_amd_avx2(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_1_ref_amd_avx(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_1_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_1_ref_amd_k8(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_1_ref_arm80(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q8_0_reference_amd_avx512(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_0_reference_amd_avx2(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_0_reference_amd_avx(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_0_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_0_reference_amd_k8(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_0_reference_arm80(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_0_ref_amd_avx512(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_0_ref_amd_avx2(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_0_ref_amd_avx(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_0_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_0_ref_amd_k8(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_0_ref_arm80(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q8_1_reference_amd_avx512(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_1_reference_amd_avx2(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_1_reference_amd_avx(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_1_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_1_reference_amd_k8(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_1_reference_arm80(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_1_ref_amd_avx512(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_1_ref_amd_avx2(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_1_ref_amd_avx(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_1_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_1_ref_amd_k8(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_1_ref_arm80(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q2_K_reference_amd_avx512(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q2_K_reference_amd_avx2(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q2_K_reference_amd_avx(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q2_K_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q2_K_reference_amd_k8(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q2_K_reference_arm80(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q2_K_ref_amd_avx512(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q2_K_ref_amd_avx2(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q2_K_ref_amd_avx(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q2_K_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q2_K_ref_amd_k8(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q2_K_ref_arm80(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q3_K_reference_amd_avx512(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q3_K_reference_amd_avx2(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q3_K_reference_amd_avx(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q3_K_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q3_K_reference_amd_k8(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q3_K_reference_arm80(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q3_K_ref_amd_avx512(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q3_K_ref_amd_avx2(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q3_K_ref_amd_avx(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q3_K_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q3_K_ref_amd_k8(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q3_K_ref_arm80(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q4_K_reference_amd_avx512(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_K_reference_amd_avx2(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_K_reference_amd_avx(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_K_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_K_reference_amd_k8(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q4_K_reference_arm80(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_K_ref_amd_avx512(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_K_ref_amd_avx2(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_K_ref_amd_avx(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_K_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_K_ref_amd_k8(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q4_K_ref_arm80(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q5_K_reference_amd_avx512(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_K_reference_amd_avx2(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_K_reference_amd_avx(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_K_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_K_reference_amd_k8(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q5_K_reference_arm80(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_K_ref_amd_avx512(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_K_ref_amd_avx2(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_K_ref_amd_avx(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_K_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_K_ref_amd_k8(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q5_K_ref_arm80(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q6_K_reference_amd_avx512(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q6_K_reference_amd_avx2(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q6_K_reference_amd_avx(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q6_K_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q6_K_reference_amd_k8(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q6_K_reference_arm80(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q6_K_ref_amd_avx512(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q6_K_ref_amd_avx2(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q6_K_ref_amd_avx(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q6_K_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q6_K_ref_amd_k8(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q6_K_ref_arm80(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_q8_K_reference_amd_avx512(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_K_reference_amd_avx2(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_K_reference_amd_avx(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_K_reference_amd_ssse3(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_K_reference_amd_k8(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_q8_K_reference_arm80(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_K_ref_amd_avx512(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_K_ref_amd_avx2(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_K_ref_amd_avx(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_K_ref_amd_ssse3(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_K_ref_amd_k8(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_q8_K_ref_arm80(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_iq3_xxs_reference_amd_avx512(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_xxs_reference_amd_avx2(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_xxs_reference_amd_avx(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_xxs_reference_amd_ssse3(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_xxs_reference_amd_k8(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_xxs_reference_arm80(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_xxs_ref_amd_avx512(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_xxs_ref_amd_avx2(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_xxs_ref_amd_avx(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_xxs_ref_amd_ssse3(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_xxs_ref_amd_k8(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_xxs_ref_arm80(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_iq4_nl_reference_amd_avx512 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_nl_reference_amd_avx2 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_nl_reference_amd_avx (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_nl_reference_amd_ssse3 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_nl_reference_amd_k8 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_nl_reference_arm80 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_nl_ref_amd_avx512 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_nl_ref_amd_avx2 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_nl_ref_amd_avx (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_nl_ref_amd_ssse3 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_nl_ref_amd_k8 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_nl_ref_arm80 (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_iq4_xs_reference_amd_avx512 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_xs_reference_amd_avx2 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_xs_reference_amd_avx (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_xs_reference_amd_ssse3 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_xs_reference_amd_k8 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq4_xs_reference_arm80 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_xs_ref_amd_avx512 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_xs_ref_amd_avx2 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_xs_ref_amd_avx (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_xs_ref_amd_ssse3 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_xs_ref_amd_k8 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq4_xs_ref_arm80 (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_iq3_s_reference_amd_avx512  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_s_reference_amd_avx2  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_s_reference_amd_avx  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_s_reference_amd_ssse3  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_s_reference_amd_k8  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq3_s_reference_arm80  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_s_ref_amd_avx512  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_s_ref_amd_avx2  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_s_ref_amd_avx  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_s_ref_amd_ssse3  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_s_ref_amd_k8  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq3_s_ref_arm80  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k);
 
-extern "C" void quantize_row_iq2_s_reference_amd_avx512  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq2_s_reference_amd_avx2  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq2_s_reference_amd_avx  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq2_s_reference_amd_ssse3  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq2_s_reference_amd_k8  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
-extern "C" void quantize_row_iq2_s_reference_arm80  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq2_s_ref_amd_avx512  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq2_s_ref_amd_avx2  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq2_s_ref_amd_avx  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq2_s_ref_amd_ssse3  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq2_s_ref_amd_k8  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
+extern "C" void quantize_row_iq2_s_ref_arm80  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k);
 
 extern "C" void quantize_row_q4_0_amd_avx512(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
 extern "C" void quantize_row_q4_0_amd_avx2(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
@@ -683,23 +683,23 @@ extern "C" bool ggml_validate_row_data_amd_k8(enum ggml_type type, const void * 
 extern "C" bool ggml_validate_row_data_arm80(enum ggml_type type, const void * data, size_t nbytes);
 
 static const struct QuantFuncs {
-    typeof(quantize_row_q4_0_reference) *ptr_quantize_row_q4_0_reference;
-    typeof(quantize_row_q4_1_reference) *ptr_quantize_row_q4_1_reference;
-    typeof(quantize_row_q5_0_reference) *ptr_quantize_row_q5_0_reference;
-    typeof(quantize_row_q5_1_reference) *ptr_quantize_row_q5_1_reference;
-    typeof(quantize_row_q8_0_reference) *ptr_quantize_row_q8_0_reference;
-    typeof(quantize_row_q8_1_reference) *ptr_quantize_row_q8_1_reference;
-    typeof(quantize_row_q2_K_reference) *ptr_quantize_row_q2_K_reference;
-    typeof(quantize_row_q3_K_reference) *ptr_quantize_row_q3_K_reference;
-    typeof(quantize_row_q4_K_reference) *ptr_quantize_row_q4_K_reference;
-    typeof(quantize_row_q5_K_reference) *ptr_quantize_row_q5_K_reference;
-    typeof(quantize_row_q6_K_reference) *ptr_quantize_row_q6_K_reference;
-    typeof(quantize_row_q8_K_reference) *ptr_quantize_row_q8_K_reference;
-    typeof(quantize_row_iq3_xxs_reference) *ptr_quantize_row_iq3_xxs_reference;
-    typeof(quantize_row_iq4_nl_reference) *ptr_quantize_row_iq4_nl_reference;
-    typeof(quantize_row_iq4_xs_reference) *ptr_quantize_row_iq4_xs_reference;
-    typeof(quantize_row_iq3_s_reference) *ptr_quantize_row_iq3_s_reference;
-    typeof(quantize_row_iq2_s_reference) *ptr_quantize_row_iq2_s_reference;
+    typeof(quantize_row_q4_0_ref) *ptr_quantize_row_q4_0_ref;
+    typeof(quantize_row_q4_1_ref) *ptr_quantize_row_q4_1_ref;
+    typeof(quantize_row_q5_0_ref) *ptr_quantize_row_q5_0_ref;
+    typeof(quantize_row_q5_1_ref) *ptr_quantize_row_q5_1_ref;
+    typeof(quantize_row_q8_0_ref) *ptr_quantize_row_q8_0_ref;
+    typeof(quantize_row_q8_1_ref) *ptr_quantize_row_q8_1_ref;
+    typeof(quantize_row_q2_K_ref) *ptr_quantize_row_q2_K_ref;
+    typeof(quantize_row_q3_K_ref) *ptr_quantize_row_q3_K_ref;
+    typeof(quantize_row_q4_K_ref) *ptr_quantize_row_q4_K_ref;
+    typeof(quantize_row_q5_K_ref) *ptr_quantize_row_q5_K_ref;
+    typeof(quantize_row_q6_K_ref) *ptr_quantize_row_q6_K_ref;
+    typeof(quantize_row_q8_K_ref) *ptr_quantize_row_q8_K_ref;
+    typeof(quantize_row_iq3_xxs_ref) *ptr_quantize_row_iq3_xxs_ref;
+    typeof(quantize_row_iq4_nl_ref) *ptr_quantize_row_iq4_nl_ref;
+    typeof(quantize_row_iq4_xs_ref) *ptr_quantize_row_iq4_xs_ref;
+    typeof(quantize_row_iq3_s_ref) *ptr_quantize_row_iq3_s_ref;
+    typeof(quantize_row_iq2_s_ref) *ptr_quantize_row_iq2_s_ref;
     typeof(quantize_row_q4_0) *ptr_quantize_row_q4_0;
     typeof(quantize_row_q4_1) *ptr_quantize_row_q4_1;
     typeof(quantize_row_q5_0) *ptr_quantize_row_q5_0;
@@ -784,23 +784,23 @@ static const struct QuantFuncs {
     QuantFuncs() {
 #ifdef __x86_64__
         if (X86_HAVE(FMA) && X86_HAVE(F16C) && X86_HAVE(AVX) && X86_HAVE(AVX2) && X86_HAVE(AVX512F)) {
-            ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_avx512;
-            ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_avx512;
-            ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_avx512;
-            ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_avx512;
-            ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_avx512;
-            ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_avx512;
-            ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_avx512;
-            ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_avx512;
-            ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_avx512;
-            ptr_quantize_row_q5_K_reference = quantize_row_q5_K_reference_amd_avx512;
-            ptr_quantize_row_q6_K_reference = quantize_row_q6_K_reference_amd_avx512;
-            ptr_quantize_row_q8_K_reference = quantize_row_q8_K_reference_amd_avx512;
-            ptr_quantize_row_iq3_xxs_reference = quantize_row_iq3_xxs_reference_amd_avx512;
-            ptr_quantize_row_iq4_nl_reference = quantize_row_iq4_nl_reference_amd_avx512;
-            ptr_quantize_row_iq4_xs_reference = quantize_row_iq4_xs_reference_amd_avx512;
-            ptr_quantize_row_iq3_s_reference = quantize_row_iq3_s_reference_amd_avx512;
-            ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_avx512;
+            ptr_quantize_row_q4_0_ref = quantize_row_q4_0_ref_amd_avx512;
+            ptr_quantize_row_q4_1_ref = quantize_row_q4_1_ref_amd_avx512;
+            ptr_quantize_row_q5_0_ref = quantize_row_q5_0_ref_amd_avx512;
+            ptr_quantize_row_q5_1_ref = quantize_row_q5_1_ref_amd_avx512;
+            ptr_quantize_row_q8_0_ref = quantize_row_q8_0_ref_amd_avx512;
+            ptr_quantize_row_q8_1_ref = quantize_row_q8_1_ref_amd_avx512;
+            ptr_quantize_row_q2_K_ref = quantize_row_q2_K_ref_amd_avx512;
+            ptr_quantize_row_q3_K_ref = quantize_row_q3_K_ref_amd_avx512;
+            ptr_quantize_row_q4_K_ref = quantize_row_q4_K_ref_amd_avx512;
+            ptr_quantize_row_q5_K_ref = quantize_row_q5_K_ref_amd_avx512;
+            ptr_quantize_row_q6_K_ref = quantize_row_q6_K_ref_amd_avx512;
+            ptr_quantize_row_q8_K_ref = quantize_row_q8_K_ref_amd_avx512;
+            ptr_quantize_row_iq3_xxs_ref = quantize_row_iq3_xxs_ref_amd_avx512;
+            ptr_quantize_row_iq4_nl_ref = quantize_row_iq4_nl_ref_amd_avx512;
+            ptr_quantize_row_iq4_xs_ref = quantize_row_iq4_xs_ref_amd_avx512;
+            ptr_quantize_row_iq3_s_ref = quantize_row_iq3_s_ref_amd_avx512;
+            ptr_quantize_row_iq2_s_ref = quantize_row_iq2_s_ref_amd_avx512;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_avx512;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_avx512;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_avx512;
@@ -886,23 +886,23 @@ static const struct QuantFuncs {
 #endif
 #ifdef __x86_64__
         if (X86_HAVE(FMA) && X86_HAVE(F16C) && X86_HAVE(AVX) && X86_HAVE(AVX2)) {
-            ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_avx2;
-            ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_avx2;
-            ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_avx2;
-            ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_avx2;
-            ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_avx2;
-            ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_avx2;
-            ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_avx2;
-            ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_avx2;
-            ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_avx2;
-            ptr_quantize_row_q5_K_reference = quantize_row_q5_K_reference_amd_avx2;
-            ptr_quantize_row_q6_K_reference = quantize_row_q6_K_reference_amd_avx2;
-            ptr_quantize_row_q8_K_reference = quantize_row_q8_K_reference_amd_avx2;
-            ptr_quantize_row_iq3_xxs_reference = quantize_row_iq3_xxs_reference_amd_avx2;
-            ptr_quantize_row_iq4_nl_reference = quantize_row_iq4_nl_reference_amd_avx2;
-            ptr_quantize_row_iq4_xs_reference = quantize_row_iq4_xs_reference_amd_avx2;
-            ptr_quantize_row_iq3_s_reference = quantize_row_iq3_s_reference_amd_avx2;
-            ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_avx2;
+            ptr_quantize_row_q4_0_ref = quantize_row_q4_0_ref_amd_avx2;
+            ptr_quantize_row_q4_1_ref = quantize_row_q4_1_ref_amd_avx2;
+            ptr_quantize_row_q5_0_ref = quantize_row_q5_0_ref_amd_avx2;
+            ptr_quantize_row_q5_1_ref = quantize_row_q5_1_ref_amd_avx2;
+            ptr_quantize_row_q8_0_ref = quantize_row_q8_0_ref_amd_avx2;
+            ptr_quantize_row_q8_1_ref = quantize_row_q8_1_ref_amd_avx2;
+            ptr_quantize_row_q2_K_ref = quantize_row_q2_K_ref_amd_avx2;
+            ptr_quantize_row_q3_K_ref = quantize_row_q3_K_ref_amd_avx2;
+            ptr_quantize_row_q4_K_ref = quantize_row_q4_K_ref_amd_avx2;
+            ptr_quantize_row_q5_K_ref = quantize_row_q5_K_ref_amd_avx2;
+            ptr_quantize_row_q6_K_ref = quantize_row_q6_K_ref_amd_avx2;
+            ptr_quantize_row_q8_K_ref = quantize_row_q8_K_ref_amd_avx2;
+            ptr_quantize_row_iq3_xxs_ref = quantize_row_iq3_xxs_ref_amd_avx2;
+            ptr_quantize_row_iq4_nl_ref = quantize_row_iq4_nl_ref_amd_avx2;
+            ptr_quantize_row_iq4_xs_ref = quantize_row_iq4_xs_ref_amd_avx2;
+            ptr_quantize_row_iq3_s_ref = quantize_row_iq3_s_ref_amd_avx2;
+            ptr_quantize_row_iq2_s_ref = quantize_row_iq2_s_ref_amd_avx2;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_avx2;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_avx2;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_avx2;
@@ -988,23 +988,23 @@ static const struct QuantFuncs {
 #endif
 #ifdef __x86_64__
         if (X86_HAVE(AVX)) {
-            ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_avx;
-            ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_avx;
-            ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_avx;
-            ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_avx;
-            ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_avx;
-            ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_avx;
-            ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_avx;
-            ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_avx;
-            ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_avx;
-            ptr_quantize_row_q5_K_reference = quantize_row_q5_K_reference_amd_avx;
-            ptr_quantize_row_q6_K_reference = quantize_row_q6_K_reference_amd_avx;
-            ptr_quantize_row_q8_K_reference = quantize_row_q8_K_reference_amd_avx;
-            ptr_quantize_row_iq3_xxs_reference = quantize_row_iq3_xxs_reference_amd_avx;
-            ptr_quantize_row_iq4_nl_reference = quantize_row_iq4_nl_reference_amd_avx;
-            ptr_quantize_row_iq4_xs_reference = quantize_row_iq4_xs_reference_amd_avx;
-            ptr_quantize_row_iq3_s_reference = quantize_row_iq3_s_reference_amd_avx;
-            ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_avx;
+            ptr_quantize_row_q4_0_ref = quantize_row_q4_0_ref_amd_avx;
+            ptr_quantize_row_q4_1_ref = quantize_row_q4_1_ref_amd_avx;
+            ptr_quantize_row_q5_0_ref = quantize_row_q5_0_ref_amd_avx;
+            ptr_quantize_row_q5_1_ref = quantize_row_q5_1_ref_amd_avx;
+            ptr_quantize_row_q8_0_ref = quantize_row_q8_0_ref_amd_avx;
+            ptr_quantize_row_q8_1_ref = quantize_row_q8_1_ref_amd_avx;
+            ptr_quantize_row_q2_K_ref = quantize_row_q2_K_ref_amd_avx;
+            ptr_quantize_row_q3_K_ref = quantize_row_q3_K_ref_amd_avx;
+            ptr_quantize_row_q4_K_ref = quantize_row_q4_K_ref_amd_avx;
+            ptr_quantize_row_q5_K_ref = quantize_row_q5_K_ref_amd_avx;
+            ptr_quantize_row_q6_K_ref = quantize_row_q6_K_ref_amd_avx;
+            ptr_quantize_row_q8_K_ref = quantize_row_q8_K_ref_amd_avx;
+            ptr_quantize_row_iq3_xxs_ref = quantize_row_iq3_xxs_ref_amd_avx;
+            ptr_quantize_row_iq4_nl_ref = quantize_row_iq4_nl_ref_amd_avx;
+            ptr_quantize_row_iq4_xs_ref = quantize_row_iq4_xs_ref_amd_avx;
+            ptr_quantize_row_iq3_s_ref = quantize_row_iq3_s_ref_amd_avx;
+            ptr_quantize_row_iq2_s_ref = quantize_row_iq2_s_ref_amd_avx;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_avx;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_avx;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_avx;
@@ -1090,23 +1090,23 @@ static const struct QuantFuncs {
 #endif
 #ifdef __x86_64__
         if (X86_HAVE(SSSE3)) {
-            ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_ssse3;
-            ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_ssse3;
-            ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_ssse3;
-            ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_ssse3;
-            ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_ssse3;
-            ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_ssse3;
-            ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_ssse3;
-            ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_ssse3;
-            ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_ssse3;
-            ptr_quantize_row_q5_K_reference = quantize_row_q5_K_reference_amd_ssse3;
-            ptr_quantize_row_q6_K_reference = quantize_row_q6_K_reference_amd_ssse3;
-            ptr_quantize_row_q8_K_reference = quantize_row_q8_K_reference_amd_ssse3;
-            ptr_quantize_row_iq3_xxs_reference = quantize_row_iq3_xxs_reference_amd_ssse3;
-            ptr_quantize_row_iq4_nl_reference = quantize_row_iq4_nl_reference_amd_ssse3;
-            ptr_quantize_row_iq4_xs_reference = quantize_row_iq4_xs_reference_amd_ssse3;
-            ptr_quantize_row_iq3_s_reference = quantize_row_iq3_s_reference_amd_ssse3;
-            ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_ssse3;
+            ptr_quantize_row_q4_0_ref = quantize_row_q4_0_ref_amd_ssse3;
+            ptr_quantize_row_q4_1_ref = quantize_row_q4_1_ref_amd_ssse3;
+            ptr_quantize_row_q5_0_ref = quantize_row_q5_0_ref_amd_ssse3;
+            ptr_quantize_row_q5_1_ref = quantize_row_q5_1_ref_amd_ssse3;
+            ptr_quantize_row_q8_0_ref = quantize_row_q8_0_ref_amd_ssse3;
+            ptr_quantize_row_q8_1_ref = quantize_row_q8_1_ref_amd_ssse3;
+            ptr_quantize_row_q2_K_ref = quantize_row_q2_K_ref_amd_ssse3;
+            ptr_quantize_row_q3_K_ref = quantize_row_q3_K_ref_amd_ssse3;
+            ptr_quantize_row_q4_K_ref = quantize_row_q4_K_ref_amd_ssse3;
+            ptr_quantize_row_q5_K_ref = quantize_row_q5_K_ref_amd_ssse3;
+            ptr_quantize_row_q6_K_ref = quantize_row_q6_K_ref_amd_ssse3;
+            ptr_quantize_row_q8_K_ref = quantize_row_q8_K_ref_amd_ssse3;
+            ptr_quantize_row_iq3_xxs_ref = quantize_row_iq3_xxs_ref_amd_ssse3;
+            ptr_quantize_row_iq4_nl_ref = quantize_row_iq4_nl_ref_amd_ssse3;
+            ptr_quantize_row_iq4_xs_ref = quantize_row_iq4_xs_ref_amd_ssse3;
+            ptr_quantize_row_iq3_s_ref = quantize_row_iq3_s_ref_amd_ssse3;
+            ptr_quantize_row_iq2_s_ref = quantize_row_iq2_s_ref_amd_ssse3;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_ssse3;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_ssse3;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_ssse3;
@@ -1192,23 +1192,23 @@ static const struct QuantFuncs {
 #endif
 #ifdef __x86_64__
         if (1) {
-            ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_amd_k8;
-            ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_amd_k8;
-            ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_amd_k8;
-            ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_amd_k8;
-            ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_amd_k8;
-            ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_amd_k8;
-            ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_amd_k8;
-            ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_amd_k8;
-            ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_amd_k8;
-            ptr_quantize_row_q5_K_reference = quantize_row_q5_K_reference_amd_k8;
-            ptr_quantize_row_q6_K_reference = quantize_row_q6_K_reference_amd_k8;
-            ptr_quantize_row_q8_K_reference = quantize_row_q8_K_reference_amd_k8;
-            ptr_quantize_row_iq3_xxs_reference = quantize_row_iq3_xxs_reference_amd_k8;
-            ptr_quantize_row_iq4_nl_reference = quantize_row_iq4_nl_reference_amd_k8;
-            ptr_quantize_row_iq4_xs_reference = quantize_row_iq4_xs_reference_amd_k8;
-            ptr_quantize_row_iq3_s_reference = quantize_row_iq3_s_reference_amd_k8;
-            ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_amd_k8;
+            ptr_quantize_row_q4_0_ref = quantize_row_q4_0_ref_amd_k8;
+            ptr_quantize_row_q4_1_ref = quantize_row_q4_1_ref_amd_k8;
+            ptr_quantize_row_q5_0_ref = quantize_row_q5_0_ref_amd_k8;
+            ptr_quantize_row_q5_1_ref = quantize_row_q5_1_ref_amd_k8;
+            ptr_quantize_row_q8_0_ref = quantize_row_q8_0_ref_amd_k8;
+            ptr_quantize_row_q8_1_ref = quantize_row_q8_1_ref_amd_k8;
+            ptr_quantize_row_q2_K_ref = quantize_row_q2_K_ref_amd_k8;
+            ptr_quantize_row_q3_K_ref = quantize_row_q3_K_ref_amd_k8;
+            ptr_quantize_row_q4_K_ref = quantize_row_q4_K_ref_amd_k8;
+            ptr_quantize_row_q5_K_ref = quantize_row_q5_K_ref_amd_k8;
+            ptr_quantize_row_q6_K_ref = quantize_row_q6_K_ref_amd_k8;
+            ptr_quantize_row_q8_K_ref = quantize_row_q8_K_ref_amd_k8;
+            ptr_quantize_row_iq3_xxs_ref = quantize_row_iq3_xxs_ref_amd_k8;
+            ptr_quantize_row_iq4_nl_ref = quantize_row_iq4_nl_ref_amd_k8;
+            ptr_quantize_row_iq4_xs_ref = quantize_row_iq4_xs_ref_amd_k8;
+            ptr_quantize_row_iq3_s_ref = quantize_row_iq3_s_ref_amd_k8;
+            ptr_quantize_row_iq2_s_ref = quantize_row_iq2_s_ref_amd_k8;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_amd_k8;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_amd_k8;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_amd_k8;
@@ -1294,23 +1294,23 @@ static const struct QuantFuncs {
 #endif
 #ifdef __aarch64__
         if (1) {
-            ptr_quantize_row_q4_0_reference = quantize_row_q4_0_reference_arm80;
-            ptr_quantize_row_q4_1_reference = quantize_row_q4_1_reference_arm80;
-            ptr_quantize_row_q5_0_reference = quantize_row_q5_0_reference_arm80;
-            ptr_quantize_row_q5_1_reference = quantize_row_q5_1_reference_arm80;
-            ptr_quantize_row_q8_0_reference = quantize_row_q8_0_reference_arm80;
-            ptr_quantize_row_q8_1_reference = quantize_row_q8_1_reference_arm80;
-            ptr_quantize_row_q2_K_reference = quantize_row_q2_K_reference_arm80;
-            ptr_quantize_row_q3_K_reference = quantize_row_q3_K_reference_arm80;
-            ptr_quantize_row_q4_K_reference = quantize_row_q4_K_reference_arm80;
-            ptr_quantize_row_q5_K_reference = quantize_row_q5_K_reference_arm80;
-            ptr_quantize_row_q6_K_reference = quantize_row_q6_K_reference_arm80;
-            ptr_quantize_row_q8_K_reference = quantize_row_q8_K_reference_arm80;
-            ptr_quantize_row_iq3_xxs_reference = quantize_row_iq3_xxs_reference_arm80;
-            ptr_quantize_row_iq4_nl_reference = quantize_row_iq4_nl_reference_arm80;
-            ptr_quantize_row_iq4_xs_reference = quantize_row_iq4_xs_reference_arm80;
-            ptr_quantize_row_iq3_s_reference = quantize_row_iq3_s_reference_arm80;
-            ptr_quantize_row_iq2_s_reference = quantize_row_iq2_s_reference_arm80;
+            ptr_quantize_row_q4_0_ref = quantize_row_q4_0_ref_arm80;
+            ptr_quantize_row_q4_1_ref = quantize_row_q4_1_ref_arm80;
+            ptr_quantize_row_q5_0_ref = quantize_row_q5_0_ref_arm80;
+            ptr_quantize_row_q5_1_ref = quantize_row_q5_1_ref_arm80;
+            ptr_quantize_row_q8_0_ref = quantize_row_q8_0_ref_arm80;
+            ptr_quantize_row_q8_1_ref = quantize_row_q8_1_ref_arm80;
+            ptr_quantize_row_q2_K_ref = quantize_row_q2_K_ref_arm80;
+            ptr_quantize_row_q3_K_ref = quantize_row_q3_K_ref_arm80;
+            ptr_quantize_row_q4_K_ref = quantize_row_q4_K_ref_arm80;
+            ptr_quantize_row_q5_K_ref = quantize_row_q5_K_ref_arm80;
+            ptr_quantize_row_q6_K_ref = quantize_row_q6_K_ref_arm80;
+            ptr_quantize_row_q8_K_ref = quantize_row_q8_K_ref_arm80;
+            ptr_quantize_row_iq3_xxs_ref = quantize_row_iq3_xxs_ref_arm80;
+            ptr_quantize_row_iq4_nl_ref = quantize_row_iq4_nl_ref_arm80;
+            ptr_quantize_row_iq4_xs_ref = quantize_row_iq4_xs_ref_arm80;
+            ptr_quantize_row_iq3_s_ref = quantize_row_iq3_s_ref_arm80;
+            ptr_quantize_row_iq2_s_ref = quantize_row_iq2_s_ref_arm80;
             ptr_quantize_row_q4_0 = quantize_row_q4_0_arm80;
             ptr_quantize_row_q4_1 = quantize_row_q4_1_arm80;
             ptr_quantize_row_q5_0 = quantize_row_q5_0_arm80;
@@ -1397,72 +1397,72 @@ static const struct QuantFuncs {
     }
 } funcs;
 
-void quantize_row_q4_0_reference(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q4_0_reference(x, y, k);
+void quantize_row_q4_0_ref(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q4_0_ref(x, y, k);
 }
 
-void quantize_row_q4_1_reference(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q4_1_reference(x, y, k);
+void quantize_row_q4_1_ref(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q4_1_ref(x, y, k);
 }
 
-void quantize_row_q5_0_reference(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q5_0_reference(x, y, k);
+void quantize_row_q5_0_ref(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q5_0_ref(x, y, k);
 }
 
-void quantize_row_q5_1_reference(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q5_1_reference(x, y, k);
+void quantize_row_q5_1_ref(const float * GGML_RESTRICT x, block_q5_1 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q5_1_ref(x, y, k);
 }
 
-void quantize_row_q8_0_reference(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q8_0_reference(x, y, k);
+void quantize_row_q8_0_ref(const float * GGML_RESTRICT x, block_q8_0 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q8_0_ref(x, y, k);
 }
 
-void quantize_row_q8_1_reference(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q8_1_reference(x, y, k);
+void quantize_row_q8_1_ref(const float * GGML_RESTRICT x, block_q8_1 * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q8_1_ref(x, y, k);
 }
 
-void quantize_row_q2_K_reference(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q2_K_reference(x, y, k);
+void quantize_row_q2_K_ref(const float * GGML_RESTRICT x, block_q2_K * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q2_K_ref(x, y, k);
 }
 
-void quantize_row_q3_K_reference(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q3_K_reference(x, y, k);
+void quantize_row_q3_K_ref(const float * GGML_RESTRICT x, block_q3_K * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q3_K_ref(x, y, k);
 }
 
-void quantize_row_q4_K_reference(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q4_K_reference(x, y, k);
+void quantize_row_q4_K_ref(const float * GGML_RESTRICT x, block_q4_K * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q4_K_ref(x, y, k);
 }
 
-void quantize_row_q5_K_reference(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q5_K_reference(x, y, k);
+void quantize_row_q5_K_ref(const float * GGML_RESTRICT x, block_q5_K * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q5_K_ref(x, y, k);
 }
 
-void quantize_row_q6_K_reference(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q6_K_reference(x, y, k);
+void quantize_row_q6_K_ref(const float * GGML_RESTRICT x, block_q6_K * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q6_K_ref(x, y, k);
 }
 
-void quantize_row_q8_K_reference(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_q8_K_reference(x, y, k);
+void quantize_row_q8_K_ref(const float * GGML_RESTRICT x, block_q8_K * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_q8_K_ref(x, y, k);
 }
 
-void quantize_row_iq3_xxs_reference(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_iq3_xxs_reference(x, y, k);
+void quantize_row_iq3_xxs_ref(const float * GGML_RESTRICT x, block_iq3_xxs * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_iq3_xxs_ref(x, y, k);
 }
 
-void quantize_row_iq4_nl_reference (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_iq4_nl_reference(x, y, k);
+void quantize_row_iq4_nl_ref (const float * GGML_RESTRICT x, block_iq4_nl  * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_iq4_nl_ref(x, y, k);
 }
 
-void quantize_row_iq4_xs_reference (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_iq4_xs_reference(x, y, k);
+void quantize_row_iq4_xs_ref (const float * GGML_RESTRICT x, block_iq4_xs  * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_iq4_xs_ref(x, y, k);
 }
 
-void quantize_row_iq3_s_reference  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_iq3_s_reference(x, y, k);
+void quantize_row_iq3_s_ref  (const float * GGML_RESTRICT x, block_iq3_s   * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_iq3_s_ref(x, y, k);
 }
 
-void quantize_row_iq2_s_reference  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k) {
-  return funcs.ptr_quantize_row_iq2_s_reference(x, y, k);
+void quantize_row_iq2_s_ref  (const float * GGML_RESTRICT x, block_iq2_s   * GGML_RESTRICT y, int64_t k) {
+  return funcs.ptr_quantize_row_iq2_s_ref(x, y, k);
 }
 
 void quantize_row_q4_0(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k) {
