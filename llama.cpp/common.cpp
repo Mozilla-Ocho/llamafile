@@ -165,6 +165,7 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
         params.kv_overrides.back().key[0] = 0;
     }
 
+    FLAGS_READY = true;
     params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
 
     return true;

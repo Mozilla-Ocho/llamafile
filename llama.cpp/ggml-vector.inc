@@ -1316,35 +1316,6 @@ Expm1f(float x)
     return fmaf(p, t, t - 1);
 }
 
-/* Single-precision tanh(x) approximation.
-   The maximum error is 2.58 ULP.
-   Designed by Arm Limited.  */
-static inline float
-Tanhf(float x)
-{
-    union
-    {
-        float f;
-        unsigned i;
-    } u = { x };
-    unsigned iax = u.i & 0x7fffffff;
-    unsigned sign = u.i & ~0x7fffffff;
-
-    /* Above 0x1.205966p+3 tanhf rounds to 1 (or -1 for negative).  */
-    if (iax > 0x41102cb3) {
-        if (iax > 0x7f800000)
-            return (x - x) / (x - x);
-        u.i = 0x3f800000 | sign;
-        return u.f;
-    }
-    if (iax < 0x34000000)
-        return x;
-
-    /* tanh(x) = (e^2x - 1) / (e^2x + 1).  */
-    float q = Expm1f(2 * x);
-    return q / (q + 2);
-}
-
 void ggml_vec_norm_f32 (const int n, float * s, const float * x) { ggml_vec_dot_f32(n, s, 0, x, 0, x, 0, 1); *s = sqrtf(*s);   }
 void ggml_vec_sqr_f32  (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = x[i]*x[i];   }
 void ggml_vec_sqrt_f32 (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = sqrtf(x[i]); }
@@ -1352,7 +1323,7 @@ void ggml_vec_log_f32  (const int n, float * y, const float * x) { for (int i = 
 void ggml_vec_abs_f32  (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = fabsf(x[i]); }
 void ggml_vec_sgn_f32  (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = (x[i] > 0.f) ? 1.f : ((x[i] < 0.f) ? -1.f : 0.f); }
 void ggml_vec_step_f32 (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = (x[i] > 0.f) ? 1.f : 0.f; }
-void ggml_vec_tanh_f32 (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = Tanhf(x[i]);  }
+void ggml_vec_tanh_f32 (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = tanhf(x[i]);  }
 void ggml_vec_elu_f32  (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = (x[i] > 0.f) ? x[i] : expf(x[i])-1; }
 void ggml_vec_relu_f32 (const int n, float * y, const float * x) { for (int i = 0; i < n; ++i) y[i] = (x[i] > 0.f) ? x[i] : 0.f; }
 void ggml_vec_leaky_relu_f32 (const int n, float * y, const float * x, const float ns) { for (int i = 0; i < n; ++i) y[i] = ((x[i] > 0.f) ? x[i] : 0.f) + ns * ((x[i] < 0.0f) ? x[i] : 0.f); }
@@ -1400,7 +1371,7 @@ void ggml_vec_hardsigmoid_f32 (const int n, float * y, const float * x) { for (i
 
 static inline float ggml_gelu_f32(float x) {
     // GeLU approximation that goes slower and we seem to be stuck with.
-    return .5f * x * (1.f + Tanhf(sqrtf(M_2_PI) * (x + .044715f * x * x * x)));
+    return .5f * x * (1.f + tanhf(sqrtf(M_2_PI) * (x + .044715f * x * x * x)));
 }
 
 void ggml_vec_gelu_f32(const int n, float * y, const float * x) {

@@ -231,6 +231,8 @@ static bool LinkMetal(const char *dso) {
 
 static bool ImportMetalImpl(void) {
 
+    npassert(FLAGS_READY);
+
     // Ensure this is MacOS ARM64.
     if (!IsXnuSilicon()) {
         return false;

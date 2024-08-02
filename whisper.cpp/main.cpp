@@ -150,7 +150,6 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
                 fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
                 exit(1);
             }
-            return true;
         } else
 
         if (arg == "-h" || arg == "--help") {
@@ -213,6 +212,8 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
             exit(0);
         }
     }
+
+    FLAGS_READY = true;
 
     return true;
 }

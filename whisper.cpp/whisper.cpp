@@ -5143,12 +5143,15 @@ static void whisper_process_logits(
             // logsumexp over timestamps
             float timestamp_logprob = -INFINITY;
             {
+                float logsumexp = 0.0f;
                 const float logprob_max = *std::max_element(logprobs.begin() + vocab.token_beg, logprobs.end());
-                float logsumexp = ggml_vec_soft_max_f32(n_logits - vocab.token_beg, 0,
-                                                        &logprobs[vocab.token_beg],
-                                                        logprob_max); // [jart]
-                if (logsumexp > 0.0f) {
-                    timestamp_logprob = logf(logsumexp) + logprob_max;
+                if (logprob_max > -INFINITY) {
+                    float logsumexp = ggml_vec_soft_max_f32(n_logits - vocab.token_beg, 0,
+                                                            &logprobs[vocab.token_beg],
+                                                            logprob_max); // [jart]
+                    if (logsumexp > 0.0f) {
+                        timestamp_logprob = logf(logsumexp) + logprob_max;
+                    }
                 }
             }
 

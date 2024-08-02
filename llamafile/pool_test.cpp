@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <cosmo.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <time.h>
 
 #define BENCHMARK(ITERATIONS, WORK_PER_RUN, CODE) \
@@ -33,9 +34,9 @@
         double nanos = \
             (timespec_tonanos(timespec_sub(timespec_real(), start)) + work - 1) / (double)work; \
         if (nanos < 1000) { \
-            kprintf("%10g ns %2dx %s\n", nanos, (ITERATIONS), #CODE); \
+            printf("%10g ns %2dx %s\n", nanos, (ITERATIONS), #CODE); \
         } else { \
-            kprintf("%10lld ns %2dx %s\n", (long long)nanos, (ITERATIONS), #CODE); \
+            printf("%10lld ns %2dx %s\n", (long long)nanos, (ITERATIONS), #CODE); \
         } \
     } while (0)
 

@@ -26,6 +26,7 @@
 
 #include "llama.cpp/llama.h"
 
+bool FLAGS_READY = false;
 bool FLAG_log_disable = false;
 bool FLAG_mlock = false;
 bool FLAG_mmap = true;
@@ -324,5 +325,6 @@ void llamafile_get_flags(int argc, char **argv) {
     if (!FLAG_model)
         required("--model");
 
+    FLAGS_READY = true;
     FLAG_n_gpu_layers = llamafile_gpu_layers(FLAG_n_gpu_layers);
 }

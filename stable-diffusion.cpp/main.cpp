@@ -585,6 +585,8 @@ void parse_args(int argc, const char** argv, SDParams& params) {
             params.output_path = "output.gguf";
         }
     }
+
+    FLAGS_READY = true;
 }
 
 static std::string sd_basename(const std::string& path) {

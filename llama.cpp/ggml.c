@@ -1799,24 +1799,14 @@ inline static void ggml_critical_section_start(void) {
     }
 }
 
-#ifdef GGML_USE_OPENMP
-void ggml_barrier(struct ggml_compute_state_shared * shared) {
-    if (shared->n_threads == 1) {
-        return;
-    }
-
-    #pragma omp barrier
-}
-#else
 void ggml_barrier(struct ggml_compute_state_shared * shared) {
     if (shared->n_threads == 1)
         return;
+    int n = shared->n_threads;
     atomic_int * count = &shared->n_barrier;
     atomic_uint * phase = &shared->n_barrier_passed;
-    int n = shared->n_threads;
     unsigned i = atomic_load_explicit(phase, memory_order_relaxed);
     if (atomic_fetch_add_explicit(count, 1, memory_order_acq_rel) == n - 1) {
-        // last thread
         atomic_store_explicit(count, 0, memory_order_relaxed);
         atomic_store_explicit(phase, i + 1, memory_order_release);
     } else {
@@ -1825,7 +1815,6 @@ void ggml_barrier(struct ggml_compute_state_shared * shared) {
                 pthread_pause_np();
     }
 }
-#endif
 
 // TODO: make this somehow automatically executed
 //       some sort of "sentry" mechanism
@@ -12808,7 +12797,6 @@ GGML_CALL void ggml_rope_yarn_corr_dims(
     dims[1] = MIN(n_dims - 1, end);
 }
 
-__target_clones("avx2") // [jart]
 static void ggml_compute_forward_rope_f32(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst,

@@ -67,8 +67,8 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 
 #define NVCC_FLAGS \
     (!IsWindows() ? "-std=c++11" : "-DIGNORE123"), "-O3", "--shared", "--use_fast_math", \
-        "-Xcudafe", "--diag_suppress=177", "--forward-unknown-to-host-compiler", \
-        "--compiler-options", \
+        "-Xcudafe", "--diag_suppress=177", "-Xcudafe", "--diag_suppress=940", "-Xcudafe", \
+        "--diag_suppress=1305", "--forward-unknown-to-host-compiler", "--compiler-options", \
         (!IsWindows() \
              ? (!IsAarch64() \
                     ? "-fPIC -O3 -march=native -mtune=native -std=c++11 -Wno-unused-function " \
@@ -746,6 +746,8 @@ static bool link_cuda_dso(const char *dso, const char *dir) {
 }
 
 static bool import_cuda_impl(void) {
+
+    npassert(FLAGS_READY);
 
     // No dynamic linking support on OpenBSD yet.
     if (IsOpenbsd())

@@ -216,6 +216,8 @@ bool whisper_params_parse(int argc, char ** argv, whisper_params & params, serve
         }
     }
 
+    FLAGS_READY = true;
+
     return true;
 }
 

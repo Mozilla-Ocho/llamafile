@@ -14356,7 +14356,7 @@ static int llama_decode_internal(
         //        never helps. This number appears to be optimal for all
         //        models ranging from TinyLLaMA 1.1B to mighty Mixtral 8x22B.
         if (n_tokens <= 2) {
-            n_threads = std::min(20, n_threads);
+            n_threads = std::min(32, n_threads);
         }
 
         llama_graph_compute(lctx, gf, n_threads);

@@ -21,15 +21,23 @@ wget https://archive.org/download/raven/raven_poe_64kb.mp3
 sox raven_poe_64kb.mp3 -r 16k raven_poe_64kb.wav
 ```
 
-Then you can use the large model, which is the best.
+The tiny model may get some words wrong. For example, it might think
+"quoth" is "quof". You can solve that using the medium model, which
+enables whisperfile to decode The Raven perfectly. However it's slower.
+
+```
+wget https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin
+o//whisper.cpp/main -m ggml-medium.en.bin -f raven_poe_64kb.wav --no-prints
+```
+
+Lastly, there's the large model, which is the best, but also slowest.
 
 ```
 wget -O whisper-large-v3.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin
 o//whisper.cpp/main -m whisper-large-v3.bin -f raven_poe_64kb.wav --no-prints
 ```
 
-## GPU Support
+### GPU Mode
 
-Pass the `--gpu auto` flag to use GPU mode. This is currently
-experimental. It appears to be working with `whisper-tiny.en-q5_1.bin`
-but isn't reliable yet for the F16 models.
+Pass the `--gpu auto` flag to use GPU mode. This can be particularly
+helpful in speeding up the medium and large models.
