@@ -5,9 +5,9 @@ PREFIX = /usr/local
 COSMOCC = .cosmocc/3.6.2
 TOOLCHAIN = $(COSMOCC)/bin/cosmo
 
-AR = $(TOOLCHAIN)ar
 CC = $(TOOLCHAIN)cc
 CXX = $(TOOLCHAIN)c++
+AR = $(COSMOCC)/bin/ar.ape
 ZIPOBJ = $(COSMOCC)/bin/zipobj
 MKDEPS = $(COSMOCC)/bin/mkdeps
 INSTALL = install

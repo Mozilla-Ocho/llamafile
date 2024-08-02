@@ -5,9 +5,6 @@ LINK.o = $(CXX) $(CCFLAGS) $(LDFLAGS)
 COMPILE.c = $(CC) $(CCFLAGS) $(CFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -c
 COMPILE.cc = $(CXX) $(CCFLAGS) $(CXXFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -c
 
-o/$(MODE)/%.a:
-	$(AR) $(ARFLAGS) $@ $^
-
 o/$(MODE)/%.o: %.c $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.c) -o $@ $<
@@ -23,6 +20,11 @@ o/$(MODE)/%.o: %.cc $(COSMOCC)
 o/$(MODE)/%.o: %.cpp $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.cc) -o $@ $<
+
+o/$(MODE)/%.a:
+	@mkdir -p $(dir $@)/.aarch64
+	$(AR) $(ARFLAGS) $@ $^
+	$(AR) $(ARFLAGS) $(dir $@)/.aarch64/$(notdir $@) $(foreach x,$^,$(dir $(x)).aarch64/$(notdir $(x)))
 
 o/$(MODE)/%: o/$(MODE)/%.o
 	$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
