@@ -439,7 +439,7 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
         .vec_dot                  = ggml_vec_dot_q8_0_q8_0,
         .vec_dot_type             = GGML_TYPE_Q8_0,
 #if defined (__ARM_FEATURE_MATMUL_INT8)
-        .nrows                    = 1,
+        .nrows                    = 2,
 #else
         .nrows                    = 1,
 #endif

@@ -31,20 +31,20 @@ static void llamafile_thread_canceled(llamafile_thread *);
 static ThreadLocal<llamafile_thread> g_key(llamafile_thread_canceled);
 
 struct llamafile_task {
+    _Atomic(pthread_t) th = -1;
     pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
     pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
     void *(*func)(void *);
     void *arg;
     void *res;
-    pthread_t th = -1;
 };
 
 struct llamafile_thread {
+    _Atomic(pthread_t) th = -1;
     pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
     pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
     llamafile_task *task;
     llamafile_thread *next;
-    pthread_t th;
 };
 
 static atomic_int g_active;
@@ -103,6 +103,13 @@ static void *llamafile_thread_worker(void *arg) {
         void *res = thread->task->func(thread->task->arg);
         pthread_setcancelstate(PTHREAD_CANCEL_MASKED, 0);
 
+        for (;;) {
+            if (thread->th != -1)
+                if (thread->task->th != -1)
+                    break;
+            pthread_pause_np();
+        }
+
         pthread_mutex_lock(&thread->task->mu);
         thread->task->res = res;
         thread->task->th = 0;
@@ -141,10 +148,10 @@ static errno_t llamafile_thread_create(llamafile_task *task) {
     pthread_attr_setguardsize(&attr, sysconf(_SC_PAGESIZE));
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setsigaltstacksize_np(&attr, sysconf(_SC_MINSIGSTKSZ) + 32768);
-    errno_t err = pthread_create(&thread->th, &attr, llamafile_thread_worker, thread);
+    errno_t err = pthread_create((pthread_t *)&thread->th, &attr, llamafile_thread_worker, thread);
     pthread_attr_destroy(&attr);
     if (!err) {
-        task->th = thread->th;
+        task->th = thread->th.load();
     } else {
         delete thread;
     }
@@ -160,7 +167,7 @@ errno_t llamafile_task_create(llamafile_task **out_task, void *(*func)(void *), 
     if ((thread = idle_pop())) {
         pthread_mutex_lock(&thread->mu);
         thread->task = task;
-        task->th = thread->th;
+        task->th = thread->th.load();
         pthread_cond_signal(&thread->cv);
         pthread_mutex_unlock(&thread->mu);
         err = 0;
@@ -195,13 +202,17 @@ errno_t llamafile_task_cancel(llamafile_task *task) {
 }
 
 void llamafile_task_shutdown(void) {
-    llamafile_thread *thread;
-    while ((thread = idle_pop()))
-        if (thread->th)
-            pthread_cancel(thread->th);
+    pthread_t th;
     int backoff = 0;
-    while (g_active)
+    llamafile_thread *thread;
+    for (;;) {
+        while ((thread = idle_pop()))
+            if ((th = thread->th))
+                pthread_cancel(th);
+        if (!g_active)
+            break;
         backoff = pthread_delay_np(&g_idle, backoff);
+    }
 }
 
 static struct llamafile_tasks {
