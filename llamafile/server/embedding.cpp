@@ -167,6 +167,7 @@ Client::embedding()
     cparams.n_seq_max = 1;
     cparams.n_threads = 8;
     cparams.n_threads_batch = 8;
+    cparams.attention_type = LLAMA_ATTENTION_TYPE_UNSPECIFIED;
     cparams.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
     cparams.pooling_type = LLAMA_POOLING_TYPE_NONE;
     cparams.type_k = GGML_TYPE_F16;

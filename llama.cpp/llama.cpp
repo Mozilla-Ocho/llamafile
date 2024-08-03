@@ -5576,6 +5576,9 @@ static bool llm_load_tensors(
 
     auto & hparams = model.hparams;
 
+    n_gpu_layers = std::min(n_gpu_layers, (int)hparams.n_layer); // [jart]
+    n_gpu_layers = std::max(n_gpu_layers, 0); // [jart]
+
     model.split_mode   = split_mode;
     model.main_gpu     = main_gpu;
     model.n_gpu_layers = n_gpu_layers;

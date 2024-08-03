@@ -78,6 +78,9 @@ static void ggml_print_backtrace(void) {
 }
 
 GGML_CALL void ggml_abort(const char * file, int line, const char * fmt, ...) {
+    // [jart] abort() shouldn't be a cancelation point
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
+
     fflush(stdout);
 
     fprintf(stderr, "%s:%d: ", file, line);
@@ -436,7 +439,7 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
         .vec_dot                  = ggml_vec_dot_q8_0_q8_0,
         .vec_dot_type             = GGML_TYPE_Q8_0,
 #if defined (__ARM_FEATURE_MATMUL_INT8)
-        .nrows                    = 2,
+        .nrows                    = 1,
 #else
         .nrows                    = 1,
 #endif
@@ -1783,7 +1786,8 @@ struct ggml_numa_nodes {
 //
 
 struct ggml_state {
-    struct ggml_context_container contexts[GGML_MAX_CONTEXTS];
+    // [jart] just use malloc
+    // struct ggml_context_container contexts[GGML_MAX_CONTEXTS];
     struct ggml_numa_nodes numa;
 };
 
@@ -2268,16 +2272,11 @@ static void ggml_init_once(void) {
         const uint64_t t_start = ggml_time_us(); UNUSED(t_start);
 
         g_state = (struct ggml_state) {
-            /*.contexts =*/ { { 0 } },
             /*.numa =*/ {
                 .n_nodes = 0,
                 .total_cpus = 0,
             },
         };
-
-        for (int i = 0; i < GGML_MAX_CONTEXTS; ++i) {
-            g_state.contexts[i].used = false;
-        }
 
         const uint64_t t_end = ggml_time_us(); UNUSED(t_end);
 
@@ -2329,33 +2328,13 @@ void ggml_free(struct ggml_context * ctx) {
     if (ctx == NULL) {
         return;
     }
-
-    // make this function thread safe
-    ggml_critical_section_start();
-
-    bool found = false;
-
-    for (int i = 0; i < GGML_MAX_CONTEXTS; i++) {
-        if (&g_state.contexts[i].context == ctx) {
-            g_state.contexts[i].used = false;
-
-            GGML_PRINT_DEBUG("%s: context %d has been freed. memory used = %zu\n",
-                    __func__, i, ggml_used_mem(ctx));
-
-            if (ctx->mem_buffer_owned) {
-                GGML_ALIGNED_FREE(ctx->mem_buffer);
-            }
-
-            found = true;
-            break;
-        }
+    // [jart] just use malloc
+    GGML_PRINT_DEBUG("%s: context %d has been freed. memory used = %zu\n",
+                     __func__, i, ggml_used_mem(ctx));
+    if (ctx->mem_buffer_owned) {
+        GGML_ALIGNED_FREE(ctx->mem_buffer);
     }
-
-    if (!found) {
-        GGML_PRINT_DEBUG("%s: context not found\n", __func__);
-    }
-
-    ggml_critical_section_end();
+    free(ctx);
 }
 
 size_t ggml_used_mem(const struct ggml_context * ctx) {

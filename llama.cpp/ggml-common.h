@@ -322,9 +322,9 @@ static_assert(sizeof(block_q6_K) == sizeof(ggml_half) + QK_K / 16 + 3*QK_K/4, "w
 // This is only used for intermediate quantization and dot products
 // [kawrakow] Note: I have switched the order of bsums and qs. This results in some performance gain on Arm
 typedef struct {
-    float   d;              // delta
-    int16_t bsums[QK_K/16]; // sum of quants in groups of 16
-    int8_t  qs[QK_K];       // quants
+    float   d;              // #1 delta
+    int16_t bsums[QK_K/16]; // #2 sum of quants in groups of 16
+    int8_t  qs[QK_K];       // #3 quants
 } block_q8_K;
 static_assert(sizeof(block_q8_K) == sizeof(float) + QK_K + QK_K/16*sizeof(int16_t), "wrong q8_K block size/padding");
 
