@@ -95,10 +95,6 @@ static inline ggml_bf16_t ggml_compute_fp32_to_bf16(float s) {
         h.bits = (u.i >> 16) | 64; /* force to quiet */
         return h;
     }
-    if (!(u.i & 0x7f800000)) { /* subnormal */
-        h.bits = (u.i & 0x80000000) >> 16; /* flush to zero */
-        return h;
-    }
     h.bits = (u.i + (0x7fff + ((u.i >> 16) & 1))) >> 16;
     return h;
 }

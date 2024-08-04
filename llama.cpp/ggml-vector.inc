@@ -1316,15 +1316,18 @@ void ggml_vec_hardsigmoid_f32 (const int n, float * y, const float * x) { for (i
 //      -7         -6         -5         -4         -3        -2         -1          0          1
 //
 
+static const float GELU_COEF_A     = .044715f;
+static const float GELU_QUICK_COEF = -1.702f;
+static const float SQRT_2_OVER_PI  = .79788456080286535587989211986876f;
+
 static inline float ggml_gelu_f32(float x) {
-    union {
-        float f;
-        uint32_t i;
-    } u = {x};
-    u.i &= 0xfffffffe;
-    x = u.f;
-    x = .5f * x * (1.f + Tanhf(sqrtf(M_2_PI) * (x + .044715f * x * x * x)));
-    return x;
+    if (x <= -10) {
+        return 0;
+    } else if (x >= 10) {
+        return x;
+    } else {
+        return .5f*x*(1.f + Tanhf(SQRT_2_OVER_PI*x*(1.0f + GELU_COEF_A*x*x)));
+    }
 }
 
 void ggml_vec_gelu_f32(const int n, float * y, const float * x) {
