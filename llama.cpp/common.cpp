@@ -205,7 +205,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         return true;
     }
     if (arg == "--fast") {
-        FLAG_precise = false;
+        FLAG_fast = true;
         return true;
     }
     if (arg == "--precise") {

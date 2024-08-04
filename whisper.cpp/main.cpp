@@ -126,6 +126,10 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
 
         if (arg == "--log-disable") {
             FLAG_log_disable = true;
+        } else if (arg == "--fast") {
+            FLAG_fast = true;
+        } else if (arg == "--precise") {
+            FLAG_precise = true;
         } else if (arg == "--trace") {
             FLAG_trace = true;
         } else if (arg == "--trap") {

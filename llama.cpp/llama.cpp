@@ -2,6 +2,7 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #define LLAMA_API_INTERNAL
 #include "llamafile/log.h"
+#include "llamafile/latency.h"
 #include "llamafile/debug.h"
 
 #include "llama-impl.h"

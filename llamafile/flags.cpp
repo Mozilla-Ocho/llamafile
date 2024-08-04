@@ -27,6 +27,7 @@
 #include "llama.cpp/llama.h"
 
 bool FLAGS_READY = false;
+bool FLAG_fast = false;
 bool FLAG_log_disable = false;
 bool FLAG_mlock = false;
 bool FLAG_mmap = true;
@@ -220,7 +221,7 @@ void llamafile_get_flags(int argc, char **argv) {
         // cpu flags
 
         if (!strcmp(flag, "--fast")) {
-            FLAG_precise = false;
+            FLAG_fast = true;
             continue;
         }
 

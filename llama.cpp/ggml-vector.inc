@@ -4,6 +4,7 @@
 #include "ggml-vector.h"
 #include "ggml-impl.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/tanhf.h"
 #include <stdatomic.h>
 
 void ggml_once(atomic_uint *, void (*)(void));
@@ -1330,8 +1331,14 @@ void ggml_vec_hardsigmoid_f32 (const int n, float * y, const float * x) { for (i
 //
 
 static inline float ggml_gelu_f32(float x) {
-    // GeLU approximation that goes slower and we seem to be stuck with.
-    return .5f * x * (1.f + tanhf(sqrtf(M_2_PI) * (x + .044715f * x * x * x)));
+    union {
+        float f;
+        uint32_t i;
+    } u = {x};
+    u.i &= 0xfffffffe;
+    x = u.f;
+    x = .5f * x * (1.f + Tanhf(sqrtf(M_2_PI) * (x + .044715f * x * x * x)));
+    return x;
 }
 
 void ggml_vec_gelu_f32(const int n, float * y, const float * x) {

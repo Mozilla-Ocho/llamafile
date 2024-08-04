@@ -2546,7 +2546,7 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         }
         else if (arg == "--fast")
         {
-            FLAG_precise = false;
+            FLAG_fast = true;
         }
         else if (arg == "--precise")
         {

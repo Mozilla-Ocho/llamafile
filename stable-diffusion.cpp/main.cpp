@@ -216,7 +216,7 @@ void parse_args(int argc, const char** argv, SDParams& params) {
 
         // [jart]
         if (arg == "--fast") {
-            FLAG_precise = false;
+            FLAG_fast = true;
         } else if (arg == "--precise") {
             FLAG_precise = true;
         } else if (arg == "--trace") {
