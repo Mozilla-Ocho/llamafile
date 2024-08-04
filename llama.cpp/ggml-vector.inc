@@ -6,6 +6,7 @@
 #include "llamafile/llamafile.h"
 #include "llamafile/tanhf.h"
 #include <stdatomic.h>
+#include <cosmo.h>
 
 void ggml_once(atomic_uint *, void (*)(void));
 
@@ -898,47 +899,32 @@ void ggml_vec_neg_f32 (const int n, float * y, const float * x)                 
 void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]*y[i];   }
 void ggml_vec_div_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]/y[i];   }
 
-void ggml_vec_dot_f32(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc) {
-   assert(nrc == 1);
-   UNUSED(nrc);
-   UNUSED(bx);
-   UNUSED(by);
-   UNUSED(bs);
+#define CHUNK 8
 
-#if defined(GGML_SIMD)
-    float sumf = 0.0f;
-    const int np = (n & ~(GGML_F32_STEP - 1));
-
-    GGML_F32_VEC sum[GGML_F32_ARR] = { GGML_F32_VEC_ZERO };
-
-    GGML_F32_VEC ax[GGML_F32_ARR];
-    GGML_F32_VEC ay[GGML_F32_ARR];
-
-    for (int i = 0; i < np; i += GGML_F32_STEP) {
-        for (int j = 0; j < GGML_F32_ARR; j++) {
-            ax[j] = GGML_F32_VEC_LOAD(x + i + j*GGML_F32_EPR);
-            ay[j] = GGML_F32_VEC_LOAD(y + i + j*GGML_F32_EPR);
-
-            sum[j] = GGML_F32_VEC_FMA(sum[j], ax[j], ay[j]);
-        }
+__attribute__((__optimize__("-O3,-ffast-math")))
+void ggml_vec_dot_f32(int n, float * restrict s, size_t bs, const float * restrict A, size_t bx, const float * restrict B, size_t by, int nrc) {
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+    int rule, step = 2;
+    size_t chunk, sp = 0;
+    float stack[bsr(n / CHUNK + 1) + 1];
+    for (chunk = 0; chunk + CHUNK * 4 <= n; chunk += CHUNK * 4, step += 2) {
+        float sum = 0;
+        for (size_t elem = 0; elem < CHUNK * 4; ++elem)
+            sum += A[chunk + elem] * B[chunk + elem];
+        for (rule = bsr(step & -step); --rule;)
+            sum += stack[--sp];
+        stack[sp++] = sum;
     }
-
-    // reduce sum0..sum3 to sum0
-    GGML_F32_VEC_REDUCE(sumf, sum);
-
-    // leftovers
-    for (int i = np; i < n; ++i) {
-        sumf += x[i]*y[i];
-    }
-#else
-    // scalar
-    ggml_float sumf = 0.0;
-    for (int i = 0; i < n; ++i) {
-        sumf += (ggml_float)(x[i]*y[i]);
-    }
-#endif
-
-    *s = sumf;
+    float res = 0;
+    while (sp)
+        res += stack[--sp];
+    for (; chunk < n; ++chunk)
+        res += A[chunk] * B[chunk];
+    *s = res;
 }
 
 void ggml_vec_dot_bf16(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc) {
