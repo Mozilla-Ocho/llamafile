@@ -12,7 +12,8 @@ FUNCS = [(re.search(r'(?<= )\w+', proto).group(0), proto)
 # END SPECIAL FUNCTIONS
 
 ARCHS = (
-  ('amd_avx512bf16', '__x86_64__', ('X86_HAVE(FMA)', 'X86_HAVE(F16C)', 'X86_HAVE(AVX2)', 'X86_HAVE(AVX512F)', 'X86_HAVE(AVX512VL)', 'X86_HAVE(AVX512_BF16)')),
+  ('amd_avx512bf16', '__x86_64__', ('X86_HAVE(FMA)', 'X86_HAVE(F16C)', 'X86_HAVE(AVX2)', 'X86_HAVE(AVX512F)', 'X86_HAVE(AVX512BW)', 'X86_HAVE(AVX512DQ)', 'X86_HAVE(AVX512VL)', 'X86_HAVE(AVX512_BF16)')),
+  ('amd_avx512vl', '__x86_64__', ('X86_HAVE(FMA)', 'X86_HAVE(F16C)', 'X86_HAVE(AVX2)', 'X86_HAVE(AVX512F)', 'X86_HAVE(AVX512BW)', 'X86_HAVE(AVX512DQ)', 'X86_HAVE(AVX512VL)')),
   ('amd_avx512', '__x86_64__', ('X86_HAVE(FMA)', 'X86_HAVE(F16C)', 'X86_HAVE(AVX2)', 'X86_HAVE(AVX512F)')),
   ('amd_avx2', '__x86_64__', ('X86_HAVE(FMA)', 'X86_HAVE(F16C)', 'X86_HAVE(AVX2)')),
   ('amd_f16c', '__x86_64__', ('X86_HAVE(AVX)', 'X86_HAVE(F16C)')),

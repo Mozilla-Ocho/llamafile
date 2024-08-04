@@ -12,6 +12,7 @@ FUNCS.append(('ggml_validate_row_data', 'bool ggml_validate_row_data(enum ggml_t
 # END SPECIAL FUNCTIONS
 
 ARCHS = (
+  ('amd_avx512vl', '__x86_64__', ('FMA', 'F16C', 'AVX', 'AVX2', 'AVX512F', 'AVX512BW', 'AVX512DQ', 'AVX512VL')),
   ('amd_avx512', '__x86_64__', ('FMA', 'F16C', 'AVX', 'AVX2', 'AVX512F')),
   ('amd_avx2', '__x86_64__', ('FMA', 'F16C', 'AVX', 'AVX2')),
   ('amd_avx', '__x86_64__', ('AVX',)),
