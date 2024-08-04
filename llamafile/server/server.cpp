@@ -114,7 +114,7 @@ Server::spawn()
 }
 
 int
-Server::accept()
+Server::accept(unsigned* out_ip)
 {
     // accept connection
     sockaddr_in clientaddr;
@@ -148,6 +148,8 @@ Server::accept()
 
     if (FLAG_verbose >= 2)
         SLOG("accept");
+    if (out_ip)
+        *out_ip = ip;
     return clifd;
 }
 

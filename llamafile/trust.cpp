@@ -15,28 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include "client.h"
-#include "server.h"
-#include <cosmo.h>
-#include <pthread.h>
+#include "trust.h"
 
-#define WORKER(e) DLL_CONTAINER(Worker, elem, e)
+ctl::vector<cidr> FLAG_trust;
 
-struct Worker
-{
-    Server* server;
-    Dll elem;
-    pthread_t th = 0;
-    bool working = false;
-    Client client;
-
-    Worker(Server*);
-    void run();
-    void begin();
-    void handle();
-    void end();
-    void deprioritize();
-    void retire();
-    void kill();
-};
+bool is_trusted_ip(unsigned ip) noexcept {
+    for (auto c : FLAG_trust)
+        if (c.matches(ip))
+            return true;
+    return false;
+}

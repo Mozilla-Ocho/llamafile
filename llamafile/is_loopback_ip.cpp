@@ -15,28 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include "client.h"
-#include "server.h"
-#include <cosmo.h>
-#include <pthread.h>
+#include "trust.h"
 
-#define WORKER(e) DLL_CONTAINER(Worker, elem, e)
-
-struct Worker
-{
-    Server* server;
-    Dll elem;
-    pthread_t th = 0;
-    bool working = false;
-    Client client;
-
-    Worker(Server*);
-    void run();
-    void begin();
-    void handle();
-    void end();
-    void deprioritize();
-    void retire();
-    void kill();
-};
+bool is_loopback_ip(unsigned x) noexcept {
+    return (x >> 24) == 127; /* 127.0.0.0/8 */
+}

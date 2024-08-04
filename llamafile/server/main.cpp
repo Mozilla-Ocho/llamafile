@@ -28,6 +28,7 @@
 #include "server.h"
 #include "signals.h"
 #include "time.h"
+#include "tokenbucket.h"
 
 Server* g_server;
 llama_model* g_model;
@@ -46,6 +47,7 @@ main(int argc, char* argv[])
     LoadZipArgs(&argc, &argv);
     llamafile_get_flags(argc, argv);
     time_init();
+    tokenbucket_init();
 
     // we must disable the llama.cpp logger
     // otherwise pthread_cancel() will cause deadlocks
@@ -78,6 +80,16 @@ main(int argc, char* argv[])
     for (int i = 0; i < FLAG_workers; ++i)
         npassert(!g_server->spawn());
 
+    // install security
+    if (!FLAG_unsecure) {
+        if (pledge(0, 0)) {
+            SLOG("warning: this OS doesn't support pledge() security\n");
+        } else if (pledge("stdio anet", 0)) {
+            perror("pledge");
+            exit(1);
+        }
+    }
+
     // run server
     signals_init();
     llama_backend_init();
@@ -91,6 +103,7 @@ main(int argc, char* argv[])
     g_server->close();
     delete g_server;
     llama_free_model(g_model);
+    tokenbucket_destroy();
     time_destroy();
     SLOG("exit");
 

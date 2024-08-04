@@ -16,27 +16,15 @@
 // limitations under the License.
 
 #pragma once
-#include "client.h"
-#include "server.h"
-#include <cosmo.h>
-#include <pthread.h>
 
-#define WORKER(e) DLL_CONTAINER(Worker, elem, e)
+void
+tokenbucket_init();
 
-struct Worker
-{
-    Server* server;
-    Dll elem;
-    pthread_t th = 0;
-    bool working = false;
-    Client client;
+void
+tokenbucket_destroy();
 
-    Worker(Server*);
-    void run();
-    void begin();
-    void handle();
-    void end();
-    void deprioritize();
-    void retire();
-    void kill();
-};
+int
+tokenbucket_acquire(unsigned);
+
+void
+tokenbucket_replenish();

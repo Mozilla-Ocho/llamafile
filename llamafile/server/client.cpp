@@ -28,10 +28,13 @@
 #include "llama.cpp/llama.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/threadlocal.h"
+#include "llamafile/trust.h"
 #include "llamafile/version.h"
 
 #include "log.h"
 #include "time.h"
+#include "tokenbucket.h"
+#include "worker.h"
 
 #define STANDARD_RESPONSE_HEADERS \
     "Server: llamafile/" LLAMAFILE_VERSION_STRING "\r\n" \
@@ -186,6 +189,36 @@ Client::transport()
     if (!has_at_most_this_element(kHttpExpect, "100-continue")) {
         close_connection = true;
         return send_error(417);
+    }
+
+    effective_ip = client_ip;
+    effective_ip_trusted = client_ip_trusted;
+    if (FLAG_ip_header) {
+        if (is_loopback_ip(client_ip) || client_ip_trusted) {
+            ctl::string_view ip_header = get_header(FLAG_ip_header);
+            if (!ip_header.empty()) {
+                long ip;
+                if ((ip = parse_ip(ip_header)) == -1) {
+                    effective_ip = ip;
+                    effective_ip_trusted = is_trusted_ip(ip);
+                } else {
+                    SLOG("client's --ip-header wasn't a single ipv4 address");
+                    effective_ip_trusted = false;
+                }
+            }
+        } else {
+            SLOG("received direct connect from untrusted ip");
+            effective_ip_trusted = false;
+        }
+    }
+
+    if (get_header("X-Priority") == "batch") {
+        worker->deprioritize();
+    } else if (!effective_ip_trusted) {
+        if (tokenbucket_acquire(client_ip) > FLAG_token_burst) {
+            SLOG("deprioritizing");
+            worker->deprioritize();
+        }
     }
 
     if (HasHeader(kHttpTransferEncoding))
@@ -352,6 +385,28 @@ Client::has_at_most_this_element(int h, const string_view s)
         }
     }
     return true;
+}
+
+ctl::string_view
+Client::get_header(const ctl::string_view& key)
+{
+    int h;
+    size_t i, keylen;
+    if ((h = GetHttpHeader(key.data(), key.size())) != -1) {
+        if (msg.headers[h].a)
+            return ctl::string_view(ibuf.p + msg.headers[h].a,
+                                    msg.headers[h].b - msg.headers[h].a);
+    } else {
+        for (i = 0; i < msg.xheaders.n; ++i)
+            if (SlicesEqualCase(key.data(),
+                                key.size(),
+                                ibuf.p + msg.xheaders.p[i].k.a,
+                                msg.xheaders.p[i].k.b - msg.xheaders.p[i].k.a))
+                return ctl::string_view(ibuf.p + msg.xheaders.p[i].v.a,
+                                        msg.xheaders.p[i].v.b -
+                                          msg.xheaders.p[i].v.a);
+    }
+    return ctl::string_view();
 }
 
 bool

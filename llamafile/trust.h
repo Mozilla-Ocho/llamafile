@@ -16,27 +16,22 @@
 // limitations under the License.
 
 #pragma once
-#include "client.h"
-#include "server.h"
-#include <cosmo.h>
-#include <pthread.h>
+#include <ctl/string.h>
+#include <ctl/vector.h>
 
-#define WORKER(e) DLL_CONTAINER(Worker, elem, e)
+struct cidr {
+    unsigned ip;
+    unsigned bits;
 
-struct Worker
-{
-    Server* server;
-    Dll elem;
-    pthread_t th = 0;
-    bool working = false;
-    Client client;
-
-    Worker(Server*);
-    void run();
-    void begin();
-    void handle();
-    void end();
-    void deprioritize();
-    void retire();
-    void kill();
+    constexpr bool matches(unsigned x) const noexcept {
+        unsigned mask = -1u << (32 - bits);
+        return (x & mask) == (ip & mask);
+    }
 };
+
+extern ctl::vector<cidr> FLAG_trust;
+
+bool is_trusted_ip(unsigned) noexcept;
+bool is_loopback_ip(unsigned) noexcept;
+long parse_ip(const ctl::string_view &) noexcept;
+bool parse_cidr(const ctl::string_view &, cidr *) noexcept;

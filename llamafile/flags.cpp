@@ -17,11 +17,15 @@
 
 #include "debug.h"
 #include "llamafile.h"
+#include "trust.h"
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "llama.cpp/llama.h"
@@ -38,9 +42,11 @@ bool FLAG_tinyblas = false;
 bool FLAG_trace = false;
 bool FLAG_unsecure = false;
 const char *FLAG_file = nullptr;
+const char *FLAG_ip_header = nullptr;
 const char *FLAG_listen = "0.0.0.0:8080";
 const char *FLAG_model = nullptr;
 const char *FLAG_prompt = nullptr;
+double FLAG_token_rate = 1;
 float FLAG_temp = 0.8;
 int FLAG_batch = 2048;
 int FLAG_ctx = 512;
@@ -54,6 +60,8 @@ int FLAG_n_gpu_layers = -1;
 int FLAG_seed = LLAMA_DEFAULT_SEED;
 int FLAG_split_mode = LLAMA_SPLIT_MODE_LAYER;
 int FLAG_threads;
+int FLAG_token_burst = 100;
+int FLAG_token_cidr = 24;
 int FLAG_ubatch = 512;
 int FLAG_verbose = 0;
 int FLAG_warmup = true;
@@ -133,6 +141,61 @@ void llamafile_get_flags(int argc, char **argv) {
             if (i == argc)
                 missing("--workers");
             FLAG_workers = atoi(argv[i++]);
+            continue;
+        }
+
+        if (!strcmp(flag, "--ip-header")) {
+            if (i == argc)
+                missing("--ip-header");
+            cidr ip;
+            FLAG_ip_header = argv[i++];
+            continue;
+        }
+
+        if (!strcmp(flag, "--trust")) {
+            if (i == argc)
+                missing("--trust");
+            cidr ip;
+            if (!parse_cidr(argv[i++], &ip))
+                error("invalid --trust CIDR (expect like 192.168.0.0/24)");
+            FLAG_trust.push_back(ip);
+            continue;
+        }
+
+        if (!strcmp(flag, "--token-rate")) {
+            if (i == argc)
+                missing("--token-rate");
+            double rate = atof(argv[i++]);
+            if (!rate)
+                error("--token-rate can't be zero");
+            double micros = 1e6 / rate;
+            if (isnan(micros) || isinf(micros))
+                error("--token-rate invalid");
+            if (micros < 10)
+                error("--token-rate too frequent (can't be above 100000 a.k.a. 1 per 10µs)");
+            if (micros > 60 * 60 * 1e6)
+                error("--token-rate too infrequent (can't be below 1/(60*60) a.k.a. 1 per hour)");
+            FLAG_token_rate = rate;
+            continue;
+        }
+
+        if (!strcmp(flag, "--token-burst")) {
+            if (i == argc)
+                missing("--token-burst");
+            int burst = atoi(argv[i++]);
+            if (!(1 <= burst && burst <= 127))
+                error("--token-burst must be 1..127");
+            FLAG_token_burst = burst;
+            continue;
+        }
+
+        if (!strcmp(flag, "--token-cidr")) {
+            if (i == argc)
+                missing("--token-cidr");
+            int cidr = atoi(argv[i++]);
+            if (!(3 <= cidr && cidr <= 32))
+                error("--token-cidr must be 3..32");
+            FLAG_token_cidr = cidr;
             continue;
         }
 

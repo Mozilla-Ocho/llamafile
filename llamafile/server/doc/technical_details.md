@@ -9,8 +9,8 @@ technical aspects of LLaMAfiler.
 This server can serve embeddings an order of a magnitude faster than the
 llama.cpp example server. We measured this on Threadripper PRO 7995WX w/
 all-MiniLM-L6-v2 Q6\_K. Using a prompt with 50 tokens this server served
-930 `/embedding` requests per second, whereas llama.cpp/build/bin/server
-built with glibc served 100 per second.
+1,916 `/embedding` requests per second, whereas
+llama.cpp/build/bin/server built with glibc served 771 per second.
 
 The following wrk script was used:
 
@@ -23,10 +23,10 @@ wrk.headers["Content-Type"] = "application/json"
 With the following commands:
 
 ```
-llamafiler -m /weights/all-MiniLM-L6-v2.Q6_K.gguf
+llamafiler -m /weights/all-MiniLM-L6-v2.Q6_K.gguf --trust 127.0.0.1/32
 wrk --latency -t 32 -c 32 -s embedding.lua 'http://127.0.0.1:8080/embedding'
 
-~/llama.cpp/build/bin/server -m /weights/all-MiniLM-L6-v2.Q6_K.gguf --embeddings
+~/llama.cpp/llama-server -m /weights/all-MiniLM-L6-v2.Q6_K.gguf --embeddings
 wrk --latency -t 32 -c 32 -s embedding.lua 'http://127.0.0.1:8080/embedding'
 ```
 
@@ -34,39 +34,39 @@ The results for llamafiler were:
 
 ```
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    33.89ms    7.48ms  61.55ms   66.90%
-    Req/Sec    29.26      6.52    50.00     59.74%
+    Latency    16.50ms    3.01ms  31.95ms   71.14%
+    Req/Sec    59.95      7.17    80.00     52.34%
   Latency Distribution
-     50%   33.31ms
-     75%   38.76ms
-     90%   43.76ms
-     99%   53.31ms
-  1592 requests in 1.70s, 8.26MB read
-Requests/sec:    934.80
-Transfer/sec:      4.85MB
+     50%   16.30ms
+     75%   18.19ms
+     90%   20.30ms
+     99%   24.95ms
+  1535 requests in 801.08ms, 7.93MB read
+Requests/sec:   1916.18
+Transfer/sec:      9.90MB
 ```
 
-The results for llama.cpp were:
+The results for llama.cpp in CPU mode were:
 
 ```
+  32 threads and 32 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency   262.34ms   75.10ms 322.91ms   82.80%
-    Req/Sec     3.73      1.88    10.00     93.55%
+    Latency    41.16ms   20.70ms 107.46ms   59.20%
+    Req/Sec    24.14      8.80    40.00     73.44%
   Latency Distribution
-     50%  281.00ms
-     75%  321.60ms
-     90%  322.32ms
-     99%  322.91ms
-  93 requests in 901.53ms, 748.74KB read
-Requests/sec:    103.16
-Transfer/sec:    830.53KB
+     50%   51.99ms
+     75%   56.98ms
+     90%   60.19ms
+     99%   87.11ms
+  2163 requests in 2.80s, 16.96MB read
+Requests/sec:    771.50
+Transfer/sec:      6.05MB
 ```
 
-It's possible to make the llama.cpp server go faster, by passing the
-`-np 10` flag. This will preallocate ten server slots which allow
-requests to be handled in parallel. However doing this boosted the
-performance to no more than 200 requests per second. Specifying higher
-values, e.g. `-np 50` causes the llama.cpp to crash.
+GPU mode was also attempted with a pair of RTX 4090s. However it was
+only able to do 450 requests per second. CPU goes faster here probably
+because we're using a model that's small enough to fit entirely inside
+Threadripper's L3 cache.
 
 For less computationally intensive endpoints, such as `/tokenize`,
 llamafiler on Threadripper PRO 7995WX is able to serve 3.3 million
@@ -95,19 +95,24 @@ LLaMAfiler uses `pthread_cancel()` to asynchronously cancel requests
 when appropriate. The server is designed this way so that high-priority
 or latency-sensitive requests can preempt batch background jobs.
 
-For example, we intend to implement an HTTP header that will allow a
-client to elect the priority of its request. For low-priority requests,
+Clients can voluntarily send an `X-Priority: batch` HTTP header that'll
+make a request first in line for preemption. For low-priority requests,
 if a higher priority job happens to come in, the low-priority job can be
 canceled in less than a millisecond, even if it's inside a deep,
 long-running matrix multiplication operation. This will not leak memory.
 It ensures that resources are freed up immediately for the other job.
 
-Cancelation is also useful for DDoS mitigation. The `-w N` flag allows
-you to specify a fixed number of HTTP workers. By default, this will be
-set to the number of CPU cores multiplied by two. HTTP clients are
-permitted to idle (via the HTTP keep-alive mechanism) as long as they
-wish. However, if the number of available workers runs out when a new
-request comes in, the oldest worker will be canceled to make room.
+Clients can also be deprioritized involuntarily, if they create more
+connections or send more requests than the token bucket burst limit.
+This provides a last line of defense against DDOS. Even without tokens,
+clients can still do whatever they want, because no action is taken by
+the server until resource pressure happens. The `-w N` flag allows you
+to specify a fixed number of HTTP workers. By default, this will be set
+to the number of CPU cores multiplied by two. HTTP clients are permitted
+to idle (via the HTTP keep-alive mechanism) or spam requests as long and
+as much as they wish. However, if the number of available workers runs
+out when a new request comes in, then the most recently deprioritized
+worker will be canceled to make room.
 
 When a cancelation happens, HTTP connections in the idle state will
 simply be closed. If an HTTP connection is in the middle of serving a
@@ -118,11 +123,12 @@ multiple servers, then failover strategies can also be used.
 
 ## Crash Proofing
 
-LLaMAfiler is designed to be impossible to crash. Let's say there's a
-bug in llama.cpp or LLaMAfiler that causes a SIGSEGV to happen while
-processing a request. In that case, the worker thread will be canceled
-and a backtrace will be logged. A fresh new worker thread will then be
-spawned to take its place.
+One of the issues with the upstream llama.cpp server is that it's very
+easy to make it crash. LLaMAfiler is designed to be impossible to crash.
+Let's say there's a bug in llama.cpp or LLaMAfiler that causes a SIGSEGV
+to happen while processing a request. In that case, the worker thread
+will be canceled and a backtrace will be logged. A fresh new worker
+thread will then be spawned to take its place.
 
 Each thread is given a stack size of 81KB, which includes the guard
 page. Stack overflows are reported and recoverable with a backtrace,

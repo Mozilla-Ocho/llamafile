@@ -146,18 +146,13 @@ void
 time_init()
 {
     update_time();
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    if (pthread_create(&g_time_thread, &attr, time_worker, 0))
+    if (pthread_create(&g_time_thread, 0, time_worker, 0))
         __builtin_trap();
-    pthread_attr_destroy(&attr);
 }
 
 void
 time_destroy()
 {
-    if (!g_time_thread)
-        return;
     pthread_cancel(g_time_thread);
     if (pthread_join(g_time_thread, 0))
         __builtin_trap();

@@ -17,6 +17,8 @@ LLAMAFILE_OBJS :=					\
 	$(LLAMAFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.o)	\
 	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)
 
+$(LLAMAFILE_OBJS): private CCFLAGS += -g
+
 # this executable defines its own malloc(), free(), etc.
 # therefore we want to avoid it going inside the .a file
 LLAMAFILE_OBJS := $(filter-out o/$(MODE)/llamafile/zipalign.o,$(LLAMAFILE_OBJS))
@@ -52,6 +54,7 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/addnl			\
 		o/$(MODE)/llamafile/pool_test.runs		\
 		o/$(MODE)/llamafile/pool_cancel_test.runs	\
+		o/$(MODE)/llamafile/parse_cidr_test.runs	\
 
 ################################################################################
 # microarchitectures
@@ -142,6 +145,11 @@ o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o:		\
 
 ################################################################################
 # testing
+
+o/$(MODE)/llamafile/parse_cidr_test:			\
+		o/$(MODE)/llamafile/parse_cidr_test.o	\
+		o/$(MODE)/llamafile/parse_cidr.o	\
+		o/$(MODE)/llamafile/parse_ip.o		\
 
 o/$(MODE)/llamafile/pool_test:				\
 		o/$(MODE)/llamafile/pool_test.o		\

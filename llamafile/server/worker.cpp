@@ -23,10 +23,12 @@
 
 #include "llamafile/llamafile.h"
 #include "llamafile/threadlocal.h"
+#include "llamafile/trust.h"
 
 #include "client.h"
 #include "log.h"
 #include "signals.h"
+#include "tokenbucket.h"
 
 Worker::Worker(Server* server) : server(server)
 {
@@ -43,6 +45,11 @@ void
 Worker::begin()
 {
     npassert(!working);
+    client.worker = this;
+    client.client_ip_trusted = is_trusted_ip(client.client_ip);
+    int tokens = 0;
+    if (!client.client_ip_trusted)
+        tokens = tokenbucket_acquire(client.client_ip);
     server->lock();
     dll_remove(&server->idle_workers, &elem);
     if (dll_is_empty(server->idle_workers)) {
@@ -53,7 +60,11 @@ Worker::begin()
         }
     }
     working = true;
-    dll_make_first(&server->active_workers, &elem);
+    if (tokens > FLAG_token_burst) {
+        dll_make_last(&server->active_workers, &elem);
+    } else {
+        dll_make_first(&server->active_workers, &elem);
+    }
     server->unlock();
 }
 
@@ -65,6 +76,16 @@ Worker::end()
     dll_remove(&server->active_workers, &elem);
     working = false;
     dll_make_first(&server->idle_workers, &elem);
+    server->unlock();
+}
+
+void
+Worker::deprioritize()
+{
+    npassert(working);
+    server->lock();
+    dll_remove(&server->active_workers, &elem);
+    dll_make_last(&server->active_workers, &elem);
     server->unlock();
 }
 
@@ -83,9 +104,9 @@ Worker::retire()
 }
 
 void
-Worker::handle(void)
+Worker::handle()
 {
-    if ((client.fd = server->accept()) == -1) {
+    if ((client.fd = server->accept(&client.client_ip)) == -1) {
         SLOG("accept returned %m");
         return;
     }

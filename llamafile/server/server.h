@@ -25,7 +25,7 @@ struct Server
     Server(int);
     ~Server();
 
-    int accept();
+    int accept(unsigned*);
     errno_t spawn();
     void terminate();
     void shutdown();

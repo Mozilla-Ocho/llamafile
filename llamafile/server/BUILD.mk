@@ -9,6 +9,8 @@ LLAMAFILE_SERVER_INCS = $(filter %.inc,$(LLAMAFILE_SERVER_FILES))
 LLAMAFILE_SERVER_SRCS = $(filter %.cpp,$(LLAMAFILE_SERVER_FILES))
 LLAMAFILE_SERVER_OBJS = $(LLAMAFILE_SERVER_SRCS:%.cpp=o/$(MODE)/%.o)
 
+$(LLAMAFILE_SERVER_OBJS): private CCFLAGS += -g
+
 o/$(MODE)/llamafile/server/server.a:				\
 		$(filter-out %_test.o,$(LLAMAFILE_SERVER_OBJS))
 
@@ -32,6 +34,12 @@ o/$(MODE)/llamafile/server/json_test:				\
 		o/$(MODE)/llamafile/server/json.o		\
 		o/$(MODE)/llamafile/server/hextoint.o		\
 		o/$(MODE)/double-conversion/double-conversion.a	\
+
+o/$(MODE)/llamafile/server/tokenbucket_test:			\
+		o/$(MODE)/llamafile/server/tokenbucket_test.o	\
+		o/$(MODE)/llamafile/server/tokenbucket.o	\
+		o/$(MODE)/llamafile/server/log.o		\
+		o/$(MODE)/llama.cpp/llama.cpp.a			\
 
 .PHONY: o/$(MODE)/llamafile/server
 o/$(MODE)/llamafile/server:					\
