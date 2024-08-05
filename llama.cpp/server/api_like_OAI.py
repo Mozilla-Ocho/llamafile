@@ -35,6 +35,8 @@ def is_present(json, key):
 #convert chat to prompt
 def convert_chat(messages):
     prompt = "" + args.chat_prompt.replace("\\n", "\n")
+    image_data = []
+    image_id = 1
 
     system_n = args.system_name.replace("\\n", "\n")
     user_n = args.user_name.replace("\\n", "\n")
@@ -46,17 +48,35 @@ def convert_chat(messages):
         if (line["role"] == "system"):
             prompt += f"{system_n}{line['content']}"
         if (line["role"] == "user"):
-            prompt += f"{user_n}{line['content']}"
+            # content can either be a string or an iterable with "text"
+            # and "image_url" elements
+            content = line['content']
+            if type(content) == str:
+                prompt += f"{user_n}{line['content']}"
+            else:
+                # add all elements from array
+                for content_part in content:
+                    if content_part['type'] == "text":
+                        prompt += f"{user_n}{content_part['text']}{stop}"
+                    elif content_part['type'] == "image_url":
+                        image_data.append(
+                            {"data": content_part['image_url']['url'].split(",")[1],
+                             "id": image_id})
+                        image_id+=1
+
         if (line["role"] == "assistant"):
             prompt += f"{ai_n}{line['content']}{stop}"
     prompt += ai_n.rstrip()
 
-    return prompt
+    return prompt, image_data
 
 def make_postData(body, chat=False, stream=False):
     postData = {}
     if (chat):
-        postData["prompt"] = convert_chat(body["messages"])
+        prompt, image_data = convert_chat(body["messages"])
+        postData["prompt"] = prompt
+        if len(image_data) > 0:
+            postData["image_data"] = image_data
     else:
         postData["prompt"] = body["prompt"]
     if(is_present(body, "temperature")): postData["temperature"] = body["temperature"]
