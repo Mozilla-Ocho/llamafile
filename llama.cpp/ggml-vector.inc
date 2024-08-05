@@ -6,9 +6,10 @@
 #include "llamafile/llamafile.h"
 #include "llamafile/tanhf.h"
 #include <stdatomic.h>
+#include <pthread.h>
 #include <cosmo.h>
 
-void ggml_once(atomic_uint *, void (*)(void));
+/* #define GGML_GELU_FP16 */
 
 #define UNUSED GGML_UNUSED
 
@@ -1290,6 +1291,27 @@ inline static float ggml_gelu_f32(float x) {
     return .5f*x*(1.f + tanhf(SQRT_2_OVER_PI*x*(1.0f + GELU_COEF_A*x*x)));
 }
 
+#ifdef GGML_GELU_FP16
+
+// precomputed gelu table in brain16 (128 KB)
+static atomic_uint ggml_table_gelu_once;
+static ggml_fp16_t ggml_table_gelu_f16[1 << 16];
+
+static void ggml_gelu_init(void) {
+    llamafile_trapping_enabled(-1);
+    for (int i = 0; i < 65536; ++i) {
+        union {
+            uint16_t i;
+            ggml_fp16_t f;
+        } u = {i};
+        ggml_table_gelu_f16[i] = GGML_COMPUTE_FP32_TO_FP16(
+            ggml_gelu_f32(GGML_COMPUTE_FP16_TO_FP32(u.f)));
+    }
+    llamafile_trapping_enabled(+1);
+}
+
+#endif // GGML_GELU_FP16
+
 #if defined(__ARM_NEON) && defined(__aarch64__)
 
 /* Approximation for single-precision vector tanh (2.58 ULP)
@@ -1605,8 +1627,27 @@ void ggml_vec_gelu_f32(const int n, float * y, const float * x) {
     }
 #endif
     } // [jart] preserve this line
+    if (i == n)
+        return;
+#ifdef GGML_GELU_FP16
+    cosmo_once(&ggml_table_gelu_once, ggml_gelu_init);
+#endif
     for (; i < n; ++i) {
+#ifdef GGML_GELU_FP16
+        if (x[i] <= -10.0f) {
+            y[i] = 0.0f;
+        } else if (x[i] >= 10.0f) {
+            y[i] = x[i];
+        } else {
+            uint16_t t;
+            ggml_fp16_t fp16 = GGML_FP32_TO_FP16(x[i]);
+            memcpy(&t, &fp16, sizeof(uint16_t));
+            y[i] = GGML_FP16_TO_FP32(ggml_table_gelu_f16[t]);
+        }
+#else
+        // computes canonical gelu approximation with ~32 bit accuracy
         y[i] = ggml_gelu_f32(x[i]);
+#endif
     }
 }
 
