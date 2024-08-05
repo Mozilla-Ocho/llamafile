@@ -14187,11 +14187,17 @@ int ggml_cuda_get_device() {
 
 static cudaError_t ggml_cuda_device_malloc(void ** ptr, size_t size, int device) {
     ggml_cuda_set_device(device);
-#if defined(GGML_USE_HIPBLAS) && defined(GGML_HIP_UMA)
-    auto res = hipMallocManaged(ptr, size);
-    if (res == hipSuccess) {
-        // if error we "need" to know why...
-        CUDA_CHECK(hipMemAdvise(*ptr, size, hipMemAdviseSetCoarseGrain, device));
+#if defined(GGML_USE_HIPBLAS)
+    auto res = hipMalloc(ptr, size);
+    // if Not enough space on VRAM => try with UMA
+    if (res == hipErrorOutOfMemory) {
+        GGML_CUDA_LOG_INFO("  Device %d: can not alloc %d MB on VRAM try alloc on HMM\n", device, (uint32_t)(size / 1024 / 1024));
+        res = hipMallocManaged(ptr, size);
+        if (res == hipSuccess) {
+            // Config the memory for best speed (It's not supposed to fail)
+            CUDA_CHECK(hipMemAdvise(*ptr, size, hipMemAdviseSetCoarseGrain, device));
+            GGML_CUDA_LOG_INFO("    => success\n");
+        }
     }
     return res;
 #else
