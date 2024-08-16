@@ -1810,59 +1810,25 @@ inline static void ggml_critical_section_start(void) {
     }
 }
 
-#define GGML_BARRIER_IMPL \
-    if (params->shared->n_threads == 1) \
-        return; \
-    int n = params->shared->n_threads; \
-    atomic_int * count = &params->shared->n_barrier; \
-    atomic_uint * phase = &params->shared->n_barrier_passed[params->ith].i; \
-    unsigned i = atomic_load_explicit(phase, memory_order_relaxed); \
-    if (atomic_fetch_add_explicit(count, 1, memory_order_acq_rel) == n - 1) { \
-        atomic_store_explicit(count, 0, memory_order_relaxed); \
-        for (int j = 0; j < n; ++j) { \
-            atomic_store_explicit(&params->shared->n_barrier_passed[j].i, \
-                                  i + 1, memory_order_relaxed); \
-        } \
-        atomic_thread_fence(memory_order_release); \
-    } else { \
-        while (atomic_load_explicit(phase, memory_order_relaxed) == i) \
-            pthread_pause_np(); \
-        atomic_thread_fence(memory_order_acquire); \
-    }
-
-#ifndef __aarch64__
-
 void ggml_barrier(const struct ggml_compute_params * params) {
-    GGML_BARRIER_IMPL
-}
-
-#else
-
-static void ggml_barrier_default(const struct ggml_compute_params * params) {
-    GGML_BARRIER_IMPL
-}
-
-#pragma GCC push_options
-#pragma GCC target ("arch=armv8.1-a")  // shaves microseconds per call on m2
-static void ggml_barrier_armv81a(const struct ggml_compute_params * params) {
-    GGML_BARRIER_IMPL
-}
-#pragma GCC pop_options
-
-void ggml_barrier(const struct ggml_compute_params * params) {
-    static void (*impl)(const struct ggml_compute_params *);
-    if (!impl) {
-        long hwcap = getauxval(AT_HWCAP);
-        if (hwcap & HWCAP_ATOMICS) {
-            impl = ggml_barrier_armv81a;
-        } else {
-            impl = ggml_barrier_default;
-        }
+    if (params->shared->n_threads == 1)
+        return;
+    int n = params->shared->n_threads;
+    atomic_int * count = &params->shared->n_barrier;
+    atomic_uint * phase = &params->shared->n_barrier_passed[params->ith].i;
+    unsigned i = atomic_load_explicit(phase, memory_order_relaxed);
+    if (atomic_fetch_add_explicit(count, 1, memory_order_acq_rel) == n - 1) {
+        atomic_store_explicit(count, 0, memory_order_relaxed);
+        for (int j = 0; j < n; ++j)
+            atomic_store_explicit(&params->shared->n_barrier_passed[j].i,
+                                  i + 1, memory_order_relaxed);
+        atomic_thread_fence(memory_order_release);
+    } else {
+        while (atomic_load_explicit(phase, memory_order_relaxed) == i)
+            pthread_pause_np();
+        atomic_thread_fence(memory_order_acquire);
     }
-    return impl(params);
 }
-
-#endif // __aarch64__
 
 // TODO: make this somehow automatically executed
 //       some sort of "sentry" mechanism
