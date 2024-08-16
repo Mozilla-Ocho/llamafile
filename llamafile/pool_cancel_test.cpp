@@ -32,5 +32,7 @@ int main(int argc, char *argv[]) {
     npassert(!llamafile_task_create(&task, waiter, 0));
     npassert(!llamafile_task_cancel(task));
     npassert(!llamafile_task_join(task, 0));
+    while (!pthread_orphan_np())
+        pthread_decimate_np();
     CheckForMemoryLeaks();
 }

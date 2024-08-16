@@ -55,6 +55,7 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/pool_test.runs		\
 		o/$(MODE)/llamafile/pool_cancel_test.runs	\
 		o/$(MODE)/llamafile/parse_cidr_test.runs	\
+		o/$(MODE)/llamafile/thread_test.runs		\
 
 ################################################################################
 # microarchitectures

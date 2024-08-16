@@ -84,5 +84,7 @@ int main() {
     for (int i = 0; i < WORKERS; ++i)
         if (pthread_join(th[i], 0))
             _Exit(2);
+    while (!pthread_orphan_np())
+        pthread_decimate_np();
     CheckForMemoryLeaks();
 }
