@@ -3,6 +3,7 @@
 #define ggml_fp32_to_fp16_row ggml_fp32_to_fp16_row_amd_fma
 #define ggml_bf16_to_fp32_row ggml_bf16_to_fp32_row_amd_fma
 #define ggml_fp32_to_bf16_row ggml_fp32_to_bf16_row_amd_fma
+#define ggml_fp32_to_bf16_row_ref ggml_fp32_to_bf16_row_ref_amd_fma
 #define ggml_vec_dot_f32 ggml_vec_dot_f32_amd_fma
 #define ggml_vec_dot_f16 ggml_vec_dot_f16_amd_fma
 #define ggml_vec_dot_bf16 ggml_vec_dot_bf16_amd_fma

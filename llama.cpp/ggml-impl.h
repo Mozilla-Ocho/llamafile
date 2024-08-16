@@ -80,8 +80,9 @@ static inline float ggml_compute_bf16_to_fp32(ggml_bf16_t h) {
 /**
  * Converts float32 to brain16.
  *
- * This function is binary identical to AMD Zen4 VCVTNEPS2BF16.
- * Subnormals shall be flushed to zero, and NANs will be quiet.
+ * This is binary identical with Google Brain float conversion.
+ * Floats shall round to nearest even, and NANs shall be quiet.
+ * Subnormals aren't flushed to zero, except perhaps when used.
  * This code should vectorize nicely if using modern compilers.
  */
 static inline ggml_bf16_t ggml_compute_fp32_to_bf16(float s) {
@@ -142,6 +143,7 @@ extern "C" {
 
 #if defined(__ARM_FEATURE_SVE)
 #include <arm_sve.h>
+#include <sys/prctl.h>
 #endif
 
 // 16-bit float

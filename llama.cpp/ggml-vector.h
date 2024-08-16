@@ -10,6 +10,7 @@ void ggml_fp16_to_fp32_row(const ggml_fp16_t * x, float * y, int64_t n);
 void ggml_fp32_to_fp16_row(const float * x, ggml_fp16_t * y, int64_t n);
 void ggml_bf16_to_fp32_row(const ggml_bf16_t * x, float * y, int64_t n);
 void ggml_fp32_to_bf16_row(const float * x, ggml_bf16_t * y, int64_t n);
+void ggml_fp32_to_bf16_row_ref(const float * x, ggml_bf16_t * y, int64_t n);
 void ggml_vec_dot_f32(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
 void ggml_vec_dot_f16(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, ggml_fp16_t * y, size_t by, int nrc);
 void ggml_vec_dot_bf16(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);

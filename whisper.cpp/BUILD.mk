@@ -43,4 +43,5 @@ $(WHISPER_CPP_OBJS): whisper.cpp/BUILD.mk
 
 .PHONY: o/$(MODE)/whisper.cpp
 o/$(MODE)/whisper.cpp:					\
-		o/$(MODE)/whisper.cpp/server
+		o/$(MODE)/whisper.cpp/server		\
+		o/$(MODE)/whisper.cpp/main

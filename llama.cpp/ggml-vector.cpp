@@ -51,6 +51,18 @@ extern "C" void ggml_fp32_to_bf16_row_amd_k8(const float * x, ggml_bf16_t * y, i
 extern "C" void ggml_fp32_to_bf16_row_arm82(const float * x, ggml_bf16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_bf16_row_arm80(const float * x, ggml_bf16_t * y, int64_t n);
 
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_avx512bf16(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_avx512vl(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_avx512(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_avx2(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_f16c(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_fma(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_avx(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_ssse3(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_amd_k8(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_arm82(const float * x, ggml_bf16_t * y, int64_t n);
+extern "C" void ggml_fp32_to_bf16_row_ref_arm80(const float * x, ggml_bf16_t * y, int64_t n);
+
 extern "C" void ggml_vec_dot_f32_amd_avx512bf16(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_amd_avx512vl(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_amd_avx512(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
@@ -668,6 +680,7 @@ static const struct VectorFuncs {
     typeof(ggml_fp32_to_fp16_row) *ptr_ggml_fp32_to_fp16_row;
     typeof(ggml_bf16_to_fp32_row) *ptr_ggml_bf16_to_fp32_row;
     typeof(ggml_fp32_to_bf16_row) *ptr_ggml_fp32_to_bf16_row;
+    typeof(ggml_fp32_to_bf16_row_ref) *ptr_ggml_fp32_to_bf16_row_ref;
     typeof(ggml_vec_dot_f32) *ptr_ggml_vec_dot_f32;
     typeof(ggml_vec_dot_f16) *ptr_ggml_vec_dot_f16;
     typeof(ggml_vec_dot_bf16) *ptr_ggml_vec_dot_bf16;
@@ -727,6 +740,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_avx512bf16;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx512bf16;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx512bf16;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx512bf16;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx512bf16;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx512bf16;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx512bf16;
@@ -787,6 +801,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_avx512vl;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx512vl;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx512vl;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx512vl;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx512vl;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx512vl;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx512vl;
@@ -847,6 +862,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_avx512;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx512;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx512;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx512;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx512;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx512;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx512;
@@ -907,6 +923,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_avx2;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx2;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx2;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx2;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx2;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx2;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx2;
@@ -967,6 +984,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_f16c;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_f16c;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_f16c;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_f16c;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_f16c;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_f16c;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_f16c;
@@ -1027,6 +1045,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_fma;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_fma;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_fma;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_fma;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_fma;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_fma;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_fma;
@@ -1087,6 +1106,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_avx;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx;
@@ -1147,6 +1167,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_ssse3;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_ssse3;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_ssse3;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_ssse3;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_ssse3;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_ssse3;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_ssse3;
@@ -1207,6 +1228,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_amd_k8;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_k8;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_k8;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_k8;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_k8;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_k8;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_k8;
@@ -1267,6 +1289,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_arm82;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_arm82;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_arm82;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_arm82;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_arm82;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_arm82;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_arm82;
@@ -1327,6 +1350,7 @@ static const struct VectorFuncs {
             ptr_ggml_fp32_to_fp16_row = ggml_fp32_to_fp16_row_arm80;
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_arm80;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_arm80;
+            ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_arm80;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_arm80;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_arm80;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_arm80;
@@ -1398,6 +1422,10 @@ void ggml_bf16_to_fp32_row(const ggml_bf16_t * x, float * y, int64_t n) {
 
 void ggml_fp32_to_bf16_row(const float * x, ggml_bf16_t * y, int64_t n) {
   return funcs.ptr_ggml_fp32_to_bf16_row(x, y, n);
+}
+
+void ggml_fp32_to_bf16_row_ref(const float * x, ggml_bf16_t * y, int64_t n) {
+  return funcs.ptr_ggml_fp32_to_bf16_row_ref(x, y, n);
 }
 
 void ggml_vec_dot_f32(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc) {

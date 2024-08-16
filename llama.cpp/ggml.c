@@ -639,7 +639,7 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
         .is_quantized             = false,
         .to_float                 = (ggml_to_float_t) ggml_bf16_to_fp32_row,
         .from_float               = (ggml_from_float_t) ggml_fp32_to_bf16_row,
-        .from_float_ref           = (ggml_from_float_t) ggml_fp32_to_bf16_row,
+        .from_float_ref           = (ggml_from_float_t) ggml_fp32_to_bf16_row_ref,
         .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_bf16,
         .vec_dot_type             = GGML_TYPE_BF16,
         .nrows                    = 1,
@@ -1537,21 +1537,21 @@ struct ggml_phaser {
 };
 
 struct ggml_compute_state_shared {
-  const struct ggml_cgraph * cgraph;
-  const struct ggml_cplan * cplan;
+    const struct ggml_cgraph * cgraph;
+    const struct ggml_cplan * cplan;
 
-  int n_threads;
+    int n_threads;
 
-  // synchronization primitives
-  atomic_int n_barrier;
-  struct ggml_phaser *n_barrier_passed;
+    // synchronization primitives
+    atomic_int n_barrier;
+    struct ggml_phaser *n_barrier_passed;
 
-  ggml_abort_callback abort_callback; // abort ggml_graph_compute when true
-  void * abort_callback_data;
+    ggml_abort_callback abort_callback; // abort ggml_graph_compute when true
+    void * abort_callback_data;
 
-  atomic_int current_chunk; // currently processing chunk during mul_mat, shared between all the threads
+    atomic_int current_chunk; // currently processing chunk during mul_mat, shared between all the threads
 
-  enum ggml_status ec;
+    enum ggml_status ec;
 };
 
 struct ggml_compute_state {
@@ -1652,7 +1652,7 @@ static const char * GGML_OP_NAME[GGML_OP_COUNT] = {
     "CROSS_ENTROPY_LOSS_BACK",
 };
 
-static_assert(GGML_OP_COUNT == 76, "GGML_OP_COUNT != 74");
+static_assert(GGML_OP_COUNT == 74, "GGML_OP_COUNT != 74");
 
 static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
     "none",
@@ -1740,7 +1740,7 @@ static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
     "cross_entropy_loss_back(x,y)",
 };
 
-static_assert(GGML_OP_COUNT == 76, "GGML_OP_COUNT != 74");
+static_assert(GGML_OP_COUNT == 74, "GGML_OP_COUNT != 74");
 
 static_assert(GGML_OP_POOL_COUNT == 2, "GGML_OP_POOL_COUNT != 2");
 
@@ -2461,7 +2461,8 @@ static struct ggml_tensor * ggml_new_tensor_impl(
         struct ggml_tensor  * view_src,
         size_t                view_offs) {
 
-    assert(n_dims >= 1 && n_dims <= GGML_MAX_DIMS);
+    GGML_ASSERT(type >= 0 && type < GGML_TYPE_COUNT);
+    GGML_ASSERT(n_dims >= 1 && n_dims <= GGML_MAX_DIMS);
 
     // find the base tensor and absolute offset
     if (view_src != NULL && view_src->view_src != NULL) {
@@ -4133,6 +4134,7 @@ static struct ggml_tensor * ggml_group_norm_impl(
     struct ggml_context * ctx,
     struct ggml_tensor * a,
     int n_groups,
+    float eps,
     bool inplace) {
 
     bool is_node = false;
@@ -4143,7 +4145,8 @@ static struct ggml_tensor * ggml_group_norm_impl(
 
     struct ggml_tensor * result = inplace ? ggml_view_tensor(ctx, a) : ggml_dup_tensor(ctx, a);
 
-    result->op_params[0] = n_groups;
+    ggml_set_op_params_i32(result, 0, n_groups);
+    ggml_set_op_params_f32(result, 1, eps);
 
     result->op = GGML_OP_GROUP_NORM;
     result->grad = is_node ? ggml_dup_tensor(ctx, result) : NULL;
@@ -4155,15 +4158,17 @@ static struct ggml_tensor * ggml_group_norm_impl(
 struct ggml_tensor * ggml_group_norm(
     struct ggml_context * ctx,
     struct ggml_tensor * a,
-    int n_groups) {
-    return ggml_group_norm_impl(ctx, a, n_groups, false);
+    int n_groups,
+    float eps) {
+    return ggml_group_norm_impl(ctx, a, n_groups, eps, false);
 }
 
 struct ggml_tensor * ggml_group_norm_inplace(
     struct ggml_context * ctx,
     struct ggml_tensor * a,
-    int n_groups) {
-    return ggml_group_norm_impl(ctx, a, n_groups, true);
+    int n_groups,
+    float eps) {
+    return ggml_group_norm_impl(ctx, a, n_groups, eps, true);
 }
 
 // ggml_mul_mat
@@ -10854,9 +10859,10 @@ static void ggml_compute_forward_group_norm_f32(
 
     GGML_TENSOR_UNARY_OP_LOCALS
 
-    const float eps = 1e-6f; // TODO: make this a parameter
-
     // TODO: optimize
+
+    float eps;
+    memcpy(&eps, dst->op_params + 1, sizeof(float));
 
     int n_channels = src0->ne[2];
     int n_groups = dst->op_params[0];
@@ -11125,6 +11131,11 @@ UseGgmlGemm1:;
         ggml_barrier(params);
     }
 
+    if (ith == 0) {
+        // Every thread starts at ith, so the first unprocessed chunk is nth.  This save a bit of coordination right at the start.
+        atomic_store(&params->shared->current_chunk, nth);
+    }
+
 #if GGML_USE_LLAMAFILE
     if (src1->type != vec_dot_type) {
         const void* wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
@@ -11149,11 +11160,6 @@ UseGgmlGemm1:;
     }
 UseGgmlGemm2:;
 #endif
-
-    if (ith == 0) {
-        // Every thread starts at ith, so the first unprocessed chunk is nth.  This save a bit of coordination right at the start.
-        atomic_store(&params->shared->current_chunk, nth);
-    }
 
     // This is the size of the first dimension of the result, so we can iterate that way. (see the ASSERT above, these are the same numbers)
     const int64_t nr0 = ne0;
@@ -12840,7 +12846,7 @@ static void ggml_compute_forward_rope_f32(
     float corr_dims[2];
     ggml_rope_yarn_corr_dims(n_dims, n_ctx_orig, freq_base, beta_fast, beta_slow, corr_dims);
 
-    const bool is_neox = mode & 2;
+    const bool is_neox = mode & GGML_ROPE_TYPE_NEOX;
 
     const float * freq_factors = NULL;
     if (src2 != NULL) {
@@ -12965,7 +12971,7 @@ static void ggml_compute_forward_rope_f16(
     float corr_dims[2];
     ggml_rope_yarn_corr_dims(n_dims, n_ctx_orig, freq_base, beta_fast, beta_slow, corr_dims);
 
-    const bool is_neox = mode & 2;
+    const bool is_neox = mode & GGML_ROPE_TYPE_NEOX;
 
     const float * freq_factors = NULL;
     if (src2 != NULL) {
@@ -17737,13 +17743,41 @@ enum ggml_status ggml_graph_compute(struct ggml_cgraph * cgraph, struct ggml_cpl
     llamafile_debug_graph = cgraph;
 #endif
 
+#ifdef GGML_USE_OPENMP
+    if (n_threads > 1) {
+        #pragma omp parallel num_threads(n_threads)
+        {
+            #pragma omp single
+            {
+                // update the number of threads from the actual number of threads that we got from OpenMP
+                n_threads = omp_get_num_threads();
+                state_shared.n_threads = n_threads;
+            }
+
+            struct ggml_compute_state worker = {
+                .thrd   = 0,
+                .ith    = omp_get_thread_num(),
+                .shared = &state_shared,
+            };
+            ggml_graph_compute_thread(&worker);
+        }
+    } else {
+        struct ggml_compute_state worker = {
+            .thrd   = 0,
+            .ith    = 0,
+            .shared = &state_shared,
+        };
+        ggml_graph_compute_thread(&worker);
+    }
+#endif
+
     struct ggml_compute_state * workers = alloca(sizeof(struct ggml_compute_state)*n_threads);
     struct ggml_compute_cleanup cleanup = {n_threads, workers};
     pthread_cleanup_push(ggml_compute_canceled, &cleanup);
 
     for (int j = 0; j < n_threads; ++j) {
         workers[j] = (struct ggml_compute_state) {
-            .thrd   = ATOMIC_VAR_INIT(0),
+            .thrd   = 0,
             .ith    = j,
             .shared = &state_shared,
             .is_main_thread = false, // [jart]
@@ -19496,7 +19530,7 @@ size_t ggml_quantize_chunk(
         case GGML_TYPE_BF16:
             {
                 size_t elemsize = sizeof(ggml_bf16_t);
-                ggml_fp32_to_bf16_row(src + start, (ggml_bf16_t *)dst + start, n);
+                ggml_fp32_to_bf16_row_ref(src + start, (ggml_bf16_t *)dst + start, n);
                 result = n * elemsize;
             } break;
         case GGML_TYPE_F32:
@@ -19938,7 +19972,7 @@ struct gguf_context * gguf_init_from_file(struct llamafile * file, struct gguf_i
                 (int64_t) info->ne[2] *
                 (int64_t) info->ne[3];
 
-            if (ne % ggml_blck_size(info->type) != 0) {
+            if (ggml_blck_size(info->type) == 0 || ne % ggml_blck_size(info->type) != 0) {
                 fprintf(stderr, "%s: tensor '%s' of type %d (%s) number of elements (%" PRId64 ") is not a multiple of block size (%" PRId64 ")\n",
                         __func__, info->name.data, (int) info->type, ggml_type_name(info->type), ne, ggml_blck_size(info->type));
                 gguf_free(ctx);

@@ -9,6 +9,11 @@
 #include <pthread.h>
 #include <cosmo.h>
 
+#if __FINITE_MATH_ONLY__
+#error "some routines in ggml.c require non-finite math arithmetics -- pass -fno-finite-math-only to the compiler to fix"
+#error "ref: https://github.com/ggerganov/llama.cpp/pull/7154#issuecomment-2143844461"
+#endif
+
 /* #define GGML_GELU_FP16 */
 
 #define UNUSED GGML_UNUSED
@@ -862,7 +867,7 @@ void ggml_bf16_to_fp32_row(const ggml_bf16_t * x, float * y, int64_t n) {
 
 void ggml_fp32_to_bf16_row(const float * x, ggml_bf16_t * y, int64_t n) {
   int i = 0;
-#if defined(__AVX512BF16__) && 0 // [jart] it kills subnormals
+#if defined(__AVX512BF16__)
   for (; i + 32 <= n; i += 32) {
         _mm512_storeu_si512(
             (__m512i *)(y + i),
@@ -872,6 +877,12 @@ void ggml_fp32_to_bf16_row(const float * x, ggml_bf16_t * y, int64_t n) {
 #endif
     for (; i < n; i++) {
         y[i] = GGML_FP32_TO_BF16(x[i]);
+    }
+}
+
+void ggml_fp32_to_bf16_row_ref(const float * x, ggml_bf16_t * y, int64_t n) {
+    for (int i = 0; i < n; i++) {
+        y[i] = ggml_compute_fp32_to_bf16(x[i]);
     }
 }
 
@@ -1608,6 +1619,7 @@ ggml_vgeluf(__m128 x)
 
 void ggml_vec_gelu_f32(const int n, float * y, const float * x) {
     int i = 0;
+
     if (!FLAG_trap) { // [jart] preserve this line
 #if defined(__ARM_NEON) && defined(__aarch64__)
     for (; i + 3 < n; i += 4) {
@@ -1627,6 +1639,7 @@ void ggml_vec_gelu_f32(const int n, float * y, const float * x) {
     }
 #endif
     } // [jart] preserve this line
+
     if (i == n)
         return;
 #ifdef GGML_GELU_FP16

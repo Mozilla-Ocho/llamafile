@@ -23,7 +23,7 @@ include stb/BUILD.mk
 .PHONY: o/$(MODE)/
 o/$(MODE)/:	o/$(MODE)/llamafile					\
 		o/$(MODE)/llama.cpp					\
-		o/$(MODE)/stable-diffusion.cpp					\
+		o/$(MODE)/stable-diffusion.cpp				\
 		o/$(MODE)/whisper.cpp					\
 		o/$(MODE)/stb						\
 		o/$(MODE)/depend.test
@@ -44,6 +44,7 @@ install:	llamafile/zipalign.1					\
 		o/$(MODE)/llama.cpp/llama-bench/llama-bench		\
 		o/$(MODE)/llama.cpp/perplexity/perplexity		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize		\
+		o/$(MODE)/whisper.cpp/main				\
 		o/$(MODE)/llamafile/server/main
 	mkdir -p $(PREFIX)/bin
 	$(INSTALL) o/$(MODE)/llamafile/zipalign $(PREFIX)/bin/zipalign
@@ -57,6 +58,8 @@ install:	llamafile/zipalign.1					\
 	$(INSTALL) o/$(MODE)/llama.cpp/perplexity/perplexity $(PREFIX)/bin/llamafile-perplexity
 	$(INSTALL) o/$(MODE)/llama.cpp/llava/llava-quantize $(PREFIX)/bin/llava-quantize
 	$(INSTALL) o/$(MODE)/llamafile/server/main $(PREFIX)/bin/llamafiler
+	$(INSTALL) o/$(MODE)/stable-diffusion.cpp/main $(PREFIX)/bin/sdfile
+	$(INSTALL) o/$(MODE)/whisper.cpp/main $(PREFIX)/bin/whisperfile
 	mkdir -p $(PREFIX)/share/man/man1
 	$(INSTALL) -m 0644 llamafile/zipalign.1 $(PREFIX)/share/man/man1/zipalign.1
 	$(INSTALL) -m 0644 llama.cpp/main/main.1 $(PREFIX)/share/man/man1/llamafile.1

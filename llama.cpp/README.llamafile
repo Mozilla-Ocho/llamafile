@@ -8,12 +8,13 @@ LICENSE
 
 ORIGIN
 
-  https://github.com/ggerganov/llama.cpp/pull/4406/
-  152da28ae54139e3754189b9e6e1c28e11277502
-  2024-05-23
+  https://github.com/ggerganov/llama.cpp/
+  8b3befc0e2ed8fb18b903735831496b8b0c80949
+  2024-08-16
 
 LOCAL MODIFICATIONS
 
+  - See [jart] and [kawrakow] annotations
   - Remove MAP_POPULATE because it makes mmap(tinyllama) block for 100ms
   - Refactor ggml.c, llama.cpp, and llava to use llamafile_open() APIs
   - Unify main, server, and llava-cli into single llamafile program
