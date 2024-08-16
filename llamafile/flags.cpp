@@ -290,6 +290,7 @@ void llamafile_get_flags(int argc, char **argv) {
 
         if (!strcmp(flag, "--trace")) {
             FLAG_trace = true;
+            FLAG_unsecure = true;
             continue;
         }
 

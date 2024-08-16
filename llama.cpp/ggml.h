@@ -705,7 +705,7 @@ extern "C" {
         struct ggml_compute_state_shared * shared;
     };
 
-    void ggml_barrier(struct ggml_compute_state_shared * shared);
+    void ggml_barrier(const struct ggml_compute_params * params);
 
     //
     // GUID

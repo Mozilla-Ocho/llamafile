@@ -14355,14 +14355,6 @@ static int llama_decode_internal(
 
         llama_set_inputs(lctx, u_batch);
 
-        // [jart] On CPUs with many cores (e.g. EPYC, Threadripper)
-        //        using more than twenty threads for token prediction
-        //        never helps. This number appears to be optimal for all
-        //        models ranging from TinyLLaMA 1.1B to mighty Mixtral 8x22B.
-        if (n_tokens <= 2) {
-            n_threads = std::min(32, n_threads);
-        }
-
         llama_graph_compute(lctx, gf, n_threads);
 
         // update the kv ring buffer
