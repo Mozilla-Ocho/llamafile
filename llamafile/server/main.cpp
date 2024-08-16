@@ -43,6 +43,10 @@ main(int argc, char* argv[])
         exit(0);
     }
 
+    mallopt(M_GRANULARITY, 2 * 1024 * 1024);
+    mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
+    mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);
+
     // get config
     LoadZipArgs(&argc, &argv);
     llamafile_get_flags(argc, argv);

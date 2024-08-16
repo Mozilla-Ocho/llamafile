@@ -147,6 +147,10 @@ static std::string chat_add_and_format(struct llama_model * model, std::vector<l
 
 int main(int argc, char ** argv) {
 
+    mallopt(M_GRANULARITY, 2 * 1024 * 1024);
+    mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
+    mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);
+
     if (llamafile_has(argv, "--version")) {
         puts("llamafile v" LLAMAFILE_VERSION_STRING);
         return 0;

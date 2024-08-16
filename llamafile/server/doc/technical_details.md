@@ -9,7 +9,7 @@ technical aspects of LLaMAfiler.
 This server can serve embeddings an order of a magnitude faster than the
 llama.cpp example server. We measured this on Threadripper PRO 7995WX w/
 all-MiniLM-L6-v2 Q6\_K. Using a prompt with 50 tokens this server served
-2,015 `/embedding` requests per second, whereas
+2,427 `/embedding` requests per second, whereas
 llama.cpp/build/bin/server built with glibc served 771 per second.
 
 The following wrk script was used:
@@ -34,16 +34,16 @@ The results for llamafiler were:
 
 ```
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    15.81ms    2.73ms  30.86ms   71.49%
-    Req/Sec    63.08      7.41    90.00     84.66%
+    Latency    13.12ms    2.95ms  32.75ms   87.75%
+    Req/Sec    75.85      8.86   101.00     76.56%
   Latency Distribution
-     50%   15.65ms
-     75%   17.46ms
-     90%   19.18ms
-     99%   23.26ms
-  4441 requests in 2.20s, 23.04MB read
-Requests/sec:   2015.82
-Transfer/sec:     10.46MB
+     50%   12.66ms
+     75%   13.54ms
+     90%   15.29ms
+     99%   25.43ms
+  2427 requests in 1.00s, 12.58MB read
+Requests/sec:   2420.96
+Transfer/sec:     12.55MB
 ```
 
 The results for llama.cpp in CPU mode were:
