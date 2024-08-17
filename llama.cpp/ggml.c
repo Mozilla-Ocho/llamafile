@@ -80,7 +80,7 @@ static void ggml_print_backtrace(void) {
     // platform not supported
 }
 
-GGML_CALL void ggml_abort(const char * file, int line, const char * fmt, ...) {
+void ggml_abort(const char * file, int line, const char * fmt, ...) { // [jart] no ggml_call
     // [jart] abort() shouldn't be a cancelation point
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
 

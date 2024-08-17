@@ -329,7 +329,7 @@ extern "C" {
 #endif
 
     GGML_NORETURN GGML_ATTRIBUTE_FORMAT(3, 4)
-    GGML_API GGML_CALL void ggml_abort(const char * file, int line, const char * fmt, ...);
+    GGML_API void ggml_abort(const char * file, int line, const char * fmt, ...); // [jart] no ggml_call
 
     enum ggml_status {
         GGML_STATUS_ALLOC_FAILED = -2,

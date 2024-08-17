@@ -59,7 +59,7 @@ __static_yoink("llama.cpp/ggml-backend-impl.h");
 #define NVCC_LIBS BLAS_ONLY("-lcublas"), "-lcuda"
 
 #define COMMON_FLAGS \
-    /* "-DNDEBUG",  */ "-DGGML_BUILD=1", "-DGGML_SHARED=1", "-DGGML_MULTIPLATFORM", \
+    "-DNDEBUG", "-DGGML_BUILD=1", "-DGGML_SHARED=1", "-DGGML_MULTIPLATFORM", \
         "-DGGML_CUDA_DMMV_X=32", "-DK_QUANTS_PER_ITERATION=2", \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128", "-DGGML_CUDA_MMV_Y=1", \
         (FLAG_tinyblas ? "-DGGML_USE_TINYBLAS" : "-DGGML_USE_CUBLAS"), \
@@ -95,8 +95,6 @@ static const struct Source {
     {"/zip/llama.cpp/ggml-backend-impl.h", "ggml-backend-impl.h"},
     {"/zip/llama.cpp/ggml-cuda.cu", "ggml-cuda.cu"}, // must come last
 };
-
-GGML_CALL int ggml_backend_cuda_reg_devices(void);
 
 static struct Cuda {
     bool supported;
@@ -747,8 +745,6 @@ static bool link_cuda_dso(const char *dso, const char *dir) {
 
 static bool import_cuda_impl(void) {
 
-    npassert(FLAGS_READY);
-
     // No dynamic linking support on OpenBSD yet.
     if (IsOpenbsd())
         return false;
@@ -762,7 +758,10 @@ static bool import_cuda_impl(void) {
     default:
         return false;
     }
+
     tinylog(__func__, ": initializing gpu module...\n", NULL);
+
+    npassert(FLAGS_READY);
 
     // extract source code
     char src[PATH_MAX];
@@ -909,8 +908,6 @@ TryNvidia:
         strlcat(dso, "ggml-cuda.", PATH_MAX);
         strlcat(dso, GetDsoExtension(), PATH_MAX);
         if (FLAG_nocompile || !FLAG_recompile) {
-            printf("FLAG_nocompile %d\n", FLAG_nocompile);
-            printf("FLAG_recompile %d\n", FLAG_recompile);
             if ((FileExists(dso) || extract_cuda_dso(dso, "ggml-cuda")) &&
                 link_cuda_dso(dso, library_path)) {
                 return true;

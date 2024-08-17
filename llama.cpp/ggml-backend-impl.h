@@ -194,7 +194,6 @@ extern "C" {
         bool (*GGML_CALL ggml_is_empty)(const struct ggml_tensor *);
         enum ggml_backend_buffer_usage (*GGML_CALL ggml_backend_buffer_get_usage)(ggml_backend_buffer_t);
         bool (*GGML_CALL ggml_are_same_shape)(const struct ggml_tensor *, const struct ggml_tensor *);
-        void (*GGML_CALL ggml_abort)(const char *, int, const char *, ...);
         bool (*GGML_CALL ggml_is_contiguous_1)(const struct ggml_tensor *);
         bool (*GGML_CALL ggml_is_contiguous_2)(const struct ggml_tensor *);
     };

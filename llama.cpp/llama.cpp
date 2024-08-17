@@ -2375,7 +2375,7 @@ struct llama_model {
             ggml_free(ctx);
         }
         for (ggml_backend_buffer_t buf : bufs) {
-// #ifdef GGML_USE_CUDA
+// #ifdef GGML_USE_CUDA [jart]
             if (ggml_backend_buffer_get_type(buf) == ggml_backend_cpu_buffer_type()) {
                 ggml_backend_cuda_unregister_host_buffer(ggml_backend_buffer_get_base(buf));
             }
@@ -15025,7 +15025,7 @@ static int llama_encode_internal(
     lctx.inp_embd_enc = NULL;
     lctx.n_outputs = n_tokens;
 
-    const int n_threads = n_tokens == 1 ? cparams.n_threads : cparams.n_threads_batch;
+    int n_threads = n_tokens == 1 ? cparams.n_threads : cparams.n_threads_batch;
     GGML_ASSERT(n_threads > 0);
 
     // helpers for smoother batch API transition
@@ -15082,6 +15082,14 @@ static int llama_encode_internal(
     ggml_backend_sched_alloc_graph(lctx.sched, gf);
 
     llama_set_inputs(lctx, batch);
+
+    // [jart] On CPUs with many cores (e.g. EPYC, Threadripper)
+    //        using more than twenty threads for token prediction
+    //        never helps. This number appears to be optimal for all
+    //        models ranging from TinyLLaMA 1.1B to mighty Mixtral 8x22B.
+    if (n_tokens <= 2) {
+        n_threads = std::min(20, n_threads);
+    }
 
     llama_graph_compute(lctx, gf, n_threads);
 
@@ -16606,9 +16614,7 @@ struct llama_model_quantize_params llama_model_quantize_default_params() {
 }
 
 size_t llama_max_devices(void) {
-    if (llamafile_has_cuda()) // [jart]
-        return GGML_CUDA_MAX_DEVICES;
-    return 1;
+    return GGML_CUDA_MAX_DEVICES; // [jart] safe to avoid early gpu init
 #if defined(GGML_USE_RPC)
     return GGML_RPC_MAX_SERVERS;
 #elif defined(GGML_USE_METAL)

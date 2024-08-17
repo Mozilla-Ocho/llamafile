@@ -267,9 +267,8 @@ static const struct ggml_backend_api *g_backend;
 #define ggml_is_empty g_backend->ggml_is_empty
 #define ggml_op_desc g_backend->ggml_op_desc
 #define ggml_is_contiguous_2 g_backend->ggml_is_contiguous_2
-#define ggml_abort g_backend->ggml_abort
 
-[[noreturn]]
+GGML_NORETURN
 static void exit_(int rc) {
     g_backend->exit(rc);
 #define exit exit_
@@ -305,6 +304,28 @@ static void ggml_cuda_print(const char *fmt, ...) {
         buf[len - 1] = '\n';
     }
     g_backend->write(2, buf, len);
+}
+
+GGML_NORETURN
+void ggml_abort(const char * file, int line, const char * fmt, ...) {
+    int len;
+    va_list va;
+    char buf[GGML_CUDA_PRINT_BUFSIZ];
+    va_start(va, fmt);
+    len = vsnprintf(buf, GGML_CUDA_PRINT_BUFSIZ, fmt, va);
+    va_end(va);
+    if (len < 0)
+        len = strnlen(buf, GGML_CUDA_PRINT_BUFSIZ);
+    if (len >= GGML_CUDA_PRINT_BUFSIZ) {
+        len = GGML_CUDA_PRINT_BUFSIZ;
+        buf[len - 4] = '.';
+        buf[len - 3] = '.';
+        buf[len - 2] = '.';
+        buf[len - 1] = '\n';
+    }
+    ggml_cuda_print("%s:%d: ", file, line);
+    g_backend->write(2, buf, len);
+    exit_(1);
 }
 
 #ifdef GGML_USE_TINYBLAS
@@ -364,7 +385,7 @@ GGML_CALL bool ggml_cuda_link(const struct ggml_backend_api *backend_api) {
 
 #define GGML_CUDA_MAX_STREAMS 8
 
-[[noreturn]]
+GGML_NORETURN
 void ggml_cuda_error(const char * stmt, const char * func, const char * file, int line, const char * msg);
 
 #define CUDA_CHECK_GEN(err, success, error_fn)                                      \
@@ -577,7 +598,7 @@ static constexpr bool int8_mma_available(const int cc) {
     return cc < CC_OFFSET_AMD && cc >= CC_TURING;
 }
 
-[[noreturn]]
+GGML_NORETURN
 static __device__ void no_device_code(
     const char * file_name, const int line, const char * function_name, const int arch, const char * arch_list) {
 
@@ -14154,7 +14175,7 @@ static void ggml_cuda_log(enum ggml_log_level level, const char * format, ...) {
     }
 }
 
-[[noreturn]]
+GGML_NORETURN
 void ggml_cuda_error(const char * stmt, const char * func, const char * file, int line, const char * msg) {
     int id = -1; // in case cudaGetDevice fails
     cudaGetDevice(&id);
@@ -17146,8 +17167,6 @@ GGML_CALL static ggml_backend_t ggml_backend_reg_cuda_init(const char * params, 
 
     GGML_UNUSED(params);
 }
-
-extern "C" GGML_CALL int ggml_backend_cuda_reg_devices();
 
 GGML_CALL int ggml_backend_cuda_reg_devices() {
     int device_count = ggml_backend_cuda_get_device_count();

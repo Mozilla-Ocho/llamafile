@@ -6,7 +6,7 @@
 # driver on a Windows system that has a CUDA-capable GPU installed.
 
 hipcc \
-  -O3 \
+  -O2 \
   -fPIC \
   -shared \
   -DNDEBUG \

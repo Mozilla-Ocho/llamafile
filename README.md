@@ -359,12 +359,6 @@ through CLI, it can be permanently disabled by adding the following in
 enabled=false
 ```
 
-### Raspberry Pi
-On Raspberry Pi, if you get "mmap error 12" then it means your kernel is
-configured with fewer than 48 bits of address space. You need to upgrade
-to RPI 5. You can still use RPI 4 if you either (1) rebuild your kernel,
-or (2) get your SDcard OS image directly from Ubuntu (don't use RPI OS).
-
 ## Supported OSes
 
 llamafile supports the following operating systems, which require a minimum

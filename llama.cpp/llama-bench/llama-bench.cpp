@@ -1,3 +1,6 @@
+// -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
+// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -1362,11 +1365,12 @@ __attribute__((__constructor__(101))) static void init(void) {
 }
 
 int main(int argc, char ** argv) {
+    FLAG_gpu = LLAMAFILE_GPU_DISABLE; // [jart]
 
     ShowCrashReports();
 
     // try to set locale for unicode characters in markdown
-    setlocale(LC_CTYPE, ".UTF-8");
+    setlocale(LC_CTYPE, "C.UTF-8");  // [jart]
 
     __warn_if_powersave();  // [jart]
     if (!getenv("LLAMAFILE_TEMPERATURE_FILE") || !getenv("LLAMAFILE_TEMPERATURE_MAX"))

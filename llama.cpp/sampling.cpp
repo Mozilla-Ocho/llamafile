@@ -4,6 +4,7 @@
 #define LLAMA_API_INTERNAL
 #include "sampling.h"
 #include <random>
+#include <cosmo.h>
 
 struct llama_sampling_context * llama_sampling_init(const struct llama_sampling_params & params) {
     struct llama_sampling_context * result = new llama_sampling_context();
@@ -17,14 +18,14 @@ struct llama_sampling_context * llama_sampling_init(const struct llama_sampling_
 
         // will be empty (default) if there are parse errors
         if (result->parsed_grammar.rules.empty()) {
-            fprintf(stderr, "%s: failed to parse grammar\n", __func__);
+            kprintf("%s: failed to parse grammar\n", __func__); // [jart]
             delete result;
             return nullptr;
         }
 
         // Ensure that there is a "root" node.
         if (result->parsed_grammar.symbol_ids.find("root") == result->parsed_grammar.symbol_ids.end()) {
-            fprintf(stderr, "%s: grammar does not contain a 'root' symbol\n", __func__);
+            kprintf("%s: grammar does not contain a 'root' symbol\n", __func__); // [jart]
             delete result;
             return nullptr;
         }

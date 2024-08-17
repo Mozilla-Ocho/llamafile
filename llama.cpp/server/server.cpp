@@ -2719,7 +2719,14 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
     }
 
     FLAGS_READY = true;
-    params.embedding = true;  // [jart] #243 always enable embedding mode
+
+    // [jart] setting `embeddings = true` on the clip model causes a
+    //        llama_get_logits_ith() fail crash due to how this param
+    //        due to `const bool has_logits = !cparams.embeddings;` from
+    //        llama.cpp interacting strangely with this parameter.
+    if (params.mmproj.empty())
+        params.embedding = true;  // [jart] #243 always enable embedding mode
+
     params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
 
     if (!params.kv_overrides.empty()) {

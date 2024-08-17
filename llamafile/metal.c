@@ -231,8 +231,6 @@ static bool LinkMetal(const char *dso) {
 
 static bool ImportMetalImpl(void) {
 
-    npassert(FLAGS_READY);
-
     // Ensure this is MacOS ARM64.
     if (!IsXnuSilicon()) {
         return false;
@@ -246,6 +244,8 @@ static bool ImportMetalImpl(void) {
     default:
         return false;
     }
+
+    npassert(FLAGS_READY);
 
     // Get path of DSO.
     char dso[PATH_MAX];

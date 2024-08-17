@@ -30,10 +30,69 @@ static const struct ggml_backend_api *g_backend; // [jart]
 #define ggml_guid_matches g_backend->ggml_guid_matches
 #define ggml_is_empty g_backend->ggml_is_empty
 #define ggml_are_same_shape g_backend->ggml_are_same_shape
-#define ggml_abort g_backend->ggml_abort
 
 void ggml_metal_link(const struct ggml_backend_api *backend_api) {
     g_backend = backend_api;
+}
+
+GGML_NORETURN
+static void exit_(int rc) {
+    g_backend->exit(rc);
+#define exit exit_
+#if defined(__GNUC__) || defined(__llvm__)
+    __builtin_unreachable();
+#elif defined(_MSC_VER)
+    __assume(0);
+#endif
+    for (;;);
+}
+
+// printf() and fprintf() runtime bridge
+// this is needed so text gets printed on windows
+// it also helps ensure the atomicity of log lines
+static void ggml_metal_print(const char *fmt, ...) {
+#define GGML_METAL_PRINT_BUFSIZ 512
+#define fflush(_) (void)0
+#define printf(...) ggml_metal_print(__VA_ARGS__)
+#define fprintf(_, ...) ggml_metal_print(__VA_ARGS__)
+    int len;
+    va_list va;
+    char buf[GGML_METAL_PRINT_BUFSIZ];
+    va_start(va, fmt);
+    len = vsnprintf(buf, GGML_METAL_PRINT_BUFSIZ, fmt, va);
+    va_end(va);
+    if (len < 0)
+        len = strnlen(buf, GGML_METAL_PRINT_BUFSIZ);
+    if (len >= GGML_METAL_PRINT_BUFSIZ) {
+        len = GGML_METAL_PRINT_BUFSIZ;
+        buf[len - 4] = '.';
+        buf[len - 3] = '.';
+        buf[len - 2] = '.';
+        buf[len - 1] = '\n';
+    }
+    g_backend->write(2, buf, len);
+}
+
+GGML_NORETURN
+void ggml_abort(const char * file, int line, const char * fmt, ...) {
+    int len;
+    va_list va;
+    char buf[GGML_METAL_PRINT_BUFSIZ];
+    va_start(va, fmt);
+    len = vsnprintf(buf, GGML_METAL_PRINT_BUFSIZ, fmt, va);
+    va_end(va);
+    if (len < 0)
+        len = strnlen(buf, GGML_METAL_PRINT_BUFSIZ);
+    if (len >= GGML_METAL_PRINT_BUFSIZ) {
+        len = GGML_METAL_PRINT_BUFSIZ;
+        buf[len - 4] = '.';
+        buf[len - 3] = '.';
+        buf[len - 2] = '.';
+        buf[len - 1] = '\n';
+    }
+    ggml_metal_print("%s:%d: ", file, line);
+    g_backend->write(2, buf, len);
+    exit_(1);
 }
 
 #undef MIN

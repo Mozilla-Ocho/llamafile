@@ -10,10 +10,13 @@ LLAMA_CPP_SRCS_C = $(filter %.c,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS_CPP = $(filter %.cpp,$(LLAMA_CPP_FILES))
 LLAMA_CPP_SRCS = $(LLAMA_CPP_SRCS_C) $(LLAMA_CPP_SRCS_CPP)
 
-LLAMA_CPP_OBJS =					\
-	$(LLAMAFILE_OBJS)				\
+LLAMA_CPP_SRCS_OBJS =					\
 	$(LLAMA_CPP_SRCS_C:%.c=o/$(MODE)/%.o)		\
 	$(LLAMA_CPP_SRCS_CPP:%.cpp=o/$(MODE)/%.o)	\
+
+LLAMA_CPP_OBJS =					\
+	$(LLAMAFILE_OBJS)				\
+	$(LLAMA_CPP_SRCS_OBJS)				\
 	$(LLAMA_CPP_FILES:%=o/$(MODE)/%.zip.o)
 
 o/$(MODE)/llama.cpp/llama.cpp.a: $(LLAMA_CPP_OBJS)
@@ -26,11 +29,14 @@ include llama.cpp/quantize/BUILD.mk
 include llama.cpp/perplexity/BUILD.mk
 include llama.cpp/llama-bench/BUILD.mk
 
-$(LLAMA_CPP_OBJS): private				\
+$(LLAMA_CPP_SRCS_OBJS): private				\
 		CCFLAGS +=				\
 			-DNDEBUG			\
+
+$(LLAMA_CPP_OBJS): private				\
+		CCFLAGS +=				\
 			-DGGML_MULTIPLATFORM		\
-			-DGGML_USE_LLAMAFILE
+			-DGGML_USE_LLAMAFILE		\
 
 o/$(MODE)/llama.cpp/ggml.o \
 o/$(MODE)/llama.cpp/ggml-vector-amd-avx2.o \
