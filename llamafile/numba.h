@@ -23,7 +23,7 @@ inline float float01(unsigned x) { // (0,1)
     return 1.f / 8388608 * ((x >> 9) + .5f);
 }
 
-inline float numba(void) { // (-10,10)
+inline float numba(void) { // (-1,1)
     return float01(rand32()) * 2.f - 1.f;
 }
 

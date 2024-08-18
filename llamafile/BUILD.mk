@@ -56,6 +56,7 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/pool_cancel_test.runs	\
 		o/$(MODE)/llamafile/parse_cidr_test.runs	\
 		o/$(MODE)/llamafile/thread_test.runs		\
+		o/$(MODE)/llamafile/vmathf_test.runs		\
 
 ################################################################################
 # microarchitectures
@@ -146,6 +147,10 @@ o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o:		\
 
 ################################################################################
 # testing
+
+o/$(MODE)/llamafile/vmathf_test:			\
+		o/$(MODE)/llamafile/vmathf_test.o	\
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
 
 o/$(MODE)/llamafile/parse_cidr_test:			\
 		o/$(MODE)/llamafile/parse_cidr_test.o	\
