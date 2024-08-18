@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "llama_matmul.h"
 #include "tinyblas_cpu.h"
 
 //
@@ -297,6 +298,18 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     assert(ldc >= m);
     assert(nth > 0);
     assert(ith < nth);
+
+#if defined(__x86_64__)
+    if (nth == NTHREADS && //
+        Btype == GGML_TYPE_BF16 && //
+        Btype == GGML_TYPE_BF16 && //
+        Ctype == GGML_TYPE_F32 && //
+        X86_CHECK(AVX2) && //
+        X86_CHECK(FMA)) {
+        llama_matmul_avx2_bf16((const uint16_t *)A, (const uint16_t *)B, (float *)C, m, n, k, ith);
+        return true;
+    }
+#endif
 
 #if defined(__x86_64__)
     if (X86_CHECK(AVX2) && X86_CHECK(FMA)) {
