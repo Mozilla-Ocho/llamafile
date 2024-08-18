@@ -58,12 +58,6 @@ main(int argc, char* argv[])
     LoadZipArgs(&argc, &argv);
     llamafile_get_flags(argc, argv);
 
-    // bounce users wanting gpu support (not ready yet)
-    if (FLAG_n_gpu_layers) {
-        fprintf(stderr, "error: llamafiler doesn't support gpu yet\n");
-        return 1;
-    }
-
     // initialize subsystems
     time_init();
     tokenbucket_init();

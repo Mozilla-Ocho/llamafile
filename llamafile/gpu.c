@@ -53,6 +53,9 @@ bool llamafile_has_gpu(void) {
  */
 int llamafile_gpu_layers(int n_gpu_layers) {
 
+    if (FLAG_gpu == LLAMAFILE_GPU_DISABLE)
+        return 0;
+
     // if user explicitly passed `--gpu KIND` but didn't specify `-ngl
     // LAYERS` then assume the user wants their model fully offloaded.
     if (n_gpu_layers < 0 && FLAG_gpu > 0)

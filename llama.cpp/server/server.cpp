@@ -2141,7 +2141,7 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("                              - distribute: spread execution evenly over all nodes\n");
     printf("                              - isolate: only spawn threads on CPUs on the node that execution started on\n");
     printf("                              - numactl: use the CPU map provided my numactl\n");
-    if (llama_supports_gpu_offload()) {
+    // if (llama_supports_gpu_offload()) { // [jart] prevent init error
         printf("  -ngl N, --n-gpu-layers N\n");
         printf("                            number of layers to store in VRAM\n");
         printf("  -sm SPLIT_MODE, --split-mode SPLIT_MODE\n");
@@ -2153,7 +2153,7 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
         printf("                            fraction of the model to offload to each GPU, comma-separated list of proportions, e.g. 3,1\n");
         printf("  -mg i, --main-gpu i       the GPU to use for the model (with split-mode = none),\n");
         printf("                            or for intermediate results and KV (with split-mode = row)\n");
-    }
+    // } // [jart] prevent init error
     printf("  -m FNAME, --model FNAME\n");
     printf("                            model path (default: %s)\n", params.model.c_str());
     printf("  -a ALIAS, --alias ALIAS\n");
@@ -2431,13 +2431,13 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 invalid_param = true;
                 break;
             }
-            if (llama_supports_gpu_offload()) {
+            // if (llama_supports_gpu_offload()) { // [jart] prevent init error
                 params.n_gpu_layers = std::stoi(argv[i]);
-            } else {
-                LOG_WARNING("Not compiled with GPU offload support, --n-gpu-layers option will be ignored. "
-                        "See main README.md for information on enabling GPU BLAS support",
-                        {{"n_gpu_layers", params.n_gpu_layers}});
-            }
+            // } else {
+            //     LOG_WARNING("Not compiled with GPU offload support, --n-gpu-layers option will be ignored. "
+            //             "See main README.md for information on enabling GPU BLAS support",
+            //             {{"n_gpu_layers", params.n_gpu_layers}});
+            // }
         }
         else if (arg == "--split-mode" || arg == "-sm")
         {
@@ -2580,7 +2580,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         }
         else if (arg == "--embedding")
         {
-            params.embedding = true;
+            fprintf(stderr, "error: the --embedding endpoint is no longer supported in the the standard llamafile --server. "
+                    "please use our new llamafiler command, which gives you a 4x faster embedding server. this is our new "
+                    "server for llamafile that, once feature complete, will replace this one entirely.\n");
+            exit(1);
         }
         else if (arg == "-cb" || arg == "--cont-batching")
         {
@@ -2694,12 +2697,14 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
 
     FLAGS_READY = true;
 
+#if 0
     // [jart] setting `embeddings = true` on the clip model causes a
     //        llama_get_logits_ith() fail crash due to how this param
     //        due to `const bool has_logits = !cparams.embeddings;` from
     //        llama.cpp interacting strangely with this parameter.
     if (params.mmproj.empty())
         params.embedding = true;  // [jart] #243 always enable embedding mode
+#endif
 
     params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
 
@@ -3512,6 +3517,23 @@ int server_cli(int argc, char **argv)
 
     svr.Post("/embedding", [&llama](const httplib::Request &req, httplib::Response &res)
             {
+
+                // TODO(jart): something llama.cpp did upstream causes
+                //             logits to no longer be saved when we
+                //             enable embedding mode. let's use this as
+                //             an opportunity to nudge people into using
+                //             the newer better server, which is now
+                //             production worthy and recommended for
+                //             /embedding serving. it's compatible with
+                //             the existing http api.
+                if (1) {
+                    fprintf(stderr, "warning: the --embedding endpoint is no longer supported in the the standard llamafile --server. "
+                            "please use our new llamafiler command, which gives you a 4x faster embedding server. this is our new "
+                            "server for llamafile that, once feature complete, will replace this one entirely.\n");
+                    res.status = 503;
+                    return res.set_content("Service Unavailable", "text/plain; charset=utf-8");
+                }
+
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 const json body = json::parse(req.body);
                 json prompt;
@@ -3548,6 +3570,23 @@ int server_cli(int argc, char **argv)
 
     svr.Post("/v1/embeddings", [&llama](const httplib::Request &req, httplib::Response &res)
             {
+
+                // TODO(jart): something llama.cpp did upstream causes
+                //             logits to no longer be saved when we
+                //             enable embedding mode. let's use this as
+                //             an opportunity to nudge people into using
+                //             the newer better server, which is now
+                //             production worthy and recommended for
+                //             /embedding serving. it's compatible with
+                //             the existing http api.
+                if (1) {
+                    fprintf(stderr, "warning: the --embedding endpoint is no longer supported in the the standard llamafile --server. "
+                            "please use our new llamafiler command, which gives you a 4x faster embedding server. this is our new "
+                            "server for llamafile that, once feature complete, will replace this one entirely.\n");
+                    res.status = 503;
+                    return res.set_content("Service Unavailable", "text/plain; charset=utf-8");
+                }
+
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 const json body = json::parse(req.body);
 

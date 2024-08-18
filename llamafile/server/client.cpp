@@ -462,6 +462,8 @@ Client::dispatcher()
         return tokenize();
     if (path() == "/embedding")
         return embedding();
+    if (path() == "/v1/embeddings")
+        return embedding();
     if (path() == "/completion")
         return completion();
     return send_error(404);

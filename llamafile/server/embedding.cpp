@@ -37,6 +37,7 @@ struct EmbeddingParams
     bool parse_special;
     ctl::string_view prompt;
     ctl::string content;
+    ctl::string model;
 };
 
 void
@@ -78,10 +79,29 @@ Client::get_embedding_params(EmbeddingParams* params)
 {
     params->add_special = atob(or_empty(param("add_special")), true);
     params->parse_special = atob(or_empty(param("parse_special")), false);
+
+    // try obtaining prompt (or its aliases) from request-uri
     ctl::optional<ctl::string_view> prompt = param("content");
+    if (!prompt.has_value()) {
+        ctl::optional<ctl::string_view> prompt2 = param("prompt");
+        if (prompt2.has_value()) {
+            prompt = ctl::move(prompt2);
+        } else {
+            ctl::optional<ctl::string_view> prompt3 = param("input");
+            if (prompt3.has_value()) {
+                prompt = ctl::move(prompt3);
+            }
+        }
+    }
+
     if (prompt.has_value()) {
+        // [simple mode] if the prompt was supplied in the request-uri
+        //               then we don't bother looking for a json body.
         params->prompt = prompt.value();
     } else if (HasHeader(kHttpContentType)) {
+        // [standard mode] if the prompt wasn't specified as a
+        //                 request-uri parameter, then it must be in the
+        //                 http message body.
         if (IsMimeType(HeaderData(kHttpContentType),
                        HeaderLength(kHttpContentType),
                        "text/plain")) {
@@ -94,14 +114,21 @@ Client::get_embedding_params(EmbeddingParams* params)
                 return send_error(400, Json::StatusToString(json.first));
             if (!json.second.isObject())
                 return send_error(400, "JSON body must be an object");
-            if (!json.second["content"].isString())
-                return send_error(400, "JSON missing \"content\" key");
-            params->content = ctl::move(json.second["content"].getString());
+            if (json.second["content"].isString())
+                params->content = ctl::move(json.second["content"].getString());
+            else if (json.second["prompt"].isString())
+                params->content = ctl::move(json.second["prompt"].getString());
+            else if (json.second["input"].isString())
+                params->content = ctl::move(json.second["input"].getString());
+            else
+                return send_error(400, "JSON missing content/prompt/input key");
             params->prompt = params->content;
             if (json.second["add_special"].isBool())
                 params->add_special = json.second["add_special"].getBool();
             if (json.second["parse_special"].isBool())
                 params->parse_special = json.second["parse_special"].getBool();
+            if (json.second["model"].isString())
+                params->model = ctl::move(json.second["model"].getString());
         } else {
             return send_error(501, "Content Type Not Implemented");
         }
@@ -207,21 +234,68 @@ Client::embedding()
           embd, embeddings->data() + batch->seq_id[i][0] * n_embd, n_embd);
     }
 
+    // determine how output json should look
+    bool in_openai_mode = path() == "/v1/embeddings";
+
     // serialize tokens to json
     char* p = obuf.p;
     p = stpcpy(p, "{\n");
-    p = stpcpy(p, "  \"add_special\": ");
-    p = encode_bool(p, params->add_special);
-    p = stpcpy(p, ",\n");
-    p = stpcpy(p, "  \"parse_special\": ");
-    p = encode_bool(p, params->parse_special);
-    p = stpcpy(p, ",\n");
-    p = stpcpy(p, "  \"tokens_provided\": ");
-    p = encode_json(p, toks->size());
-    p = stpcpy(p, ",\n");
-    p = stpcpy(p, "  \"tokens_used\": ");
-    p = encode_json(p, count);
-    p = stpcpy(p, ",\n");
+
+    // Here's what an OpenAI /v1/embedding response looks like:
+    //
+    //     {
+    //       "object": "list",
+    //       "data": [
+    //         {
+    //           "object": "embedding",
+    //           "index": 0,
+    //           "embedding": [
+    //             -0.006929283495992422,
+    //             -0.005336422007530928,
+    //             ... (omitted for spacing)
+    //             -4.547132266452536e-05,
+    //             -0.024047505110502243
+    //           ],
+    //         }
+    //       ],
+    //       "model": "text-embedding-3-small",
+    //       "usage": {
+    //         "prompt_tokens": 5,
+    //         "total_tokens": 5
+    //       }
+    //     }
+    //
+
+    if (in_openai_mode) {
+        p = stpcpy(p, "  \"object\": \"list\",\n");
+        p = stpcpy(p, "  \"model\": ");
+        p = encode_json(p, params->model);
+        p = stpcpy(p, ",\n");
+        p = stpcpy(p, "  \"usage\": {\n");
+        p = stpcpy(p, "    \"prompt_tokens\": ");
+        p = encode_json(p, count);
+        p = stpcpy(p, ",\n");
+        p = stpcpy(p, "    \"total_tokens\": ");
+        p = encode_json(p, toks->size());
+        p = stpcpy(p, "\n  },\n");
+        p = stpcpy(p, "  \"data\": [{\n");
+        p = stpcpy(p, "  \"object\": \"embedding\",\n");
+        p = stpcpy(p, "  \"index\": 0,\n");
+    } else {
+        p = stpcpy(p, "  \"add_special\": ");
+        p = encode_bool(p, params->add_special);
+        p = stpcpy(p, ",\n");
+        p = stpcpy(p, "  \"parse_special\": ");
+        p = encode_bool(p, params->parse_special);
+        p = stpcpy(p, ",\n");
+        p = stpcpy(p, "  \"tokens_provided\": ");
+        p = encode_json(p, toks->size());
+        p = stpcpy(p, ",\n");
+        p = stpcpy(p, "  \"tokens_used\": ");
+        p = encode_json(p, count);
+        p = stpcpy(p, ",\n");
+    }
+
     p = stpcpy(p, "  \"embedding\": [");
     for (size_t i = 0; i < embeddings->size(); ++i) {
         if (i) {
@@ -231,6 +305,8 @@ Client::embedding()
         p = encode_json(p, (*embeddings)[i]);
     }
     p = stpcpy(p, "]\n");
+    if (in_openai_mode)
+        p = stpcpy(p, "  }]\n");
     p = stpcpy(p, "}\n");
     ctl::string_view content(obuf.p, p - obuf.p);
 

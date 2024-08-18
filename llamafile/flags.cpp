@@ -84,6 +84,12 @@ static wontreturn void bad(const char *flag) {
     exit(1);
 }
 
+static wontreturn void nogpu(const char *flag) {
+    tinyprint(2, program_invocation_name, ": ", flag, " was passed but ",
+              program_invocation_short_name, " doesn't support GPU mode yet.\n", NULL);
+    exit(1);
+}
+
 static wontreturn void missing(const char *flag) {
     tinyprint(2, program_invocation_name, ": ", flag, " missing argument\n", NULL);
     exit(1);
@@ -100,6 +106,7 @@ static wontreturn void unknown(const char *flag) {
 }
 
 void llamafile_get_flags(int argc, char **argv) {
+    bool program_supports_gpu = FLAG_gpu != LLAMAFILE_GPU_DISABLE;
     FLAG_threads = cpu_get_num_math();
     for (int i = 1; i < argc;) {
         const char *flag = argv[i++];
@@ -320,16 +327,22 @@ void llamafile_get_flags(int argc, char **argv) {
         // gpu flags
 
         if (!strcmp(flag, "--tinyblas")) {
+            if (!program_supports_gpu)
+                nogpu("--tinyblas");
             FLAG_tinyblas = true;
             continue;
         }
 
         if (!strcmp(flag, "--nocompile")) {
+            if (!program_supports_gpu)
+                nogpu("--nocompile");
             FLAG_nocompile = true;
             continue;
         }
 
         if (!strcmp(flag, "--recompile")) {
+            if (!program_supports_gpu)
+                nogpu("--recompile");
             FLAG_recompile = true;
             continue;
         }
@@ -346,6 +359,8 @@ void llamafile_get_flags(int argc, char **argv) {
         if (!strcmp(flag, "-ngl") || //
             !strcmp(flag, "--gpu-layers") || //
             !strcmp(flag, "--n-gpu-layers")) {
+            if (!program_supports_gpu)
+                nogpu("--n-gpu-layers");
             if (i == argc)
                 missing("--n-gpu-layers");
             FLAG_n_gpu_layers = atoi(argv[i++]);
@@ -355,6 +370,8 @@ void llamafile_get_flags(int argc, char **argv) {
         }
 
         if (!strcmp(flag, "-mg") || !strcmp(flag, "--main-gpu")) {
+            if (!program_supports_gpu)
+                nogpu("--main-gpu");
             if (i == argc)
                 missing("--main-gpu");
             FLAG_main_gpu = atoi(argv[i++]);
@@ -362,6 +379,8 @@ void llamafile_get_flags(int argc, char **argv) {
         }
 
         if (!strcmp(flag, "-sm") || !strcmp(flag, "--split-mode")) {
+            if (!program_supports_gpu)
+                nogpu("--split-mode");
             if (i == argc)
                 missing("--split-mode");
             const char *value = argv[i];

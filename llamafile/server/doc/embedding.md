@@ -14,7 +14,8 @@ classification, or content recommendation systems.
 
 ## Request URIs
 
-- `/embedding`
+- `/embedding` (llama.cpp compatible)
+- `/v1/embeddings` (OpenAI compatible)
 
 ## Request Methods
 
@@ -51,6 +52,12 @@ classification, or content recommendation systems.
   by checking if the `tokens_used` response parameter is less than
   `tokens_provided`. The `/tokenize` endpoint may also be used to check
   beforehand how the model chops up strings and into how many pieces.
+
+- `input` (string) is an alias for `content`, which is provided for
+  OpenAI API compatibility.
+
+- `prompt` (string) is an alias for `content`, which is provided for
+  consistency with the `/tokenize` endpoint.
 
 - `add_special` (bool; default: true) may be specified to indicate if
   the tokenizer should insert special tokens automatically. What tokens
