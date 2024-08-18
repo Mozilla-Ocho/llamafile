@@ -51,6 +51,11 @@ __static_yoink("llama.cpp/ggml-common.h");
 __static_yoink("llama.cpp/ggml-backend.h");
 __static_yoink("llama.cpp/ggml-backend-impl.h");
 
+// yoink the fastest zlib deflate impl from cosmo libc
+__static_yoink("_Cz_inflateInit2");
+__static_yoink("_Cz_inflate");
+__static_yoink("_Cz_inflateEnd");
+
 #define THESTRING(x) #x
 #define STRINGIFY(x) THESTRING(x)
 #define ARMS_ONLY(x) (!IsAarch64() ? "-DIGNORE" STRINGIFY(__COUNTER__) : x)
