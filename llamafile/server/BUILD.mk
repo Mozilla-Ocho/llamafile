@@ -16,6 +16,7 @@ o/$(MODE)/llamafile/server/server.a:				\
 
 o/$(MODE)/llamafile/server/main:				\
 		o/$(MODE)/llamafile/server/main.o		\
+		o/$(MODE)/llamafile/server/main.1.asc.zip.o	\
 		o/$(MODE)/llamafile/server/server.a		\
 		o/$(MODE)/llama.cpp/llama.cpp.a			\
 		o/$(MODE)/llama.cpp/llava/llava.a		\

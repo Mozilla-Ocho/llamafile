@@ -2867,8 +2867,8 @@ static bool whisper_decode_internal(
         logits = gf->nodes[gf->n_nodes - 1];
 
         if (batch.n_tokens < 16) {
-            if (n_threads > 20)
-                n_threads = 20;
+            if (n_threads > 23)
+                n_threads = 23;
         }
 
         if (!ggml_graph_compute_helper(sched, gf, n_threads)) {

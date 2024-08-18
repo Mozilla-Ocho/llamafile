@@ -1,5 +1,7 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
+#include "llamafile/version.h"
+#include "llamafile/llamafile.h"
 #include "common.h"
 
 #include "whisper.h"
@@ -13,6 +15,7 @@
 #include <thread>
 #include <vector>
 #include <cstring>
+#include <cosmo.h>
 
 #include "llamafile/llamafile.h"
 #include "llamafile/debug.h"
@@ -211,8 +214,8 @@ static bool whisper_params_parse(int argc, char ** argv, whisper_params & params
         else if (                  arg == "--grammar-rule")    { params.grammar_rule    = argv[++i]; }
         else if (                  arg == "--grammar-penalty") { params.grammar_penalty = std::stof(argv[++i]); }
         else {
-            fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
-            whisper_print_usage(argc, argv, params);
+            fprintf(stderr, "error: unknown argument: %s\n", arg.c_str()); // [jart]
+            // whisper_print_usage(argc, argv, params); // [jart]
             exit(0);
         }
     }
@@ -943,13 +946,36 @@ static bool output_lrc(struct whisper_context * ctx, const char * fname, const w
 
 static void cb_log_disable(enum ggml_log_level , const char * , void * ) { }
 
-int main(int argc, char ** argv) {
-    whisper_params params;
+int whisper_server_main(int argc, char ** argv);
 
+int main(int argc, char ** argv) {
+
+    mallopt(M_GRANULARITY, 1 * 1024 * 1024);
+    mallopt(M_MMAP_THRESHOLD, 1 * 1024 * 1024);
+    mallopt(M_TRIM_THRESHOLD, 32 * 1024 * 1024);
+    FLAG_gpu = LLAMAFILE_GPU_DISABLE;  // pass `--gpu auto` to enable it
+    llamafile_check_cpu();
     ShowCrashReports();
 
-    // [jart] disable GPU by default (pass `--gpu auto` to enable it)
-    FLAG_gpu = LLAMAFILE_GPU_DISABLE;
+    if (llamafile_has(argv, "--version")) {
+        puts("whisperfile v" LLAMAFILE_VERSION_STRING);
+        return 0;
+    }
+
+    if (llamafile_has(argv, "-h") ||
+        llamafile_has(argv, "-help") ||
+        llamafile_has(argv, "--help")) {
+        llamafile_help("/zip/whisper.cpp/main.1.asc");
+        __builtin_unreachable();
+    }
+
+    LoadZipArgs(&argc, &argv);
+
+    if (!llamafile_has(argv, "--cli") &&
+        (llamafile_has(argv, "--server") ||
+         !llamafile_has(argv, "-f"))) {
+        return whisper_server_main(argc, argv);
+    }
 
     // If the only argument starts with "@", read arguments line-by-line
     // from the given file.
@@ -980,6 +1006,7 @@ int main(int argc, char ** argv) {
         }
     }
 
+    whisper_params params;
     if (whisper_params_parse(argc, argv, params) == false) {
         whisper_print_usage(argc, argv, params);
         return 1;

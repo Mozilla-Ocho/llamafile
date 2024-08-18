@@ -29,19 +29,14 @@ $(WHISPER_CPP_OBJS): private				\
 			-Wno-alloc-size-larger-than	\
 			-Wno-deprecated-declarations
 
-o/$(MODE)/whisper.cpp/server:				\
-		o/$(MODE)/whisper.cpp/server.o		\
-		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
-		o/$(MODE)/llama.cpp/llama.cpp.a	
-
 o/$(MODE)/whisper.cpp/main:				\
 		o/$(MODE)/whisper.cpp/main.o		\
+		o/$(MODE)/whisper.cpp/main.1.asc.zip.o	\
 		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
-		o/$(MODE)/llama.cpp/llama.cpp.a	
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
 
 $(WHISPER_CPP_OBJS): whisper.cpp/BUILD.mk
 
 .PHONY: o/$(MODE)/whisper.cpp
 o/$(MODE)/whisper.cpp:					\
-		o/$(MODE)/whisper.cpp/server		\
 		o/$(MODE)/whisper.cpp/main

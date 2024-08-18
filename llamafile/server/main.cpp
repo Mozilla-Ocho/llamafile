@@ -36,20 +36,35 @@ llama_model* g_model;
 int
 main(int argc, char* argv[])
 {
-    ShowCrashReports();
+    mallopt(M_GRANULARITY, 2 * 1024 * 1024);
+    mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
+    mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);
+    FLAG_gpu = LLAMAFILE_GPU_DISABLE;
     llamafile_check_cpu();
+    ShowCrashReports();
+
     if (llamafile_has(argv, "--version")) {
         puts("llamafiler v" LLAMAFILE_VERSION_STRING);
         exit(0);
     }
 
-    mallopt(M_GRANULARITY, 2 * 1024 * 1024);
-    mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
-    mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);
+    if (llamafile_has(argv, "-h") || llamafile_has(argv, "-help") ||
+        llamafile_has(argv, "--help")) {
+        llamafile_help("/zip/llamafile/server/main.1.asc");
+        __builtin_unreachable();
+    }
 
     // get config
     LoadZipArgs(&argc, &argv);
     llamafile_get_flags(argc, argv);
+
+    // bounce users wanting gpu support (not ready yet)
+    if (FLAG_n_gpu_layers) {
+        fprintf(stderr, "error: llamafiler doesn't support gpu yet\n");
+        return 1;
+    }
+
+    // initialize subsystems
     time_init();
     tokenbucket_init();
 

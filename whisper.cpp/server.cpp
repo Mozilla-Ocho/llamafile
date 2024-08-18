@@ -1,5 +1,6 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
+#include "llamafile/debug.h"
 #include "common.h"
 
 #include "whisper.h"
@@ -148,6 +149,38 @@ bool whisper_params_parse(int argc, char ** argv, whisper_params & params, serve
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
 
+        if (arg == "--log-disable") {
+            FLAG_log_disable = true;
+        } else if (arg == "--fast") {
+            FLAG_fast = true;
+        } else if (arg == "--precise") {
+            FLAG_precise = true;
+        } else if (arg == "--trace") {
+            FLAG_trace = true;
+        } else if (arg == "--trap") {
+            FLAG_trap = true;
+            FLAG_unsecure = true; // for better backtraces
+            llamafile_trapping_enabled(+1);
+        } else if (arg == "--unsecure") {
+            FLAG_unsecure = true;
+        } else if (arg == "--nocompile") {
+            FLAG_nocompile = true;
+        } else if (arg == "--recompile") {
+            FLAG_recompile = true;
+        } else if (arg == "--tinyblas") {
+            FLAG_tinyblas = true;  // undocumented
+        } else if (arg == "--gpu") {
+            if (++i >= argc) {
+                fprintf(stderr, "error: missing --gpu flag value\n");
+                exit(1);
+            }
+            FLAG_gpu = llamafile_gpu_parse(argv[i]);
+            if (FLAG_gpu == LLAMAFILE_GPU_ERROR) {
+                fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
+                exit(1);
+            }
+        } else
+
         if (arg == "-h" || arg == "--help") {
             whisper_print_usage(argc, argv, params, sparams);
             exit(0);
@@ -211,7 +244,7 @@ bool whisper_params_parse(int argc, char ** argv, whisper_params & params, serve
 
         else {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
-            whisper_print_usage(argc, argv, params, sparams);
+            // whisper_print_usage(argc, argv, params, sparams); // [jart]
             exit(0);
         }
     }
@@ -501,16 +534,11 @@ void get_req_parameters(const Request & req, whisper_params & params)
 
 }  // namespace
 
-int main(int argc, char ** argv) {
+int whisper_server_main(int argc, char ** argv) {
     whisper_params params;
     server_params sparams;
 
     std::mutex whisper_mutex;
-
-    // [jart] disable GPU by default (pass `--gpu auto` to enable it)
-    FLAG_gpu = LLAMAFILE_GPU_DISABLE;
-
-    LoadZipArgs(&argc, &argv);
 
     if (whisper_params_parse(argc, argv, params, sparams) == false) {
         whisper_print_usage(argc, argv, params, sparams);

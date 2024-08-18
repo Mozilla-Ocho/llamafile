@@ -224,7 +224,7 @@ bool sam_params_parse(int argc, char ** argv, sam_params & params) {
             exit(0);
         } else {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
-            sam_print_usage(argc, argv, params);
+            // sam_print_usage(argc, argv, params); // [jart]
             exit(0);
         }
     }

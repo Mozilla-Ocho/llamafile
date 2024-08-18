@@ -444,7 +444,9 @@ struct llama_server_context
             }
         }
 
-        std::tie(model, ctx) = llama_init_from_gpt_params(params);
+        llama_init_result llama_init = llama_init_from_gpt_params(params);
+        model = llama_init.model;
+        ctx = llama_init.context;
         if (model == nullptr)
         {
             LOG_ERROR("unable to load model", {{"model", params.model}});
@@ -2156,8 +2158,6 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("                            model path (default: %s)\n", params.model.c_str());
     printf("  -a ALIAS, --alias ALIAS\n");
     printf("                            set an alias for the model, will be added as `model` field in completion response\n");
-    printf("  --lora FNAME              apply LoRA adapter (implies --no-mmap)\n");
-    printf("  --lora-base FNAME         optional model to use as a base for the layers modified by the LoRA adapter\n");
     printf("  --host                    ip address to listen (default  (default: %s)\n", sparams.hostname.c_str());
     printf("  --port PORT               port to listen (default  (default: %d)\n", sparams.port);
     printf("  --path PUBLIC_PATH        path from which to serve static files (default %s)\n", sparams.public_path.c_str());
@@ -2498,32 +2498,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 break;
             }
             params.main_gpu = std::stoi(argv[i]);
-        }
-        else if (arg == "--lora")
-        {
-            if (++i >= argc)
-            {
-                invalid_param = true;
-                break;
-            }
-            params.lora_adapter.emplace_back(argv[i], 1.0f);
-            params.use_mmap = false;
-        }
-        else if (arg == "--lora-scaled")
-        {
-            if (++i >= argc)
-            {
-                invalid_param = true;
-                break;
-            }
-            const char * lora_adapter = argv[i];
-            if (++i >= argc)
-            {
-                invalid_param = true;
-                break;
-            }
-            params.lora_adapter.emplace_back(lora_adapter, std::stof(argv[i]));
-            params.use_mmap = false;
         }
         else if (arg == "-v" || arg == "--verbose")
         {
