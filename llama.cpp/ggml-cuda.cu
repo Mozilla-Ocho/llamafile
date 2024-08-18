@@ -341,8 +341,15 @@ void ggml_abort(const char * file, int line, const char * fmt, ...) {
 // - 13B quantum model: +200-400 MB
 //
 // [jart] https://github.com/Mozilla-Ocho/llamafile/issues/403#issuecomment-2103687594
+//
+// TODO(jart): oops looks like we can't use this anymore, because my
+//             five year old NVIDIA GeForce RTX 2080 Ti card stopped
+//             working with "ggml-cuda.cu:11460: ERROR: CUDA kernel
+//             mul_mat_q has no device code compatible with CUDA arch
+//             700. ggml-cuda.cu was compiled for: 600,700,800,900"!
+//
 #ifdef GGML_USE_TINYBLAS
-#define GGML_CUDA_FORCE_MMQ // [jart] want this
+// #define GGML_CUDA_FORCE_MMQ // [jart] want this
 #endif
 
 GGML_CALL bool ggml_cuda_link(const struct ggml_backend_api *backend_api) {
