@@ -40,18 +40,22 @@ The `--no-prints` is optional. It's helpful in avoiding a lot of verbose
 logging and statistical information from being printed, which is useful
 when writing shell scripts.
 
-## Converting MP3 to WAV
+## Supported Audio Formats
 
-Whisperfile only currently understands .wav files. So if you have files
-in a different audio format, you need to convert them to wav beforehand.
-One great tool for doing that is sox (your swiss army knife for audio).
-It's easily installed and used on Debian systems as follows:
+Whisperfile prefers that the input file be a 16khz .wav file with 16-bit
+signed linear samples that's stereo or mono. Otherwise it'll attempt to
+convert your audiofile automatically using an internal library. The MP3,
+FLAC, and Ogg Vorbis Theora formats are supported across platforms.
+
+For example, here's an audio recording of a famous poem in MP3 format:
 
 ```
-sudo apt install sox libsox-fmt-all
 wget https://archive.org/download/raven/raven_poe_64kb.mp3
-sox raven_poe_64kb.mp3 -r 16k raven_poe_64kb.wav
+o//whisper.cpp/main -m whisper-tiny.en-q5_1.bin -f raven_poe_64kb.mp3 -pc
 ```
+
+Here we also passed the `-pc` flag to get color-coded terminal output
+which communicates the confidence of transcription.
 
 ## Higher Quality Models
 
@@ -61,14 +65,14 @@ enables whisperfile to decode The Raven perfectly. However it's slower.
 
 ```
 wget https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin
-o//whisper.cpp/main -m ggml-medium.en.bin -f raven_poe_64kb.wav --no-prints
+o//whisper.cpp/main -m ggml-medium.en.bin -f raven_poe_64kb.mp3 --no-prints
 ```
 
 Lastly, there's the large model, which is the best, but also slowest.
 
 ```
 wget -O whisper-large-v3.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin
-o//whisper.cpp/main -m whisper-large-v3.bin -f raven_poe_64kb.wav --no-prints
+o//whisper.cpp/main -m whisper-large-v3.bin -f raven_poe_64kb.mp3 --no-prints
 ```
 
 ## Installation
