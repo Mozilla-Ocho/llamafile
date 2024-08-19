@@ -34,9 +34,12 @@ o/$(MODE)/whisper.cpp/main:				\
 		o/$(MODE)/whisper.cpp/main.1.asc.zip.o	\
 		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
+		o/$(MODE)/stb/stb.a			\
+
+o/$(MODE)/whisper.cpp/miniaudio.o: private COPTS += -O3
 
 $(WHISPER_CPP_OBJS): whisper.cpp/BUILD.mk
 
 .PHONY: o/$(MODE)/whisper.cpp
 o/$(MODE)/whisper.cpp:					\
-		o/$(MODE)/whisper.cpp/main
+		o/$(MODE)/whisper.cpp/main		\

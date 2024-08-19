@@ -15,3 +15,4 @@ ORIGIN
 LOCAL MODIFICATIONS
 
   - Integrate with llamafile file loader
+  - Automatically convert MP3/FLAC/OGG to WAV

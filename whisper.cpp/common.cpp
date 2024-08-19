@@ -2,11 +2,13 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #define _USE_MATH_DEFINES // for M_PI
 
+#include "llamafile/log.h"
+#include "llamafile/llamafile.h"
 #include "common.h"
 
 // third-party utilities
 // use your favorite implementations
-#define DR_WAV_IMPLEMENTATION
+// #define DR_WAV_IMPLEMENTATION // [jart] comment out
 #include "dr_wav.h"
 
 #if defined(_MSC_VER)
@@ -17,6 +19,23 @@
 #include <fcntl.h>
 #include <io.h>
 #endif
+
+#include <cosmo.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "stb/stb_vorbis.h"
+#include "miniaudio.h"
+
+#define MA_DATA_CONVERTER_STACK_BUFFER_SIZE 4096
+
+static std::string delete_me;
+
+static void on_exit(void) {
+    if (!delete_me.empty()) {
+        unlink(delete_me.c_str());
+    }
+}
 
 bool is_wav_buffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
@@ -33,10 +52,103 @@ bool is_wav_buffer(const std::string buf) {
     return true;
 }
 
-bool read_wav(const std::string & fname, std::vector<float>& pcmf32, std::vector<std::vector<float>>& pcmf32s, bool stereo) {
+static ma_result perform_audio_conversion(ma_decoder* pDecoder, ma_encoder* pEncoder) {
+    ma_result rc = MA_SUCCESS;
+    for (;;) {
+        ma_uint8 pRawData[MA_DATA_CONVERTER_STACK_BUFFER_SIZE];
+        ma_uint64 framesReadThisIteration;
+        ma_uint64 framesToReadThisIteration;
+        framesToReadThisIteration = sizeof(pRawData) / ma_get_bytes_per_frame(pDecoder->outputFormat, pDecoder->outputChannels);
+        rc = ma_decoder_read_pcm_frames(pDecoder, pRawData, framesToReadThisIteration, &framesReadThisIteration);
+        if (rc != MA_SUCCESS) {
+            break;
+        }
+        ma_encoder_write_pcm_frames(pEncoder, pRawData, framesReadThisIteration, NULL);
+        if (framesReadThisIteration < framesToReadThisIteration) {
+            break;
+        }
+    }
+    return rc;
+}
+
+// converts audio file to signed 16-bit 16000hz wav
+static std::string convert_audio_file(const std::string & fname, bool stereo) {
+
+    // create temporary filename
+    std::string newpath;
+    newpath = __get_tmpdir();
+    newpath += "/whisperfile.";
+    newpath += std::to_string(_rand64());
+    newpath += ".wav";
+
+    // create decoder
+    ma_decoder_config decoderConfig =
+            ma_decoder_config_init(ma_format_s16, 1 + stereo, COMMON_SAMPLE_RATE);
+    decoderConfig.resampling.algorithm = ma_resample_algorithm_linear;
+    decoderConfig.resampling.linear.lpfOrder = 8;
+
+    // open input file
+    ma_decoder decoder;
+    ma_result rc = ma_decoder_init_file(fname.c_str(), &decoderConfig, &decoder);
+    if (rc != MA_SUCCESS) {
+        fprintf(stderr, "%s: failed to open audio file: %s (we support .wav, .mp3, .flac, and .ogg)\n",
+                fname.c_str(), ma_result_description(rc));
+        return "";
+    }
+
+    // create encoder
+    ma_encoder encoder;
+    ma_encoder_config encoderConfig = ma_encoder_config_init(
+        ma_encoding_format_wav,
+        decoder.outputFormat,
+        decoder.outputChannels,
+        decoder.outputSampleRate);
+    rc = ma_encoder_init_file(newpath.c_str(), &encoderConfig, &encoder);
+    if (rc != MA_SUCCESS) {
+        ma_decoder_uninit(&decoder);
+        fprintf(stderr, "%s: failed to open output file: %s\n",
+                newpath.c_str(), ma_result_description(rc));
+        return "";
+    }
+
+    // perform the conversion
+    rc = perform_audio_conversion(&decoder, &encoder);
+    ma_encoder_uninit(&encoder);
+    ma_decoder_uninit(&decoder);
+    if (rc != MA_SUCCESS) {
+        fprintf(stderr, "%s: failed to convert audio file: %s\n",
+                fname.c_str(), ma_result_description(rc));
+        return "";
+    }
+
+    // return new path
+    delete_me = newpath;
+    atexit(on_exit);
+    return newpath;
+}
+
+#define TRY_CONVERSION                                                  \
+    do {                                                                \
+        if (did_conversion) {                                           \
+            fprintf(stderr, "error: failed to open audio file\n");      \
+            return false;                                               \
+        }                                                               \
+        std::string fname2 = convert_audio_file(fname, stereo);         \
+        if (fname2.empty()) {                                           \
+            return false;                                               \
+        }                                                               \
+        fname = fname2;                                                 \
+        did_conversion = true;                                          \
+        goto TryAgain;                                                  \
+    } while (0)
+
+bool read_wav(const std::string & fname_, std::vector<float>& pcmf32, std::vector<std::vector<float>>& pcmf32s, bool stereo) {
     drwav wav;
     std::vector<uint8_t> wav_data; // used for pipe input from stdin
+    std::string fname = fname_;
+    bool did_conversion = false;
 
+TryAgain:
     if (fname == "-") {
         {
             #ifdef _WIN32
@@ -68,32 +180,38 @@ bool read_wav(const std::string & fname, std::vector<float>& pcmf32, std::vector
         }
     }
     else if (drwav_init_file(&wav, fname.c_str(), nullptr) == false) {
-        fprintf(stderr, "error: failed to open '%s' as WAV file\n", fname.c_str());
+        tinylogf("%s: converting to wav...\n", fname.c_str());
+        TRY_CONVERSION;
+    }
+
+    if (stereo && wav.channels < 2) {
+        fprintf(stderr, "%s: audio file must be stereo for diarization\n", fname.c_str());
+        drwav_uninit(&wav);
         return false;
     }
 
     if (wav.channels != 1 && wav.channels != 2) {
-        fprintf(stderr, "%s: WAV file '%s' must be mono or stereo\n", __func__, fname.c_str());
+        tinylogf("%s: audio file has %d channels\n", fname.c_str(), wav.channels);
         drwav_uninit(&wav);
-        return false;
+        TRY_CONVERSION;
     }
 
     if (stereo && wav.channels != 2) {
-        fprintf(stderr, "%s: WAV file '%s' must be stereo for diarization\n", __func__, fname.c_str());
+        tinylogf("%s: audio file has %d channels (we want diarization)\n", fname.c_str(), wav.channels);
         drwav_uninit(&wav);
-        return false;
+        TRY_CONVERSION;
     }
 
     if (wav.sampleRate != COMMON_SAMPLE_RATE) {
-        fprintf(stderr, "%s: WAV file '%s' must be %i kHz\n", __func__, fname.c_str(), COMMON_SAMPLE_RATE/1000);
+        tinylogf("%s: audio file has %d sample rate\n", fname.c_str(), wav.sampleRate);
         drwav_uninit(&wav);
-        return false;
+        TRY_CONVERSION;
     }
 
     if (wav.bitsPerSample != 16) {
-        fprintf(stderr, "%s: WAV file '%s' must be 16-bit\n", __func__, fname.c_str());
+        tinylogf("%s: audio file has %d bits per sample\n", fname.c_str(), wav.bitsPerSample);
         drwav_uninit(&wav);
-        return false;
+        TRY_CONVERSION;
     }
 
     const uint64_t n = wav_data.empty() ? wav.totalPCMFrameCount : wav_data.size()/(wav.channels*wav.bitsPerSample/8);
@@ -171,7 +289,7 @@ bool vad_simple(std::vector<float> & pcmf32, int sample_rate, int last_ms, float
     energy_last /= n_samples_last;
 
     if (verbose) {
-        fprintf(stderr, "%s: energy_all: %f, energy_last: %f, vad_thold: %f, freq_thold: %f\n", __func__, energy_all, energy_last, vad_thold, freq_thold);
+        tinylogf("%s: energy_all: %f, energy_last: %f, vad_thold: %f, freq_thold: %f\n", __func__, energy_all, energy_last, vad_thold, freq_thold);
     }
 
     if (energy_last > vad_thold*energy_all) {

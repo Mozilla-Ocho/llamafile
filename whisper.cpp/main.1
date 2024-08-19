@@ -32,7 +32,10 @@ Puts program in HTTP server mode.
 Path of Whisper model weights. See
 https://huggingface.co/ggerganov/whisper.cpp
 .It Fl f Ar FNAME , Fl Fl file Ar FNAME
-Path of WAV file to transcribe.
+Path of audio file to transcribe. The preferred audio format is a 16khz
+16-bit signed linear WAV file, which can be stereo or mono. It's also
+permissible to pass an MP3, FLAC, or OGG file, in which case it'll be
+converted to .wav file in your temp directory before transcribing.
 .It Fl tr , Fl Fl translate
 Translate audio into English text.
 .It Fl ot Ar N , Fl Fl offset-t Ar N
