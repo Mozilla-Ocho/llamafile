@@ -21,15 +21,15 @@
 #define TEST 1
 
 #ifndef MDIM
-#define MDIM 2000
+#define MDIM 4000
 #endif
 
 #ifndef NDIM
-#define NDIM 2000
+#define NDIM 4000
 #endif
 
 #ifndef KDIM
-#define KDIM 2000
+#define KDIM 4000
 #endif
 
 #ifndef NITER
@@ -55,8 +55,6 @@
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
-#define _mm256_broadcast_hs(u16ptr) \
-    _mm256_castsi256_ps(_mm256_slli_epi32(_mm256_set1_epi16(*(u16ptr)), 16))
 #define _mm256_loadu_hs(u16ptr) \
     _mm256_castsi256_ps( \
         _mm256_slli_epi32(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i *)(u16ptr))), 16))
@@ -80,17 +78,26 @@ static void syncthreads(int ith) {
     }
 }
 
+static float blockB_packed[NC * KC] ALIGNED;
 static uint16_t blockA_packed[MC * KC] ALIGNED;
-static uint16_t blockB_packed[NC * KC] ALIGNED;
 
 static int8_t mask_32[32] ALIGNED = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                                      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
 
-static void pack_panelB(const uint16_t *B, uint16_t *blockB_packed, const int nr, const int kc,
+static float from_brain(uint16_t h) {
+    union {
+        float f;
+        uint32_t i;
+    } u;
+    u.i = (uint32_t)h << 16;
+    return u.f;
+}
+
+static void pack_panelB(const uint16_t *B, float *blockB_packed, const int nr, const int kc,
                         const int K) {
     for (int p = 0; p < kc; p++) {
         for (int j = 0; j < nr; j++) {
-            *blockB_packed++ = B[j * K + p];
+            *blockB_packed++ = from_brain(B[j * K + p]);
         }
         for (int j = nr; j < NR; j++) {
             *blockB_packed++ = 0;
@@ -98,7 +105,7 @@ static void pack_panelB(const uint16_t *B, uint16_t *blockB_packed, const int nr
     }
 }
 
-static void pack_blockB(const uint16_t *B, uint16_t *blockB_packed, const int nc, const int kc,
+static void pack_blockB(const uint16_t *B, float *blockB_packed, const int nc, const int kc,
                         const int K, const int ith) {
     for (int j = ith * NR; j < nc; j += NR * NTHREADS) {
         const int nr = min(NR, nc - j);
@@ -126,7 +133,7 @@ static void pack_blockA(const uint16_t *A, uint16_t *blockA_packed, const int mc
     }
 }
 
-static void kernel_16x6(uint16_t *blockA_packed, uint16_t *blockB_packed, float *C, const int m,
+static void kernel_16x6(uint16_t *blockA_packed, float *blockB_packed, float *C, const int m,
                         const int n, const int k, const int M) {
     __m256 C_buffer[2][6];
     __m256 b_packFloat8;
@@ -150,27 +157,27 @@ static void kernel_16x6(uint16_t *blockA_packed, uint16_t *blockB_packed, float 
         a0_packFloat8 = _mm256_loadu_hs(blockA_packed);
         a1_packFloat8 = _mm256_loadu_hs(blockA_packed + 8);
 
-        b_packFloat8 = _mm256_broadcast_hs(blockB_packed);
+        b_packFloat8 = _mm256_broadcast_ss(blockB_packed);
         C_buffer[0][0] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][0]);
         C_buffer[1][0] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][0]);
 
-        b_packFloat8 = _mm256_broadcast_hs(blockB_packed + 1);
+        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 1);
         C_buffer[0][1] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][1]);
         C_buffer[1][1] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][1]);
 
-        b_packFloat8 = _mm256_broadcast_hs(blockB_packed + 2);
+        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 2);
         C_buffer[0][2] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][2]);
         C_buffer[1][2] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][2]);
 
-        b_packFloat8 = _mm256_broadcast_hs(blockB_packed + 3);
+        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 3);
         C_buffer[0][3] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][3]);
         C_buffer[1][3] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][3]);
 
-        b_packFloat8 = _mm256_broadcast_hs(blockB_packed + 4);
+        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 4);
         C_buffer[0][4] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][4]);
         C_buffer[1][4] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][4]);
 
-        b_packFloat8 = _mm256_broadcast_hs(blockB_packed + 5);
+        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 5);
         C_buffer[0][5] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][5]);
         C_buffer[1][5] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][5]);
 
@@ -209,8 +216,8 @@ static void matmul_llama(uint16_t *A, uint16_t *B, float *C, const int M, const 
                                     &C[(j + jr) * M + (i + ir)], mr, nr, kc, M);
                     }
                 }
+                syncthreads(ith);
             }
-            syncthreads(ith);
         }
     }
 }
@@ -224,15 +231,6 @@ static void matmul_llama_mt(uint16_t *A, uint16_t *B, float *C, const int M, con
 #pragma omp parallel for num_threads(NTHREADS)
     for (int ith = 0; ith < NTHREADS; ++ith)
         matmul_llama(A, B, C, M, N, K, ith);
-}
-
-static float from_brain(uint16_t h) {
-    union {
-        float f;
-        uint32_t i;
-    } u;
-    u.i = (uint32_t)h << 16;
-    return u.f;
 }
 
 static uint16_t to_brain(float s) {

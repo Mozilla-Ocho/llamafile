@@ -300,15 +300,55 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     assert(ith < nth);
 
 #if defined(__x86_64__)
-    if (nth == NTHREADS && //
-        Btype == GGML_TYPE_BF16 && //
-        Btype == GGML_TYPE_BF16 && //
+
+    if (m >= 5 && //
+        n >= 5 && //
+        nth == NTHREADS && //
+        Atype == GGML_TYPE_F32 && //
+        Btype == GGML_TYPE_F32 && //
         Ctype == GGML_TYPE_F32 && //
         X86_CHECK(AVX2) && //
         X86_CHECK(FMA)) {
-        llama_matmul_avx2_bf16((const uint16_t *)A, (const uint16_t *)B, (float *)C, m, n, k, ith);
+        llama_matmul_avx2_fp32((const float *)A, (const float *)B, (float *)C, m, n, k, lda, ldb,
+                               ldc, ith);
         return true;
     }
+
+    if (m >= 5 && //
+        n >= 5 && //
+        nth == NTHREADS && //
+        Atype == GGML_TYPE_F16 && //
+        (Btype == GGML_TYPE_F32 || //
+         Btype == GGML_TYPE_F16) && //
+        Ctype == GGML_TYPE_F32 && //
+        X86_CHECK(F16C) && //
+        X86_CHECK(AVX2) && //
+        X86_CHECK(FMA)) {
+        if (Btype == GGML_TYPE_F32) {
+            return WANT_QUANTIZATION;
+        }
+        llama_matmul_avx2_fp16((const uint16_t *)A, (const uint16_t *)B, (float *)C, m, n, k, lda,
+                               ldb, ldc, ith);
+        return true;
+    }
+
+    if (m >= 5 && //
+        n >= 5 && //
+        nth == NTHREADS && //
+        Atype == GGML_TYPE_BF16 && //
+        (Btype == GGML_TYPE_F32 || //
+         Btype == GGML_TYPE_BF16) && //
+        Ctype == GGML_TYPE_F32 && //
+        X86_CHECK(AVX2) && //
+        X86_CHECK(FMA)) {
+        if (Btype == GGML_TYPE_F32) {
+            return WANT_QUANTIZATION;
+        }
+        llama_matmul_avx2_bf16((const uint16_t *)A, (const uint16_t *)B, (float *)C, m, n, k, lda,
+                               ldb, ldc, ith);
+        return true;
+    }
+
 #endif
 
 #if defined(__x86_64__)

@@ -23,10 +23,6 @@
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
-#define _mm256_loadu_hs(u16ptr) \
-    _mm256_castsi256_ps( \
-        _mm256_slli_epi32(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i *)(u16ptr))), 16))
-
 static void syncthreads(int ith) {
     static atomic_uint count;
     static struct {
@@ -46,26 +42,17 @@ static void syncthreads(int ith) {
     }
 }
 
+static float blockA_packed[MC * KC] ALIGNED;
 static float blockB_packed[NC * KC] ALIGNED;
-static uint16_t blockA_packed[MC * KC] ALIGNED;
 
 static int8_t mask_32[32] ALIGNED = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                                      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
 
-static float from_brain(uint16_t h) {
-    union {
-        float f;
-        uint32_t i;
-    } u;
-    u.i = (uint32_t)h << 16;
-    return u.f;
-}
-
-static void pack_panelB(const uint16_t *B, float *blockB_packed, const int nr, const int kc,
+static void pack_panelB(const float *B, float *blockB_packed, const int nr, const int kc,
                         const long ldb) {
     for (int p = 0; p < kc; p++) {
         for (int j = 0; j < nr; j++) {
-            *blockB_packed++ = from_brain(B[j * ldb + p]);
+            *blockB_packed++ = B[j * ldb + p];
         }
         for (int j = nr; j < NR; j++) {
             *blockB_packed++ = 0;
@@ -73,15 +60,15 @@ static void pack_panelB(const uint16_t *B, float *blockB_packed, const int nr, c
     }
 }
 
-static dontinline void pack_blockB(const uint16_t *B, float *blockB_packed, const int nc,
-                                   const int kc, const long ldb, const int ith) {
+static dontinline void pack_blockB(const float *B, float *blockB_packed, const int nc, const int kc,
+                                   const long ldb, const int ith) {
     for (int j = ith * NR; j < nc; j += NR * NTHREADS) {
         const int nr = min(NR, nc - j);
         pack_panelB(&B[j * ldb], &blockB_packed[j * kc], nr, kc, ldb);
     }
 }
 
-static void pack_panelA(const uint16_t *A, uint16_t *blockA_packed, const int mr, const int kc,
+static void pack_panelA(const float *A, float *blockA_packed, const int mr, const int kc,
                         const long lda) {
     for (int p = 0; p < kc; p++) {
         for (int i = 0; i < mr; i++) {
@@ -93,15 +80,15 @@ static void pack_panelA(const uint16_t *A, uint16_t *blockA_packed, const int mr
     }
 }
 
-static dontinline void pack_blockA(const uint16_t *A, uint16_t *blockA_packed, const int mc,
-                                   const int kc, const long lda, const int ith) {
+static dontinline void pack_blockA(const float *A, float *blockA_packed, const int mc, const int kc,
+                                   const long lda, const int ith) {
     for (int i = ith * MR; i < mc; i += MR * NTHREADS) {
         const int mr = min(MR, mc - i);
         pack_panelA(&A[i * lda], &blockA_packed[i * kc], mr, kc, lda);
     }
 }
 
-static dontinline void llama_matmul_kernel_16x6_avx2_bf16(uint16_t *blockA_packed,
+static dontinline void llama_matmul_kernel_16x6_avx2_fp32(float *blockA_packed,
                                                           float *blockB_packed, float *C,
                                                           const int m, const int n, const int k,
                                                           const long ldc) {
@@ -124,8 +111,8 @@ static dontinline void llama_matmul_kernel_16x6_avx2_bf16(uint16_t *blockA_packe
         }
     }
     for (int p = 0; p < k; p++) {
-        a0_packFloat8 = _mm256_loadu_hs(blockA_packed);
-        a1_packFloat8 = _mm256_loadu_hs(blockA_packed + 8);
+        a0_packFloat8 = _mm256_loadu_ps(blockA_packed);
+        a1_packFloat8 = _mm256_loadu_ps(blockA_packed + 8);
 
         b_packFloat8 = _mm256_broadcast_ss(blockB_packed);
         C_buffer[0][0] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][0]);
@@ -175,9 +162,9 @@ static void clear_tile(float *C, const int m, const int n, const long ldc) {
     }
 }
 
-void llama_matmul_avx2_bf16(const uint16_t *A, const uint16_t *B, float *C, const int M,
-                            const int N, const int K, const long lda, const long ldb,
-                            const long ldc, const int ith) {
+void llama_matmul_avx2_fp32(const float *A, const float *B, float *C, const int M, const int N,
+                            const int K, const long lda, const long ldb, const long ldc,
+                            const int ith) {
     for (int j = 0; j < N; j += NC) {
         const int nc = min(NC, N - j);
         for (int i = 0; i < M; i += MC) {
@@ -204,7 +191,7 @@ void llama_matmul_avx2_bf16(const uint16_t *A, const uint16_t *B, float *C, cons
                     const int nr = min(NR, nc - jr);
                     for (int ir = 0; ir < mc; ir += MR) {
                         const int mr = min(MR, mc - ir);
-                        llama_matmul_kernel_16x6_avx2_bf16(
+                        llama_matmul_kernel_16x6_avx2_fp32(
                             &blockA_packed[ir * kc], &blockB_packed[jr * kc],
                             &C[(j + jr) * M + (i + ir)], mr, nr, kc, ldc);
                     }

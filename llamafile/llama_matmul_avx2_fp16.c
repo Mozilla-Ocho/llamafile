@@ -3,6 +3,8 @@
 
 #ifdef __x86_64__
 
+#include "llama.cpp/ggml-impl.h"
+
 #include "llama_matmul.h"
 
 #include <immintrin.h>
@@ -23,9 +25,7 @@
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
-#define _mm256_loadu_hs(u16ptr) \
-    _mm256_castsi256_ps( \
-        _mm256_slli_epi32(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i *)(u16ptr))), 16))
+#define _mm256_loadu_hs(u16ptr) _mm256_cvtph_ps(_mm_loadu_si128((const __m128i *)(u16ptr)))
 
 static void syncthreads(int ith) {
     static atomic_uint count;
@@ -46,26 +46,40 @@ static void syncthreads(int ith) {
     }
 }
 
+static float lut[65536];
 static float blockB_packed[NC * KC] ALIGNED;
 static uint16_t blockA_packed[MC * KC] ALIGNED;
 
 static int8_t mask_32[32] ALIGNED = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                                      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
 
-static float from_brain(uint16_t h) {
-    union {
-        float f;
-        uint32_t i;
-    } u;
-    u.i = (uint32_t)h << 16;
-    return u.f;
+static dontinline void clear_matrix(float *C, const int M, const int N, long ldc, int ith) {
+    if (M == ldc) {
+        char *data = (char *)C;
+        size_t size = sizeof(float) * M * N;
+        size_t pagesz = sysconf(_SC_PAGESIZE);
+        size_t pages = size / pagesz;
+        size_t extra = size % pagesz;
+        for (size_t page = ith; page < pages; page += NTHREADS) {
+            memset(data + page * pagesz, 0, pagesz);
+        }
+        if (!ith && extra) {
+            memset(data + pages * pagesz, 0, extra);
+        }
+    } else {
+        for (int j = ith; j < N; j += NTHREADS) {
+            for (int i = 0; i < M; ++i) {
+                C[j * ldc + i] = 0;
+            }
+        }
+    }
 }
 
 static void pack_panelB(const uint16_t *B, float *blockB_packed, const int nr, const int kc,
                         const long ldb) {
     for (int p = 0; p < kc; p++) {
         for (int j = 0; j < nr; j++) {
-            *blockB_packed++ = from_brain(B[j * ldb + p]);
+            *blockB_packed++ = _cvtsh_ss(B[j * ldb + p]);
         }
         for (int j = nr; j < NR; j++) {
             *blockB_packed++ = 0;
@@ -101,7 +115,7 @@ static dontinline void pack_blockA(const uint16_t *A, uint16_t *blockA_packed, c
     }
 }
 
-static dontinline void llama_matmul_kernel_16x6_avx2_bf16(uint16_t *blockA_packed,
+static dontinline void llama_matmul_kernel_16x6_avx2_fp16(uint16_t *blockA_packed,
                                                           float *blockB_packed, float *C,
                                                           const int m, const int n, const int k,
                                                           const long ldc) {
@@ -175,7 +189,7 @@ static void clear_tile(float *C, const int m, const int n, const long ldc) {
     }
 }
 
-void llama_matmul_avx2_bf16(const uint16_t *A, const uint16_t *B, float *C, const int M,
+void llama_matmul_avx2_fp16(const uint16_t *A, const uint16_t *B, float *C, const int M,
                             const int N, const int K, const long lda, const long ldb,
                             const long ldc, const int ith) {
     for (int j = 0; j < N; j += NC) {
@@ -204,7 +218,7 @@ void llama_matmul_avx2_bf16(const uint16_t *A, const uint16_t *B, float *C, cons
                     const int nr = min(NR, nc - jr);
                     for (int ir = 0; ir < mc; ir += MR) {
                         const int mr = min(MR, mc - ir);
-                        llama_matmul_kernel_16x6_avx2_bf16(
+                        llama_matmul_kernel_16x6_avx2_fp16(
                             &blockA_packed[ir * kc], &blockB_packed[jr * kc],
                             &C[(j + jr) * M + (i + ir)], mr, nr, kc, ldc);
                     }
