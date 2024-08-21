@@ -18,6 +18,10 @@ void llama_matmul_avx2_bf16(const uint16_t *A, const uint16_t *B, float *C, cons
                             const int N, const int K, const long lda, const long ldb,
                             const long ldc, const int ith);
 
+void llama_matmul_avx512_bf16(const uint16_t *A, const uint16_t *B, float *C, const int M,
+                              const int N, const int K, const long lda, const long ldb,
+                              const long ldc, const int ith);
+
 #ifdef __cplusplus
 }
 #endif

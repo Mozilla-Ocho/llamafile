@@ -338,15 +338,23 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
         Atype == GGML_TYPE_BF16 && //
         (Btype == GGML_TYPE_F32 || //
          Btype == GGML_TYPE_BF16) && //
-        Ctype == GGML_TYPE_F32 && //
-        X86_CHECK(AVX2) && //
-        X86_CHECK(FMA)) {
-        if (Btype == GGML_TYPE_F32) {
-            return WANT_QUANTIZATION;
+        Ctype == GGML_TYPE_F32) {
+        if (X86_CHECK(AVX512F) && X86_CHECK(AVX512DQ) && X86_CHECK(FMA)) {
+            if (Btype == GGML_TYPE_F32) {
+                return WANT_QUANTIZATION;
+            }
+            llama_matmul_avx512_bf16((const uint16_t *)A, (const uint16_t *)B, (float *)C, m, n, k,
+                                     lda, ldb, ldc, ith);
+            return true;
         }
-        llama_matmul_avx2_bf16((const uint16_t *)A, (const uint16_t *)B, (float *)C, m, n, k, lda,
-                               ldb, ldc, ith);
-        return true;
+        if (X86_CHECK(AVX2) && X86_CHECK(FMA)) {
+            if (Btype == GGML_TYPE_F32) {
+                return WANT_QUANTIZATION;
+            }
+            llama_matmul_avx2_bf16((const uint16_t *)A, (const uint16_t *)B, (float *)C, m, n, k,
+                                   lda, ldb, ldc, ith);
+            return true;
+        }
     }
 
 #endif

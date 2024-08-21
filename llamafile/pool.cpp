@@ -144,7 +144,7 @@ static errno_t llamafile_thread_create(llamafile_task *task) {
     thread->task = task;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 128 * 1024);
+    pthread_attr_setstacksize(&attr, 512 * 1024);
     pthread_attr_setguardsize(&attr, sysconf(_SC_PAGESIZE));
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setsigaltstacksize_np(&attr, sysconf(_SC_MINSIGSTKSZ) + 32768);

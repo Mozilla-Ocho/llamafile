@@ -79,8 +79,10 @@ static void syncthreads(int ith) {
 static float blockB_packed[NC * KC] ALIGNED;
 static uint16_t blockA_packed[MC * KC] ALIGNED;
 
-static int8_t mask_32[32] ALIGNED = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                                     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
+static int8_t mask_32[32] ALIGNED = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, //
+    -0, -0, -0, -0, -0, -0, -0, -0, -0, -0, -0, -0, -0, -0, -0, -0, //
+};
 
 static void pack_panelB(const uint16_t *B, float *blockB_packed, const int nr, const int kc,
                         const int K) {

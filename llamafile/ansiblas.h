@@ -107,7 +107,6 @@ struct ansiBLAS {
             int ii = m0 + job / xtiles * RM;
             int jj = n0 + job % xtiles * RN;
             Vector Cv[RN][RM] = {0};
-            Vector Ce[RN][RM] = {0};
             for (int l = 0; l < k; l += KN)
                 for (int j = 0; j < RN; ++j)
                     for (int i = 0; i < RM; ++i)

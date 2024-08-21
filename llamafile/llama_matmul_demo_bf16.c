@@ -21,15 +21,15 @@
 #define TEST 1
 
 #ifndef MDIM
-#define MDIM 4000
+#define MDIM 6000
 #endif
 
 #ifndef NDIM
-#define NDIM 4000
+#define NDIM 6000
 #endif
 
 #ifndef KDIM
-#define KDIM 4000
+#define KDIM 6000
 #endif
 
 #ifndef NITER
@@ -42,11 +42,11 @@
 
 #define MEM_ALIGN 64
 
-#define MR 16
+#define MR 64
 #define NR 6
 
 // Consider fine-tuning the following parameters for your CPU
-#define NTHREADS 96
+#define NTHREADS 160
 #define MC MR *NTHREADS * 4
 #define NC NR *NTHREADS * 32
 #define KC 1000
@@ -55,9 +55,9 @@
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
-#define _mm256_loadu_hs(u16ptr) \
-    _mm256_castsi256_ps( \
-        _mm256_slli_epi32(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i *)(u16ptr))), 16))
+#define _mm512_loadu_hs(u16ptr) \
+    _mm512_castsi512_ps(_mm512_slli_epi32( \
+        _mm512_cvtepu16_epi32(_mm256_loadu_si256((const __m256i *)(u16ptr))), 16))
 
 static void syncthreads(int ith) {
     static atomic_uint count;
@@ -80,9 +80,6 @@ static void syncthreads(int ith) {
 
 static float blockB_packed[NC * KC] ALIGNED;
 static uint16_t blockA_packed[MC * KC] ALIGNED;
-
-static int8_t mask_32[32] ALIGNED = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                                     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
 
 static float from_brain(uint16_t h) {
     union {
@@ -133,66 +130,54 @@ static void pack_blockA(const uint16_t *A, uint16_t *blockA_packed, const int mc
     }
 }
 
-static void kernel_16x6(uint16_t *blockA_packed, float *blockB_packed, float *C, const int m,
+static void kernel_64x6(uint16_t *blockA_packed, float *blockB_packed, float *C, const int m,
                         const int n, const int k, const int M) {
-    __m256 C_buffer[2][6];
-    __m256 b_packFloat8;
-    __m256 a0_packFloat8;
-    __m256 a1_packFloat8;
-    __m256i packed_masks[2] = {};
-    if (m != 16) {
-        packed_masks[0] = _mm256_cvtepi8_epi32(_mm_loadu_si64(&mask_32[16 - m]));
-        packed_masks[1] = _mm256_cvtepi8_epi32(_mm_loadu_si64(&mask_32[16 - m + 8]));
+    __m512 C_buffer[4][6];
+    __m512 a_packFloat16[4];
+    __m512 b_packFloat16;
+    __mmask16 mask[4] = {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
+    if (m != 64) {
+        for (int i = 0; i < 4; i++) {
+            mask[i] = (m > i * 16)
+                          ? (__mmask16)((1ULL << ((m - i * 16) > 16 ? 16 : (m - i * 16))) - 1)
+                          : 0x0000;
+        }
         for (int j = 0; j < n; j++) {
-            C_buffer[0][j] = _mm256_maskload_ps(&C[j * M], packed_masks[0]);
-            C_buffer[1][j] = _mm256_maskload_ps(&C[j * M + 8], packed_masks[1]);
+            for (int i = 0; i < 4; i++) {
+                C_buffer[i][j] = _mm512_maskz_loadu_ps(mask[i], &C[j * M + i * 16]);
+            }
         }
     } else {
         for (int j = 0; j < n; j++) {
-            C_buffer[0][j] = _mm256_loadu_ps(&C[j * M]);
-            C_buffer[1][j] = _mm256_loadu_ps(&C[j * M + 8]);
+            for (int i = 0; i < 4; i++) {
+                C_buffer[i][j] = _mm512_loadu_ps(&C[j * M + i * 16]);
+            }
         }
     }
     for (int p = 0; p < k; p++) {
-        a0_packFloat8 = _mm256_loadu_hs(blockA_packed);
-        a1_packFloat8 = _mm256_loadu_hs(blockA_packed + 8);
-
-        b_packFloat8 = _mm256_broadcast_ss(blockB_packed);
-        C_buffer[0][0] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][0]);
-        C_buffer[1][0] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][0]);
-
-        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 1);
-        C_buffer[0][1] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][1]);
-        C_buffer[1][1] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][1]);
-
-        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 2);
-        C_buffer[0][2] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][2]);
-        C_buffer[1][2] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][2]);
-
-        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 3);
-        C_buffer[0][3] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][3]);
-        C_buffer[1][3] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][3]);
-
-        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 4);
-        C_buffer[0][4] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][4]);
-        C_buffer[1][4] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][4]);
-
-        b_packFloat8 = _mm256_broadcast_ss(blockB_packed + 5);
-        C_buffer[0][5] = _mm256_fmadd_ps(a0_packFloat8, b_packFloat8, C_buffer[0][5]);
-        C_buffer[1][5] = _mm256_fmadd_ps(a1_packFloat8, b_packFloat8, C_buffer[1][5]);
-
-        blockA_packed += 16;
+        for (int i = 0; i < 4; i++) {
+            a_packFloat16[i] = _mm512_loadu_hs(blockA_packed + i * 16);
+        }
+        for (int j = 0; j < 6; j++) {
+            b_packFloat16 = _mm512_set1_ps(blockB_packed[j]);
+            for (int i = 0; i < 4; i++) {
+                C_buffer[i][j] = _mm512_fmadd_ps(a_packFloat16[i], b_packFloat16, C_buffer[i][j]);
+            }
+        }
+        blockA_packed += 64;
         blockB_packed += 6;
     }
-    if (m != 16) {
+    if (m != 64) {
         for (int j = 0; j < n; j++) {
-            _mm256_maskstore_ps(&C[j * M], packed_masks[0], C_buffer[0][j]);
-            _mm256_maskstore_ps(&C[j * M + 8], packed_masks[1], C_buffer[1][j]);
+            for (int i = 0; i < 4; i++) {
+                _mm512_mask_storeu_ps(&C[j * M + i * 16], mask[i], C_buffer[i][j]);
+            }
         }
     } else {
         for (int j = 0; j < n; j++) {
-            _mm256_storeu_ps(&C[j * M], C_buffer[0][j]);
-            _mm256_storeu_ps(&C[j * M + 8], C_buffer[1][j]);
+            for (int i = 0; i < 4; i++) {
+                _mm512_storeu_ps(&C[j * M + i * 16], C_buffer[i][j]);
+            }
         }
     }
 }
@@ -212,7 +197,7 @@ static void matmul_llama(uint16_t *A, uint16_t *B, float *C, const int M, const 
                     const int nr = min(NR, nc - jr);
                     for (int ir = 0; ir < mc; ir += MR) {
                         const int mr = min(MR, mc - ir);
-                        kernel_16x6(&blockA_packed[ir * kc], &blockB_packed[jr * kc],
+                        kernel_64x6(&blockA_packed[ir * kc], &blockB_packed[jr * kc],
                                     &C[(j + jr) * M + (i + ir)], mr, nr, kc, M);
                     }
                 }
