@@ -11091,8 +11091,7 @@ static void ggml_compute_forward_mul_mat(
                                      ith, nth,
                                      src0->type,
                                      src1->type,
-                                     dst->type,
-                                     dst->op_params[0]))
+                                     dst->type))
                     goto UseGgmlGemm1;
         return;
     }
@@ -11153,8 +11152,7 @@ UseGgmlGemm1:;
                                      ith, nth,
                                      src0->type,
                                      vec_dot_type,
-                                     dst->type,
-                                     dst->op_params[0]))
+                                     dst->type))
                     goto UseGgmlGemm2;
         return;
     }

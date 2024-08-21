@@ -19,7 +19,7 @@
 
 bool llamafile_sgemm_unsupported(long m, long n, long k, const void *A, long lda, const void *B,
                                  long ldb, void *C, long ldc, int ith, int nth, int Atype,
-                                 int Btype, int Ctype, int precision) {
+                                 int Btype, int Ctype) {
     return false;
 }
 

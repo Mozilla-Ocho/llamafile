@@ -21,30 +21,30 @@ bool iqk_mul_mat_moe_unsupported(long, long, long, int, int, const void *, const
                                  long, long, const void *, int, int);
 
 bool llamafile_sgemm(long, long, long, const void *, long, const void *, long, void *, long, int,
-                     int, int, int, int, int);
+                     int, int, int, int);
 bool llamafile_mixmul(const struct ggml_compute_params *, const struct ggml_tensor *,
                       const struct ggml_tensor *, const struct ggml_tensor *, struct ggml_tensor *);
 size_t llamafile_mixmul_needs(const struct ggml_tensor *, const struct ggml_tensor *,
                               const struct ggml_tensor *);
 
 bool llamafile_sgemm_unsupported(long, long, long, const void *, long, const void *, long, void *,
-                                 long, int, int, int, int, int, int);
+                                 long, int, int, int, int, int);
 bool llamafile_sgemm_amd_avx(long, long, long, const void *, long, const void *, long, void *, long,
-                             int, int, int, int, int, int);
+                             int, int, int, int, int);
 bool llamafile_sgemm_amd_fma(long, long, long, const void *, long, const void *, long, void *, long,
-                             int, int, int, int, int, int);
+                             int, int, int, int, int);
 bool llamafile_sgemm_amd_avx2(long, long, long, const void *, long, const void *, long, void *,
-                              long, int, int, int, int, int, int);
+                              long, int, int, int, int, int);
 bool llamafile_sgemm_amd_avxvnni(long, long, long, const void *, long, const void *, long, void *,
-                                 long, int, int, int, int, int, int);
+                                 long, int, int, int, int, int);
 bool llamafile_sgemm_amd_avx512f(long, long, long, const void *, long, const void *, long, void *,
-                                 long, int, int, int, int, int, int);
+                                 long, int, int, int, int, int);
 bool llamafile_sgemm_amd_zen4(long, long, long, const void *, long, const void *, long, void *,
-                              long, int, int, int, int, int, int);
+                              long, int, int, int, int, int);
 bool llamafile_sgemm_arm80(long, long, long, const void *, long, const void *, long, void *, long,
-                           int, int, int, int, int, int);
+                           int, int, int, int, int);
 bool llamafile_sgemm_arm82(long, long, long, const void *, long, const void *, long, void *, long,
-                           int, int, int, int, int, int);
+                           int, int, int, int, int);
 
 bool llamafile_mixmul_unsupported(const struct ggml_compute_params *, const struct ggml_tensor *,
                                   const struct ggml_tensor *, const struct ggml_tensor *,

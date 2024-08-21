@@ -34,10 +34,8 @@
 // have excellent performance[1] for matrices that fit in the CPU cache
 // without imposing any overhead such as cache filling or malloc calls.
 //
-// This implementation does not guarantee any upper bound with rounding
-// errors, which grow along with k. Our goal's to maximally exploit the
-// hardware for performance, and then use whatever resources remain for
-// improving numerical accuracy.
+// With the F32, F16, and BF16 data types, the accumulation of roundoff
+// errors will only grow logarithmically, thanks to the ruler function.
 //
 // [1] J. Tunney, ‘LLaMA Now Goes Faster on CPUs’, Mar. 2024. [Online].
 //     Available: https://justine.lol/matmul/. [Accessed: 29-Mar-2024].
@@ -46,8 +44,7 @@ namespace {
 
 template <typename TC>
 bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                          TC *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype,
-                          int precision) {
+                          TC *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype) {
 
     switch (Atype) {
 
@@ -160,23 +157,14 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         if (n < 2)
             // TODO(jart): Why is ggml_vec_dot_f16_unroll() so fast at matvec?
             return NOT_PROFITABLE;
-        if (precision == GGML_PREC_F32) {
-            if (Btype != GGML_TYPE_F32)
-                return NOT_SUPPORTED;
-            tinyBLAS<0, 4, float32x4_t, float32x4_t, ggml_fp16_t, float, TC> tb{
-                k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n);
-            return true;
-        } else {
-            if (Btype == GGML_TYPE_F32)
-                return WANT_QUANTIZATION;
-            if (Btype != GGML_TYPE_F16)
-                return NOT_SUPPORTED;
-            tinyBLAS<0, 8, float16x8_t, float16x8_t, ggml_fp16_t, ggml_fp16_t, TC> tb{
-                k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, C, ldc, ith, nth};
-            tb.matmul(m, n);
-            return true;
-        }
+        if (Btype == GGML_TYPE_F32)
+            return WANT_QUANTIZATION;
+        if (Btype != GGML_TYPE_F16)
+            return NOT_SUPPORTED;
+        tinyBLAS<0, 8, float16x8_t, float16x8_t, ggml_fp16_t, ggml_fp16_t, TC> tb{
+            k, (const ggml_fp16_t *)A, lda, (const ggml_fp16_t *)B, ldb, C, ldc, ith, nth};
+        tb.matmul(m, n);
+        return true;
 #elif defined(__ARM_NEON) && !defined(_MSC_VER)
         if (n < 2 && !FLAG_precise)
             // TODO(jart): Why is ggml_vec_dot_f16_unroll() so fast at matvec?
@@ -249,7 +237,6 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
     (void)nth;
     (void)Atype;
     (void)Btype;
-    (void)precision;
 }
 
 } // namespace
@@ -265,8 +252,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
  * For example, for single-threaded single-precision GEMM you can say
  *
  *     llamafile_sgemm(m, n, k, A, lda, B, ldb, C, ldc, 0, 1,
- *                     GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32,
- *                     GGML_PREC_DEFAULT);
+ *                     GGML_TYPE_F32, GGML_TYPE_F32, GGML_TYPE_F32);
  *
  * @param m is rows in `A` and `C`
  * @param n is cols in `B` and `C`
@@ -286,8 +272,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
  * @return true if this function was able to service the matmul request
  */
 bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void *B, long ldb,
-                     void *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype,
-                     int precision) {
+                     void *C, long ldc, int ith, int nth, int Atype, int Btype, int Ctype) {
 
     assert(m >= 0);
     assert(n >= 0);
@@ -339,7 +324,7 @@ bool llamafile_sgemm(long m, long n, long k, const void *A, long lda, const void
     switch (Ctype) {
     case GGML_TYPE_F32:
         return llamafile_sgemm_impl(m, n, k, A, lda, B, ldb, (float *)C, ldc, ith, nth, Atype,
-                                    Btype, Ctype, precision);
+                                    Btype, Ctype);
     default:
         return NOT_SUPPORTED;
     }
