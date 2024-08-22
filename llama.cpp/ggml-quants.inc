@@ -14742,7 +14742,7 @@ bool ggml_validate_row_data(enum ggml_type type, const void * data, size_t nbyte
                 int nans = 0;
                 const unsigned char * f = (const unsigned char *) data;
                 for (size_t i = 0; i < nb; ++i) {
-                    nans += f[i] > 0xff;
+                    nans += (f[i] & 127) == 127;
                 }
                 if (nans) {
                     fprintf(stderr, "%s: found %d NaNs in row of %zu FP8 values\n", __func__, nans, nb);
