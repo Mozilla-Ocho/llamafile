@@ -357,6 +357,13 @@ extern "C" {
     GGML_API void        ggml_fp32_to_bf16_row_ref(const float *, ggml_bf16_t *, int64_t);
     GGML_API void        ggml_fp32_to_bf16_row(const float *, ggml_bf16_t *, int64_t);
 
+    // ieee 8-bit floating point format
+    typedef struct { uint8_t bits; } ggml_fp8_t;
+    GGML_API ggml_fp8_t ggml_fp32_to_fp8(float);
+    GGML_API float      ggml_fp8_to_fp32(ggml_fp8_t);  // consider just doing << 16
+    GGML_API void       ggml_fp8_to_fp32_row(const ggml_fp8_t *, float *, int64_t);
+    GGML_API void       ggml_fp32_to_fp8_row(const float *, ggml_fp8_t *, int64_t);
+
     struct ggml_object;
     struct ggml_context;
 
@@ -396,6 +403,7 @@ extern "C" {
         GGML_TYPE_Q4_0_4_4 = 31,
         GGML_TYPE_Q4_0_4_8 = 32,
         GGML_TYPE_Q4_0_8_8 = 33,
+        GGML_TYPE_FP8      = 34,
         GGML_TYPE_COUNT,
     };
 
@@ -440,6 +448,7 @@ extern "C" {
         GGML_FTYPE_MOSTLY_Q4_0_4_4 = 25, // except 1d tensors
         GGML_FTYPE_MOSTLY_Q4_0_4_8 = 26, // except 1d tensors
         GGML_FTYPE_MOSTLY_Q4_0_8_8 = 27, // except 1d tensors
+        GGML_FTYPE_MOSTLY_FP8      = 28, // except 1d tensors
     };
 
     // available tensor operations:

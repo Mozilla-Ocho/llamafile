@@ -4,9 +4,12 @@
 #define ggml_bf16_to_fp32_row ggml_bf16_to_fp32_row_amd_ssse3
 #define ggml_fp32_to_bf16_row ggml_fp32_to_bf16_row_amd_ssse3
 #define ggml_fp32_to_bf16_row_ref ggml_fp32_to_bf16_row_ref_amd_ssse3
+#define ggml_fp8_to_fp32_row ggml_fp8_to_fp32_row_amd_ssse3
+#define ggml_fp32_to_fp8_row ggml_fp32_to_fp8_row_amd_ssse3
 #define ggml_vec_dot_f32 ggml_vec_dot_f32_amd_ssse3
 #define ggml_vec_dot_f16 ggml_vec_dot_f16_amd_ssse3
 #define ggml_vec_dot_bf16 ggml_vec_dot_bf16_amd_ssse3
+#define ggml_vec_dot_fp8 ggml_vec_dot_fp8_amd_ssse3
 #define ggml_vec_dot_f16_unroll ggml_vec_dot_f16_unroll_amd_ssse3
 #define ggml_vec_mad_f32_unroll ggml_vec_mad_f32_unroll_amd_ssse3
 #define ggml_vec_set_i8 ggml_vec_set_i8_amd_ssse3
@@ -14,6 +17,7 @@
 #define ggml_vec_set_i32 ggml_vec_set_i32_amd_ssse3
 #define ggml_vec_set_f16 ggml_vec_set_f16_amd_ssse3
 #define ggml_vec_set_bf16 ggml_vec_set_bf16_amd_ssse3
+#define ggml_vec_set_fp8 ggml_vec_set_fp8_amd_ssse3
 #define ggml_vec_add_f32 ggml_vec_add_f32_amd_ssse3
 #define ggml_vec_add1_f32 ggml_vec_add1_f32_amd_ssse3
 #define ggml_vec_acc_f32 ggml_vec_acc_f32_amd_ssse3
@@ -50,6 +54,7 @@
 #define ggml_vec_sum_f32_ggf ggml_vec_sum_f32_ggf_amd_ssse3
 #define ggml_vec_sum_f16_ggf ggml_vec_sum_f16_ggf_amd_ssse3
 #define ggml_vec_sum_bf16_ggf ggml_vec_sum_bf16_ggf_amd_ssse3
+#define ggml_vec_sum_fp8_ggf ggml_vec_sum_fp8_ggf_amd_ssse3
 #define ggml_vec_max_f32 ggml_vec_max_f32_amd_ssse3
 #define ggml_vec_argmax_f32 ggml_vec_argmax_f32_amd_ssse3
 #define ggml_vec_soft_max_f32 ggml_vec_soft_max_f32_amd_ssse3

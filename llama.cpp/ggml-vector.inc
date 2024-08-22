@@ -884,6 +884,20 @@ void ggml_fp32_to_bf16_row_ref(const float * x, ggml_bf16_t * y, int64_t n) {
     }
 }
 
+void ggml_fp8_to_fp32_row(const ggml_fp8_t * x, float * y, int64_t n) {
+    int64_t i = 0;
+    for (; i < n; i++) {
+        y[i] = GGML_FP8_TO_FP32(x[i]);
+    }
+}
+
+void ggml_fp32_to_fp8_row(const float * x, ggml_fp8_t * y, int64_t n) {
+    int i = 0;
+    for (; i < n; i++) {
+        y[i] = GGML_FP32_TO_FP8(x[i]);
+    }
+}
+
 //
 // fundamental operations
 //
@@ -897,6 +911,8 @@ void ggml_vec_set_i32(const int n, int32_t * x, const int32_t v) { for (int i = 
 void ggml_vec_set_f16(const int n, ggml_fp16_t * x, const int32_t v) { for (int i = 0; i < n; ++i) x[i] = v; }
 
 void ggml_vec_set_bf16(const int n, ggml_bf16_t * x, const ggml_bf16_t v) { for (int i = 0; i < n; ++i) x[i] = v; }
+
+void ggml_vec_set_fp8(const int n, ggml_fp8_t * x, const ggml_fp8_t v) { for (int i = 0; i < n; ++i) x[i] = v; }
 
 void ggml_vec_add_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i] + y[i]; }
 void ggml_vec_add1_f32(const int n, float * z, const float * x, const float   v) { for (int i = 0; i < n; ++i) z[i]  = x[i] + v;    }
@@ -1000,6 +1016,42 @@ void ggml_vec_dot_bf16(int n, float * restrict s, size_t bs, ggml_bf16_t * restr
     }
     *s = sumf;
 }
+
+#ifdef __AVX512F__
+
+void ggml_vec_dot_fp8(int n, float * restrict s, size_t bs, ggml_fp8_t * restrict x, size_t bx, ggml_fp8_t * restrict y, size_t by, int nrc) {
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+    int i = 0;
+    ggml_float sumf = 0;
+    for (; i < n; ++i) {
+        sumf += (ggml_float)(GGML_FP8_TO_FP32(x[i]) *
+                             GGML_FP8_TO_FP32(y[i]));
+    }
+    *s = sumf;
+}
+
+#else
+
+void ggml_vec_dot_fp8(int n, float * restrict s, size_t bs, ggml_fp8_t * restrict x, size_t bx, ggml_fp8_t * restrict y, size_t by, int nrc) {
+    assert(nrc == 1);
+    UNUSED(nrc);
+    UNUSED(bx);
+    UNUSED(by);
+    UNUSED(bs);
+    int i = 0;
+    ggml_float sumf = 0;
+    for (; i < n; ++i) {
+        sumf += (ggml_float)(GGML_FP8_TO_FP32(x[i]) *
+                             GGML_FP8_TO_FP32(y[i]));
+    }
+    *s = sumf;
+}
+
+#endif // __AVX512F__
 
 void ggml_vec_dot_f16(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc) {
     assert(nrc == 1);
@@ -2027,6 +2079,14 @@ void ggml_vec_sum_bf16_ggf(const int n, float * s, const ggml_bf16_t * x) {
     float sum = 0.0f;
     for (int i = 0; i < n; ++i) {
         sum += GGML_BF16_TO_FP32(x[i]);
+    }
+    *s = sum;
+}
+
+void ggml_vec_sum_fp8_ggf(const int n, float * s, const ggml_fp8_t * x) {
+    float sum = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        sum += GGML_FP8_TO_FP32(x[i]);
     }
     *s = sum;
 }

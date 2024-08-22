@@ -63,6 +63,30 @@ extern "C" void ggml_fp32_to_bf16_row_ref_amd_k8(const float * x, ggml_bf16_t * 
 extern "C" void ggml_fp32_to_bf16_row_ref_arm82(const float * x, ggml_bf16_t * y, int64_t n);
 extern "C" void ggml_fp32_to_bf16_row_ref_arm80(const float * x, ggml_bf16_t * y, int64_t n);
 
+extern "C" void ggml_fp8_to_fp32_row_amd_avx512bf16(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_avx512vl(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_avx512(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_avx2(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_f16c(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_fma(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_avx(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_ssse3(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_amd_k8(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_arm82(const ggml_fp8_t * x, float * y, int64_t n);
+extern "C" void ggml_fp8_to_fp32_row_arm80(const ggml_fp8_t * x, float * y, int64_t n);
+
+extern "C" void ggml_fp32_to_fp8_row_amd_avx512bf16(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_avx512vl(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_avx512(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_avx2(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_f16c(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_fma(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_avx(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_ssse3(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_amd_k8(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_arm82(const float * x, ggml_fp8_t * y, int64_t n);
+extern "C" void ggml_fp32_to_fp8_row_arm80(const float * x, ggml_fp8_t * y, int64_t n);
+
 extern "C" void ggml_vec_dot_f32_amd_avx512bf16(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_amd_avx512vl(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_f32_amd_avx512(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc);
@@ -98,6 +122,18 @@ extern "C" void ggml_vec_dot_bf16_amd_ssse3(int n, float * s, size_t bs, ggml_bf
 extern "C" void ggml_vec_dot_bf16_amd_k8(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_bf16_arm82(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
 extern "C" void ggml_vec_dot_bf16_arm80(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc);
+
+extern "C" void ggml_vec_dot_fp8_amd_avx512bf16(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_avx512vl(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_avx512(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_avx2(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_f16c(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_fma(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_avx(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_ssse3(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_amd_k8(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_arm82(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
+extern "C" void ggml_vec_dot_fp8_arm80(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc);
 
 extern "C" void ggml_vec_dot_f16_unroll_amd_avx512bf16(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
 extern "C" void ggml_vec_dot_f16_unroll_amd_avx512vl(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y);
@@ -182,6 +218,18 @@ extern "C" void ggml_vec_set_bf16_amd_ssse3(const int n, ggml_bf16_t * x, const 
 extern "C" void ggml_vec_set_bf16_amd_k8(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
 extern "C" void ggml_vec_set_bf16_arm82(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
 extern "C" void ggml_vec_set_bf16_arm80(const int n, ggml_bf16_t * x, const ggml_bf16_t v);
+
+extern "C" void ggml_vec_set_fp8_amd_avx512bf16(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_avx512vl(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_avx512(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_avx2(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_f16c(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_fma(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_avx(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_ssse3(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_amd_k8(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_arm82(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
+extern "C" void ggml_vec_set_fp8_arm80(const int n, ggml_fp8_t * x, const ggml_fp8_t v);
 
 extern "C" void ggml_vec_add_f32_amd_avx512bf16 (const int n, float * z, const float * x, const float * y);
 extern "C" void ggml_vec_add_f32_amd_avx512vl (const int n, float * z, const float * x, const float * y);
@@ -615,6 +663,18 @@ extern "C" void ggml_vec_sum_bf16_ggf_amd_k8(const int n, float * s, const ggml_
 extern "C" void ggml_vec_sum_bf16_ggf_arm82(const int n, float * s, const ggml_bf16_t * x);
 extern "C" void ggml_vec_sum_bf16_ggf_arm80(const int n, float * s, const ggml_bf16_t * x);
 
+extern "C" void ggml_vec_sum_fp8_ggf_amd_avx512bf16(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_avx512vl(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_avx512(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_avx2(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_f16c(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_fma(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_avx(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_ssse3(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_amd_k8(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_arm82(const int n, float * s, const ggml_fp8_t * x);
+extern "C" void ggml_vec_sum_fp8_ggf_arm80(const int n, float * s, const ggml_fp8_t * x);
+
 extern "C" void ggml_vec_max_f32_amd_avx512bf16(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_amd_avx512vl(const int n, float * s, const float * x);
 extern "C" void ggml_vec_max_f32_amd_avx512(const int n, float * s, const float * x);
@@ -681,9 +741,12 @@ static const struct VectorFuncs {
     typeof(ggml_bf16_to_fp32_row) *ptr_ggml_bf16_to_fp32_row;
     typeof(ggml_fp32_to_bf16_row) *ptr_ggml_fp32_to_bf16_row;
     typeof(ggml_fp32_to_bf16_row_ref) *ptr_ggml_fp32_to_bf16_row_ref;
+    typeof(ggml_fp8_to_fp32_row) *ptr_ggml_fp8_to_fp32_row;
+    typeof(ggml_fp32_to_fp8_row) *ptr_ggml_fp32_to_fp8_row;
     typeof(ggml_vec_dot_f32) *ptr_ggml_vec_dot_f32;
     typeof(ggml_vec_dot_f16) *ptr_ggml_vec_dot_f16;
     typeof(ggml_vec_dot_bf16) *ptr_ggml_vec_dot_bf16;
+    typeof(ggml_vec_dot_fp8) *ptr_ggml_vec_dot_fp8;
     typeof(ggml_vec_dot_f16_unroll) *ptr_ggml_vec_dot_f16_unroll;
     typeof(ggml_vec_mad_f32_unroll) *ptr_ggml_vec_mad_f32_unroll;
     typeof(ggml_vec_set_i8) *ptr_ggml_vec_set_i8;
@@ -691,6 +754,7 @@ static const struct VectorFuncs {
     typeof(ggml_vec_set_i32) *ptr_ggml_vec_set_i32;
     typeof(ggml_vec_set_f16) *ptr_ggml_vec_set_f16;
     typeof(ggml_vec_set_bf16) *ptr_ggml_vec_set_bf16;
+    typeof(ggml_vec_set_fp8) *ptr_ggml_vec_set_fp8;
     typeof(ggml_vec_add_f32) *ptr_ggml_vec_add_f32;
     typeof(ggml_vec_add1_f32) *ptr_ggml_vec_add1_f32;
     typeof(ggml_vec_acc_f32) *ptr_ggml_vec_acc_f32;
@@ -727,6 +791,7 @@ static const struct VectorFuncs {
     typeof(ggml_vec_sum_f32_ggf) *ptr_ggml_vec_sum_f32_ggf;
     typeof(ggml_vec_sum_f16_ggf) *ptr_ggml_vec_sum_f16_ggf;
     typeof(ggml_vec_sum_bf16_ggf) *ptr_ggml_vec_sum_bf16_ggf;
+    typeof(ggml_vec_sum_fp8_ggf) *ptr_ggml_vec_sum_fp8_ggf;
     typeof(ggml_vec_max_f32) *ptr_ggml_vec_max_f32;
     typeof(ggml_vec_argmax_f32) *ptr_ggml_vec_argmax_f32;
     typeof(ggml_vec_soft_max_f32) *ptr_ggml_vec_soft_max_f32;
@@ -741,9 +806,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx512bf16;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx512bf16;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx512bf16;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_avx512bf16;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_avx512bf16;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx512bf16;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx512bf16;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx512bf16;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_avx512bf16;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_avx512bf16;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_avx512bf16;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_avx512bf16;
@@ -751,6 +819,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_avx512bf16;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_avx512bf16;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_avx512bf16;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_avx512bf16;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_avx512bf16;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_avx512bf16;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_avx512bf16;
@@ -787,6 +856,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx512bf16;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx512bf16;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx512bf16;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_avx512bf16;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx512bf16;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx512bf16;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx512bf16;
@@ -802,9 +872,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx512vl;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx512vl;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx512vl;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_avx512vl;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_avx512vl;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx512vl;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx512vl;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx512vl;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_avx512vl;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_avx512vl;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_avx512vl;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_avx512vl;
@@ -812,6 +885,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_avx512vl;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_avx512vl;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_avx512vl;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_avx512vl;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_avx512vl;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_avx512vl;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_avx512vl;
@@ -848,6 +922,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx512vl;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx512vl;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx512vl;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_avx512vl;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx512vl;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx512vl;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx512vl;
@@ -863,9 +938,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx512;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx512;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx512;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_avx512;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_avx512;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx512;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx512;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx512;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_avx512;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_avx512;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_avx512;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_avx512;
@@ -873,6 +951,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_avx512;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_avx512;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_avx512;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_avx512;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_avx512;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_avx512;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_avx512;
@@ -909,6 +988,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx512;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx512;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx512;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_avx512;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx512;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx512;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx512;
@@ -924,9 +1004,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx2;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx2;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx2;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_avx2;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_avx2;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx2;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx2;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx2;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_avx2;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_avx2;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_avx2;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_avx2;
@@ -934,6 +1017,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_avx2;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_avx2;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_avx2;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_avx2;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_avx2;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_avx2;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_avx2;
@@ -970,6 +1054,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx2;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx2;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx2;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_avx2;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx2;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx2;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx2;
@@ -985,9 +1070,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_f16c;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_f16c;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_f16c;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_f16c;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_f16c;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_f16c;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_f16c;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_f16c;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_f16c;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_f16c;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_f16c;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_f16c;
@@ -995,6 +1083,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_f16c;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_f16c;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_f16c;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_f16c;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_f16c;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_f16c;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_f16c;
@@ -1031,6 +1120,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_f16c;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_f16c;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_f16c;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_f16c;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_f16c;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_f16c;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_f16c;
@@ -1046,9 +1136,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_fma;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_fma;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_fma;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_fma;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_fma;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_fma;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_fma;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_fma;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_fma;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_fma;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_fma;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_fma;
@@ -1056,6 +1149,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_fma;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_fma;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_fma;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_fma;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_fma;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_fma;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_fma;
@@ -1092,6 +1186,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_fma;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_fma;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_fma;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_fma;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_fma;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_fma;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_fma;
@@ -1107,9 +1202,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_avx;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_avx;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_avx;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_avx;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_avx;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_avx;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_avx;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_avx;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_avx;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_avx;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_avx;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_avx;
@@ -1117,6 +1215,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_avx;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_avx;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_avx;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_avx;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_avx;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_avx;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_avx;
@@ -1153,6 +1252,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_avx;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_avx;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_avx;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_avx;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_avx;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_avx;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_avx;
@@ -1168,9 +1268,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_ssse3;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_ssse3;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_ssse3;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_ssse3;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_ssse3;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_ssse3;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_ssse3;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_ssse3;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_ssse3;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_ssse3;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_ssse3;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_ssse3;
@@ -1178,6 +1281,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_ssse3;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_ssse3;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_ssse3;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_ssse3;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_ssse3;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_ssse3;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_ssse3;
@@ -1214,6 +1318,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_ssse3;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_ssse3;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_ssse3;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_ssse3;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_ssse3;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_ssse3;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_ssse3;
@@ -1229,9 +1334,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_amd_k8;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_amd_k8;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_amd_k8;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_amd_k8;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_amd_k8;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_amd_k8;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_amd_k8;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_amd_k8;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_amd_k8;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_amd_k8;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_amd_k8;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_amd_k8;
@@ -1239,6 +1347,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_amd_k8;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_amd_k8;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_amd_k8;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_amd_k8;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_amd_k8;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_amd_k8;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_amd_k8;
@@ -1275,6 +1384,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_amd_k8;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_amd_k8;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_amd_k8;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_amd_k8;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_amd_k8;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_amd_k8;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_amd_k8;
@@ -1290,9 +1400,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_arm82;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_arm82;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_arm82;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_arm82;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_arm82;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_arm82;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_arm82;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_arm82;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_arm82;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_arm82;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_arm82;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_arm82;
@@ -1300,6 +1413,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_arm82;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_arm82;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_arm82;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_arm82;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_arm82;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_arm82;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_arm82;
@@ -1336,6 +1450,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_arm82;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_arm82;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_arm82;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_arm82;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_arm82;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_arm82;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_arm82;
@@ -1351,9 +1466,12 @@ static const struct VectorFuncs {
             ptr_ggml_bf16_to_fp32_row = ggml_bf16_to_fp32_row_arm80;
             ptr_ggml_fp32_to_bf16_row = ggml_fp32_to_bf16_row_arm80;
             ptr_ggml_fp32_to_bf16_row_ref = ggml_fp32_to_bf16_row_ref_arm80;
+            ptr_ggml_fp8_to_fp32_row = ggml_fp8_to_fp32_row_arm80;
+            ptr_ggml_fp32_to_fp8_row = ggml_fp32_to_fp8_row_arm80;
             ptr_ggml_vec_dot_f32 = ggml_vec_dot_f32_arm80;
             ptr_ggml_vec_dot_f16 = ggml_vec_dot_f16_arm80;
             ptr_ggml_vec_dot_bf16 = ggml_vec_dot_bf16_arm80;
+            ptr_ggml_vec_dot_fp8 = ggml_vec_dot_fp8_arm80;
             ptr_ggml_vec_dot_f16_unroll = ggml_vec_dot_f16_unroll_arm80;
             ptr_ggml_vec_mad_f32_unroll = ggml_vec_mad_f32_unroll_arm80;
             ptr_ggml_vec_set_i8 = ggml_vec_set_i8_arm80;
@@ -1361,6 +1479,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_set_i32 = ggml_vec_set_i32_arm80;
             ptr_ggml_vec_set_f16 = ggml_vec_set_f16_arm80;
             ptr_ggml_vec_set_bf16 = ggml_vec_set_bf16_arm80;
+            ptr_ggml_vec_set_fp8 = ggml_vec_set_fp8_arm80;
             ptr_ggml_vec_add_f32 = ggml_vec_add_f32_arm80;
             ptr_ggml_vec_add1_f32 = ggml_vec_add1_f32_arm80;
             ptr_ggml_vec_acc_f32 = ggml_vec_acc_f32_arm80;
@@ -1397,6 +1516,7 @@ static const struct VectorFuncs {
             ptr_ggml_vec_sum_f32_ggf = ggml_vec_sum_f32_ggf_arm80;
             ptr_ggml_vec_sum_f16_ggf = ggml_vec_sum_f16_ggf_arm80;
             ptr_ggml_vec_sum_bf16_ggf = ggml_vec_sum_bf16_ggf_arm80;
+            ptr_ggml_vec_sum_fp8_ggf = ggml_vec_sum_fp8_ggf_arm80;
             ptr_ggml_vec_max_f32 = ggml_vec_max_f32_arm80;
             ptr_ggml_vec_argmax_f32 = ggml_vec_argmax_f32_arm80;
             ptr_ggml_vec_soft_max_f32 = ggml_vec_soft_max_f32_arm80;
@@ -1428,6 +1548,14 @@ void ggml_fp32_to_bf16_row_ref(const float * x, ggml_bf16_t * y, int64_t n) {
   return funcs.ptr_ggml_fp32_to_bf16_row_ref(x, y, n);
 }
 
+void ggml_fp8_to_fp32_row(const ggml_fp8_t * x, float * y, int64_t n) {
+  return funcs.ptr_ggml_fp8_to_fp32_row(x, y, n);
+}
+
+void ggml_fp32_to_fp8_row(const float * x, ggml_fp8_t * y, int64_t n) {
+  return funcs.ptr_ggml_fp32_to_fp8_row(x, y, n);
+}
+
 void ggml_vec_dot_f32(int n, float * s, size_t bs, const float * x, size_t bx, const float * y, size_t by, int nrc) {
   return funcs.ptr_ggml_vec_dot_f32(n, s, bs, x, bx, y, by, nrc);
 }
@@ -1438,6 +1566,10 @@ void ggml_vec_dot_f16(int n, float * s, size_t bs, ggml_fp16_t * x, size_t bx, g
 
 void ggml_vec_dot_bf16(int n, float * s, size_t bs, ggml_bf16_t * x, size_t bx, ggml_bf16_t * y, size_t by, int nrc) {
   return funcs.ptr_ggml_vec_dot_bf16(n, s, bs, x, bx, y, by, nrc);
+}
+
+void ggml_vec_dot_fp8(int n, float * s, size_t bs, ggml_fp8_t * x, size_t bx, ggml_fp8_t * y, size_t by, int nrc) {
+  return funcs.ptr_ggml_vec_dot_fp8(n, s, bs, x, bx, y, by, nrc);
 }
 
 void ggml_vec_dot_f16_unroll(const int n, const int xs, float * s, void * xv, ggml_fp16_t * y) {
@@ -1466,6 +1598,10 @@ void ggml_vec_set_f16(const int n, ggml_fp16_t * x, const int32_t v) {
 
 void ggml_vec_set_bf16(const int n, ggml_bf16_t * x, const ggml_bf16_t v) {
   return funcs.ptr_ggml_vec_set_bf16(n, x, v);
+}
+
+void ggml_vec_set_fp8(const int n, ggml_fp8_t * x, const ggml_fp8_t v) {
+  return funcs.ptr_ggml_vec_set_fp8(n, x, v);
 }
 
 void ggml_vec_add_f32 (const int n, float * z, const float * x, const float * y) {
@@ -1610,6 +1746,10 @@ void ggml_vec_sum_f16_ggf(const int n, float * s, const ggml_fp16_t * x) {
 
 void ggml_vec_sum_bf16_ggf(const int n, float * s, const ggml_bf16_t * x) {
   return funcs.ptr_ggml_vec_sum_bf16_ggf(n, s, x);
+}
+
+void ggml_vec_sum_fp8_ggf(const int n, float * s, const ggml_fp8_t * x) {
+  return funcs.ptr_ggml_vec_sum_fp8_ggf(n, s, x);
 }
 
 void ggml_vec_max_f32(const int n, float * s, const float * x) {

@@ -210,6 +210,9 @@ typedef double ggml_float;
 // global data
 //
 
+// precomputed f32 table for fp8 (1 KB) (ggml-impl.h)
+float ggml_table_f32_fp8[1 << 8];
+
 // precomputed f32 table for f16 (256 KB) (ggml-impl.h)
 float ggml_table_f32_f16[1 << 16];
 
@@ -242,6 +245,16 @@ float ggml_bf16_to_fp32(ggml_bf16_t x) {
 ggml_bf16_t ggml_fp32_to_bf16(float x) {
 #define ggml_fp32_to_bf16 do_not_use__ggml_fp32_to_bf16__in_ggml
     return GGML_FP32_TO_BF16(x);
+}
+
+float ggml_fp8_to_fp32(ggml_fp8_t x) {
+#define ggml_fp8_to_fp32 do_not_use__ggml_fp8_to_fp32__in_ggml
+    return GGML_FP8_TO_FP32(x);
+}
+
+ggml_fp8_t ggml_fp32_to_fp8(float x) {
+#define ggml_fp32_to_fp8 do_not_use__ggml_fp32_to_fp8__in_ggml
+    return GGML_FP32_TO_FP8(x);
 }
 
 GGML_CALL bool ggml_guid_matches(ggml_guid_t guid_a, ggml_guid_t guid_b) {
@@ -691,6 +704,18 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
         .ncols                    = 8,
         .gemv                     = ggml_gemv_q4_0_8x8_q8_0,
         .gemm                     = ggml_gemm_q4_0_8x8_q8_0,
+    },
+    [GGML_TYPE_FP8] = {
+        .type_name                = "fp8",
+        .blck_size                = 1,
+        .type_size                = sizeof(ggml_fp8_t),
+        .is_quantized             = true,
+        .to_float                 = (ggml_to_float_t) ggml_fp8_to_fp32_row,
+        .from_float               = (ggml_from_float_t) ggml_fp32_to_fp8_row,
+        .from_float_ref           = (ggml_from_float_t) ggml_fp32_to_fp8_row,
+        .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_fp8,
+        .vec_dot_type             = GGML_TYPE_FP8,
+        .nrows                    = 1,
     }
 };
 
@@ -2093,6 +2118,7 @@ enum ggml_type ggml_ftype_to_ggml_type(enum ggml_ftype ftype) {
         case GGML_FTYPE_ALL_F32:              wtype = GGML_TYPE_F32;   break;
         case GGML_FTYPE_MOSTLY_F16:           wtype = GGML_TYPE_F16;   break;
         case GGML_FTYPE_MOSTLY_BF16:          wtype = GGML_TYPE_BF16;  break;
+        case GGML_FTYPE_MOSTLY_FP8:           wtype = GGML_TYPE_FP8;   break;
         case GGML_FTYPE_MOSTLY_Q4_0:          wtype = GGML_TYPE_Q4_0;  break;
         case GGML_FTYPE_MOSTLY_Q4_1:          wtype = GGML_TYPE_Q4_1;  break;
         case GGML_FTYPE_MOSTLY_Q5_0:          wtype = GGML_TYPE_Q5_0;  break;
@@ -2263,6 +2289,14 @@ static void ggml_init_once(void) {
     // initialize GELU, Quick GELU, SILU and EXP F32 tables
     {
         const uint64_t t_start = ggml_time_us(); UNUSED(t_start);
+
+        for (int i = 0; i < (1 << 8); ++i) {
+            union {
+                uint16_t i;
+                ggml_fp8_t f;
+            } u = {i};
+            ggml_table_f32_fp8[i] = GGML_COMPUTE_FP8_TO_FP32(u.f);
+        }
 
         for (int i = 0; i < (1 << 16); ++i) {
             union {
@@ -2703,6 +2737,13 @@ struct ggml_tensor * ggml_set_i32 (struct ggml_tensor * tensor, int32_t value) {
                     ggml_vec_set_bf16(nc, (ggml_bf16_t *)(data + i*n1), GGML_FP32_TO_BF16(value));
                 }
             } break;
+        case GGML_TYPE_FP8:
+            {
+                assert(tensor->nb[0] == sizeof(ggml_fp16_t));
+                for (int i = 0; i < n; i++) {
+                    ggml_vec_set_fp8(nc, (ggml_fp8_t *)(data + i*n1), GGML_FP32_TO_FP8(value));
+                }
+            } break;
         case GGML_TYPE_F32:
             {
                 assert(tensor->nb[0] == sizeof(float));
@@ -2760,6 +2801,13 @@ struct ggml_tensor * ggml_set_f32(struct ggml_tensor * tensor, float value) {
                 assert(tensor->nb[0] == sizeof(ggml_bf16_t));
                 for (int i = 0; i < n; i++) {
                     ggml_vec_set_bf16(nc, (ggml_bf16_t *)(data + i*n1), GGML_FP32_TO_BF16(value));
+                }
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                assert(tensor->nb[0] == sizeof(ggml_fp8_t));
+                for (int i = 0; i < n; i++) {
+                    ggml_vec_set_fp8(nc, (ggml_fp8_t *)(data + i*n1), GGML_FP32_TO_FP8(value));
                 }
             } break;
         case GGML_TYPE_F32:
@@ -2834,6 +2882,11 @@ int32_t ggml_get_i32_1d(const struct ggml_tensor * tensor, int i) {
                 GGML_ASSERT(tensor->nb[0] == sizeof(ggml_bf16_t));
                 return GGML_BF16_TO_FP32(((ggml_bf16_t *)(tensor->data))[i]);
             }
+        case GGML_TYPE_FP8:
+            {
+                GGML_ASSERT(tensor->nb[0] == sizeof(ggml_fp8_t));
+                return GGML_FP8_TO_FP32(((ggml_fp8_t *)(tensor->data))[i]);
+            }
         case GGML_TYPE_F32:
             {
                 GGML_ASSERT(tensor->nb[0] == sizeof(float));
@@ -2879,6 +2932,11 @@ void ggml_set_i32_1d(const struct ggml_tensor * tensor, int i, int32_t value) {
                 GGML_ASSERT(tensor->nb[0] == sizeof(ggml_bf16_t));
                 ((ggml_bf16_t *)(tensor->data))[i] = GGML_FP32_TO_BF16(value);
             } break;
+        case GGML_TYPE_FP8:
+            {
+                GGML_ASSERT(tensor->nb[0] == sizeof(ggml_fp8_t));
+                ((ggml_fp8_t *)(tensor->data))[i] = GGML_FP32_TO_FP8(value);
+            } break;
         case GGML_TYPE_F32:
             {
                 GGML_ASSERT(tensor->nb[0] == sizeof(float));
@@ -2904,6 +2962,8 @@ int32_t ggml_get_i32_nd(const struct ggml_tensor * tensor, int i0, int i1, int i
             return GGML_FP16_TO_FP32(((ggml_fp16_t *) data)[0]);
         case GGML_TYPE_BF16:
             return GGML_BF16_TO_FP32(((ggml_bf16_t *) data)[0]);
+        case GGML_TYPE_FP8:
+            return GGML_FP8_TO_FP32(((ggml_fp8_t *) data)[0]);
         case GGML_TYPE_F32:
             return ((float *) data)[0];
         default:
@@ -2933,6 +2993,10 @@ void ggml_set_i32_nd(const struct ggml_tensor * tensor, int i0, int i1, int i2, 
         case GGML_TYPE_BF16:
             {
                 ((ggml_bf16_t *)(data))[0] = GGML_FP32_TO_BF16(value);
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                ((ggml_fp8_t *)(data))[0] = GGML_FP32_TO_FP8(value);
             } break;
         case GGML_TYPE_F32:
             {
@@ -2971,6 +3035,10 @@ float ggml_get_f32_1d(const struct ggml_tensor * tensor, int i) {
         case GGML_TYPE_BF16:
             {
                 return GGML_BF16_TO_FP32(((ggml_bf16_t *)(tensor->data))[i]);
+            }
+        case GGML_TYPE_FP8:
+            {
+                return GGML_FP8_TO_FP32(((ggml_fp8_t *)(tensor->data))[i]);
             }
         case GGML_TYPE_F32:
             {
@@ -3011,6 +3079,10 @@ void ggml_set_f32_1d(const struct ggml_tensor * tensor, int i, float value) {
             {
                 ((ggml_bf16_t *)(tensor->data))[i] = GGML_FP32_TO_BF16(value);
             } break;
+        case GGML_TYPE_FP8:
+            {
+                ((ggml_fp8_t *)(tensor->data))[i] = GGML_FP32_TO_FP8(value);
+            } break;
         case GGML_TYPE_F32:
             {
                 ((float *)(tensor->data))[i] = value;
@@ -3035,6 +3107,8 @@ float ggml_get_f32_nd(const struct ggml_tensor * tensor, int i0, int i1, int i2,
             return GGML_FP16_TO_FP32(((ggml_fp16_t *) data)[0]);
         case GGML_TYPE_BF16:
             return GGML_BF16_TO_FP32(((ggml_bf16_t *) data)[0]);
+        case GGML_TYPE_FP8:
+            return GGML_FP8_TO_FP32(((ggml_fp8_t *) data)[0]);
         case GGML_TYPE_F32:
             return ((float *) data)[0];
         default:
@@ -3064,6 +3138,10 @@ void ggml_set_f32_nd(const struct ggml_tensor * tensor, int i0, int i1, int i2, 
         case GGML_TYPE_BF16:
             {
                 ((ggml_bf16_t *)(data))[0] = GGML_FP32_TO_BF16(value);
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                ((ggml_fp8_t *)(data))[0] = GGML_FP32_TO_FP8(value);
             } break;
         case GGML_TYPE_F32:
             {
@@ -7372,6 +7450,362 @@ static void ggml_compute_forward_dup_bf16(
     }
 }
 
+static void ggml_compute_forward_dup_fp8(
+        const struct ggml_compute_params * params,
+        struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+
+    GGML_ASSERT(ggml_nelements(dst) == ggml_nelements(src0));
+
+    GGML_TENSOR_UNARY_OP_LOCALS
+
+    const int ith = params->ith; // thread index
+    const int nth = params->nth; // number of threads
+
+    if (ggml_is_contiguous(src0) && ggml_is_contiguous(dst) && src0->type == dst->type) {
+        ggml_compute_forward_dup_same_cont(params, dst);
+        return;
+    }
+
+    // parallelize by rows
+    const int nr = ne01;
+    // number of rows per thread
+    const int dr = (nr + nth - 1) / nth;
+    // row range for this thread
+    const int ir0 = dr * ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    if (src0->type == dst->type &&
+        ne00 == ne0 &&
+        nb00 == ggml_type_size(src0->type) && nb0 == ggml_type_size(dst->type)) {
+        // copy by rows
+        const size_t rs = ne00*nb00;
+        for (int64_t i03 = 0; i03 < ne03; i03++) {
+            for (int64_t i02 = 0; i02 < ne02; i02++) {
+                for (int64_t i01 = ir0; i01 < ir1; i01++) {
+                    memcpy(
+                        ((char *)  dst->data + i01*nb1  + i02*nb2  + i03*nb3),
+                        ((char *) src0->data + i01*nb01 + i02*nb02 + i03*nb03),
+                        rs);
+                }
+            }
+        }
+        return;
+    }
+
+    // TODO: add more special-case implementations for tensor shapes/strides that can benefit from memcpy
+
+    if (ggml_is_contiguous(dst)) {
+        if (nb00 == sizeof(ggml_fp8_t)) {
+            if (dst->type == GGML_TYPE_FP8) {
+                size_t id = 0;
+                const size_t rs = ne00 * nb00;
+                char * dst_ptr = (char *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += rs * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            const char * src0_ptr = (char *) src0->data + i01*nb01 + i02*nb02 + i03*nb03;
+                            memcpy(dst_ptr + id, src0_ptr, rs);
+                            id += rs;
+                        }
+                        id += rs * (ne01 - ir1);
+                    }
+                }
+            } else if (dst->type == GGML_TYPE_F16) {
+                size_t id = 0;
+                ggml_fp16_t * dst_ptr = (ggml_fp16_t *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += ne00 * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            const ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i01*nb01 + i02*nb02 + i03*nb03);
+                            for (int i00 = 0; i00 < ne00; i00++) {
+                                dst_ptr[id] = GGML_FP32_TO_FP16(GGML_FP8_TO_FP32(src0_ptr[i00]));
+                                id++;
+                            }
+                        }
+                        id += ne00 * (ne01 - ir1);
+                    }
+                }
+            } else if (dst->type == GGML_TYPE_F32) {
+                size_t id = 0;
+                float * dst_ptr = (float *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += ne00 * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            const ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i01*nb01 + i02*nb02 + i03*nb03);
+                            for (int i00 = 0; i00 < ne00; i00++) {
+                                dst_ptr[id] = GGML_FP8_TO_FP32(src0_ptr[i00]);
+                                id++;
+                            }
+                        }
+                        id += ne00 * (ne01 - ir1);
+                    }
+                }
+            } else if (type_traits[dst->type].from_float) {
+                ggml_from_float_t const quantize_row_q = type_traits[dst->type].from_float;
+                float * src0_f32 = (float *) params->wdata + (ne00 + CACHE_LINE_SIZE_F32) * ith;
+
+                size_t id = 0;
+                size_t rs = nb0 * (ne00 / ggml_blck_size(dst->type));
+                char * dst_ptr = (char *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += rs * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            const ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i01*nb01 + i02*nb02 + i03*nb03);
+
+                            for (int i00 = 0; i00 < ne00; i00++) {
+                                src0_f32[i00] = GGML_FP8_TO_FP32(src0_ptr[i00]);
+                            }
+
+                            quantize_row_q(src0_f32, dst_ptr + id, ne00);
+                            id += rs;
+                        }
+                        id += rs * (ne01 - ir1);
+                    }
+                }
+            } else {
+                GGML_ABORT("fatal error"); // TODO: implement
+            }
+        } else {
+            //printf("%s: this is not optimal - fix me\n", __func__);
+
+            if (dst->type == GGML_TYPE_F32) {
+                size_t id = 0;
+                float * dst_ptr = (float *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += ne00 * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            for (int i00 = 0; i00 < ne00; i00++) {
+                                const ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+
+                                dst_ptr[id] = GGML_FP8_TO_FP32(*src0_ptr);
+                                id++;
+                            }
+                        }
+                        id += ne00 * (ne01 - ir1);
+                    }
+                }
+            } else if (dst->type == GGML_TYPE_FP8) {
+                size_t id = 0;
+                ggml_fp8_t * dst_ptr = (ggml_fp8_t *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += ne00 * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            for (int i00 = 0; i00 < ne00; i00++) {
+                                const ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+
+                                dst_ptr[id] = *src0_ptr;
+                                id++;
+                            }
+                        }
+                        id += ne00 * (ne01 - ir1);
+                    }
+                }
+            } else if (dst->type == GGML_TYPE_F16) {
+                size_t id = 0;
+                ggml_fp16_t * dst_ptr = (ggml_fp16_t *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += ne00 * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            for (int i00 = 0; i00 < ne00; i00++) {
+                                const ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+
+                                dst_ptr[id] = GGML_FP32_TO_FP16(GGML_FP8_TO_FP32(*src0_ptr));
+                                id++;
+                            }
+                        }
+                        id += ne00 * (ne01 - ir1);
+                    }
+                }
+            } else {
+                GGML_ABORT("fatal error"); // TODO: implement
+            }
+        }
+        return;
+    }
+
+    // dst counters
+    int64_t i10 = 0;
+    int64_t i11 = 0;
+    int64_t i12 = 0;
+    int64_t i13 = 0;
+
+    if (dst->type == GGML_TYPE_FP8) {
+        for (int64_t i03 = 0; i03 < ne03; i03++) {
+            for (int64_t i02 = 0; i02 < ne02; i02++) {
+                i10 += ne00 * ir0;
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+                for (int64_t i01 = ir0; i01 < ir1; i01++) {
+                    for (int64_t i00 = 0; i00 < ne00; i00++) {
+                        const char * src0_ptr = ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+                              char * dst_ptr  = ((char *)  dst->data + i10*nb0  + i11*nb1  + i12*nb2  + i13*nb3);
+
+                        memcpy(dst_ptr, src0_ptr, sizeof(ggml_fp8_t));
+
+                        if (++i10 == ne00) {
+                            i10 = 0;
+                            if (++i11 == ne01) {
+                                i11 = 0;
+                                if (++i12 == ne02) {
+                                    i12 = 0;
+                                    if (++i13 == ne03) {
+                                        i13 = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                i10 += ne00 * (ne01 - ir1);
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else if (dst->type == GGML_TYPE_F16) {
+        for (int64_t i03 = 0; i03 < ne03; i03++) {
+            for (int64_t i02 = 0; i02 < ne02; i02++) {
+                i10 += ne00 * ir0;
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+                for (int64_t i01 = ir0; i01 < ir1; i01++) {
+                    for (int64_t i00 = 0; i00 < ne00; i00++) {
+                        const char * src0_ptr = ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+                              char * dst_ptr  = ((char *)  dst->data + i10*nb0  + i11*nb1  + i12*nb2  + i13*nb3);
+
+                        *(ggml_fp16_t *) dst_ptr = GGML_FP32_TO_FP16(GGML_FP8_TO_FP32(*(const ggml_fp8_t *) src0_ptr));
+
+                        if (++i10 == ne0) {
+                            i10 = 0;
+                            if (++i11 == ne1) {
+                                i11 = 0;
+                                if (++i12 == ne2) {
+                                    i12 = 0;
+                                    if (++i13 == ne3) {
+                                        i13 = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                i10 += ne00 * (ne01 - ir1);
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else if (dst->type == GGML_TYPE_F32) {
+        for (int64_t i03 = 0; i03 < ne03; i03++) {
+            for (int64_t i02 = 0; i02 < ne02; i02++) {
+                i10 += ne00 * ir0;
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+                for (int64_t i01 = ir0; i01 < ir1; i01++) {
+                    for (int64_t i00 = 0; i00 < ne00; i00++) {
+                        const char * src0_ptr = ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+                              char * dst_ptr  = ((char *)  dst->data + i10*nb0  + i11*nb1  + i12*nb2  + i13*nb3);
+
+                        *(float *) dst_ptr = GGML_FP8_TO_FP32(*(const ggml_fp8_t *) src0_ptr);
+
+                        if (++i10 == ne0) {
+                            i10 = 0;
+                            if (++i11 == ne1) {
+                                i11 = 0;
+                                if (++i12 == ne2) {
+                                    i12 = 0;
+                                    if (++i13 == ne3) {
+                                        i13 = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                i10 += ne00 * (ne01 - ir1);
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        GGML_ABORT("fatal error"); // TODO: implement
+    }
+}
+
 static void ggml_compute_forward_dup_f32(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -7507,6 +7941,24 @@ static void ggml_compute_forward_dup_f32(
                                 const float * src0_ptr = (float *) ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
 
                                 dst_ptr[id] = GGML_FP32_TO_BF16(*src0_ptr);
+                                id++;
+                            }
+                        }
+                        id += ne00 * (ne01 - ir1);
+                    }
+                }
+            } else if (dst->type == GGML_TYPE_FP8) {
+                size_t id = 0;
+                ggml_fp8_t * dst_ptr = (ggml_fp8_t *) dst->data;
+
+                for (int i03 = 0; i03 < ne03; i03++) {
+                    for (int i02 = 0; i02 < ne02; i02++) {
+                        id += ne00 * ir0;
+                        for (int i01 = ir0; i01 < ir1; i01++) {
+                            for (int i00 = 0; i00 < ne00; i00++) {
+                                const float * src0_ptr = (float *) ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+
+                                dst_ptr[id] = GGML_FP32_TO_FP8(*src0_ptr);
                                 id++;
                             }
                         }
@@ -7654,6 +8106,58 @@ static void ggml_compute_forward_dup_f32(
                               char * dst_ptr  = ((char *)  dst->data + i10*nb0  + i11*nb1  + i12*nb2  + i13*nb3);
 
                         *(ggml_bf16_t *) dst_ptr = GGML_FP32_TO_BF16(*(const float *) src0_ptr);
+
+                        if (++i10 == ne0) {
+                            i10 = 0;
+                            if (++i11 == ne1) {
+                                i11 = 0;
+                                if (++i12 == ne2) {
+                                    i12 = 0;
+                                    if (++i13 == ne3) {
+                                        i13 = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                i10 += ne00 * (ne01 - ir1);
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else if (dst->type == GGML_TYPE_FP8) {
+        for (int64_t i03 = 0; i03 < ne03; i03++) {
+            for (int64_t i02 = 0; i02 < ne02; i02++) {
+                i10 += ne00 * ir0;
+                while (i10 >= ne0) {
+                    i10 -= ne0;
+                    if (++i11 == ne1) {
+                        i11 = 0;
+                        if (++i12 == ne2) {
+                            i12 = 0;
+                            if (++i13 == ne3) {
+                                i13 = 0;
+                            }
+                        }
+                    }
+                }
+                for (int64_t i01 = ir0; i01 < ir1; i01++) {
+                    for (int64_t i00 = 0; i00 < ne00; i00++) {
+                        const char * src0_ptr = ((char *) src0->data + i00*nb00 + i01*nb01 + i02*nb02 + i03*nb03);
+                              char * dst_ptr  = ((char *)  dst->data + i10*nb0  + i11*nb1  + i12*nb2  + i13*nb3);
+
+                        *(ggml_fp8_t *) dst_ptr = GGML_FP32_TO_FP8(*(const float *) src0_ptr);
 
                         if (++i10 == ne0) {
                             i10 = 0;
@@ -7856,6 +8360,10 @@ static void ggml_compute_forward_dup(
         case GGML_TYPE_BF16:
             {
                 ggml_compute_forward_dup_bf16(params, dst);
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                ggml_compute_forward_dup_fp8(params, dst);
             } break;
         case GGML_TYPE_F32:
             {
@@ -8095,6 +8603,81 @@ static void ggml_compute_forward_add_bf16_f32(
     }
 }
 
+static void ggml_compute_forward_add_fp8_f32(
+        const struct ggml_compute_params * params,
+        struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+    const struct ggml_tensor * src1 = dst->src[1];
+
+    GGML_ASSERT(ggml_are_same_shape(src0, src1) && ggml_are_same_shape(src0, dst));
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nr  = ggml_nrows(src0);
+
+    GGML_TENSOR_BINARY_OP_LOCALS
+
+    GGML_ASSERT(src0->type == GGML_TYPE_FP8);
+    GGML_ASSERT(src1->type == GGML_TYPE_F32);
+
+    if (dst->type == GGML_TYPE_F32) {
+        GGML_ASSERT( nb0 == sizeof(float));
+    }
+    else {
+        GGML_ASSERT(dst->type  == GGML_TYPE_FP8);
+        GGML_ASSERT( nb0 == sizeof(ggml_fp8_t));
+    }
+
+    GGML_ASSERT(nb00 == sizeof(ggml_fp8_t));
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    if (nb10 == sizeof(float)) {
+        if (dst->type == GGML_TYPE_FP8) {
+            for (int ir = ir0; ir < ir1; ++ir) {
+                // src0, src1 and dst are same shape => same indices
+                const int i3 = ir/(ne2*ne1);
+                const int i2 = (ir - i3*ne2*ne1)/ne1;
+                const int i1 = (ir - i3*ne2*ne1 - i2*ne1);
+
+                ggml_fp8_t * dst_ptr  = (ggml_fp8_t *) ((char *) dst->data  + i3*nb3  + i2*nb2  + i1*nb1);
+                ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i3*nb03 + i2*nb02 + i1*nb01);
+                float *      src1_ptr = (float *)      ((char *) src1->data + i3*nb13 + i2*nb12 + i1*nb11);
+
+                for (int i = 0; i < ne0; i++) {
+                    dst_ptr[i] = GGML_FP32_TO_FP8(GGML_FP8_TO_FP32(src0_ptr[i]) + src1_ptr[i]);
+                }
+            }
+        } else {
+            for (int ir = ir0; ir < ir1; ++ir) {
+                // src0, src1 and dst are same shape => same indices
+                const int i3 = ir/(ne2*ne1);
+                const int i2 = (ir - i3*ne2*ne1)/ne1;
+                const int i1 = (ir - i3*ne2*ne1 - i2*ne1);
+
+                float *      dst_ptr  = (float *)      ((char *) dst->data  + i3*nb3  + i2*nb2  + i1*nb1);
+                ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i3*nb03 + i2*nb02 + i1*nb01);
+                float *      src1_ptr = (float *)      ((char *) src1->data + i3*nb13 + i2*nb12 + i1*nb11);
+
+                for (int i = 0; i < ne0; i++) {
+                    dst_ptr[i] = GGML_FP8_TO_FP32(src0_ptr[i]) + src1_ptr[i];
+                }
+            }
+        }
+    }
+    else {
+        // src1 is not contiguous
+        GGML_ABORT("fatal error");
+    }
+}
+
 static void ggml_compute_forward_add_f16_f16(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -8190,6 +8773,58 @@ static void ggml_compute_forward_add_bf16_bf16(
 
             for (int i = 0; i < ne0; i++) {
                 dst_ptr[i] = GGML_FP32_TO_BF16(GGML_BF16_TO_FP32(src0_ptr[i]) + GGML_BF16_TO_FP32(src1_ptr[i]));
+            }
+        }
+    }
+    else {
+        // src1 is not contiguous
+        GGML_ABORT("fatal error");
+    }
+}
+
+static void ggml_compute_forward_add_fp8_fp8(
+        const struct ggml_compute_params * params,
+        struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+    const struct ggml_tensor * src1 = dst->src[1];
+
+    GGML_ASSERT(ggml_are_same_shape(src0, src1) && ggml_are_same_shape(src0, dst));
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nr  = ggml_nrows(src0);
+
+    GGML_TENSOR_BINARY_OP_LOCALS
+
+    GGML_ASSERT(src0->type == GGML_TYPE_FP8);
+    GGML_ASSERT(src1->type == GGML_TYPE_FP8);
+    GGML_ASSERT(dst->type  == GGML_TYPE_FP8);
+
+    GGML_ASSERT( nb0 == sizeof(ggml_fp8_t));
+    GGML_ASSERT(nb00 == sizeof(ggml_fp8_t));
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    if (nb10 == sizeof(ggml_fp8_t)) {
+        for (int ir = ir0; ir < ir1; ++ir) {
+            // src0, src1 and dst are same shape => same indices
+            const int i3 = ir/(ne2*ne1);
+            const int i2 = (ir - i3*ne2*ne1)/ne1;
+            const int i1 = (ir - i3*ne2*ne1 - i2*ne1);
+
+            ggml_fp8_t * dst_ptr  = (ggml_fp8_t *) ((char *) dst->data  + i3*nb3  + i2*nb2  + i1*nb1);
+            ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i3*nb03 + i2*nb02 + i1*nb01);
+            ggml_fp8_t * src1_ptr = (ggml_fp8_t *) ((char *) src1->data + i3*nb13 + i2*nb12 + i1*nb11);
+
+            for (int i = 0; i < ne0; i++) {
+                dst_ptr[i] = GGML_FP32_TO_FP8(GGML_FP8_TO_FP32(src0_ptr[i]) + GGML_FP8_TO_FP32(src1_ptr[i]));
             }
         }
     }
@@ -8311,6 +8946,18 @@ static void ggml_compute_forward_add(
                 }
                 else if (src1->type == GGML_TYPE_F32) {
                     ggml_compute_forward_add_bf16_f32(params, dst);
+                }
+                else {
+                    GGML_ABORT("fatal error");
+                }
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                if (src1->type == GGML_TYPE_FP8) {
+                    ggml_compute_forward_add_fp8_fp8(params, dst);
+                }
+                else if (src1->type == GGML_TYPE_F32) {
+                    ggml_compute_forward_add_fp8_f32(params, dst);
                 }
                 else {
                     GGML_ABORT("fatal error");
@@ -8609,6 +9256,54 @@ static void ggml_compute_forward_add1_bf16_f32(
     }
 }
 
+static void ggml_compute_forward_add1_fp8_f32(
+        const struct ggml_compute_params * params,
+        struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+    const struct ggml_tensor * src1 = dst->src[1];
+
+    GGML_ASSERT(ggml_are_same_shape(src0, dst));
+    GGML_ASSERT(ggml_is_scalar(src1));
+
+    // scalar to add
+    const float v = *(float *) src1->data;
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nr  = ggml_nrows(src0);
+
+    GGML_TENSOR_UNARY_OP_LOCALS
+
+    GGML_ASSERT(src0->type == GGML_TYPE_FP8);
+    GGML_ASSERT(src1->type == GGML_TYPE_F32);
+    GGML_ASSERT(dst->type  == GGML_TYPE_FP8);
+
+    GGML_ASSERT( nb0 == sizeof(ggml_fp8_t));
+    GGML_ASSERT(nb00 == sizeof(ggml_fp8_t));
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    for (int ir = ir0; ir < ir1; ++ir) {
+        // src0 and dst are same shape => same indices
+        const int i3 = ir/(ne2*ne1);
+        const int i2 = (ir - i3*ne2*ne1)/ne1;
+        const int i1 = (ir - i3*ne2*ne1 - i2*ne1);
+
+        ggml_fp8_t * dst_ptr  = (ggml_fp8_t *) ((char *) dst->data  + i3*nb3  + i2*nb2  + i1*nb1 );
+        ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i3*nb03 + i2*nb02 + i1*nb01);
+        for (int i = 0; i < ne0; i++) {
+            dst_ptr[i] = GGML_FP32_TO_FP8(GGML_FP8_TO_FP32(src0_ptr[i]) + v);
+        }
+    }
+}
+
 static void ggml_compute_forward_add1_bf16_bf16(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -8657,6 +9352,54 @@ static void ggml_compute_forward_add1_bf16_bf16(
     }
 }
 
+static void ggml_compute_forward_add1_fp8_fp8(
+        const struct ggml_compute_params * params,
+        struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+    const struct ggml_tensor * src1 = dst->src[1];
+
+    GGML_ASSERT(ggml_are_same_shape(src0, dst));
+    GGML_ASSERT(ggml_is_scalar(src1));
+
+    // scalar to add
+    const float v = GGML_FP8_TO_FP32(*(ggml_fp8_t *) src1->data);
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nr  = ggml_nrows(src0);
+
+    GGML_TENSOR_UNARY_OP_LOCALS
+
+    GGML_ASSERT(src0->type == GGML_TYPE_FP8);
+    GGML_ASSERT(src1->type == GGML_TYPE_FP8);
+    GGML_ASSERT(dst->type  == GGML_TYPE_FP8);
+
+    GGML_ASSERT( nb0 == sizeof(ggml_fp8_t));
+    GGML_ASSERT(nb00 == sizeof(ggml_fp8_t));
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    for (int ir = ir0; ir < ir1; ++ir) {
+        // src0 and dst are same shape => same indices
+        const int i3 = ir/(ne2*ne1);
+        const int i2 = (ir - i3*ne2*ne1)/ne1;
+        const int i1 = (ir - i3*ne2*ne1 - i2*ne1);
+
+        ggml_fp8_t * dst_ptr  = (ggml_fp8_t *) ((char *) dst->data  + i3*nb3  + i2*nb2  + i1*nb1 );
+        ggml_fp8_t * src0_ptr = (ggml_fp8_t *) ((char *) src0->data + i3*nb03 + i2*nb02 + i1*nb01);
+        for (int i = 0; i < ne0; i++) {
+            dst_ptr[i] = GGML_FP32_TO_FP8(GGML_FP8_TO_FP32(src0_ptr[i]) + v);
+        }
+    }
+}
+
 static void ggml_compute_forward_add1(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -8688,6 +9431,18 @@ static void ggml_compute_forward_add1(
                 }
                 else if (src1->type == GGML_TYPE_F32) {
                     ggml_compute_forward_add1_bf16_f32(params, dst);
+                }
+                else {
+                    GGML_ABORT("fatal error");
+                }
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                if (src1->type == GGML_TYPE_FP8) {
+                    ggml_compute_forward_add1_fp8_fp8(params, dst);
+                }
+                else if (src1->type == GGML_TYPE_F32) {
+                    ggml_compute_forward_add1_fp8_f32(params, dst);
                 }
                 else {
                     GGML_ABORT("fatal error");
@@ -8821,6 +9576,7 @@ static void ggml_compute_forward_acc(
             } break;
         case GGML_TYPE_F16:
         case GGML_TYPE_BF16:
+        case GGML_TYPE_FP8:
         case GGML_TYPE_Q4_0:
         case GGML_TYPE_Q4_1:
         case GGML_TYPE_Q5_0:
@@ -9355,6 +10111,39 @@ static void ggml_compute_forward_sum_bf16(
     ((ggml_bf16_t *) dst->data)[0] = GGML_FP32_TO_BF16(sum);
 }
 
+static void ggml_compute_forward_sum_fp8(
+    const struct ggml_compute_params * params,
+          struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+
+    if (params->ith != 0) {
+        return;
+    }
+
+    assert(ggml_is_scalar(dst));
+
+    assert(src0->nb[0] == sizeof(ggml_fp8_t));
+
+    GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne)
+    GGML_TENSOR_LOCALS(size_t,  nb0, src0, nb)
+
+    float sum = 0;
+    float row_sum = 0;
+
+    for (int64_t i03 = 0; i03 < ne03; i03++) {
+        for (int64_t i02 = 0; i02 < ne02; i02++) {
+            for (int64_t i01 = 0; i01 < ne01; i01++) {
+                ggml_vec_sum_fp8_ggf(ne00,
+                    &row_sum,
+                    (ggml_fp8_t *) ((char *) src0->data + i01 * nb01 + i02 * nb02 + i03 * nb03));
+                sum += row_sum;
+            }
+        }
+    }
+    ((ggml_fp8_t *) dst->data)[0] = GGML_FP32_TO_FP8(sum);
+}
+
 static void ggml_compute_forward_sum(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -9373,6 +10162,10 @@ static void ggml_compute_forward_sum(
         case GGML_TYPE_BF16:
             {
                 ggml_compute_forward_sum_bf16(params, dst);
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                ggml_compute_forward_sum_fp8(params, dst);
             } break;
         default:
             {
@@ -9632,6 +10425,53 @@ static void ggml_compute_forward_repeat_f16(
     }
 }
 
+static void ggml_compute_forward_repeat_fp8(
+        const struct ggml_compute_params * params,
+        struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+
+    if (params->ith != 0) {
+        return;
+    }
+
+    GGML_ASSERT(ggml_can_repeat(src0, dst));
+
+    GGML_TENSOR_UNARY_OP_LOCALS
+
+    // guaranteed to be an integer due to the check in ggml_can_repeat
+    const int nr0 = (int)(ne0/ne00);
+    const int nr1 = (int)(ne1/ne01);
+    const int nr2 = (int)(ne2/ne02);
+    const int nr3 = (int)(ne3/ne03);
+
+    // TODO: support for transposed / permuted tensors
+    GGML_ASSERT(nb0  == sizeof(ggml_fp8_t));
+    GGML_ASSERT(nb00 == sizeof(ggml_fp8_t));
+
+    // TODO: maybe this is not optimal?
+    for                         (int i3 = 0; i3 < nr3;  i3++) {
+        for                     (int k3 = 0; k3 < ne03; k3++) {
+            for                 (int i2 = 0; i2 < nr2;  i2++) {
+                for             (int k2 = 0; k2 < ne02; k2++) {
+                    for         (int i1 = 0; i1 < nr1;  i1++) {
+                        for     (int k1 = 0; k1 < ne01; k1++) {
+                            for (int i0 = 0; i0 < nr0;  i0++) {
+                                ggml_fp8_t * y = (ggml_fp8_t *) ((char *)  dst->data + (i3*ne03 + k3)*nb3  + (i2*ne02 + k2)*nb2  + (i1*ne01 + k1)*nb1  + (i0*ne00)*nb0);
+                                ggml_fp8_t * x = (ggml_fp8_t *) ((char *) src0->data + (          k3)*nb03 + (          k2)*nb02 + (          k1)*nb01);
+                                // ggml_vec_cpy_fp8(ne00, y, x)
+                                for (int i = 0; i < ne00; ++i) {
+                                    y[i]  = x[i];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 static void ggml_compute_forward_repeat(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -9639,6 +10479,10 @@ static void ggml_compute_forward_repeat(
     const struct ggml_tensor * src0 = dst->src[0];
 
     switch (src0->type) {
+        case GGML_TYPE_FP8:
+            {
+                ggml_compute_forward_repeat_fp8(params, dst);
+            } break;
         case GGML_TYPE_F16:
         case GGML_TYPE_BF16:
         case GGML_TYPE_I16:
@@ -11842,6 +12686,7 @@ static void ggml_compute_forward_set(
             } break;
         case GGML_TYPE_F16:
         case GGML_TYPE_BF16:
+        case GGML_TYPE_FP8:
         case GGML_TYPE_Q4_0:
         case GGML_TYPE_Q4_1:
         case GGML_TYPE_Q5_0:
@@ -12056,6 +12901,47 @@ static void ggml_compute_forward_get_rows_bf16(
     }
 }
 
+static void ggml_compute_forward_get_rows_fp8(
+        const struct ggml_compute_params * params,
+              struct ggml_tensor * dst) {
+
+    const struct ggml_tensor * src0 = dst->src[0];
+    const struct ggml_tensor * src1 = dst->src[1];
+
+    GGML_TENSOR_BINARY_OP_LOCALS
+
+    const int64_t nc = ne00;
+    const int64_t nr = ggml_nelements(src1);
+
+    assert(ne0  == nc);
+    assert(ne02 == ne11);
+    assert(nb00 == sizeof(ggml_fp8_t));
+    assert(ggml_nrows(dst) == nr);
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    for (int64_t i = ir0; i < ir1; ++i) {
+        const int64_t i12 = i/(ne11*ne10);
+        const int64_t i11 = (i - i12*ne11*ne10)/ne10;
+        const int64_t i10 = (i - i12*ne11*ne10 - i11*ne10);
+        const int64_t i01 = *(int32_t *) ((char *) src1->data + i10*nb10 + i11*nb11 + i12*nb12);
+
+        assert(i01 >= 0 && i01 < ne01);
+
+        ggml_fp8_to_fp32_row(
+                (const void *) ((char *) src0->data + i01*nb01 + i11*nb02 + i12*nb03),
+                     (float *) ((char *)  dst->data + i10*nb1  + i11*nb2  + i12*nb3), nc);
+    }
+}
+
 static void ggml_compute_forward_get_rows_f32(
         const struct ggml_compute_params * params,
               struct ggml_tensor * dst) {
@@ -12137,6 +13023,10 @@ static void ggml_compute_forward_get_rows(
         case GGML_TYPE_BF16:
             {
                 ggml_compute_forward_get_rows_bf16(params, dst);
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                ggml_compute_forward_get_rows_fp8(params, dst);
             } break;
         case GGML_TYPE_F32:
         case GGML_TYPE_I32:
@@ -12696,6 +13586,7 @@ static void ggml_compute_forward_clamp(
             } break;
         case GGML_TYPE_F16:
         case GGML_TYPE_BF16:
+        case GGML_TYPE_FP8:
         case GGML_TYPE_Q4_0:
         case GGML_TYPE_Q4_1:
         case GGML_TYPE_Q5_0:
@@ -14967,6 +15858,32 @@ static void ggml_compute_forward_unary(
 
 // ggml_compute_forward_get_rel_pos
 
+static void ggml_compute_forward_get_rel_pos_fp8(
+        const struct ggml_compute_params * params,
+        struct ggml_tensor * dst) {
+    UNUSED(params);
+
+    const struct ggml_tensor * src0 = dst->src[0];
+
+    // ref: https://github.com/facebookresearch/segment-anything/blob/main/segment_anything/modeling/image_encoder.py#L292-L322
+
+    GGML_TENSOR_UNARY_OP_LOCALS
+
+    const int64_t w = ne1;
+
+    ggml_fp8_t * src0_data = (ggml_fp8_t *) src0->data;
+    ggml_fp8_t * dst_data  = (ggml_fp8_t *) dst->data;
+
+    for (int64_t i2 = 0; i2 < ne2; ++i2) {
+        for (int64_t i1 = 0; i1 < ne1; ++i1) {
+            const int64_t pos = (w - i1 - 1) + i2;
+            for (int64_t i0 = 0; i0 < ne0; ++i0) {
+                dst_data[i2*ne1*ne0 + i1*ne0 + i0] = src0_data[pos*ne00 + i0];
+            }
+        }
+    }
+}
+
 static void ggml_compute_forward_get_rel_pos_f16(
         const struct ggml_compute_params * params,
         struct ggml_tensor * dst) {
@@ -15000,6 +15917,10 @@ static void ggml_compute_forward_get_rel_pos(
     const struct ggml_tensor * src0 = dst->src[0];
 
     switch (src0->type) {
+        case GGML_TYPE_FP8:
+            {
+                ggml_compute_forward_get_rel_pos_fp8(params, dst);
+            } break;
         case GGML_TYPE_F16:
         case GGML_TYPE_BF16:
             {
@@ -17557,7 +18478,8 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph * cgraph, int n_threa
                     const int64_t ne11 = node->src[1]->ne[1];  // Cin
 
                     if ((node->src[0]->type == GGML_TYPE_F16 ||
-                         node->src[0]->type == GGML_TYPE_BF16) &&
+                         node->src[0]->type == GGML_TYPE_BF16 ||
+                         node->src[0]->type == GGML_TYPE_FP8) &&
                         node->src[1]->type == GGML_TYPE_F32) {
                         cur += sizeof(ggml_fp16_t)*ne00*ne01*ne02;
                         cur += sizeof(ggml_fp16_t)*ne10*ne11;
@@ -17601,6 +18523,9 @@ struct ggml_cplan ggml_graph_plan(const struct ggml_cgraph * cgraph, int n_threa
                         cur  = sizeof(float)*mxDn*n_tasks; // TODO: this can become (n_tasks-1)
                         cur += sizeof(float)*mxDn*n_tasks; // this is overestimated by x2
                     } else if (node->src[1]->type == GGML_TYPE_BF16) {
+                        cur  = sizeof(float)*mxDn*n_tasks; // TODO: this can become (n_tasks-1)
+                        cur += sizeof(float)*mxDn*n_tasks; // this is overestimated by x2
+                    } else if (node->src[1]->type == GGML_TYPE_FP8) {
                         cur  = sizeof(float)*mxDn*n_tasks; // TODO: this can become (n_tasks-1)
                         cur += sizeof(float)*mxDn*n_tasks; // this is overestimated by x2
                     }
@@ -18468,7 +19393,8 @@ void ggml_graph_dump_dot(const struct ggml_cgraph * gb, const struct ggml_cgraph
                 }
                 else if (node->type == GGML_TYPE_F32 ||
                          node->type == GGML_TYPE_F16 ||
-                         node->type == GGML_TYPE_BF16) {
+                         node->type == GGML_TYPE_BF16 ||
+                         node->type == GGML_TYPE_FP8) {
                     fprintf(fp, "%.1e", (double)ggml_get_f32_1d(node, j));
                 }
                 else {
@@ -19529,6 +20455,12 @@ size_t ggml_quantize_chunk(
             {
                 size_t elemsize = sizeof(ggml_bf16_t);
                 ggml_fp32_to_bf16_row_ref(src + start, (ggml_bf16_t *)dst + start, n);
+                result = n * elemsize;
+            } break;
+        case GGML_TYPE_FP8:
+            {
+                size_t elemsize = sizeof(ggml_fp8_t);
+                ggml_fp32_to_fp8_row(src + start, (ggml_fp8_t *)dst + start, n);
                 result = n * elemsize;
             } break;
         case GGML_TYPE_F32:

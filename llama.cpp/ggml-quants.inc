@@ -14737,6 +14737,18 @@ bool ggml_validate_row_data(enum ggml_type type, const void * data, size_t nbyte
                     return false;
                 }
             } break;
+        case GGML_TYPE_FP8:
+            {
+                int nans = 0;
+                const unsigned char * f = (const unsigned char *) data;
+                for (size_t i = 0; i < nb; ++i) {
+                    nans += f[i] > 0xff;
+                }
+                if (nans) {
+                    fprintf(stderr, "%s: found %d NaNs in row of %zu FP8 values\n", __func__, nans, nb);
+                    return false;
+                }
+            } break;
         case GGML_TYPE_F16:
             {
                 const ggml_fp16_t * f = (const ggml_fp16_t *) data;

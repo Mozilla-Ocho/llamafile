@@ -103,6 +103,87 @@ static inline ggml_bf16_t ggml_compute_fp32_to_bf16(float s) {
 #define GGML_FP32_TO_BF16(x) ggml_compute_fp32_to_bf16(x)
 #define GGML_BF16_TO_FP32(x) ggml_compute_bf16_to_fp32(x)
 
+// FP8 (E4M3)
+//
+//   Exponent bits : 4
+//   Mantissa bits : 3
+//   Exponent bias : 7
+//   Infinities    : N/A
+//   NaN           : S.1111.111
+//   Zeros         : S.0000.000
+//   Max normal    : S.1111.110 = 1.75 * 2**8 = 448
+//   Min normal    : S.0001.000 = 2**(−6)
+//   Max subnorm   : S.0000.111 = 0.875 ∗ 2**(−6)
+//   Min subnorm   : S.0000.001 = 2**(−9)
+//
+// See "FP8 Formats For Deep Learning"
+//   §3 FP8 Binary Interchange Format
+//        NVIDIA / ARM / Intel
+
+static uint8_t to_fp8(float f) {
+    uint8_t sign = signbit(f) ? 0x80 : 0;
+    if (isnan(f)) return sign | 127;
+    if (!f) return sign;
+    f = fabsf(f);
+    int exp = floorf(log2f(f));
+    float mantissa = f / exp2f(exp) - 1.0f;
+    if (exp < -6) {
+        mantissa = f / exp2f(-6); // subnormal
+        exp = -7;
+    }
+    if (exp > 8) {
+        return sign | 0x7E; // overflow
+    }
+    uint8_t exp_bits = (exp + 7) & 0x0F;
+    uint8_t mantissa_bits = (uint8_t)(mantissa * 8) & 0x07;
+    // [jpp] avoid generate NAN ?
+    if (exp_bits == 0x0F && mantissa_bits == 0x07) mantissa_bits = 0x06;
+    return sign | (exp_bits << 3) | mantissa_bits;
+}
+
+static float from_fp8(uint8_t fp8) {
+    union {
+        float f;
+        uint32_t i;
+    } u;
+    uint32_t t = fp8;
+    if ((fp8 & 127) == 127)
+        return NAN;
+    if ((fp8 & 127) >= 8) {
+        int exp = ((fp8 >> 3) & 15) - 7;
+        u.i = (t & 128) << 24;     // sign
+        u.i |= (exp + 127) << 23;  // exponent
+        u.i |= (t & 7) << 20;      // mantissa: bit 2-0 -> 22-20
+    } else {
+        const unsigned kSubnormal[] = {
+            0x00000000, 0x3b000000, 0x3b800000, 0x3bc00000,
+            0x3c000000, 0x3c200000, 0x3c400000, 0x3c600000,
+        };
+        u.i = kSubnormal[fp8 & 127];
+        u.i |= (t & 128) << 24;
+    }
+    return u.f;
+}
+
+static ggml_fp8_t ggml_compute_fp32_to_fp8(float f) {
+    union {
+        uint8_t i;
+        ggml_fp8_t f;
+    } u = {to_fp8(f)};
+    return u.f;
+}
+
+static float ggml_compute_fp8_to_fp32(ggml_fp8_t f) {
+    union {
+        ggml_fp8_t f;
+        uint8_t i;
+    } u = {f};
+    return from_fp8(u.i);
+}
+
+#define GGML_COMPUTE_FP8_TO_FP32(x) ggml_compute_fp8_to_fp32(x)
+#define GGML_COMPUTE_FP32_TO_FP8(x) ggml_compute_fp32_to_fp8(x)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -145,6 +226,22 @@ extern "C" {
 #include <arm_sve.h>
 #include <sys/prctl.h>
 #endif
+
+// precomputed f32 table for fp8 (1 KB)
+// defined in ggml.c, initialized in ggml_init()
+extern float ggml_table_f32_fp8[1 << 8];
+
+inline static float ggml_lookup_fp8_to_fp32(ggml_fp8_t f) {
+    union {
+        ggml_fp8_t f;
+        uint8_t i;
+    } u = {f};
+    return ggml_table_f32_fp8[u.i];
+}
+
+#define GGML_FP32_TO_FP8(x) GGML_COMPUTE_FP32_TO_FP8(x)
+#define GGML_FP8_TO_FP32(x) ggml_lookup_fp8_to_fp32(x)
+// #define GGML_FP8_TO_FP32(x) GGML_COMPUTE_FP8_TO_FP32(x)
 
 // 16-bit float
 // on Arm, we use __fp16
