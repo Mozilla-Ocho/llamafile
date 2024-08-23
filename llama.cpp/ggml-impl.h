@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ggml.h"
+#include "fp8.h"
 
 // GGML internal header
 
@@ -103,87 +104,8 @@ static inline ggml_bf16_t ggml_compute_fp32_to_bf16(float s) {
 #define GGML_FP32_TO_BF16(x) ggml_compute_fp32_to_bf16(x)
 #define GGML_BF16_TO_FP32(x) ggml_compute_bf16_to_fp32(x)
 
-// FP8 (E4M3)
-//
-//   Exponent bits : 4
-//   Mantissa bits : 3
-//   Exponent bias : 7
-//   Infinities    : N/A
-//   NaN           : S.1111.111
-//   Zeros         : S.0000.000
-//   Max normal    : S.1111.110 = 1.75 * 2**8 = 448
-//   Min normal    : S.0001.000 = 2**(−6)
-//   Max subnorm   : S.0000.111 = 0.875 ∗ 2**(−6)
-//   Min subnorm   : S.0000.001 = 2**(−9)
-//
-// See "FP8 Formats For Deep Learning"
-//   §3 FP8 Binary Interchange Format
-//        NVIDIA / ARM / Intel
-
-static uint8_t to_fp8(float f) {
-    uint8_t sign = signbit(f) ? 0x80 : 0;
-    if (isnan(f)) return sign | 127;
-    if (!f) return sign;
-    f = fabsf(f);
-    int exp = floorf(log2f(f));
-    float mantissa = f / exp2f(exp) - 1.0f;
-    if (exp < -6) {
-        mantissa = f / exp2f(-6); // subnormal
-        exp = -7;
-    }
-    if (exp > 8) {
-        return sign | 0x7E; // overflow
-    }
-    uint8_t exp_bits = (exp + 7) & 0x0F;
-    uint8_t mantissa_bits = (uint8_t)(mantissa * 8) & 0x07;
-    // [jpp] avoid generate NAN ?
-    if (exp_bits == 0x0F && mantissa_bits == 0x07) mantissa_bits = 0x06;
-    return sign | (exp_bits << 3) | mantissa_bits;
-}
-
-
-static ggml_fp8_t ggml_compute_fp32_to_fp8(float f) {
-    union {
-        uint8_t i;
-        ggml_fp8_t f;
-    } u = {to_fp8(f)};
-    return u.f;
-}
-
-static unsigned select(bool b, unsigned x, unsigned y) {
-    unsigned p = b - 1;
-    return (x & ~p) | (y & p);
-}
-
-static float ggml_compute_fp8_to_fp32(ggml_fp8_t fp8) {
-    union {
-        ggml_fp8_t f;
-        unsigned char i;
-    } in = {fp8};
-    union {
-        float f;
-        unsigned i;
-    } u;
-    unsigned x = in.i;
-    u.i = (x & 128) << 24; // sign
-    if (x & 127) {
-        if ((x & 127) == 127) {
-            u.i |= 0x7fc00001; // nan
-        } else if ((x & 127) >= 8) {
-            u.i |= (x & 7) << 20; // mantissa: bit 2-0 -> 22-20
-            u.i |= (((x >> 3) & 15) + 120) << 23; // exponent
-        } else {
-            int lg2mant = select(x & 2, 1, 0);
-            lg2mant = select(x & 4, 2, lg2mant);
-            u.i |= ((x & 3) << (23 - lg2mant)) & 0x007fffff; // mantissa
-            u.i |= (lg2mant + 118) << 23; // exponent
-        }
-    }
-    return u.f;
-}
-
-#define GGML_COMPUTE_FP8_TO_FP32(x) ggml_compute_fp8_to_fp32(x)
-#define GGML_COMPUTE_FP32_TO_FP8(x) ggml_compute_fp32_to_fp8(x)
+#define GGML_COMPUTE_FP8_TO_FP32(x) llamafile_fp8_e4m3_to_fp32(x)
+#define GGML_COMPUTE_FP32_TO_FP8(x) llamafile_fp32_to_fp8_e4m3(x)
 
 #ifdef __cplusplus
 extern "C" {

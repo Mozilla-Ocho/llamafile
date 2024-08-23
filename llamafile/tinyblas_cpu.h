@@ -403,41 +403,9 @@ inline __m512bh load(const float *p) {
 #endif // __AVX512BF16__
 
 #if defined(__AVX512F__) && defined(__AVX512VL__)
-static inline __m512 from_fp8_e4m3_avx512(__m128i fp8_vec) {
-    __m512i x = _mm512_cvtepu8_epi32(fp8_vec);
-    __m512i sign = _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24);
-    __m512i mantissa = _mm512_and_si512(x, _mm512_set1_epi32(7));
-    __m512i exponent = _mm512_and_si512(_mm512_srli_epi32(x, 3), _mm512_set1_epi32(15));
-    __mmask16 is_zero = _mm512_cmpeq_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(127)),
-                                                _mm512_setzero_si512());
-    __mmask16 is_nan_inf = _mm512_cmpeq_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(127)),
-                                                   _mm512_set1_epi32(127));
-    __mmask16 is_normal = _mm512_cmpge_epi32_mask(exponent, _mm512_set1_epi32(1));
-    __m512i normal_mantissa = _mm512_slli_epi32(mantissa, 20);
-    __m512i normal_exponent =
-        _mm512_slli_epi32(_mm512_add_epi32(exponent, _mm512_set1_epi32(120)), 23);
-    __m512i subnormal_lg2mant =
-        _mm512_mask_blend_epi32(_mm512_cmpgt_epi32_mask(mantissa, _mm512_set1_epi32(1)),
-                                _mm512_set1_epi32(0), _mm512_set1_epi32(1));
-    subnormal_lg2mant =
-        _mm512_mask_blend_epi32(_mm512_cmpgt_epi32_mask(mantissa, _mm512_set1_epi32(3)),
-                                subnormal_lg2mant, _mm512_set1_epi32(2));
-    __m512i subnormal_mantissa = _mm512_and_si512(
-        _mm512_sllv_epi32(mantissa, _mm512_sub_epi32(_mm512_set1_epi32(23), subnormal_lg2mant)),
-        _mm512_set1_epi32(0x007fffff));
-    __m512i subnormal_exponent =
-        _mm512_slli_epi32(_mm512_add_epi32(subnormal_lg2mant, _mm512_set1_epi32(118)), 23);
-    __m512i result =
-        _mm512_mask_blend_epi32(is_normal, _mm512_or_si512(subnormal_mantissa, subnormal_exponent),
-                                _mm512_or_si512(normal_mantissa, normal_exponent));
-    result = _mm512_mask_blend_epi32(is_nan_inf, result, _mm512_set1_epi32(0x7fc00001));
-    result = _mm512_or_si512(result, sign);
-    result = _mm512_mask_mov_epi32(result, is_zero, sign);
-    return _mm512_castsi512_ps(result);
-}
 template <>
 inline __m512 load(const ggml_fp8_t *p) {
-    return from_fp8_e4m3_avx512(_mm_loadu_si128((__m128i *)p));
+    return llamafile_from_fp8_e4m3_avx512(_mm_loadu_si128((__m128i *)p));
 }
 #endif // AVX512F + AVX512DQ + AVX512VL
 
