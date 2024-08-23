@@ -141,29 +141,6 @@ static uint8_t to_fp8(float f) {
     return sign | (exp_bits << 3) | mantissa_bits;
 }
 
-static float from_fp8(uint8_t fp8) {
-    union {
-        float f;
-        uint32_t i;
-    } u;
-    uint32_t t = fp8;
-    if ((fp8 & 127) == 127)
-        return NAN;
-    if ((fp8 & 127) >= 8) {
-        int exp = ((fp8 >> 3) & 15) - 7;
-        u.i = (t & 128) << 24;     // sign
-        u.i |= (exp + 127) << 23;  // exponent
-        u.i |= (t & 7) << 20;      // mantissa: bit 2-0 -> 22-20
-    } else {
-        const unsigned kSubnormal[] = {
-            0x00000000, 0x3b000000, 0x3b800000, 0x3bc00000,
-            0x3c000000, 0x3c200000, 0x3c400000, 0x3c600000,
-        };
-        u.i = kSubnormal[fp8 & 127];
-        u.i |= (t & 128) << 24;
-    }
-    return u.f;
-}
 
 static ggml_fp8_t ggml_compute_fp32_to_fp8(float f) {
     union {
@@ -173,12 +150,36 @@ static ggml_fp8_t ggml_compute_fp32_to_fp8(float f) {
     return u.f;
 }
 
-static float ggml_compute_fp8_to_fp32(ggml_fp8_t f) {
+static unsigned select(bool b, unsigned x, unsigned y) {
+    unsigned p = b - 1;
+    return (x & ~p) | (y & p);
+}
+
+static float ggml_compute_fp8_to_fp32(ggml_fp8_t fp8) {
     union {
         ggml_fp8_t f;
-        uint8_t i;
-    } u = {f};
-    return from_fp8(u.i);
+        unsigned char i;
+    } in = {fp8};
+    union {
+        float f;
+        unsigned i;
+    } u;
+    unsigned x = in.i;
+    u.i = (x & 128) << 24; // sign
+    if (x & 127) {
+        if ((x & 127) == 127) {
+            u.i |= 0x7fc00001; // nan
+        } else if ((x & 127) >= 8) {
+            u.i |= (x & 7) << 20; // mantissa: bit 2-0 -> 22-20
+            u.i |= (((x >> 3) & 15) + 120) << 23; // exponent
+        } else {
+            int lg2mant = select(x & 2, 1, 0);
+            lg2mant = select(x & 4, 2, lg2mant);
+            u.i |= ((x & 3) << (23 - lg2mant)) & 0x007fffff; // mantissa
+            u.i |= (lg2mant + 118) << 23; // exponent
+        }
+    }
+    return u.f;
 }
 
 #define GGML_COMPUTE_FP8_TO_FP32(x) ggml_compute_fp8_to_fp32(x)

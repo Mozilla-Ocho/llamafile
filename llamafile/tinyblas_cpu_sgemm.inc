@@ -180,6 +180,17 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 #endif
     }
 
+#if defined(__AVX512F__) && defined(__AVX512VL__)
+    case GGML_TYPE_FP8: {
+        if (Btype != GGML_TYPE_FP8)
+            return WANT_QUANTIZATION;
+        tinyBLAS<0, 16, __m512, __m512, ggml_fp8_t, ggml_fp8_t, TC> tb{
+            k, (const ggml_fp8_t *)A, lda, (const ggml_fp8_t *)B, ldb, C, ldc, ith, nth};
+        tb.matmul(m, n);
+        return true;
+    }
+#endif
+
     case GGML_TYPE_Q8_0: {
         if (Btype == GGML_TYPE_F32)
             return WANT_QUANTIZATION;

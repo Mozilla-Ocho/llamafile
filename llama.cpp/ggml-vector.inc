@@ -1017,7 +1017,63 @@ void ggml_vec_dot_bf16(int n, float * restrict s, size_t bs, ggml_bf16_t * restr
     *s = sumf;
 }
 
-#ifdef __AVX512F__
+#if defined(__AVX512F__) && defined(__AVX512VL__)
+
+static __m512 from_fp8_avx512(__m128i fp8_vec) {
+  __m512i x = _mm512_cvtepu8_epi32(fp8_vec);
+
+  // Extract sign (bit 7)
+  __m512i sign =
+      _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24);
+
+  // Extract mantissa and exponent
+  __m512i mantissa = _mm512_and_si512(x, _mm512_set1_epi32(7));
+  __m512i exponent =
+      _mm512_and_si512(_mm512_srli_epi32(x, 3), _mm512_set1_epi32(15));
+
+  // Check for zero (including signed zero)
+  __mmask16 is_zero = _mm512_cmpeq_epi32_mask(
+      _mm512_and_si512(x, _mm512_set1_epi32(127)), _mm512_setzero_si512());
+
+  // Check for NaN/Inf
+  __mmask16 is_nan_inf = _mm512_cmpeq_epi32_mask(
+      _mm512_and_si512(x, _mm512_set1_epi32(127)), _mm512_set1_epi32(127));
+
+  // Handle normal numbers (exponent >= 1)
+  __mmask16 is_normal = _mm512_cmpge_epi32_mask(exponent, _mm512_set1_epi32(1));
+  __m512i normal_mantissa = _mm512_slli_epi32(mantissa, 20);
+  __m512i normal_exponent =
+      _mm512_slli_epi32(_mm512_add_epi32(exponent, _mm512_set1_epi32(120)), 23);
+
+  // Handle subnormal numbers
+  __m512i subnormal_lg2mant = _mm512_mask_blend_epi32(
+      _mm512_cmpgt_epi32_mask(mantissa, _mm512_set1_epi32(1)),
+      _mm512_set1_epi32(0), _mm512_set1_epi32(1));
+  subnormal_lg2mant = _mm512_mask_blend_epi32(
+      _mm512_cmpgt_epi32_mask(mantissa, _mm512_set1_epi32(3)),
+      subnormal_lg2mant, _mm512_set1_epi32(2));
+  __m512i subnormal_mantissa = _mm512_and_si512(
+      _mm512_sllv_epi32(
+          mantissa, _mm512_sub_epi32(_mm512_set1_epi32(23), subnormal_lg2mant)),
+      _mm512_set1_epi32(0x007fffff));
+  __m512i subnormal_exponent = _mm512_slli_epi32(
+      _mm512_add_epi32(subnormal_lg2mant, _mm512_set1_epi32(118)), 23);
+
+  // Combine results
+  __m512i result = _mm512_mask_blend_epi32(
+      is_normal, _mm512_or_si512(subnormal_mantissa, subnormal_exponent),
+      _mm512_or_si512(normal_mantissa, normal_exponent));
+
+  result = _mm512_mask_blend_epi32(is_nan_inf, result,
+                                   _mm512_set1_epi32(0x7fc00001));
+
+  result = _mm512_or_si512(result, sign);
+
+  // Apply zero mask, preserving the sign bit for signed zero
+  result = _mm512_mask_mov_epi32(result, is_zero, sign);
+
+  return _mm512_castsi512_ps(result);
+}
 
 void ggml_vec_dot_fp8(int n, float * restrict s, size_t bs, ggml_fp8_t * restrict x, size_t bx, ggml_fp8_t * restrict y, size_t by, int nrc) {
     assert(nrc == 1);
@@ -1025,13 +1081,24 @@ void ggml_vec_dot_fp8(int n, float * restrict s, size_t bs, ggml_fp8_t * restric
     UNUSED(bx);
     UNUSED(by);
     UNUSED(bs);
+    __m512 sum = _mm512_setzero_ps();
     int i = 0;
-    ggml_float sumf = 0;
-    for (; i < n; ++i) {
-        sumf += (ggml_float)(GGML_FP8_TO_FP32(x[i]) *
-                             GGML_FP8_TO_FP32(y[i]));
+    for (; i < n - 15; i += 16) {
+        __m128i x_vec = _mm_loadu_si128((__m128i*)&x[i]);
+        __m128i y_vec = _mm_loadu_si128((__m128i*)&y[i]);
+        __m512 x_float = from_fp8_avx512(x_vec);
+        __m512 y_float = from_fp8_avx512(y_vec);
+        sum = _mm512_fmadd_ps(x_float, y_float, sum);
     }
-    *s = sumf;
+    if (i < n) {
+        __mmask16 mask = _cvtu32_mask16((1U << (n - i)) - 1);
+        __m128i x_vec = _mm_maskz_loadu_epi8(mask, x + i);
+        __m128i y_vec = _mm_maskz_loadu_epi8(mask, y + i);
+        __m512 x_float = from_fp8_avx512(x_vec);
+        __m512 y_float = from_fp8_avx512(y_vec);
+        sum = _mm512_fmadd_ps(x_float, y_float, sum);
+    }
+    *s = _mm512_reduce_add_ps(sum);
 }
 
 #else
