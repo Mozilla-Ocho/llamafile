@@ -16234,12 +16234,12 @@ static void llama_model_quantize_internal(const std::string & fname_inp, const s
                     }
                 }
             }
-            if ((new_type == GGML_TYPE_IQ2_XXS ||
-                 new_type == GGML_TYPE_IQ2_XS  ||
+            if (!params->ignore_imatrix_rules && !imatrix &&
+                (new_type == GGML_TYPE_IQ2_XS  ||
                  new_type == GGML_TYPE_IQ2_S   ||
                  new_type == GGML_TYPE_IQ1_S   ||
                 (new_type == GGML_TYPE_IQ1_M && strcmp(tensor->name, "token_embd.weight") && strcmp(tensor->name, "output.weight"))  ||
-                (new_type == GGML_TYPE_Q2_K && params->ftype == LLAMA_FTYPE_MOSTLY_Q2_K_S && strcmp(tensor->name, "token_embd.weight") != 0)) && !imatrix) {
+                (new_type == GGML_TYPE_Q2_K && params->ftype == LLAMA_FTYPE_MOSTLY_Q2_K_S && strcmp(tensor->name, "token_embd.weight") != 0))) {
                 LLAMA_LOG_ERROR("\n\n============================================================\n");
                 LLAMA_LOG_ERROR("Missing importance matrix for tensor %s in a very low-bit quantization\n", tensor->name);
                 LLAMA_LOG_ERROR("The result will be garbage, so bailing out\n");
@@ -16606,6 +16606,7 @@ struct llama_model_quantize_params llama_model_quantize_default_params() {
         /*.only_copy                   =*/ false,
         /*.pure                        =*/ false,
         /*.keep_split                  =*/ false,
+        /*.ignore_imatrix_rules        =*/ false,
         /*.imatrix                     =*/ nullptr,
         /*.kv_overrides                =*/ nullptr,
     };
