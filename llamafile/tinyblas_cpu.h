@@ -76,6 +76,10 @@
 
 namespace {
 
+typedef struct {
+    uint8_t bits;
+} ggml_fp8_bf16_t;
+
 bool tinyBLAS_not_supported(const char *file, int line) {
     tinylogf("%s:%d: tinyBLAS not supported\n", file, line);
     return false;
@@ -324,6 +328,10 @@ template <>
 inline float load(const ggml_fp8_t *p) {
     return GGML_FP8_TO_FP32(*p);
 }
+template <>
+inline float load(const ggml_fp8_bf16_t *p) {
+    return GGML_FP8_TO_FP32(*(const ggml_fp8_t *)p);
+}
 
 #if defined(__ARM_NEON)
 template <>
@@ -399,6 +407,10 @@ inline __m512bh load(const ggml_bf16_t *p) {
 template <>
 inline __m512bh load(const float *p) {
     return _mm512_cvtne2ps_pbh(_mm512_loadu_ps(p + 16), _mm512_loadu_ps(p));
+}
+template <>
+inline __m512bh load(const ggml_fp8_bf16_t *p) {
+    return llamafile_fp8_e4m3_to_bf16_avx512(_mm256_loadu_si256((__m256i *)p));
 }
 #endif // __AVX512BF16__
 

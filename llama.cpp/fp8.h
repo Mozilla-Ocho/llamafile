@@ -28,6 +28,7 @@
 #include "ggml.h"
 #include <math.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // FP8 (E4M3)
 //
@@ -45,6 +46,13 @@
 // See "FP8 Formats For Deep Learning"
 //   §3 FP8 Binary Interchange Format
 //        NVIDIA / ARM / Intel
+
+static unsigned
+llamafile_fp8_select(bool b, unsigned x, unsigned y)
+{
+    unsigned p = b - 1;
+    return (x & ~p) | (y & p);
+}
 
 static inline ggml_fp8_t
 llamafile_fp32_to_fp8_e4m3(float f)
@@ -78,6 +86,37 @@ llamafile_fp32_to_fp8_e4m3(float f)
             out.i = sign | (exp_bits << 3) | mantissa_bits;
         }
     }
+    return out.f;
+}
+
+static inline ggml_bf16_t
+llamafile_fp8_e4m3_to_bf16(ggml_fp8_t fp8)
+{
+    union
+    {
+        ggml_fp8_t f;
+        unsigned char i;
+    } in = { fp8 };
+    union
+    {
+        ggml_bf16_t f;
+        unsigned short i;
+    } out;
+    unsigned x = in.i;
+    if (x & 127) {
+        if (x & 120) {
+            out.i = (x & 7) << 4;
+            out.i |= (((x >> 3) & 15) + 120) << 7;
+        } else {
+            int lg2mant = llamafile_fp8_select(x & 2, 1, 0);
+            lg2mant = llamafile_fp8_select(x & 4, 2, lg2mant);
+            out.i = ((x & 3) << (7 - lg2mant)) & 0x007f;
+            out.i |= (lg2mant + 118) << 7;
+        }
+    } else {
+        out.i = 0;
+    }
+    out.i |= (x & 128) << 8;
     return out.f;
 }
 
@@ -117,17 +156,11 @@ static inline __m512
 llamafile_from_fp8_e4m3_avx512(__m128i xi)
 {
     __m512i x = _mm512_cvtepu8_epi32(xi);
-    __m512i ex = _mm512_srli_epi32(x, 3);
-    ex = _mm512_and_si512(ex, _mm512_set1_epi32(15));
-    ex = _mm512_add_epi32(ex, _mm512_set1_epi32(120));
-    ex = _mm512_slli_epi32(ex, 23);
-    return _mm512_castsi512_ps(_mm512_mask_blend_epi32(
-      _mm512_cmpneq_epi32_mask(x, _mm512_setzero_si512()),
-      _mm512_setzero_si512(),
+    return _mm512_castsi512_ps(
       _mm512_or_si512(
         _mm512_mask_blend_epi32(
-          _mm512_cmpge_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(127)),
-                                  _mm512_set1_epi32(8)),
+          _mm512_cmpneq_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(120)),
+                                   _mm512_setzero_si512()),
           _mm512_castps_si512(_mm512_sub_ps(
             _mm512_castsi512_ps(_mm512_or_si512(
               _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 14),
@@ -135,7 +168,47 @@ llamafile_from_fp8_e4m3_avx512(__m128i xi)
             _mm512_set1_ps(1))),
           _mm512_or_si512(
             _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 20),
-            ex)),
-        _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24))));
+            _mm512_slli_epi32(
+              _mm512_add_epi32(_mm512_and_si512(_mm512_srli_epi32(x, 3),
+                                                _mm512_set1_epi32(15)),
+                               _mm512_set1_epi32(120)),
+              23))),
+        _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24)));
 }
-#endif // __AVX512F__ + __AVX512VL__
+#endif // __AVX512F__
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+static inline __m512bh
+llamafile_fp8_e4m3_to_bf16_avx512(__m256i fp8_vec)
+{
+    __m512i x = _mm512_cvtepu8_epi16(fp8_vec);
+    __m512i lg2mant = _mm512_mask_mov_epi16(
+      _mm512_mask_mov_epi16(_mm512_setzero_si512(),
+                            _mm512_test_epi16_mask(x, _mm512_set1_epi16(2)),
+                            _mm512_set1_epi16(1)),
+      _mm512_test_epi16_mask(x, _mm512_set1_epi16(4)),
+      _mm512_set1_epi16(2));
+    return (__m512bh)_mm512_or_si512(
+      _mm512_maskz_mov_epi16(
+        _mm512_cmpneq_epi16_mask(_mm512_and_si512(x, _mm512_set1_epi16(127)),
+                                 _mm512_setzero_si512()),
+        _mm512_mask_blend_epi16(
+          _mm512_test_epi16_mask(x, _mm512_set1_epi16(120)),
+          _mm512_or_si512(
+            _mm512_and_si512(_mm512_sllv_epi16(
+                               _mm512_and_si512(x, _mm512_set1_epi16(3)),
+                               _mm512_sub_epi16(_mm512_set1_epi16(7), lg2mant)),
+                             _mm512_set1_epi16(0x007f)),
+            _mm512_slli_epi16(_mm512_add_epi16(lg2mant, _mm512_set1_epi16(118)),
+                              7)),
+          _mm512_or_si512(
+            _mm512_slli_epi16(_mm512_and_si512(x, _mm512_set1_epi16(7)), 4),
+            _mm512_slli_epi16(
+              _mm512_add_epi16(
+                _mm512_srli_epi16(_mm512_and_si512(x, _mm512_set1_epi16(120)),
+                                  3),
+                _mm512_set1_epi16(120)),
+              7)))),
+      _mm512_slli_epi16(_mm512_and_si512(x, _mm512_set1_epi16(128)), 8));
+}
+#endif // __AVX512F__ + __AVX512BW__
