@@ -196,7 +196,6 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
             return NOT_SUPPORTED;
         }
 #elif defined(__AVX512F__)
-    case GGML_TYPE_FP8:
         switch (Btype) {
         case GGML_TYPE_F32: {
             tinyBLAS<0, 16, __m512, __m512, ggml_fp8_t, float, TC> tb{

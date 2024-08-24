@@ -359,10 +359,6 @@ template <>
 inline __m128 load(const float *p) {
     return _mm_loadu_ps(p);
 }
-template <>
-inline __m128 load(const ggml_fp8_t *p) {
-    return llamafile_from_fp8_e4m3_sse2(p);
-}
 #endif // __SSE__
 
 #if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__)
