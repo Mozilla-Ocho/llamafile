@@ -354,6 +354,7 @@ extern "C" {
         bool only_copy;                      // only copy tensors - ftype, allow_requantize and quantize_output_tensor are ignored
         bool pure;                           // quantize all tensors to the default type
         bool keep_split;                     // quantize to the same number of shards
+        bool ignore_imatrix_rules;           // [kawrakow] If set to true, the built-in rules for refusing to quantize into certain quants without imatrix are ignored
         void * imatrix;                      // pointer to importance matrix data
         void * kv_overrides;                 // pointer to vector containing overrides
     } llama_model_quantize_params;
