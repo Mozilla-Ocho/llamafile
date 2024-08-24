@@ -73,7 +73,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 
     case GGML_TYPE_BF16: {
 #if defined(__AVX512BF16__)
-        if (Btype == GGML_TYPE_F32 && n < 2) {
+        if (Btype == GGML_TYPE_F32 && n <= 2) {
             tinyBLAS<0, 16, __m512, __m512, ggml_bf16_t, float, TC> tb{
                 k, (const ggml_bf16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
             tb.matmul(m, n);
@@ -120,7 +120,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 
     case GGML_TYPE_F16: {
 #if defined(__AVX512F__)
-        if (Btype == GGML_TYPE_F32 && n < 2) {
+        if (Btype == GGML_TYPE_F32 && n <= 2) {
             tinyBLAS<0, 16, __m512, __m512, ggml_fp16_t, float, TC> tb{
                 k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
             tb.matmul(m, n);
@@ -136,7 +136,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         return true;
 #elif (defined(__AVX__) || defined(__AVX2__)) && defined(__F16C__)
         if (X86_CHECK(F16C)) {
-            if (Btype == GGML_TYPE_F32 && n < 2) {
+            if (Btype == GGML_TYPE_F32 && n <= 2) {
                 tinyBLAS<0, 8, __m256, __m256, ggml_fp16_t, float, TC> tb{
                     k, (const ggml_fp16_t *)A, lda, (const float *)B, ldb, C, ldc, ith, nth};
                 tb.matmul(m, n);

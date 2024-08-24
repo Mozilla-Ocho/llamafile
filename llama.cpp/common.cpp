@@ -2159,6 +2159,9 @@ static ggml_type kv_cache_type_from_str(const std::string & s) {
     if (s == "f32") {
         return GGML_TYPE_F32;
     }
+    if (s == "bf16") {
+        return GGML_TYPE_BF16;
+    }
     if (s == "f16") {
         return GGML_TYPE_F16;
     }
