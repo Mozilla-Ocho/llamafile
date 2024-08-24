@@ -118,8 +118,9 @@ llamafile_fp8_select(bool b, unsigned x, unsigned y)
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
-
-static __m512 llamafile_from_fp8_e4m3_avx512(__m128i fp8_vec) {
+static __m512
+llamafile_from_fp8_e4m3_avx512(__m128i fp8_vec)
+{
     // extract componants
     __m128i expo_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x78));
     __m128i mant_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x07));
@@ -142,6 +143,31 @@ static __m512 llamafile_from_fp8_e4m3_avx512(__m128i fp8_vec) {
     result = _mm512_mask_add_ps(result, is_denorm, result, _mm512_set1_ps(-1.0/64));
     // add sign
     return _mm512_castsi512_ps(_mm512_or_si512(sign_32,_mm512_castps_si512(result)));
+}
+#elif defined(__AVX512F__)
+#include <immintrin.h>
+static inline __m512
+llamafile_from_fp8_e4m3_avx512(__m128i xi)
+{
+    __m512i x = _mm512_cvtepu8_epi32(xi);
+    return _mm512_castsi512_ps(
+      _mm512_or_si512(
+        _mm512_mask_blend_epi32(
+          _mm512_cmpneq_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(120)),
+                                   _mm512_setzero_si512()),
+          _mm512_castps_si512(_mm512_sub_ps(
+            _mm512_castsi512_ps(_mm512_or_si512(
+              _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 14),
+              _mm512_set1_epi32(127 << 23))),
+            _mm512_set1_ps(1))),
+          _mm512_or_si512(
+            _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 20),
+            _mm512_slli_epi32(
+              _mm512_add_epi32(_mm512_and_si512(_mm512_srli_epi32(x, 3),
+                                                _mm512_set1_epi32(15)),
+                               _mm512_set1_epi32(120)),
+              23))),
+        _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24)));
 }
 #endif // __AVX512F__
 

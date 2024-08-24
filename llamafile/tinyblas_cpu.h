@@ -414,7 +414,7 @@ inline __m512bh load(const ggml_fp8_bf16_t *p) {
 }
 #endif // __AVX512BF16__
 
-#if defined(__AVX512F__) && defined(__AVX512BW__)
+#if defined(__AVX512F__)
 template <>
 inline __m512 load(const ggml_fp8_t *p) {
     return llamafile_from_fp8_e4m3_avx512(_mm_loadu_si128((__m128i *)p));
