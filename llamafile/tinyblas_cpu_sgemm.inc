@@ -180,7 +180,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
 #endif
     }
 
-#if defined(__AVX512F__) && defined(__AVX512VL__)
+#if defined(__AVX512F__)
     case GGML_TYPE_FP8:
         switch (Btype) {
         case GGML_TYPE_F32: {

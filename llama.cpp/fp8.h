@@ -27,6 +27,7 @@
 
 #include "ggml.h"
 #include <math.h>
+#include <stdint.h>
 
 // FP8 (E4M3)
 //
@@ -45,8 +46,11 @@
 //   §3 FP8 Binary Interchange Format
 //        NVIDIA / ARM / Intel
 
-static ggml_fp8_t llamafile_fp32_to_fp8_e4m3(float f) {
-    union {
+static inline ggml_fp8_t
+llamafile_fp32_to_fp8_e4m3(float f)
+{
+    union
+    {
         unsigned char i;
         ggml_fp8_t f;
     } out;
@@ -69,77 +73,69 @@ static ggml_fp8_t llamafile_fp32_to_fp8_e4m3(float f) {
             uint8_t exp_bits = (exp + 7) & 15;
             uint8_t mantissa_bits = (uint8_t)(mantissa * 8) & 7;
             // [jpp] avoid generate NAN ?
-            if (exp_bits == 15 && mantissa_bits == 0x07) mantissa_bits = 6;
+            if (exp_bits == 15 && mantissa_bits == 0x07)
+                mantissa_bits = 6;
             out.i = sign | (exp_bits << 3) | mantissa_bits;
         }
     }
     return out.f;
 }
 
-static inline unsigned llamafile_fp8_select(bool b, unsigned x, unsigned y) {
-    unsigned p = b - 1;
-    return (x & ~p) | (y & p);
-}
-
-static float llamafile_fp8_e4m3_to_fp32(ggml_fp8_t fp8) {
-    union {
+static inline float
+llamafile_fp8_e4m3_to_fp32(ggml_fp8_t f)
+{
+    union
+    {
         ggml_fp8_t f;
         unsigned char i;
-    } in = {fp8};
-    union {
+    } in = { f };
+    union
+    {
         float f;
         unsigned i;
     } u;
     unsigned x = in.i;
-    u.i = (x & 128) << 24; // sign
     if (x & 127) {
-        if ((x & 127) == 127) {
-            u.i |= 0x7fc00001; // nan
-        } else if ((x & 127) >= 8) {
-            u.i |= (x & 7) << 20; // mantissa: bit 2-0 -> 22-20
-            u.i |= (((x >> 3) & 15) + 120) << 23; // exponent
+        if (x & 120) {
+            u.i = (x & 7) << 20;
+            u.i |= (((x >> 3) & 15) + 120) << 23;
         } else {
-            int lg2mant = llamafile_fp8_select(x & 2, 1, 0);
-            lg2mant = llamafile_fp8_select(x & 4, 2, lg2mant);
-            u.i |= ((x & 3) << (23 - lg2mant)) & 0x007fffff; // mantissa
-            u.i |= (lg2mant + 118) << 23; // exponent
+            u.i = (x & 7) << 14;
+            u.i |= 127 << 23;
+            u.f -= 1;
         }
+    } else {
+        u.i = 0;
     }
+    u.i |= (x & 128) << 24;
     return u.f;
 }
 
-#if defined(__AVX512F__) && defined(__AVX512VL__)
+#if defined(__AVX512F__)
 #include <immintrin.h>
-static __m512 llamafile_from_fp8_e4m3_avx512(__m128i fp8_vec) {
-    __m512i x = _mm512_cvtepu8_epi32(fp8_vec);
-    __m512i sign = _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24);
-    __m512i mantissa = _mm512_and_si512(x, _mm512_set1_epi32(7));
-    __m512i exponent = _mm512_and_si512(_mm512_srli_epi32(x, 3), _mm512_set1_epi32(15));
-    __mmask16 is_zero = _mm512_cmpeq_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(127)),
-                                                _mm512_setzero_si512());
-    __mmask16 is_nan_inf = _mm512_cmpeq_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(127)),
-                                                   _mm512_set1_epi32(127));
-    __mmask16 is_normal = _mm512_cmpge_epi32_mask(exponent, _mm512_set1_epi32(1));
-    __m512i normal_mantissa = _mm512_slli_epi32(mantissa, 20);
-    __m512i normal_exponent =
-        _mm512_slli_epi32(_mm512_add_epi32(exponent, _mm512_set1_epi32(120)), 23);
-    __m512i subnormal_lg2mant =
-        _mm512_mask_blend_epi32(_mm512_cmpgt_epi32_mask(mantissa, _mm512_set1_epi32(1)),
-                                _mm512_set1_epi32(0), _mm512_set1_epi32(1));
-    subnormal_lg2mant =
-        _mm512_mask_blend_epi32(_mm512_cmpgt_epi32_mask(mantissa, _mm512_set1_epi32(3)),
-                                subnormal_lg2mant, _mm512_set1_epi32(2));
-    __m512i subnormal_mantissa = _mm512_and_si512(
-        _mm512_sllv_epi32(mantissa, _mm512_sub_epi32(_mm512_set1_epi32(23), subnormal_lg2mant)),
-        _mm512_set1_epi32(0x007fffff));
-    __m512i subnormal_exponent =
-        _mm512_slli_epi32(_mm512_add_epi32(subnormal_lg2mant, _mm512_set1_epi32(118)), 23);
-    __m512i result =
-        _mm512_mask_blend_epi32(is_normal, _mm512_or_si512(subnormal_mantissa, subnormal_exponent),
-                                _mm512_or_si512(normal_mantissa, normal_exponent));
-    result = _mm512_mask_blend_epi32(is_nan_inf, result, _mm512_set1_epi32(0x7fc00001));
-    result = _mm512_or_si512(result, sign);
-    result = _mm512_mask_mov_epi32(result, is_zero, sign);
-    return _mm512_castsi512_ps(result);
+static inline __m512
+llamafile_from_fp8_e4m3_avx512(__m128i xi)
+{
+    __m512i x = _mm512_cvtepu8_epi32(xi);
+    __m512i ex = _mm512_srli_epi32(x, 3);
+    ex = _mm512_and_si512(ex, _mm512_set1_epi32(15));
+    ex = _mm512_add_epi32(ex, _mm512_set1_epi32(120));
+    ex = _mm512_slli_epi32(ex, 23);
+    return _mm512_castsi512_ps(_mm512_mask_blend_epi32(
+      _mm512_cmpneq_epi32_mask(x, _mm512_setzero_si512()),
+      _mm512_setzero_si512(),
+      _mm512_or_si512(
+        _mm512_mask_blend_epi32(
+          _mm512_cmpge_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(127)),
+                                  _mm512_set1_epi32(8)),
+          _mm512_castps_si512(_mm512_sub_ps(
+            _mm512_castsi512_ps(_mm512_or_si512(
+              _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 14),
+              _mm512_set1_epi32(127 << 23))),
+            _mm512_set1_ps(1))),
+          _mm512_or_si512(
+            _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 20),
+            ex)),
+        _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24))));
 }
 #endif // __AVX512F__ + __AVX512VL__
