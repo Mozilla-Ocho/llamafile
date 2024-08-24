@@ -47,11 +47,31 @@
 //   §3 FP8 Binary Interchange Format
 //        NVIDIA / ARM / Intel
 
-static unsigned
-llamafile_fp8_select(bool b, unsigned x, unsigned y)
+static inline float
+llamafile_fp8_e4m3_to_fp32(ggml_fp8_t f)
 {
-    unsigned p = b - 1;
-    return (x & ~p) | (y & p);
+    union
+    {
+        ggml_fp8_t f;
+        unsigned char i;
+    } in = { f };
+    union
+    {
+        float f;
+        unsigned i;
+    } u;
+    unsigned x = in.i;
+    // // quantization checks for nans
+    // if ((x & 127) == 127)
+    //   return x==255 ? -NAN : +NAN;
+    auto exp_8 = x & 0x78;
+    auto exp_32 = (exp_8 + (120 << 3)) << 20;
+    u.i = (x & 7) << 20;                       // mantissa: bit 2-0 -> 22-20
+    u.i |= exp_8 ? exp_32 : (-6 + 127) << 23;  // exponent
+    if (!exp_8)
+        u.f -= 1.0 / 64;      // 2⁻⁶
+    u.i |= (x & 0x80) << 24;  // sign
+    return u.f;
 }
 
 static inline ggml_fp8_t
@@ -89,6 +109,42 @@ llamafile_fp32_to_fp8_e4m3(float f)
     return out.f;
 }
 
+static inline unsigned
+llamafile_fp8_select(bool b, unsigned x, unsigned y)
+{
+    unsigned p = b - 1;
+    return (x & ~p) | (y & p);
+}
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+#include <immintrin.h>
+
+static __m512 llamafile_from_fp8_e4m3_avx512(__m128i fp8_vec) {
+    // extract componants
+    __m128i expo_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x78));
+    __m128i mant_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x07));
+    __m128i sign_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x80));
+    // denorm mask
+    __mmask16 is_denorm = _mm_cmpeq_epi8_mask(expo_8, _mm_set1_epi8(0));
+    // convert to 32 bits
+    __m512i expo_32 = _mm512_cvtepu8_epi32(expo_8);
+    __m512i mant_32 = _mm512_cvtepu8_epi32(mant_8);
+    __m512i sign_32 = _mm512_cvtepu8_epi32(sign_8);
+    // shift
+    expo_32 = _mm512_slli_epi32(_mm512_add_epi32(expo_32,_mm512_set1_epi32(120<<3)), 20);
+    mant_32 = _mm512_slli_epi32(mant_32, 20);
+    sign_32 = _mm512_slli_epi32(sign_32, 24);
+    // correction denorm expo
+    expo_32 = _mm512_mask_blend_epi32(is_denorm, expo_32, _mm512_set1_epi32((-6 + 127) << 23));
+    // merge mantissa+exponent
+    __m512 result = _mm512_castsi512_ps(_mm512_or_si512(expo_32,mant_32));
+    // correction denorm mantissa
+    result = _mm512_mask_add_ps(result, is_denorm, result, _mm512_set1_ps(-1.0/64));
+    // add sign
+    return _mm512_castsi512_ps(_mm512_or_si512(sign_32,_mm512_castps_si512(result)));
+}
+#endif // __AVX512F__
+
 static inline ggml_bf16_t
 llamafile_fp8_e4m3_to_bf16(ggml_fp8_t fp8)
 {
@@ -119,63 +175,6 @@ llamafile_fp8_e4m3_to_bf16(ggml_fp8_t fp8)
     out.i |= (x & 128) << 8;
     return out.f;
 }
-
-static inline float
-llamafile_fp8_e4m3_to_fp32(ggml_fp8_t f)
-{
-    union
-    {
-        ggml_fp8_t f;
-        unsigned char i;
-    } in = { f };
-    union
-    {
-        float f;
-        unsigned i;
-    } u;
-    unsigned x = in.i;
-    if (x & 127) {
-        if (x & 120) {
-            u.i = (x & 7) << 20;
-            u.i |= (((x >> 3) & 15) + 120) << 23;
-        } else {
-            u.i = (x & 7) << 14;
-            u.i |= 127 << 23;
-            u.f -= 1;
-        }
-    } else {
-        u.i = 0;
-    }
-    u.i |= (x & 128) << 24;
-    return u.f;
-}
-
-#if defined(__AVX512F__)
-#include <immintrin.h>
-static inline __m512
-llamafile_from_fp8_e4m3_avx512(__m128i xi)
-{
-    __m512i x = _mm512_cvtepu8_epi32(xi);
-    return _mm512_castsi512_ps(
-      _mm512_or_si512(
-        _mm512_mask_blend_epi32(
-          _mm512_cmpneq_epi32_mask(_mm512_and_si512(x, _mm512_set1_epi32(120)),
-                                   _mm512_setzero_si512()),
-          _mm512_castps_si512(_mm512_sub_ps(
-            _mm512_castsi512_ps(_mm512_or_si512(
-              _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 14),
-              _mm512_set1_epi32(127 << 23))),
-            _mm512_set1_ps(1))),
-          _mm512_or_si512(
-            _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(7)), 20),
-            _mm512_slli_epi32(
-              _mm512_add_epi32(_mm512_and_si512(_mm512_srli_epi32(x, 3),
-                                                _mm512_set1_epi32(15)),
-                               _mm512_set1_epi32(120)),
-              23))),
-        _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24)));
-}
-#endif // __AVX512F__
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 static inline __m512bh

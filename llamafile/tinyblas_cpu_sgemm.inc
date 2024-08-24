@@ -195,7 +195,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
         default:
             return NOT_SUPPORTED;
         }
-#elif defined(__AVX512F__)
+#elif defined(__AVX512F__) && defined(__AVX512BW__)
     case GGML_TYPE_FP8:
         switch (Btype) {
         case GGML_TYPE_F32: {
