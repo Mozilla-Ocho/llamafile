@@ -118,6 +118,7 @@ llamafile_fp8_select(bool b, unsigned x, unsigned y)
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
+
 static __m512
 llamafile_from_fp8_e4m3_avx512(__m128i fp8_vec)
 {
@@ -144,8 +145,10 @@ llamafile_from_fp8_e4m3_avx512(__m128i fp8_vec)
     // add sign
     return _mm512_castsi512_ps(_mm512_or_si512(sign_32,_mm512_castps_si512(result)));
 }
+
 #elif defined(__AVX512F__)
 #include <immintrin.h>
+
 static inline __m512
 llamafile_from_fp8_e4m3_avx512(__m128i xi)
 {
@@ -169,7 +172,48 @@ llamafile_from_fp8_e4m3_avx512(__m128i xi)
               23))),
         _mm512_slli_epi32(_mm512_and_si512(x, _mm512_set1_epi32(128)), 24)));
 }
+
 #endif // __AVX512F__
+
+#if defined(__AVX2__) || defined(__AVX512F__)
+#include <immintrin.h>
+
+static __m256
+llamafile_from_fp8_e4m3_avx2(const ggml_fp8_t *fp8_ptr)
+{
+    __m128i fp8_vec = _mm_loadu_si64(fp8_ptr);
+    // extract components
+    __m128i expo_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x78));
+    __m128i mant_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x07));
+    __m128i sign_8 = _mm_and_si128(fp8_vec, _mm_set1_epi8(0x80));
+    // denorm mask
+    __m128i zero = _mm_setzero_si128();
+    __m128i is_denorm = _mm_cmpeq_epi8(expo_8, zero);
+    // convert to 32 bits
+    __m256i expo_32 = _mm256_cvtepu8_epi32(expo_8);
+    __m256i mant_32 = _mm256_cvtepu8_epi32(mant_8);
+    __m256i sign_32 = _mm256_cvtepu8_epi32(sign_8);
+    // shift
+    expo_32 = _mm256_slli_epi32(
+        _mm256_add_epi32(expo_32, _mm256_set1_epi32(120 << 3)), 20);
+    mant_32 = _mm256_slli_epi32(mant_32, 20);
+    sign_32 = _mm256_slli_epi32(sign_32, 24);
+    // correction denorm expo
+    __m256i denorm_expo = _mm256_set1_epi32((-6 + 127) << 23);
+    __m256i is_denorm_32 = _mm256_cvtepi8_epi32(is_denorm);
+    expo_32 = _mm256_blendv_epi8(expo_32, denorm_expo, is_denorm_32);
+    // merge mantissa+exponent
+    __m256 result = _mm256_castsi256_ps(_mm256_or_si256(expo_32, mant_32));
+    // correction denorm mantissa
+    __m256 denorm_correction = _mm256_set1_ps(-1.0f / 64);
+    result = _mm256_blendv_ps(result, _mm256_add_ps(result, denorm_correction),
+                              _mm256_castsi256_ps(is_denorm_32));
+    // add sign
+    return _mm256_castsi256_ps(
+        _mm256_or_si256(sign_32, _mm256_castps_si256(result)));
+}
+
+#endif // __AVX2__
 
 static inline ggml_bf16_t
 llamafile_fp8_e4m3_to_bf16(ggml_fp8_t fp8)

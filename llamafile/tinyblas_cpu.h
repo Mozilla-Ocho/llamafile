@@ -359,6 +359,10 @@ template <>
 inline __m128 load(const float *p) {
     return _mm_loadu_ps(p);
 }
+template <>
+inline __m128 load(const ggml_fp8_t *p) {
+    return llamafile_from_fp8_e4m3_sse2(p);
+}
 #endif // __SSE__
 
 #if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__)
@@ -373,6 +377,10 @@ template <>
 inline __m256 load(const ggml_bf16_t *p) {
     return _mm256_castsi256_ps(
         _mm256_slli_epi32(_mm256_cvtepu16_epi32(_mm_loadu_si128((const __m128i *)p)), 16));
+}
+template <>
+inline __m256 load(const ggml_fp8_t *p) {
+    return llamafile_from_fp8_e4m3_avx2(p);
 }
 #endif // __AVX2__
 
