@@ -104,7 +104,7 @@ static void usage(const char * executable) {
     printf("  --leave-output-tensor: Will leave output.weight un(re)quantized. Increases model size but may also increase quality, especially when requantizing\n");
     printf("  --pure: Disable k-quant mixtures and quantize all tensors to the same type\n");
     printf("  --imatrix file_name: use data in file_name as importance matrix for quant optimizations\n");
-    printf("  --ignore-imatrix-rules: ignore built-in rules for mandatory imatrix for certain quantization types\n");
+    printf("  --ignore-imatrix-rules: ignore built-in rules for mandatory imatrix for certain quantization types\n"); // [kawrakow]
     printf("  --include-weights tensor_name: use importance matrix for this/these tensor(s)\n");
     printf("  --exclude-weights tensor_name: use importance matrix for this/these tensor(s)\n");
     printf("  --output-tensor-type ggml_type: use this ggml_type for the output.weight tensor\n");
@@ -270,7 +270,7 @@ int main(int argc, char ** argv) {
         if (strcmp(argv[arg_idx], "--leave-output-tensor") == 0) {
             params.quantize_output_tensor = false;
         } else if (strcmp(argv[arg_idx], "--ignore-imatrix-rules") == 0) {
-            params.ignore_imatrix_rules = true;
+            params.ignore_imatrix_rules = true; // [kawrakow]
         } else if (strcmp(argv[arg_idx], "--output-tensor-type") == 0) {
             if (arg_idx < argc-1) {
                 params.output_tensor_type = parse_ggml_type(argv[++arg_idx]);
@@ -425,7 +425,7 @@ int main(int argc, char ** argv) {
         }
     }
 
-    if (!params.ignore_imatrix_rules && imatrix_data.empty() &&
+    if (!params.ignore_imatrix_rules && imatrix_data.empty() && // [kawrakpow] - be able to ignore imatrix rules
         (params.ftype == LLAMA_FTYPE_MOSTLY_IQ2_XS || params.ftype == LLAMA_FTYPE_MOSTLY_IQ2_XXS ||
          params.ftype == LLAMA_FTYPE_MOSTLY_IQ2_S  ||
          params.ftype == LLAMA_FTYPE_MOSTLY_Q2_K_S ||

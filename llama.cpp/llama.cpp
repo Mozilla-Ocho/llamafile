@@ -16234,7 +16234,7 @@ static void llama_model_quantize_internal(const std::string & fname_inp, const s
                     }
                 }
             }
-            if (!params->ignore_imatrix_rules && !imatrix &&
+            if (!params->ignore_imatrix_rules && !imatrix && // [kawrakow] - be able to ignore imatrix rules
                 (new_type == GGML_TYPE_IQ2_XS  ||
                  new_type == GGML_TYPE_IQ2_S   ||
                  new_type == GGML_TYPE_IQ1_S   ||
