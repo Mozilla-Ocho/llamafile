@@ -425,7 +425,7 @@ int main(int argc, char ** argv) {
         }
     }
 
-    if (!params.ignore_imatrix_rules && imatrix_data.empty() && // [kawrakpow] - be able to ignore imatrix rules
+    if (!params.ignore_imatrix_rules && imatrix_data.empty() && // [kawrakow] - be able to ignore imatrix rules
         (params.ftype == LLAMA_FTYPE_MOSTLY_IQ2_XS || params.ftype == LLAMA_FTYPE_MOSTLY_IQ2_XXS ||
          params.ftype == LLAMA_FTYPE_MOSTLY_IQ2_S  ||
          params.ftype == LLAMA_FTYPE_MOSTLY_Q2_K_S ||
