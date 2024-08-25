@@ -28,6 +28,7 @@
 
 #include "llama.cpp/ggml.h"
 #include "llama.cpp/llama.h"
+#include "llama.cpp/string.h"
 #include "llama.cpp/common.h"
 #include "llama.cpp/ggml-cuda.h"
 #include "llamafile/llamafile.h"
