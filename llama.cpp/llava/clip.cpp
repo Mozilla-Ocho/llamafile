@@ -11,6 +11,7 @@
 #include "llama.cpp/ggml-backend.h"
 #include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/ggml-metal.h"
+#include "llama.cpp/string.h"
 
 #include "stb/stb_image.h"
 
@@ -202,17 +203,6 @@ static std::string gguf_data_to_str(enum gguf_type type, const void * data, int 
     }
 }
 
-static void replace_all(std::string & s, const std::string & search, const std::string & replace) {
-    if (search.empty()) {
-        return; // Avoid infinite loop if 'search' is an empty string
-    }
-    size_t pos = 0;
-    while ((pos = s.find(search, pos)) != std::string::npos) {
-        s.replace(pos, search.length(), replace);
-        pos += replace.length();
-    }
-}
-
 static std::string gguf_kv_to_str(const struct gguf_context * ctx_gguf, int i) {
     const enum gguf_type type = gguf_get_kv_type(ctx_gguf, i);
 
@@ -230,8 +220,8 @@ static std::string gguf_kv_to_str(const struct gguf_context * ctx_gguf, int i) {
                     if (arr_type == GGUF_TYPE_STRING) {
                         std::string val = gguf_get_arr_str(ctx_gguf, i, j);
                         // escape quotes
-                        replace_all(val, "\\", "\\\\");
-                        replace_all(val, "\"", "\\\"");
+                        val = replace_all(val, "\\", "\\\\");
+                        val = replace_all(val, "\"", "\\\"");
                         ss << '"' << val << '"';
                     } else if (arr_type == GGUF_TYPE_ARRAY) {
                         ss << "???";
@@ -1073,7 +1063,7 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             if (value.size() > MAX_VALUE_LEN) {
                 value = format("%s...", value.substr(0, MAX_VALUE_LEN - 3).c_str());
             }
-            replace_all(value, "\n", "\\n");
+            value = replace_all(value, "\n", "\\n");
 
             LOG_TEE("%s: - kv %3d: %42s %-16s = %s\n", __func__, i, name, type_name.c_str(), value.c_str());
         }

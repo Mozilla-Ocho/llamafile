@@ -19,6 +19,7 @@
 
 #include "llamafile/version.h"
 #include "llama.cpp/llama.h"
+#include "llama.cpp/string.h"
 #include "llama.cpp/common.h"
 #include "llama.cpp/console.h"
 #include "llama.cpp/ggml-cuda.h"

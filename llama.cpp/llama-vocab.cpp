@@ -3,6 +3,7 @@
 #include "llama-vocab.h"
 
 #include "unicode.h"
+#include "string.h"
 
 #include <algorithm>
 #include <cassert>
@@ -152,11 +153,11 @@ static uint8_t llama_token_to_byte(const llama_vocab & vocab, llama_token id) {
 }
 
 static void llama_escape_whitespace(std::string & text) {
-    replace_all(text, " ", "\xe2\x96\x81");
+    text = replace_all(text, " ", "\xe2\x96\x81");
 }
 
 static void llama_unescape_whitespace(std::string & word) {
-    replace_all(word, "\xe2\x96\x81", " ");
+    word = replace_all(word, "\xe2\x96\x81", " ");
 }
 
 struct llm_symbol {

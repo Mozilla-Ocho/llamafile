@@ -11,6 +11,7 @@
 #include "llama-sampling.h"
 
 #include "unicode.h"
+#include "string.h"
 
 #include "ggml.h"
 #include "ggml-alloc.h"
@@ -1424,8 +1425,8 @@ static std::string gguf_kv_to_str(const struct gguf_context * ctx_gguf, int i) {
                     if (arr_type == GGUF_TYPE_STRING) {
                         std::string val = gguf_get_arr_str(ctx_gguf, i, j);
                         // escape quotes
-                        replace_all(val, "\\", "\\\\");
-                        replace_all(val, "\"", "\\\"");
+                        val = replace_all(val, "\\", "\\\\");
+                        val = replace_all(val, "\"", "\\\"");
                         ss << '"' << val << '"';
                     } else if (arr_type == GGUF_TYPE_ARRAY) {
                         ss << "???";
@@ -3563,7 +3564,7 @@ struct llama_model_loader {
                 if (value.size() > MAX_VALUE_LEN) {
                     value = format("%s...", value.substr(0, MAX_VALUE_LEN - 3).c_str());
                 }
-                replace_all(value, "\n", "\\n");
+                value = replace_all(value, "\n", "\\n");
 
                 LLAMA_LOG_INFO("%s: - kv %3d: %42s %-16s = %s\n", __func__, i, name, type_name.c_str(), value.c_str());
             }
@@ -16397,14 +16398,14 @@ static void llama_lora_adapter_init_internal(struct llama_model * model, const c
     for (ggml_tensor * cur = ggml_get_first_tensor(ctx); cur; cur = ggml_get_next_tensor(ctx, cur)) {
         std::string name(cur->name);
         if (str_endswith(name, ".lora_a")) {
-            replace_all(name, ".lora_a", "");
+            name = replace_all(name, ".lora_a", "");
             if (ab_map.find(name) == ab_map.end()) {
                 ab_map[name] = llama_lora_weight(cur, nullptr);
             } else {
                 ab_map[name].a = cur;
             }
         } else if (str_endswith(name, ".lora_b")) {
-            replace_all(name, ".lora_b", "");
+            name = replace_all(name, ".lora_b", "");
             if (ab_map.find(name) == ab_map.end()) {
                 ab_map[name] = llama_lora_weight(nullptr, cur);
             } else {

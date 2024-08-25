@@ -19,20 +19,11 @@
 
 #include "llamafile/llamafile.h"
 #include "llamafile/debug.h"
+#include "llama.cpp/string.h"
 
 #if defined(_MSC_VER)
 #pragma warning(disable: 4244 4267) // possible loss of data
 #endif
-
-// helper function to replace substrings
-static void replace_all(std::string & s, const std::string & search, const std::string & replace) {
-    for (size_t pos = 0; ; pos += replace.length()) {
-        pos = s.find(search, pos);
-        if (pos == std::string::npos) break;
-        s.erase(pos, search.length());
-        s.insert(pos, replace);
-    }
-}
 
 int cpu_get_num_math();
 
@@ -870,10 +861,10 @@ static bool output_wts(struct whisper_context * ctx, const char * fname, const c
                     }
                 }
 
-                ::replace_all(txt_bg, "'", "\u2019");
-                ::replace_all(txt_bg, "\"", "\\\"");
-                ::replace_all(txt_fg, "'", "\u2019");
-                ::replace_all(txt_fg, "\"", "\\\"");
+                txt_bg = replace_all(txt_bg, "'", "\u2019");
+                txt_bg = replace_all(txt_bg, "\"", "\\\"");
+                txt_fg = replace_all(txt_fg, "'", "\u2019");
+                txt_fg = replace_all(txt_fg, "\"", "\\\"");
             }
 
             if (is_first) {

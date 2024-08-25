@@ -289,11 +289,6 @@ std::string gpt_params_get_system_info(const gpt_params & params);
 
 std::vector<std::string> string_split(std::string input, char separator);
 
-std::string string_strip(const std::string & str);
-std::string string_get_sortable_timestamp();
-
-void string_replace_all(std::string & s, const std::string & search, const std::string & replace);
-
 template<class T>
 static std::vector<T> string_split(const std::string & str, char delim) {
     std::vector<T> values;
@@ -309,17 +304,6 @@ static std::vector<T> string_split(const std::string & str, char delim) {
 }
 
 bool string_parse_kv_override(const char * data, std::vector<llama_model_kv_override> & overrides);
-void string_process_escapes(std::string & input);
-
-//
-// Filesystem utils
-//
-
-bool fs_validate_filename(const std::string & filename);
-bool fs_create_directory_with_parents(const std::string & path);
-
-std::string fs_get_cache_directory();
-std::string fs_get_cache_file(const std::string & filename);
 
 //
 // Model utils

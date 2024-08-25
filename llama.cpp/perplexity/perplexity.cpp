@@ -2,6 +2,7 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
+#include "llama.cpp/string.h"
 
 #include <cmath>
 #include <cstdio>

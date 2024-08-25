@@ -2,8 +2,10 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 
 #include "clip.h"
-#include "llama.cpp/common.h"
+#include "llama.cpp/string.h"
 #include "llama.cpp/llama.h"
+#include "llama.cpp/log.h"
+#include "llama.cpp/common.h"
 #include "llava.h"
 
 #include <cstdio>

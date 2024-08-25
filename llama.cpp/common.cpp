@@ -11,6 +11,7 @@
 #include "json-schema-to-grammar.h"
 #include "llama.h"
 #include "llamafile/debug.h"
+#include "string.h"
 
 #include <cosmo.h>
 #include <algorithm>
@@ -1731,15 +1732,20 @@ std::string string_get_sortable_timestamp() {
     return std::string(timestamp_no_ns) + "." + std::string(timestamp_ns);
 }
 
-void string_replace_all(std::string & s, const std::string & search, const std::string & replace) {
-    if (search.empty()) {
-        return; // Avoid infinite loop if 'search' is an empty string
-    }
+std::string replace_all(const std::string& s, const std::string& search, const std::string& replace) {
+    if (search.empty())
+        return s;
+    std::string builder;
+    builder.reserve(s.length());
     size_t pos = 0;
-    while ((pos = s.find(search, pos)) != std::string::npos) {
-        s.replace(pos, search.length(), replace);
-        pos += replace.length();
+    size_t last_pos = 0;
+    while ((pos = s.find(search, last_pos)) != std::string::npos) {
+        builder.append(s, last_pos, pos - last_pos);
+        builder.append(replace);
+        last_pos = pos + search.length();
     }
+    builder.append(s, last_pos, std::string::npos);
+    return builder;
 }
 
 void string_process_escapes(std::string & input) {

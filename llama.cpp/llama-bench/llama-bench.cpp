@@ -91,16 +91,6 @@ static T stdev(const std::vector<T> & v) {
     return stdev;
 }
 
-static std::string replaceAll(std::string str, const std::string& from, const std::string& to) {
-    size_t start_pos = 0;
-    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
-        str.replace(start_pos, from.length(), to);
-        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
-    }
-    return str;
-}
-
-
 #ifdef __x86_64__
 static void cpuid(unsigned leaf, unsigned subleaf, unsigned *info) {
     asm("movq\t%%rbx,%%rsi\n\t"
@@ -159,9 +149,9 @@ static std::string get_cpu_info() { // [jart]
         }
     }
 #endif
-    id = replaceAll(id, " 96-Cores", "");
-    id = replaceAll(id, "(TM)", "");
-    id = replaceAll(id, "(R)", "");
+    id = replace_all(id, " 96-Cores", "");
+    id = replace_all(id, "(TM)", "");
+    id = replace_all(id, "(R)", "");
 
     std::string march;
 #ifdef __x86_64__
@@ -1257,7 +1247,7 @@ struct markdown_printer : public printer {
                 snprintf(buf, sizeof(buf), "%.2f", t.avg_ts());
                 value = buf;
             } else if (vmap.find(field) != vmap.end()) {
-                value = replaceAll(replaceAll(vmap.at(field), ".gguf", ""), ".llamafile", ""); // [jart]
+                value = replace_all(replace_all(vmap.at(field), ".gguf", ""), ".llamafile", ""); // [jart]
             } else {
                 assert(false);
                 exit(1);
