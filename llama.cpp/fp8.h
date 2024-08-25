@@ -30,6 +30,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// NOTE: THIS IS EXPERIMENTAL UNTESTED CODE
+
 // FP8 (E4M3)
 //
 //   Exponent bits : 4
