@@ -181,7 +181,7 @@ bool llamafile_sgemm_impl(long m, long n, long k, const void *A, long lda, const
     }
 
     case GGML_TYPE_FP8:
-#if defined(__AVX512BF16__) && 0 // not very good yet
+#if defined(__AVX512BF16__) && defined(__AVX512BW__) && defined(__AVX512DQ__)
         switch (Btype) {
         case GGML_TYPE_F32:
             return WANT_QUANTIZATION;

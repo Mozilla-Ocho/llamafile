@@ -412,6 +412,9 @@ template <>
 inline __m512bh load(const float *p) {
     return _mm512_cvtne2ps_pbh(_mm512_loadu_ps(p + 16), _mm512_loadu_ps(p));
 }
+#endif
+
+#if defined(__AVX512BF16__) && defined(__AVX512BW__) && defined(__AVX512DQ__)
 template <>
 inline __m512bh load(const ggml_fp8_bf16_t *p) {
     return llamafile_fp8_e4m3_to_bf16_avx512(_mm256_loadu_si256((__m256i *)p));

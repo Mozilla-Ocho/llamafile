@@ -246,7 +246,15 @@ llamafile_fp8_e4m3_to_bf16(ggml_fp8_t fp8)
     return out.f;
 }
 
-#if defined(__AVX512F__) && defined(__AVX512BW__)
+#if defined(__AVX512F__) && defined(__AVX512BW__) && defined(__AVX512DQ__)
+
+extern __inline __m512bh
+__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+_mm512_castsi512_bh (__m512i __A)
+{
+    return (__m512bh) (__A);
+}
+
 static inline __m512bh
 llamafile_fp8_e4m3_to_bf16_avx512(__m256i fp8_vec)
 {
@@ -257,7 +265,7 @@ llamafile_fp8_e4m3_to_bf16_avx512(__m256i fp8_vec)
                             _mm512_set1_epi16(1)),
       _mm512_test_epi16_mask(x, _mm512_set1_epi16(4)),
       _mm512_set1_epi16(2));
-    return (__m512bh)_mm512_or_si512(
+    return _mm512_castsi512_bh(_mm512_or_si512(
       _mm512_maskz_mov_epi16(
         _mm512_cmpneq_epi16_mask(_mm512_and_si512(x, _mm512_set1_epi16(127)),
                                  _mm512_setzero_si512()),
@@ -278,6 +286,7 @@ llamafile_fp8_e4m3_to_bf16_avx512(__m256i fp8_vec)
                                   3),
                 _mm512_set1_epi16(120)),
               7)))),
-      _mm512_slli_epi16(_mm512_and_si512(x, _mm512_set1_epi16(128)), 8));
+      _mm512_slli_epi16(_mm512_and_si512(x, _mm512_set1_epi16(128)), 8)));
 }
+
 #endif // __AVX512F__ + __AVX512BW__
