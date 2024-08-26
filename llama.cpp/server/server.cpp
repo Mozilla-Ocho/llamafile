@@ -2229,6 +2229,15 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
             }
             // ignored
         }
+        else if (arg == "--repeat-penalty")
+        {
+            if (++i >= argc)
+            {
+                invalid_param = true;
+                break;
+            }
+            // ignored
+        }
         else if (arg == "--path")
         {
             if (++i >= argc)
