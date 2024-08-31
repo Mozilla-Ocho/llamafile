@@ -24,8 +24,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <signal.h>
-#include <libc/calls/pledge.h>
-#include <tool/args/args.h>
+#include <cosmo.h>
 #include <libc/dce.h>
 
 double g_prompt_per_second_jart;

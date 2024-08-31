@@ -18,11 +18,11 @@
 #include "llamafile.h"
 #include "version.h"
 
+#include <cosmo.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tool/args/args.h>
 
 #include "llama.cpp/llama.h"
 

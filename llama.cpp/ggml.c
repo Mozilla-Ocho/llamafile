@@ -144,13 +144,10 @@ inline static void * ggml_aligned_malloc(size_t size) {
     if (result != 0) {
         // Handle allocation failure
         const char *error_desc = "unknown allocation error";
-        switch (result) {
-            case EINVAL:
-                error_desc = "invalid alignment value";
-                break;
-            case ENOMEM:
-                error_desc = "insufficient memory";
-                break;
+        if (result == EINVAL) {
+            error_desc = "invalid alignment value";
+        } else if (result == ENOMEM) {
+            error_desc = "insufficient memory";
         }
         GGML_PRINT("%s: %s (attempted to allocate %6.2f MB)\n", __func__, error_desc, size/(1024.0*1024.0));
         GGML_ABORT("fatal error");

@@ -2,7 +2,7 @@
 #── vi: set noet ft=make ts=8 sw=8 fenc=utf-8 :vi ────────────────────┘
 
 PREFIX = /usr/local
-COSMOCC = .cosmocc/3.7.1
+COSMOCC = .cosmocc/3.8.0
 TOOLCHAIN = $(COSMOCC)/bin/cosmo
 
 CC = $(TOOLCHAIN)cc
@@ -14,7 +14,7 @@ INSTALL = install
 
 ARFLAGS = rcsD
 CXXFLAGS = -frtti -std=gnu++23
-CCFLAGS = -O2 -fexceptions -fsignaling-nans -ffunction-sections -fdata-sections
+CCFLAGS = -O2 -g -fexceptions -ffunction-sections -fdata-sections -mclang
 CPPFLAGS_ = -iquote. -mcosmo -DGGML_MULTIPLATFORM -Wno-attributes -DLLAMAFILE_DEBUG
 TARGET_ARCH = -Xx86_64-mtune=znver4
 
@@ -52,5 +52,5 @@ clean:; rm -rf o
 .PHONY: distclean
 distclean:; rm -rf o .cosmocc
 
-.cosmocc/3.7.1:
-	build/download-cosmocc.sh $@ 3.7.1 13b65b0e659b493bd82f3d0a319d0265d66f849839e484aa2a54191024711e85
+.cosmocc/3.8.0:
+	build/download-cosmocc.sh $@ 3.8.0 813c6b2f95062d2e0a845307a79505424cb98cb038e8013334f8a22e3b92a474

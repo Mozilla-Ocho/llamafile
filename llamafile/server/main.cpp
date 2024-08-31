@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <tool/args/args.h>
+#include <cosmo.h>
 
 #include "llama.cpp/llama.h"
 #include "llamafile/llamafile.h"

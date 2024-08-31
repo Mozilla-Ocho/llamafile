@@ -27,7 +27,7 @@ namespace ansiBLAS {
 
 static constexpr int KN = 8;
 
-alignas(64) union Vector {
+union alignas(64) Vector {
     double v[KN];
 };
 
@@ -94,7 +94,7 @@ struct ansiBLAS {
     }
 
     template <int RM, int RN>
-    __target_clones("avx512f,fma") void gemm(int m0, int m, int n0, int n) {
+    void gemm(int m0, int m, int n0, int n) {
         int ytiles = (m - m0) / RM;
         int xtiles = (n - n0) / RN;
         int tiles = xtiles * ytiles;

@@ -8,7 +8,6 @@
 #include "llama.cpp/json.h"
 
 #include <cosmo.h>
-#include <tool/args/args.h>
 #include <cmath>
 #include <fstream>
 #include <cstdio>

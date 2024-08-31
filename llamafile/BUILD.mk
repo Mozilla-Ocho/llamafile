@@ -143,7 +143,7 @@ o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_fma.o	\
 o/$(MODE)/llamafile/tinyblas_cpu_sgemm_amd_zen4.o	\
 o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm80.o		\
 o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o:		\
-		private CCFLAGS += -O3 -fopenmp
+		private CCFLAGS += -O3 -fopenmp -mgcc
 
 ################################################################################
 # testing

@@ -8,8 +8,6 @@ LLAMA_CPP_LLAVA_HDRS = $(filter %.h,$(LLAMA_CPP_LLAVA_FILES))
 LLAMA_CPP_LLAVA_SRCS = $(filter %.cpp,$(LLAMA_CPP_LLAVA_FILES))
 LLAMA_CPP_LLAVA_OBJS = $(LLAMA_CPP_LLAVA_SRCS:%.cpp=o/$(MODE)/%.o)
 
-.PHONY: tool/args/args.h
-
 o/$(MODE)/llama.cpp/llava/llava.a:					\
 		$(LLAMA_CPP_LLAVA_OBJS)
 

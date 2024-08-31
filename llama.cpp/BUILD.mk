@@ -47,7 +47,7 @@ o/$(MODE)/llama.cpp/ggml-vector-amd-f16c.o \
 o/$(MODE)/llama.cpp/ggml-vector-amd-fma.o \
 o/$(MODE)/llama.cpp/ggml-vector-arm80.o \
 o/$(MODE)/llama.cpp/ggml-vector-arm82.o: \
-		private CCFLAGS += -O3
+		private CCFLAGS += -O3 -mgcc
 
 o/$(MODE)/llama.cpp/ggml-alloc.o			\
 o/$(MODE)/llama.cpp/ggml-backend.o			\
@@ -59,6 +59,9 @@ o/$(MODE)/llama.cpp/sampling.o				\
 o/$(MODE)/llama.cpp/ggml-alloc.o			\
 o/$(MODE)/llama.cpp/common.o:				\
 		private CCFLAGS += -Os
+
+o/$(MODE)/llama.cpp/unicode-data.o:			\
+		private CCFLAGS += -mgcc
 
 o/$(MODE)/llama.cpp/ggml-quants.o: private CXXFLAGS += -Os
 o/$(MODE)/llama.cpp/ggml-quants-amd-k8.o: private TARGET_ARCH += -Xx86_64-mtune=k8

@@ -178,7 +178,7 @@ static void on_sigfpe(int sig, siginfo_t *si, void *arg) {
     }
     if (!once) {
         struct StackFrame sf = {.next = (struct StackFrame *)ctx->uc_mcontext.BP,
-                                .addr = ctx->uc_mcontext.PC};
+                                .addr = (intptr_t)ctx->uc_mcontext.PC};
         ShowBacktrace(2, &sf);
         const struct ggml_cgraph *g;
         if ((g = llamafile_debug_graph)) {

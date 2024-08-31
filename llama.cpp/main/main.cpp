@@ -15,7 +15,7 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
-#include <tool/args/args.h>
+#include <cosmo.h>
 
 #include "llamafile/version.h"
 #include "llama.cpp/llama.h"
