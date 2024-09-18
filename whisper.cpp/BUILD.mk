@@ -26,7 +26,6 @@ $(WHISPER_CPP_OBJS): private				\
 $(WHISPER_CPP_OBJS): private				\
 		CXXFLAGS +=				\
 			-frtti				\
-			-Wno-alloc-size-larger-than	\
 			-Wno-deprecated-declarations
 
 o/$(MODE)/whisper.cpp/main:				\
@@ -36,6 +35,19 @@ o/$(MODE)/whisper.cpp/main:				\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
 		o/$(MODE)/stb/stb.a			\
 
+o/$(MODE)/whisper.cpp/stream:				\
+		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
+		o/$(MODE)/stb/stb.a			\
+
+o/$(MODE)/whisper.cpp/mic2txt:				\
+		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
+
+o/$(MODE)/whisper.cpp/mic2raw:				\
+		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
+
 o/$(MODE)/whisper.cpp/miniaudio.o: private COPTS += -O3
 
 $(WHISPER_CPP_OBJS): whisper.cpp/BUILD.mk
@@ -43,3 +55,6 @@ $(WHISPER_CPP_OBJS): whisper.cpp/BUILD.mk
 .PHONY: o/$(MODE)/whisper.cpp
 o/$(MODE)/whisper.cpp:					\
 		o/$(MODE)/whisper.cpp/main		\
+		o/$(MODE)/whisper.cpp/stream		\
+		o/$(MODE)/whisper.cpp/mic2txt		\
+		o/$(MODE)/whisper.cpp/mic2raw		\
