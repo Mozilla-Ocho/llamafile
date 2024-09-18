@@ -90,7 +90,6 @@ using json = nlohmann::ordered_json;
 //
 
 int32_t cpu_get_num_physical_cores();
-int32_t cpu_get_num_math();
 
 //
 // CLI argument parsing

@@ -1,3 +1,5 @@
+#include "cores.h"
+
 #include <cosmo.h>
 #include <fstream>
 #include <thread>
@@ -87,10 +89,7 @@ static int count_math_cpus(int cpu_count) {
 
 #endif // __x86_64__ && __linux__
 
-/**
- * Returns number of CPUs on system that are useful for math.
- */
-int cpu_get_num_math() {
+static int cpu_get_num_math_impl() {
 #if defined(__x86_64__) && (defined(__linux__) || defined(__COSMOPOLITAN__)) && !defined(__ANDROID__)
     int cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
     if (cpu_count < 1) {
@@ -108,4 +107,17 @@ int cpu_get_num_math() {
     }
 #endif
     return get_num_physical_cores();
+}
+
+/**
+ * Returns number of CPUs on system that are useful for math.
+ */
+int cpu_get_num_math() {
+    static bool once;
+    static int result;
+    if (!once) {
+        result = cpu_get_num_math_impl();
+        once = true;
+    }
+    return result;
 }

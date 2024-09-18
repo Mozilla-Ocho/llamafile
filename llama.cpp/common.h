@@ -6,6 +6,7 @@
 #pragma once
 
 #include "llamafile/log.h"
+#include "llama.cpp/cores.h"
 #include "llama.h"
 
 #include "sampling.h"
@@ -61,7 +62,6 @@ struct llama_control_vector_load_info;
 //
 
 int32_t cpu_get_num_physical_cores();
-int32_t cpu_get_num_math();
 
 //
 // CLI argument parsing

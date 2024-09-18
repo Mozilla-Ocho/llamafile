@@ -5,6 +5,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include "llama.cpp/cores.h"
 #include <cosmo.h>
 
 // #include "preprocessing.hpp"
@@ -527,7 +528,6 @@ void parse_args(int argc, const char** argv, SDParams& params) {
         exit(1);
     }
     if (params.n_threads <= 0) {
-        int cpu_get_num_math(void);
         params.n_threads = cpu_get_num_math();
     }
 

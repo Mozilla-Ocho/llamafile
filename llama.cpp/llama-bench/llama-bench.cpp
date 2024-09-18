@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <sys/auxv.h>
 #include <libc/intrin/x86.h>
+#include "llama.cpp/cores.h"
 #include <libc/sysv/consts/hwcap.h>
 
 #include "llama.cpp/ggml.h"

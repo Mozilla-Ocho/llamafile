@@ -1,6 +1,7 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "llama.cpp/ggml-vector.h"
+#include "llama.cpp/cores.h"
 #include "whisper.h"
 
 #define GGML_USE_CUDA
@@ -4777,7 +4778,7 @@ struct whisper_full_params whisper_full_default_params(enum whisper_sampling_str
     struct whisper_full_params result = {
         /*.strategy          =*/ strategy,
 
-        /*.n_threads         =*/ std::min(4, (int32_t) std::thread::hardware_concurrency()),
+        /*.n_threads         =*/ std::min(8, (int32_t) cpu_get_num_math()),
         /*.n_max_text_ctx    =*/ 16384,
         /*.offset_ms         =*/ 0,
         /*.duration_ms       =*/ 0,

@@ -1459,7 +1459,7 @@ class DoubleArrayBuilder {
  private:
   enum { BLOCK_SIZE = 256 };
   enum { NUM_EXTRA_BLOCKS = 16 };
-  enum { NUM_EXTRAS = BLOCK_SIZE * NUM_EXTRA_BLOCKS };
+  enum { NUM_EXTRAS = (int)BLOCK_SIZE * (int)NUM_EXTRA_BLOCKS };
 
   enum { UPPER_MASK = 0xFF << 21 };
   enum { LOWER_MASK = 0xFF };

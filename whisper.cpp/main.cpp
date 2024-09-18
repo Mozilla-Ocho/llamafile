@@ -1,7 +1,9 @@
 // -*- mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8 -*-
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
+
 #include "llamafile/version.h"
 #include "llamafile/llamafile.h"
+#include "llama.cpp/cores.h"
 #include "common.h"
 
 #include "whisper.h"
@@ -25,11 +27,9 @@
 #pragma warning(disable: 4244 4267) // possible loss of data
 #endif
 
-int cpu_get_num_math();
-
 // command-line parameters
 struct whisper_params {
-    int32_t n_threads     = cpu_get_num_math();
+    int32_t n_threads     = std::min(16, cpu_get_num_math());
     int32_t n_processors  = 1;
     int32_t offset_t_ms   = 0;
     int32_t offset_n      = 0;

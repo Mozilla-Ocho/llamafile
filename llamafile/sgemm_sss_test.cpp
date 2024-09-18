@@ -28,8 +28,6 @@
 #define ITERATIONS 5
 #define ALLOC(n) (float *)memalign(4096, sizeof(float) * (n))
 
-int cpu_get_num_math();
-
 void llamafile_sgemm_openmp(long m, long n, long k, const void *A, long lda, const void *B,
                             long ldb, void *C, long ldc, int Atype, int Btype, int Ctype) {
     static int nth = cpu_get_num_math();

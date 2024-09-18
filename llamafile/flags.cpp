@@ -16,6 +16,7 @@
 // limitations under the License.
 
 #include "debug.h"
+#include "llama.cpp/cores.h"
 #include "llamafile.h"
 #include "trust.h"
 
@@ -66,8 +67,6 @@ int FLAG_ubatch = 512;
 int FLAG_verbose = 0;
 int FLAG_warmup = true;
 int FLAG_workers;
-
-int cpu_get_num_math();
 
 static wontreturn void usage(int rc, int fd) {
     tinyprint(fd, "usage: ", program_invocation_name, " -m MODEL -l [HOST:]PORT\n", NULL);

@@ -19,7 +19,7 @@
 
 #include <assert.h>
 
-int cpu_get_num_math();
+#include "llama.cpp/cores.h"
 
 CoreManager g_core_manager;
 

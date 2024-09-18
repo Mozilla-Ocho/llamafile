@@ -24,7 +24,6 @@ $(STABLE_DIFFUSION_CPP_OBJS): private					\
 $(STABLE_DIFFUSION_CPP_OBJS): private					\
 		CXXFLAGS +=						\
 			-frtti						\
-			-Wno-alloc-size-larger-than			\
 			-Wno-deprecated-declarations
 
 o/$(MODE)/stable-diffusion.cpp/main:					\
