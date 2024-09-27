@@ -37,21 +37,6 @@ static void on_exit(void) {
     }
 }
 
-bool is_wav_buffer(const std::string buf) {
-    // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
-    // WAV ref: https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
-    if (buf.size() < 12 || buf.substr(0, 4) != "RIFF" || buf.substr(8, 4) != "WAVE") {
-        return false;
-    }
-
-    uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
-    if (chunk_size + 8 != buf.size()) {
-        return false;
-    }
-
-    return true;
-}
-
 static ma_result perform_audio_conversion(ma_decoder* pDecoder, ma_encoder* pEncoder) {
     ma_result rc = MA_SUCCESS;
     for (;;) {
@@ -172,12 +157,6 @@ TryAgain:
         }
 
         fprintf(stderr, "%s: read %zu bytes from stdin\n", __func__, wav_data.size());
-    }
-    else if (is_wav_buffer(fname)) {
-        if (drwav_init_memory(&wav, fname.c_str(), fname.size(), nullptr) == false) {
-            fprintf(stderr, "error: failed to open WAV file from fname buffer\n");
-            return false;
-        }
     }
     else if (drwav_init_file(&wav, fname.c_str(), nullptr) == false) {
         tinylogf("%s: converting to wav...\n", fname.c_str());
