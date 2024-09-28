@@ -4,6 +4,7 @@
 #include "slurp.h"
 #include "miniaudio.h"
 #include "llamafile/log.h"
+#include <math.h>
 
 static int get_audio_file_channels(const char *fname) {
     ma_decoder decoder;
@@ -96,7 +97,7 @@ bool slurp_audio_file(const char *fname,
             for (int i = 0; i < got; ++i) {
                 float left = frames[i*2+0];
                 float right = frames[i*2+1];
-                pcmf32.push_back(left + right);
+                pcmf32.push_back(sqrtf((left*left + right*right) / 2));
                 pcmf32s[0].push_back(left);
                 pcmf32s[1].push_back(right);
             }
