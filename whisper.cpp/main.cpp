@@ -5,6 +5,7 @@
 #include "llamafile/llamafile.h"
 #include "llama.cpp/cores.h"
 #include "common.h"
+#include "slurp.h"
 
 #include "whisper.h"
 #include "grammar-parser.h"
@@ -1108,8 +1109,8 @@ int main(int argc, char ** argv) {
         std::vector<float> pcmf32;               // mono-channel F32 PCM
         std::vector<std::vector<float>> pcmf32s; // stereo-channel F32 PCM
 
-        if (!::read_wav(fname_inp, pcmf32, pcmf32s, params.diarize)) {
-            fprintf(stderr, "error: failed to read WAV file '%s'\n", fname_inp.c_str());
+        if (!slurp_audio_file(fname_inp.c_str(), pcmf32, pcmf32s, params.diarize)) {
+            fprintf(stderr, "error: failed to read audio file '%s'\n", fname_inp.c_str());
             continue;
         }
 
