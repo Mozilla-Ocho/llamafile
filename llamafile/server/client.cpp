@@ -261,28 +261,36 @@ Client::transport()
     return dispatch();
 }
 
-void
-Client::begin_response()
-{
-    cleanup();
-    pthread_testcancel();
-    should_send_error_if_canceled = false;
-}
-
+// sends http error response message and body in one shot
+//
+// after this function is called, the handler must return control.
+//
+// @param code must be a number between 400 and 999
+// @param reason must be a sanitized http token, or null for default
 bool
 Client::send_error(int code, const char* reason)
 {
-    begin_response();
     if (!reason)
         reason = GetHttpReason(code);
     SLOG("error %d %s", code, reason);
-    char* p = start_response(obuf.p, code, reason);
+    char* p = append_http_response_message(obuf.p, code, reason);
     return send_response(obuf.p, p, string(reason) + "\r\n");
 }
 
+// appends start of http response message to `p`
+//
+// after this function is called, more header lines may be appended.
+// afterwards, either send_response() or send_response_start() should be
+// called to transmit the message over the wire.
+//
+// @param p is a page guarded buffer
+// @param code must be a number between 200 and 999
+// @param reason must be a sanitized http token, or null for default
+// @return p + len(appended content)
 char*
-Client::start_response(char* p, int code, const char* reason)
+Client::append_http_response_message(char* p, int code, const char* reason)
 {
+    // generate http message starting line
     *p++ = 'H';
     *p++ = 'T';
     *p++ = 'T';
@@ -301,14 +309,9 @@ Client::start_response(char* p, int code, const char* reason)
     p = stpcpy(p, reason);
     *p++ = '\r';
     *p++ = '\n';
-    p = stpcpy(p, STANDARD_RESPONSE_HEADERS);
-    return p;
-}
 
-bool
-Client::send_response(char* p0, char* p, string_view content)
-{
-    begin_response();
+    // append standard headers
+    p = stpcpy(p, STANDARD_RESPONSE_HEADERS);
 
     // append date header
     tm tm;
@@ -326,6 +329,23 @@ Client::send_response(char* p0, char* p, string_view content)
     if (close_connection)
         p = stpcpy(p, "Connection: close\r\n");
 
+    return p;
+}
+
+// sends http response message and body in one shot
+//
+// after this function is called, the handler must return control.
+//
+// @param p0 points to start of http response message
+// @param p points to end of http response message headers; we assume
+//     that we can keep appending to `p` which must be page guarded
+bool
+Client::send_response(char* p0, char* p, string_view content)
+{
+    cleanup();
+    pthread_testcancel();
+    should_send_error_if_canceled = false;
+
     // append content length
     p = stpcpy(p, "Content-Length: ");
     p = FormatInt64(p, content.size());
@@ -339,6 +359,114 @@ Client::send_response(char* p0, char* p, string_view content)
     return send2(string_view(p0, p - p0), content);
 }
 
+// sends http response message, but not its body.
+//
+// after this function is called, send_response_chunk() may be called to
+// stream individual pieces of the response body. when you're done, you
+// must call send_response_finish() to complete the response.
+//
+// here's an example handler that uses this:
+//
+//     bool
+//     Client::fun()
+//     {
+//         char* message = obuf.p;
+//         char* p = append_http_response_message(message, 200);
+//         if (!send_response_start(message, p))
+//             return false;
+//         sleep(1);
+//         if (!send_response_chunk("hello\r\n"))
+//             return false;
+//         sleep(1);
+//         if (!send_response_chunk("world\r\n"))
+//             return false;
+//         sleep(1);
+//         return send_response_finish();
+//     }
+//
+// @param p0 points to start of http response message
+// @param p points to end of http response message headers; we assume
+//     that we can keep appending to `p` which must be page guarded
+bool
+Client::send_response_start(char* p0, char* p)
+{
+    // use chunked transfer encoding if http/1.1
+    if (msg.version >= 11)
+        p = stpcpy(p, "Transfer-Encoding: chunked\r\n");
+
+    // finish message
+    *p++ = '\r';
+    *p++ = '\n';
+
+    return send(string_view(p0, p - p0));
+}
+
+// finishes sending chunked http response body.
+//
+// once you are finished sending chunks, call send_response_finish().
+bool
+Client::send_response_chunk(const string_view content)
+{
+    // don't encode chunk boundaries for simple http client
+    // it will need to rely on read() doing the right thing
+    if (msg.version < 11)
+        return send(content);
+
+    // sent in three pieces
+    iovec iov[3];
+    size_t bytes = 0;
+
+    // 1. send "%zx\r\n" % (len(content))
+    char start[32];
+    char* p = start;
+    p = FormatHex64(p, content.size(), 0);
+    *p++ = '\r';
+    *p++ = '\n';
+    iov[0].iov_base = start;
+    iov[0].iov_len = p - start;
+    bytes += iov[0].iov_len;
+
+    // 2. send content
+    iov[1].iov_base = (void*)content.data();
+    iov[1].iov_len = content.size();
+    bytes += iov[1].iov_len;
+
+    // 3. send newline
+    iov[2].iov_base = (void*)"\r\n";
+    iov[2].iov_len = 2;
+    bytes += iov[2].iov_len;
+
+    // perform send system call
+    ssize_t sent;
+    if ((sent = writev(fd, iov, 3)) != bytes) {
+        if (sent == -1 && errno != EAGAIN && errno != ECONNRESET)
+            SLOG("writev failed %m");
+        return false;
+    }
+    return true;
+}
+
+// finishes sending chunked http response body.
+//
+// after this function is called, the handler must return control.
+bool
+Client::send_response_finish()
+{
+    cleanup();
+
+    // don't encode chunk boundaries for simple http client
+    // it will need to rely on read() doing the right thing
+    if (msg.version < 11)
+        return true;
+
+    // send terminating chunk
+    return send("0\r\n\r\n");
+}
+
+// writes raw data to socket
+//
+// consider using the higher level methods like send_error(),
+// send_response(), send_response_start(), etc.
 bool
 Client::send(const string_view s)
 {
@@ -351,6 +479,10 @@ Client::send(const string_view s)
     return true;
 }
 
+// writes two pieces of raw data to socket in single system call
+//
+// consider using the higher level methods like send_error(),
+// send_response(), send_response_start(), etc.
 bool
 Client::send2(const string_view s1, const string_view s2)
 {
@@ -434,14 +566,7 @@ Client::read_payload()
         params_memory =
           ParseParams(payload.data(), payload.size(), &url.params);
     }
-
     return true;
-}
-
-static void
-cancel_http_request(void* arg)
-{
-    Client* client = (Client*)arg;
 }
 
 bool

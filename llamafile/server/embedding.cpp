@@ -323,7 +323,7 @@ Client::embedding()
 
     // send response
     char* headers = p;
-    p = start_response(p, 200);
+    p = append_http_response_message(p, 200);
     p = stpcpy(p, "Content-Type: application/json\r\n");
     p = stpcpy(p, "X-Wall-Micros: ");
     p = FormatInt64(p, wall_us);

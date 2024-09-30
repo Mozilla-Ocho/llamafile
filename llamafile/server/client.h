@@ -81,16 +81,19 @@ struct Client
     bool read_request() __wur;
     bool read_content() __wur;
     bool send_continue() __wur;
-    void begin_response();
     bool send(const ctl::string_view) __wur;
     void defer_cleanup(void (*)(void*), void*);
     bool send_error(int, const char* = nullptr);
-    char* start_response(char*, int, const char* = nullptr);
+    char* append_http_response_message(char*, int, const char* = nullptr);
     bool send_response(char*, char*, const ctl::string_view) __wur;
+    bool send_response_start(char*, char*) __wur;
+    bool send_response_chunk(const ctl::string_view) __wur;
+    bool send_response_finish() __wur;
     bool send2(const ctl::string_view, const ctl::string_view) __wur;
     char* append_header(const ctl::string_view, const ctl::string_view);
     bool has_at_most_this_element(int, const ctl::string_view);
     ctl::string_view get_header(const ctl::string_view&);
+    bool fun() __wur;
 
     ctl::string_view path();
     ctl::optional<ctl::string_view> param(ctl::string_view);
