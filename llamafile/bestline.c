@@ -3201,6 +3201,7 @@ static ssize_t bestlineEdit(int stdin_fd, int stdout_fd, const char *prompt, con
         // fallthrough
         case '\n': {
             char is_finished = 1;
+            char needs_strip = 0;
             free(history[--historylen]);
             history[historylen] = 0;
             l.final = 1;
@@ -3215,11 +3216,19 @@ static ssize_t bestlineEdit(int stdin_fd, int stdout_fd, const char *prompt, con
                     is_finished = 0;
             if (llamamode)
                 if (StartsWith(l.full.b, "\"\"\""))
-                    is_finished = l.full.len > 3 && EndsWith(l.full.b, "\"\"\"");
+                    needs_strip = is_finished = l.full.len > 6 && EndsWith(l.full.b, "\"\"\"");
             if (is_finished) {
-                *obuf = l.full.b;
-                free(l.buf);
-                return l.len;
+                if (needs_strip) {
+                    int len = l.full.len - 6;
+                    *obuf = strndup(l.full.b + 3, len);
+                    abFree(&l.full);
+                    free(l.buf);
+                    return len;
+                } else {
+                    *obuf = l.full.b;
+                    free(l.buf);
+                    return l.full.len;
+                }
             } else {
                 l.prompt = "... ";
                 abAppends(&l.full, "\n");
