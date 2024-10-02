@@ -81,7 +81,7 @@ struct gpt_params {
     int32_t n_threads_batch       =    -1; // number of threads to use for batch processing (-1 = use n_threads)
     int32_t n_threads_batch_draft =    -1;
     int32_t n_predict             =    -1; // new tokens to predict
-    int32_t n_ctx                 =     0; // context size
+    int32_t n_ctx                 =  8192; // context size [jart]
     int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
     int32_t n_ubatch              =   512; // physical batch size for prompt processing (must be >=32 to use BLAS)
     int32_t n_keep                =     0; // number of tokens to keep from initial prompt

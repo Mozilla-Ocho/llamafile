@@ -39,10 +39,6 @@ o/$(MODE)/llamafile/simple:				\
 		o/$(MODE)/llamafile/simple.o		\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
 
-o/$(MODE)/llamafile/chatbot:				\
-		o/$(MODE)/llamafile/chatbot.o		\
-		o/$(MODE)/llama.cpp/llama.cpp.a		\
-
 o/$(MODE)/llamafile/tokenize:				\
 		o/$(MODE)/llamafile/tokenize.o		\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
@@ -52,7 +48,6 @@ o/$(MODE)/llamafile:						\
 		$(LLAMAFILE_OBJS)				\
 		o/$(MODE)/llamafile/server			\
 		o/$(MODE)/llamafile/simple			\
-		o/$(MODE)/llamafile/chatbot			\
 		o/$(MODE)/llamafile/zipalign			\
 		o/$(MODE)/llamafile/zipcheck			\
 		o/$(MODE)/llamafile/tokenize			\

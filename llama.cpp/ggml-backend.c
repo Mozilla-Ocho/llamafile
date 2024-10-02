@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cosmo.h>
 
 #include "llamafile/log.h"
 
@@ -2259,10 +2260,14 @@ GGML_CALL static void *system_malloc(size_t n) {
 }
 
 GGML_CALL static char *system_getenv(const char *s) {
+    if (IsWindows())
+        return 0;
     return getenv(s);
 }
 
 GGML_CALL static long system_write(int fd, const void *p, long n) {
+    if (IsWindows())
+        return 0;
     return write(fd, p, n);
 }
 

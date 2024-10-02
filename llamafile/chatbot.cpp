@@ -20,6 +20,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <signal.h>
+#include <sstream>
 #include <stdio.h>
 #include <string>
 #include <vector>
@@ -29,7 +30,21 @@
 #include "llamafile/bestline.h"
 #include "llamafile/llamafile.h"
 
-static sig_atomic_t g_got_sigint;
+#define BOLD "\e[1m"
+#define FAINT "\e[2m"
+#define UNBOLD "\e[22m"
+#define RED "\e[31m"
+#define MAGENTA "\e[35m"
+#define UNFOREGROUND "\e[39m"
+#define BRIGHT_BLACK "\e[90m"
+#define BRIGHT_RED "\e[91m"
+#define BRIGHT_GREEN "\e[92m"
+#define CLEAR_FORWARD "\e[K"
+
+static int n_past;
+static llama_model *g_model;
+static llama_context *g_ctx;
+static volatile sig_atomic_t g_got_sigint;
 
 static void on_sigint(int sig) {
     g_got_sigint = 1;
@@ -57,62 +72,122 @@ static std::string basename(const std::string_view path) {
     }
 }
 
-static bool eval_tokens(struct llama_context *ctx_llama, std::vector<llama_token> tokens,
-                        int n_batch, int *n_past) {
+static void on_completion(const char *line, bestlineCompletions *comp) {
+    static const char *const kCompletions[] = {
+        "/context", //
+        "/stats", //
+    };
+    for (int i = 0; i < sizeof(kCompletions) / sizeof(*kCompletions); ++i)
+        if (startswith(kCompletions[i], line))
+            bestlineAddCompletion(comp, kCompletions[i]);
+}
+
+// handle irc style commands like: `/arg0 arg1 arg2`
+static bool handle_command(const char *command) {
+    if (!(command[0] == '/' && std::isalpha(command[1])))
+        return false;
+    std::vector<std::string> args;
+    std::istringstream iss(command + 1);
+    std::string arg;
+    while (iss >> arg)
+        args.push_back(arg);
+    if (args[0] == "stats") {
+        FLAG_log_disable = false;
+        llama_print_timings(g_ctx);
+        FLAG_log_disable = true;
+    } else if (args[0] == "context") {
+        int configured_context = llama_n_ctx(g_ctx);
+        int max_context = llama_n_ctx_train(g_model);
+        printf("%d out of %d context tokens used (%d tokens remaining)\n", n_past,
+               configured_context, configured_context - n_past);
+        if (configured_context < max_context)
+            printf("use the `-c %d` flag at startup for maximum context\n", max_context);
+    } else {
+        printf("%s: unrecognized command\n", args[0].c_str());
+    }
+    return true;
+}
+
+static void print_logo(const char16_t *s) {
+    for (int i = 0; s[i]; ++i) {
+        switch (s[i]) {
+        case u'█':
+            printf(MAGENTA "█" UNFOREGROUND);
+            break;
+        case u'╚':
+        case u'═':
+        case u'╝':
+        case u'╗':
+        case u'║':
+        case u'╔':
+            printf(FAINT "%C" UNBOLD, s[i]);
+            break;
+        default:
+            printf("%C", s[i]);
+            break;
+        }
+    }
+}
+
+static void die_out_of_context(void) {
+    fprintf(stderr,
+            "\n" BRIGHT_RED
+            "error: ran out of context window at %d tokens; you can use the maximum "
+            "context window size by passing the flag `-c %d` to llamafile." UNFOREGROUND "\n",
+            n_past, llama_n_ctx_train(g_model));
+    exit(1);
+}
+
+static void eval_tokens(std::vector<llama_token> tokens, int n_batch) {
     int N = (int)tokens.size();
     for (int i = 0; i < N; i += n_batch) {
         int n_eval = (int)tokens.size() - i;
         if (n_eval > n_batch)
             n_eval = n_batch;
-        if (llama_decode(ctx_llama, llama_batch_get_one(&tokens[i], n_eval, *n_past, 0)))
-            return false; // probably ran out of context
-        *n_past += n_eval;
+        if (llama_decode(g_ctx, llama_batch_get_one(&tokens[i], n_eval, n_past, 0)))
+            die_out_of_context();
+        n_past += n_eval;
     }
-    return true;
 }
 
-static bool eval_id(struct llama_context *ctx_llama, int id, int *n_past) {
+static void eval_id(int id) {
     std::vector<llama_token> tokens;
     tokens.push_back(id);
-    return eval_tokens(ctx_llama, tokens, 1, n_past);
+    eval_tokens(tokens, 1);
 }
 
-static bool eval_string(struct llama_context *ctx_llama, const char *str, int n_batch, int *n_past,
-                        bool add_special, bool parse_special) {
+static void eval_string(const char *str, int n_batch, bool add_special, bool parse_special) {
     std::string str2 = str;
-    std::vector<llama_token> embd_inp =
-        ::llama_tokenize(ctx_llama, str2, add_special, parse_special);
-    return eval_tokens(ctx_llama, embd_inp, n_batch, n_past);
+    eval_tokens(llama_tokenize(g_ctx, str2, add_special, parse_special), n_batch);
 }
 
 static void print_ephemeral(const char *description) {
-    fprintf(stderr, " \e[90m%s\e[39m\r", description);
+    fprintf(stderr, " " BRIGHT_BLACK "%s" UNFOREGROUND "\r", description);
 }
 
 static void clear_ephemeral(void) {
-    fprintf(stderr, "\e[K");
+    fprintf(stderr, CLEAR_FORWARD);
 }
 
-int main(int argc, char **argv) {
+int chatbot_main(int argc, char **argv) {
     llamafile_check_cpu();
     ShowCrashReports();
     log_disable();
 
     gpt_params params;
-    params.n_ctx = 8192; // make default context more reasonable
-
     if (!gpt_params_parse(argc, argv, params))
         return 1;
 
-    printf("\n\e[32m\
+    print_logo(u"\n\
 ██╗     ██╗      █████╗ ███╗   ███╗ █████╗ ███████╗██╗██╗     ███████╗\n\
 ██║     ██║     ██╔══██╗████╗ ████║██╔══██╗██╔════╝██║██║     ██╔════╝\n\
 ██║     ██║     ███████║██╔████╔██║███████║█████╗  ██║██║     █████╗\n\
 ██║     ██║     ██╔══██║██║╚██╔╝██║██╔══██║██╔══╝  ██║██║     ██╔══╝\n\
 ███████╗███████╗██║  ██║██║ ╚═╝ ██║██║  ██║██║     ██║███████╗███████╗\n\
-╚══════╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝\e[39m\n\
-\e[1msoftware\e[22m: llamafile " LLAMAFILE_VERSION_STRING "\n\
-\e[1mmodel\e[22m:    %s\n\n",
+╚══════╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝\n");
+
+    printf(BOLD "software" UNBOLD ": llamafile " LLAMAFILE_VERSION_STRING "\n" //
+           BOLD "model" UNBOLD ":    %s\n\n",
            basename(params.model).c_str());
 
     print_ephemeral("initializing backend...");
@@ -122,15 +197,15 @@ int main(int argc, char **argv) {
     print_ephemeral("initializing model...");
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = llamafile_gpu_layers(35);
-    llama_model *model = llama_load_model_from_file(params.model.c_str(), model_params);
-    if (model == NULL)
+    g_model = llama_load_model_from_file(params.model.c_str(), model_params);
+    if (g_model == NULL)
         return 2;
     clear_ephemeral();
 
     print_ephemeral("initializing context...");
     llama_context_params ctx_params = llama_context_params_from_gpt_params(params);
-    llama_context *ctx = llama_new_context_with_model(model, ctx_params);
-    if (ctx == NULL)
+    g_ctx = llama_new_context_with_model(g_model, ctx_params);
+    if (g_ctx == NULL)
         return 3;
     clear_ephemeral();
 
@@ -140,11 +215,10 @@ int main(int argc, char **argv) {
             "assistant gives helpful, detailed, and polite answers to the human's questions.";
 
     print_ephemeral("loading prompt...");
-    int n_past = 0;
-    bool add_bos = llama_should_add_bos_token(llama_get_model(ctx));
+    bool add_bos = llama_should_add_bos_token(llama_get_model(g_ctx));
     std::vector<llama_chat_msg> chat = {{"system", params.prompt}};
-    std::string msg = llama_chat_apply_template(model, params.chat_template, chat, false);
-    eval_string(ctx, msg.c_str(), params.n_batch, &n_past, add_bos, true);
+    std::string msg = llama_chat_apply_template(g_model, params.chat_template, chat, false);
+    eval_string(msg.c_str(), params.n_batch, add_bos, true);
     clear_ephemeral();
     printf("%s\n", params.special ? msg.c_str() : params.prompt.c_str());
 
@@ -153,27 +227,33 @@ int main(int argc, char **argv) {
     signal(SIGINT, on_sigint);
 
     // run chatbot
-    char *line;
-    bestlineLlamaMode(true);
-    while ((line = bestlineWithHistory(">>> ", "llamafile"))) {
+    for (;;) {
+        bestlineLlamaMode(true);
+        bestlineSetCompletionCallback(on_completion);
+        write(1, BRIGHT_GREEN, strlen(BRIGHT_GREEN));
+        char *line = bestlineWithHistory(">>> ", "llamafile");
+        write(1, UNFOREGROUND, strlen(UNFOREGROUND));
+        if (!line)
+            break;
         if (is_empty(line)) {
             free(line);
             continue;
         }
+        if (handle_command(line)) {
+            free(line);
+            continue;
+        }
         std::vector<llama_chat_msg> chat = {{"user", line}};
-        std::string msg = llama_chat_apply_template(model, params.chat_template, chat, true);
-        eval_string(ctx, msg.c_str(), params.n_batch, &n_past, false, true);
+        std::string msg = llama_chat_apply_template(g_model, params.chat_template, chat, true);
+        eval_string(msg.c_str(), params.n_batch, false, true);
         while (!g_got_sigint) {
-            llama_token id = llama_sampling_sample(ctx_sampling, ctx, NULL);
-            llama_sampling_accept(ctx_sampling, ctx, id, true);
-            printf("%s", llama_token_to_piece(ctx, id, params.special).c_str());
-            if (llama_token_is_eog(model, id))
+            llama_token id = llama_sampling_sample(ctx_sampling, g_ctx, NULL);
+            llama_sampling_accept(ctx_sampling, g_ctx, id, true);
+            if (llama_token_is_eog(g_model, id))
                 break;
+            printf("%s", llama_token_to_piece(g_ctx, id, params.special).c_str());
             fflush(stdout);
-            if (!eval_id(ctx, id, &n_past)) {
-                fprintf(stderr, "[out of context]\n");
-                exit(1);
-            }
+            eval_id(id);
         }
         g_got_sigint = 0;
         printf("\n");
@@ -181,7 +261,8 @@ int main(int argc, char **argv) {
     }
 
     llama_sampling_free(ctx_sampling);
-    llama_free(ctx);
-    llama_free_model(model);
+    llama_free(g_ctx);
+    llama_free_model(g_model);
     llama_backend_free();
+    return 0;
 }

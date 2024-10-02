@@ -146,6 +146,30 @@ static std::string chat_add_and_format(struct llama_model * model, std::vector<l
     return formatted;
 }
 
+enum Program {
+    UNKNOWN,
+    MAIN,
+    SERVER,
+    CHATBOT,
+    EMBEDDING,
+};
+
+enum Program determine_program(char *argv[]) {
+    enum Program prog = UNKNOWN;
+    for (int i = 0; argv[i]; ++i) {
+        if (!strcmp(argv[i], "--cli")) {
+            prog = MAIN;
+        } else if (!strcmp(argv[i], "--chat")) {
+            prog = CHATBOT;
+        } else if (!strcmp(argv[i], "--server")) {
+            prog = SERVER;
+        } else if (!strcmp(argv[i], "--embedding")) {
+            prog = EMBEDDING;
+        }
+    }
+    return prog;
+}
+
 int main(int argc, char ** argv) {
 
     mallopt(M_GRANULARITY, 2 * 1024 * 1024);
@@ -167,20 +191,28 @@ int main(int argc, char ** argv) {
     llamafile_check_cpu();
     ShowCrashReports();
     LoadZipArgs(&argc, &argv);
-    launch_sigint_thread();
 
-    if (!llamafile_has(argv, "--cli") &&
-        (llamafile_has(argv, "--server") ||
-         (!llamafile_has(argv, "-p") &&
-          !llamafile_has(argv, "-f") &&
-          !llamafile_has(argv, "--random-prompt")))) {
+    enum Program prog = determine_program(argv);
+
+    if (prog == SERVER ||
+        (prog == UNKNOWN &&
+         !llamafile_has(argv, "-p") &&
+         !llamafile_has(argv, "-f") &&
+         !llamafile_has(argv, "--random-prompt"))) {
         return server_cli(argc, argv);
     }
 
-    if (llamafile_has(argv, "--embedding")) {
+    if (prog == CHATBOT) {
+        int chatbot_main(int, char **);
+        return chatbot_main(argc, argv);
+    }
+
+    if (prog == EMBEDDING) {
         int embedding_cli(int, char **);
         return embedding_cli(argc, argv);
     }
+
+    launch_sigint_thread();
 
     gpt_params params;
     g_params = &params;

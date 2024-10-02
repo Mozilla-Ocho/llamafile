@@ -2526,6 +2526,15 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         else if (arg == "--server")
         {
         }
+        else if (arg == "--chat")
+        {
+        }
+        else if (arg == "--cli")
+        {
+        }
+        else if (arg == "--embedding")
+        {
+        }
         else if (arg == "--fast")
         {
             FLAG_fast = true;
@@ -2585,13 +2594,6 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 else if (value == "numactl") { params.numa = GGML_NUMA_STRATEGY_NUMACTL; }
                 else { invalid_param = true; break; }
             }
-        }
-        else if (arg == "--embedding")
-        {
-            fprintf(stderr, "error: the --embedding endpoint is no longer supported in the the standard llamafile --server. "
-                    "please use our new llamafiler command, which gives you a 4x faster embedding server. this is our new "
-                    "server for llamafile that, once feature complete, will replace this one entirely.\n");
-            exit(1);
         }
         else if (arg == "-cb" || arg == "--cont-batching")
         {

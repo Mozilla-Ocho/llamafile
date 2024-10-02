@@ -199,6 +199,12 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     if (arg == "--cli") {
         return true;
     }
+    if (arg == "--chat") {
+        return true;
+    }
+    if (arg == "--server") {
+        return true;
+    }
     if (arg == "--trace") {
         FLAG_trace = true;
         FLAG_unsecure = true;
