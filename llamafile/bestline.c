@@ -235,6 +235,7 @@ static int gotcont;
 static int gotwinch;
 static signed char rawmode;
 static char maskmode;
+static char emacsmode;
 static char llamamode;
 static char balancemode;
 static char ispaused;
@@ -3168,15 +3169,19 @@ static ssize_t bestlineEdit(int stdin_fd, int stdout_fd, const char *prompt, con
             Case(Ctrl('K'), bestlineEditKillRight(&l));
             Case(Ctrl('W'), bestlineEditRuboutWord(&l));
         case Ctrl('C'):
-            if (bestlineRead(l.ifd, seq, sizeof(seq), &l) != 1)
-                break;
-            switch (seq[0]) {
-                Case(Ctrl('C'), bestlineEditInterrupt());
-                Case(Ctrl('B'), bestlineEditBarf(&l));
-                Case(Ctrl('S'), bestlineEditSlurp(&l));
-                Case(Ctrl('R'), bestlineEditRaise(&l));
-            default:
-                break;
+            if (emacsmode) {
+                if (bestlineRead(l.ifd, seq, sizeof(seq), &l) != 1)
+                    break;
+                switch (seq[0]) {
+                    Case(Ctrl('C'), bestlineEditInterrupt());
+                    Case(Ctrl('B'), bestlineEditBarf(&l));
+                    Case(Ctrl('S'), bestlineEditSlurp(&l));
+                    Case(Ctrl('R'), bestlineEditRaise(&l));
+                default:
+                    break;
+                }
+            } else {
+                bestlineEditInterrupt();
             }
             break;
         case Ctrl('X'):
@@ -3757,6 +3762,16 @@ void bestlineBalanceMode(char mode) {
  */
 void bestlineLlamaMode(char mode) {
     llamamode = mode;
+}
+
+/**
+ * Enables Emacs mode.
+ *
+ * This mode remaps CTRL-C so you can use additional shortcuts, like C-c
+ * C-s for slurp. By default, CTRL-C raises SIGINT for exiting programs.
+ */
+void bestlineEmacsMode(char mode) {
+    emacsmode = mode;
 }
 
 /**

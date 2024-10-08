@@ -34,6 +34,7 @@
 #define FAINT "\e[2m"
 #define UNBOLD "\e[22m"
 #define RED "\e[31m"
+#define GREEN "\e[32m"
 #define MAGENTA "\e[35m"
 #define UNFOREGROUND "\e[39m"
 #define BRIGHT_BLACK "\e[90m"
@@ -75,6 +76,7 @@ static std::string basename(const std::string_view path) {
 static void on_completion(const char *line, bestlineCompletions *comp) {
     static const char *const kCompletions[] = {
         "/context", //
+        "/exit", //
         "/stats", //
     };
     for (int i = 0; i < sizeof(kCompletions) / sizeof(*kCompletions); ++i)
@@ -91,7 +93,9 @@ static bool handle_command(const char *command) {
     std::string arg;
     while (iss >> arg)
         args.push_back(arg);
-    if (args[0] == "stats") {
+    if (args[0] == "exit") {
+        exit(0);
+    } else if (args[0] == "stats") {
         FLAG_log_disable = false;
         llama_print_timings(g_ctx);
         FLAG_log_disable = true;
@@ -112,7 +116,7 @@ static void print_logo(const char16_t *s) {
     for (int i = 0; s[i]; ++i) {
         switch (s[i]) {
         case u'█':
-            printf(MAGENTA "█" UNFOREGROUND);
+            printf(GREEN "█" UNFOREGROUND);
             break;
         case u'╚':
         case u'═':
@@ -223,18 +227,21 @@ int chatbot_main(int argc, char **argv) {
     printf("%s\n", params.special ? msg.c_str() : params.prompt.c_str());
 
     // perform important setup
-    struct llama_sampling_context *ctx_sampling = llama_sampling_init(params.sparams);
+    struct llama_sampling_context *sampler = llama_sampling_init(params.sparams);
     signal(SIGINT, on_sigint);
 
     // run chatbot
     for (;;) {
         bestlineLlamaMode(true);
         bestlineSetCompletionCallback(on_completion);
-        write(1, BRIGHT_GREEN, strlen(BRIGHT_GREEN));
+        write(1, GREEN, strlen(GREEN));
         char *line = bestlineWithHistory(">>> ", "llamafile");
         write(1, UNFOREGROUND, strlen(UNFOREGROUND));
-        if (!line)
+        if (!line) {
+            if (g_got_sigint)
+                printf("\n");
             break;
+        }
         if (is_empty(line)) {
             free(line);
             continue;
@@ -247,8 +254,8 @@ int chatbot_main(int argc, char **argv) {
         std::string msg = llama_chat_apply_template(g_model, params.chat_template, chat, true);
         eval_string(msg.c_str(), params.n_batch, false, true);
         while (!g_got_sigint) {
-            llama_token id = llama_sampling_sample(ctx_sampling, g_ctx, NULL);
-            llama_sampling_accept(ctx_sampling, g_ctx, id, true);
+            llama_token id = llama_sampling_sample(sampler, g_ctx, NULL);
+            llama_sampling_accept(sampler, g_ctx, id, true);
             if (llama_token_is_eog(g_model, id))
                 break;
             printf("%s", llama_token_to_piece(g_ctx, id, params.special).c_str());
@@ -260,9 +267,18 @@ int chatbot_main(int argc, char **argv) {
         free(line);
     }
 
-    llama_sampling_free(ctx_sampling);
+    print_ephemeral("freeing context...");
+    llama_sampling_free(sampler);
     llama_free(g_ctx);
+    clear_ephemeral();
+
+    print_ephemeral("freeing model...");
     llama_free_model(g_model);
+    clear_ephemeral();
+
+    print_ephemeral("freeing backend...");
     llama_backend_free();
+    clear_ephemeral();
+
     return 0;
 }

@@ -28,6 +28,7 @@ int bestlineHistoryAdd(const char *);
 int bestlineHistoryLoad(const char *);
 int bestlineHistorySave(const char *);
 void bestlineBalanceMode(char);
+void bestlineEmacsMode(char);
 void bestlineClearScreen(int);
 void bestlineDisableRawMode(void);
 void bestlineFree(void *);
