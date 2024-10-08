@@ -18,8 +18,8 @@
 #include "llamafile.h"
 #include <fcntl.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /**
  * Displays man page.
@@ -60,12 +60,12 @@ void llamafile_help(const char *path) {
         int j = 0;
         for (int i = 0; i < size; ++i) {
             switch (text[i]) {
-                case '\b':
-                    --j;
-                    break;
-                default:
-                    text[j++] = text[i];
-                    break;
+            case '\b':
+                --j;
+                break;
+            default:
+                text[j++] = text[i];
+                break;
             }
         }
         text[j] = 0;
