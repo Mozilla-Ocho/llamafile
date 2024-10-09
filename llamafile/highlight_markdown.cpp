@@ -163,6 +163,13 @@ void HighlightMarkdown::flush(std::string *r) {
     case LANG:
         lang_.clear();
         break;
+    case STAR:
+        *r += '*';
+        break;
+    case STRONG:
+    case STRONG_STAR:
+        *r += RESET;
+        break;
     case CODE:
     case CODE_TICK:
     case CODE_TICK_TICK:
