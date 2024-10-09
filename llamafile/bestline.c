@@ -3142,8 +3142,10 @@ static ssize_t bestlineEdit(int stdin_fd, int stdout_fd, const char *prompt, con
             seq[0] = '\r';
             seq[1] = 0;
         } else {
-            free(history[--historylen]);
-            history[historylen] = 0;
+            if (historylen) {
+                free(history[--historylen]);
+                history[historylen] = 0;
+            }
             free(l.buf);
             abFree(&l.full);
             return -1;
@@ -3193,8 +3195,10 @@ static ssize_t bestlineEdit(int stdin_fd, int stdout_fd, const char *prompt, con
             if (l.len) {
                 bestlineEditDelete(&l);
             } else {
-                free(history[--historylen]);
-                history[historylen] = 0;
+                if (historylen) {
+                    free(history[--historylen]);
+                    history[historylen] = 0;
+                }
                 free(l.buf);
                 abFree(&l.full);
                 return -1;
@@ -3207,8 +3211,10 @@ static ssize_t bestlineEdit(int stdin_fd, int stdout_fd, const char *prompt, con
         case '\n': {
             char is_finished = 1;
             char needs_strip = 0;
-            free(history[--historylen]);
-            history[historylen] = 0;
+            if (historylen) {
+                free(history[--historylen]);
+                history[historylen] = 0;
+            }
             l.final = 1;
             bestlineEditEnd(&l);
             bestlineRefreshLineForce(&l);
