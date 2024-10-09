@@ -10,6 +10,8 @@
 #include <thread>
 #include <fstream>
 
+#include "llamafile/xterm.h"
+
 #define COMMON_SAMPLE_RATE 16000
 
 //
@@ -157,43 +159,27 @@ void sam_print_usage(int argc, char ** argv, const sam_params & params);
 // Terminal utils
 //
 
-#define SQR(X)    ((X) * (X))
-#define UNCUBE(x) x < 48 ? 0 : x < 115 ? 1 : (x - 35) / 40
-
-/**
- * Quantizes 24-bit RGB to xterm256 code range [16,256).
- */
-static int rgb2xterm256(int r, int g, int b) {
-    unsigned char cube[] = {0, 0137, 0207, 0257, 0327, 0377};
-    int av, ir, ig, ib, il, qr, qg, qb, ql;
-    av = r * .299 + g * .587 + b * .114 + .5;
-    ql = (il = av > 238 ? 23 : (av - 3) / 10) * 10 + 8;
-    qr = cube[(ir = UNCUBE(r))];
-    qg = cube[(ig = UNCUBE(g))];
-    qb = cube[(ib = UNCUBE(b))];
-    if (SQR(qr - r) + SQR(qg - g) + SQR(qb - b) <=
-        SQR(ql - r) + SQR(ql - g) + SQR(ql - b))
-        return ir * 36 + ig * 6 + ib + 020;
-    return il + 0350;
-}
-
-static std::string set_xterm256_foreground(int r, int g, int b) {
-    int x = rgb2xterm256(r, g, b);
+static std::string set_xterm256_foreground(int rgb) {
+    int x = rgb2xterm256(rgb);
     std::ostringstream oss;
     oss << "\033[38;5;" << x << "m";
     return oss.str();
 }
 
+static inline int rgb(int red, int green, int blue) {
+    return (red & 255) << 16 | (green & 255) << 8 | (blue & 255);
+}
+
 // Lowest is red, middle is yellow, highest is green. Color scheme from
 // Paul Tol; it is colorblind friendly https://personal.sron.nl/~pault/
 const std::vector<std::string> k_colors = {
-    set_xterm256_foreground(220,   5,  12),
-    set_xterm256_foreground(232,  96,  28),
-    set_xterm256_foreground(241, 147,  45),
-    set_xterm256_foreground(246, 193,  65),
-    set_xterm256_foreground(247, 240,  86),
-    set_xterm256_foreground(144, 201, 135),
-    set_xterm256_foreground( 78, 178, 101),
+    set_xterm256_foreground(rgb(220,   5,  12)),
+    set_xterm256_foreground(rgb(232,  96,  28)),
+    set_xterm256_foreground(rgb(241, 147,  45)),
+    set_xterm256_foreground(rgb(246, 193,  65)),
+    set_xterm256_foreground(rgb(247, 240,  86)),
+    set_xterm256_foreground(rgb(144, 201, 135)),
+    set_xterm256_foreground(rgb( 78, 178, 101)),
 };
 
 //

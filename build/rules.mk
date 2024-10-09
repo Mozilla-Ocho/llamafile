@@ -5,6 +5,9 @@ LINK.o = $(CXX) $(CCFLAGS) $(LDFLAGS)
 COMPILE.c = $(CC) $(CCFLAGS) $(CFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -c
 COMPILE.cc = $(CXX) $(CCFLAGS) $(CXXFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -c
 
+%.c: %.gperf
+	gperf $< >$@
+
 o/$(MODE)/%.o: %.c $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.c) -o $@ $<

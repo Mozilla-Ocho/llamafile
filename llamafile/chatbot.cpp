@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "llamafile/highlight.h"
 #include <assert.h>
 #include <cosmo.h>
 #include <ctype.h>
@@ -227,6 +228,7 @@ int chatbot_main(int argc, char **argv) {
     printf("%s\n", params.special ? msg.c_str() : params.prompt.c_str());
 
     // perform important setup
+    HighlightMarkdown highlighter;
     struct llama_sampling_context *sampler = llama_sampling_init(params.sparams);
     signal(SIGINT, on_sigint);
 
@@ -258,13 +260,17 @@ int chatbot_main(int argc, char **argv) {
             llama_sampling_accept(sampler, g_ctx, id, true);
             if (llama_token_is_eog(g_model, id))
                 break;
-            printf("%s", llama_token_to_piece(g_ctx, id, params.special).c_str());
+            std::string s;
+            highlighter.feed(&s, llama_token_to_piece(g_ctx, id, params.special));
+            printf("%s", s.c_str());
             fflush(stdout);
             eval_id(id);
         }
         g_got_sigint = 0;
-        printf("\n");
         free(line);
+        std::string s;
+        highlighter.flush(&s);
+        printf("%s\n", s.c_str());
     }
 
     print_ephemeral("freeing context...");

@@ -52,6 +52,9 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/zipcheck			\
 		o/$(MODE)/llamafile/tokenize			\
 		o/$(MODE)/llamafile/addnl			\
+		o/$(MODE)/llamafile/high			\
+		o/$(MODE)/llamafile/highlight_c_test.runs	\
+		o/$(MODE)/llamafile/highlight_python_test.runs	\
 		o/$(MODE)/llamafile/pool_test.runs		\
 		o/$(MODE)/llamafile/pool_cancel_test.runs	\
 		o/$(MODE)/llamafile/parse_cidr_test.runs	\
@@ -161,6 +164,24 @@ o/$(MODE)/llamafile/pool_test:				\
 		o/$(MODE)/llamafile/pool_test.o		\
 		o/$(MODE)/llamafile/crash.o		\
 		o/$(MODE)/llamafile/pool.o		\
+
+o/$(MODE)/llamafile/highlight_c_test:			\
+		o/$(MODE)/llamafile/highlight_c_test.o	\
+		o/$(MODE)/llamafile/highlight_c.o	\
+		o/$(MODE)/llamafile/is_keyword_c.o	\
+
+o/$(MODE)/llamafile/highlight_python_test:			\
+		o/$(MODE)/llamafile/highlight_python_test.o	\
+		o/$(MODE)/llamafile/highlight_python.o	\
+		o/$(MODE)/llamafile/is_keyword_python.o	\
+
+o/$(MODE)/llamafile/high:				\
+		o/$(MODE)/llamafile/high.o		\
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
+
+o/$(MODE)/llamafile/hex2xterm:				\
+		o/$(MODE)/llamafile/hex2xterm.o		\
+		o/$(MODE)/llamafile/xterm.o		\
 
 o/$(MODE)/llamafile/pool_cancel_test:			\
 		o/$(MODE)/llamafile/pool_cancel_test.o	\
