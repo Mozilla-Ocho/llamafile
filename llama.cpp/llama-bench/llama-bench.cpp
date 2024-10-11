@@ -450,6 +450,7 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                 invalid_param = true;
                 break;
             }
+            FLAG_gpu = LLAMAFILE_GPU_AUTO;
             auto p = split<int>(argv[i], split_delim);
             params.n_gpu_layers.insert(params.n_gpu_layers.end(), p.begin(), p.end());
         } else if (arg == "-sm" || arg == "--split-mode") {
@@ -1357,8 +1358,6 @@ __attribute__((__constructor__(101))) static void init(void) {
 }
 
 int main(int argc, char ** argv) {
-    FLAG_gpu = LLAMAFILE_GPU_DISABLE; // [jart]
-
     ShowCrashReports();
 
     // try to set locale for unicode characters in markdown
@@ -1382,6 +1381,7 @@ int main(int argc, char ** argv) {
 #endif
 
     cmd_params params = parse_cmd_params(argc, argv);
+    FLAGS_READY = true;
 
     // initialize llama.cpp
     if (!params.verbose) {
