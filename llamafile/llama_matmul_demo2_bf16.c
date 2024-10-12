@@ -5,9 +5,11 @@
 
 // run me:
 //
-//     make -j o//llamafile/llama_matmul_demo_bf16
-//     o//llamafile/llama_matmul_demo_bf16
+//     make -j o//llamafile/llama_matmul_demo2_bf16
+//     o//llamafile/llama_matmul_demo2_bf16
 //
+// - demo  => GFLOPS = 528.307
+// - demo2 => GFLOPS = 934.148
 
 #include <immintrin.h>
 #include <math.h>
@@ -42,14 +44,22 @@
 
 #define MEM_ALIGN 64
 
-#define MR 64
-#define NR 6
+#define MR 32
+#define NR 12
 
 // Consider fine-tuning the following parameters for your CPU
-#define NTHREADS 160
-#define MC MR *NTHREADS * 4
-#define NC NR *NTHREADS * 32
+// NB_BLOC is not implemented, do not change it for now.
+#define NB_CORE 8
+#define NB_BLOC 1
+#define NTHREADS (NB_CORE*NB_BLOC)
+
+#define MC MR*4
+#define NC NR*32
 #define KC 1000
+
+#define MT MC*NTHREADS // TODO: NB_CORE_PER_L3
+#define NT NC*NB_BLOC  // TODO: NB_L3
+
 
 #define ALIGNED __attribute__((__aligned__(MEM_ALIGN)))
 
@@ -78,8 +88,9 @@ static void syncthreads(int ith) {
     }
 }
 
-static float blockB_packed[NC * KC] ALIGNED;
-static uint16_t blockA_packed[MC * KC] ALIGNED;
+// TODO: use bf16 for blockB too!!!
+static float    blockB_packed[NT*KC] ALIGNED;
+static uint16_t blockA_packed[NTHREADS][MC*KC] ALIGNED;
 
 static float from_brain(uint16_t h) {
     union {
@@ -104,7 +115,7 @@ static void pack_panelB(const uint16_t *B, float *blockB_packed, const int nr, c
 
 static void pack_blockB(const uint16_t *B, float *blockB_packed, const int nc, const int kc,
                         const int K, const int ith) {
-    for (int j = ith * NR; j < nc; j += NR * NTHREADS) {
+    for (int j = ith * NR; j < nc; j += NR*NTHREADS) {
         const int nr = min(NR, nc - j);
         pack_panelB(&B[j * K], &blockB_packed[j * kc], nr, kc, K);
     }
@@ -122,86 +133,87 @@ static void pack_panelA(const uint16_t *A, uint16_t *blockA_packed, const int mr
     }
 }
 
-static void pack_blockA(const uint16_t *A, uint16_t *blockA_packed, const int mc, const int kc,
-                        const int K, const int ith) {
-    for (int i = ith * MR; i < mc; i += MR * NTHREADS) {
+// 1 blockA per THREAD: blockA_packed[NTHREADS][MC/MR][MR]
+static void pack_blockA(const uint16_t *A, uint16_t *blockA_packed, const int mc, const int kc, const int K) {
+    for (int i = 0; i < MC; i += MR) {
         const int mr = min(MR, mc - i);
         pack_panelA(&A[i * K], &blockA_packed[i * kc], mr, kc, K);
     }
 }
 
-static void kernel_64x6(uint16_t *blockA_packed, float *blockB_packed, float *C, const int m,
+static void kernel_32x12(uint16_t *blockA_packed, float *blockB_packed, float *C, const int m,
                         const int n, const int k, const int M) {
-    __m512 C_buffer[4][6];
-    __m512 a_packFloat16[4];
+    __m512 C_buffer[2][12];
+    __m512 a_packFloat16[2];
     __m512 b_packFloat16;
-    __mmask16 mask[4] = {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
-    if (m != 64) {
-        for (int i = 0; i < 4; i++) {
+    __mmask16 mask[4] = {0xFFFF, 0xFFFF};
+    if (m != 32) {
+        for (int i = 0; i < 2; i++) {
             mask[i] = (m > i * 16)
                           ? (__mmask16)((1ULL << ((m - i * 16) > 16 ? 16 : (m - i * 16))) - 1)
                           : 0x0000;
         }
         for (int j = 0; j < n; j++) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 2; i++) {
                 C_buffer[i][j] = _mm512_maskz_loadu_ps(mask[i], &C[j * M + i * 16]);
             }
         }
     } else {
         for (int j = 0; j < n; j++) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 2; i++) {
                 C_buffer[i][j] = _mm512_loadu_ps(&C[j * M + i * 16]);
             }
         }
     }
     for (int p = 0; p < k; p++) {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 2; i++) {
             a_packFloat16[i] = _mm512_loadu_hs(blockA_packed + i * 16);
         }
-        for (int j = 0; j < 6; j++) {
+        for (int j = 0; j < 12; j++) {
             b_packFloat16 = _mm512_set1_ps(blockB_packed[j]);
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 2; i++) {
                 C_buffer[i][j] = _mm512_fmadd_ps(a_packFloat16[i], b_packFloat16, C_buffer[i][j]);
             }
         }
-        blockA_packed += 64;
-        blockB_packed += 6;
+        blockA_packed += 32;
+        blockB_packed += 12;
     }
-    if (m != 64) {
+    if (m != 32) {
         for (int j = 0; j < n; j++) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 2; i++) {
                 _mm512_mask_storeu_ps(&C[j * M + i * 16], mask[i], C_buffer[i][j]);
             }
         }
     } else {
         for (int j = 0; j < n; j++) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 2; i++) {
                 _mm512_storeu_ps(&C[j * M + i * 16], C_buffer[i][j]);
             }
         }
     }
 }
 
-static void matmul_llama(uint16_t *A, uint16_t *B, float *C, const int M, const int N, const int K,
-                         const int ith) {
-    for (int j = 0; j < N; j += NC) {
-        const int nc = min(NC, N - j);
+static void matmul_llama(uint16_t *A, uint16_t *B, float *C, const int M, const int N, const int K, const int ith) {
+    for (int j = 0; j < N; j += NT) {  // TODO: add // level per_l3_cache
+        const int nt = min(NT, N - j);
         for (int p = 0; p < K; p += KC) {
             const int kc = min(KC, K - p);
-            pack_blockB(&B[j * K + p], blockB_packed, nc, kc, K, ith);
-            for (int i = 0; i < M; i += MC) {
+            
+            pack_blockB(&B[j * K + p], blockB_packed, nt, kc, K, ith);
+            
+            syncthreads(ith);
+
+            for (int i = ith * MC; i < M; i += MT) {  // this is the on that is //
                 const int mc = min(MC, M - i);
-                pack_blockA(&A[i * K + p], blockA_packed, mc, kc, K, ith);
-                syncthreads(ith);
-                for (int jr = ith * NR; jr < nc; jr += NR * NTHREADS) {
-                    const int nr = min(NR, nc - jr);
+                pack_blockA(&A[i*K + p], blockA_packed[ith], mc, kc, K);
+                for (int jr = 0; jr < nt; jr += NR) {
+                    const int nr = min(NR, nt - jr);
                     for (int ir = 0; ir < mc; ir += MR) {
                         const int mr = min(MR, mc - ir);
-                        kernel_64x6(&blockA_packed[ir * kc], &blockB_packed[jr * kc],
-                                    &C[(j + jr) * M + (i + ir)], mr, nr, kc, M);
+                        kernel_32x12(&blockA_packed[ith][ir * kc], &blockB_packed[jr * kc],
+                                     &C[(j + jr) * M + (i + ir)], mr, nr, kc, M);
                     }
                 }
-                syncthreads(ith);
             }
         }
     }

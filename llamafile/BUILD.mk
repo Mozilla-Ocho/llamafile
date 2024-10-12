@@ -124,6 +124,7 @@ o/$(MODE)/llamafile/llama_matmul_avx2_bf16.o: private TARGET_ARCH += -Xx86_64-ma
 o/$(MODE)/llamafile/llama_matmul_avx512_bf16.o: private TARGET_ARCH += -Xx86_64-march=znver4 -O3
 o/$(MODE)/llamafile/llama_matmul_demo_fp16.o: private TARGET_ARCH += -Xx86_64-march=znver4 -O3 -fopenmp
 o/$(MODE)/llamafile/llama_matmul_demo_bf16.o: private TARGET_ARCH += -Xx86_64-march=znver4 -O3 -fopenmp
+o/$(MODE)/llamafile/llama_matmul_demo2_bf16.o: private TARGET_ARCH += -Xx86_64-march=znver4 -O3 -fopenmp
 
 o/$(MODE)/llamafile/sgemm.o: private CXXFLAGS += -Os
 
@@ -225,3 +226,7 @@ o/$(MODE)/llamafile/check:					\
 		o/$(MODE)/llamafile/tinyblas_test.runs		\
 		o/$(MODE)/llamafile/llama_matmul_demo_fp16	\
 		o/$(MODE)/llamafile/llama_matmul_demo_bf16	\
+
+
+# o/$(MODE)/llamafile/llama_matmul_demo2_bf16	\
+

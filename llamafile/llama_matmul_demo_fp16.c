@@ -5,8 +5,8 @@
 
 // run me:
 //
-//     make -j o//llamafile/llama_matmul_demo
-//     o//llamafile/llama_matmul_demo
+//     make -j o//llamafile/llama_matmul_demo_fp16
+//     o//llamafile/llama_matmul_demo_fp16
 //
 
 #include <immintrin.h>
