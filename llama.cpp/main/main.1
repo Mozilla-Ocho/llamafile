@@ -1,10 +1,14 @@
-.Dd January 1, 2024
+.Dd October 12, 2024
 .Dt LLAMAFILE 1
 .Os Mozilla Ocho
 .Sh NAME
 .Nm llamafile
 .Nd large language model runner
 .Sh SYNOPSIS
+.Nm
+.Op Fl Fl chat
+.Op flags...
+.Fl m Ar model.gguf
 .Nm
 .Op Fl Fl server
 .Op flags...
@@ -36,13 +40,20 @@ Chatbot that passes the Turing test
 .It
 Text/image summarization and analysis
 .El
-.Sh OPTIONS
-The following options are available:
+.Sh MODES
+.Pp
+There's three modes of operation:
+.Fl Fl chat ,
+.Fl Fl server ,
+and
+.Fl Fl cli .
+If none of these flags is specified, then llamafile makes its best guess
+about which mode is best. By default, the
+.Fl Fl chat
+interface is launched in the foreground with a
+.Fl Fl server
+in the background.
 .Bl -tag -width indent
-.It Fl Fl version
-Print version and exit.
-.It Fl h , Fl Fl help
-Show help message and exit.
 .It Fl Fl cli
 Puts program in command line interface mode. This flag is implied when a
 prompt is supplied using either the
@@ -50,9 +61,19 @@ prompt is supplied using either the
 or
 .Fl f
 flags.
+.It Fl Fl chat
+Puts program in command line chatbot only mode. This mode launches an
+interactive shell that lets you talk to your LLM, which should be
+specified using the
+.Fl m
+flag. This mode also launches a server in the background. The system
+prompt that's displayed at the start of your conversation may be changed
+by passing the
+.Fl p
+flag.
 .It Fl Fl server
-Puts program in server mode. This will launch an HTTP server on a local
-port. This server has both a web UI and an OpenAI API compatible
+Puts program in server only mode. This will launch an HTTP server on a
+local port. This server has both a web UI and an OpenAI API compatible
 completions endpoint. When the server is run on a desk system, a tab
 browser tab will be launched automatically that displays the web UI.
 This
@@ -62,6 +83,15 @@ flag is implied if no prompt is specified, i.e. neither the
 or
 .Fl f
 flags are passed.
+.El
+.Sh OPTIONS
+.Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl Fl version
+Print version and exit.
+.It Fl h , Fl Fl help
+Show help message and exit.
 .It Fl m Ar FNAME , Fl Fl model Ar FNAME
 Model path in the GGUF file format.
 .Pp
@@ -83,25 +113,6 @@ Default: -1
 Number of threads to use during generation.
 .Pp
 Default: $(nproc)/2
-.It Fl tb Ar N , Fl Fl threads-batch Ar N
-Set the number of threads to use during batch and prompt processing. In
-some systems, it is beneficial to use a higher number of threads during
-batch processing than during generation. If not specified, the number of
-threads used for batch processing will be the same as the number of
-threads used for generation.
-.Pp
-Default: Same as
-.Fl Fl threads
-.It Fl td Ar N , Fl Fl threads-draft Ar N
-Number of threads to use during generation.
-.Pp
-Default: Same as
-.Fl Fl threads
-.It Fl tbd Ar N , Fl Fl threads-batch-draft Ar N
-Number of threads to use during batch and prompt processing.
-.Pp
-Default: Same as
-.Fl Fl threads-draft
 .It Fl Fl in-prefix-bos
 Prefix BOS to user inputs, preceding the
 .Fl Fl in-prefix
@@ -143,21 +154,15 @@ Number of tokens to predict.
 .Pp
 Default: -1
 .It Fl c Ar N , Fl Fl ctx-size Ar N
-Set the size of the prompt context. A larger context size helps the
-model to better comprehend and generate responses for longer input or
-conversations. The LLaMA models were built with a context of 2048, which
-yields the best results on longer input / inference.
-.Pp
-.Bl -dash -compact
-.It
-0 = loaded automatically from model
-.El
-.Pp
-Default: 512
+Sets the maximum context size, in tokens. In
+.Fl Fl chat
+mode, this value sets a hard limit on how long your conversation can be.
+The default is 8192 tokens. If this value is zero, then it'll be set to
+the maximum context size the model allows.
 .It Fl b Ar N , Fl Fl batch-size Ar N
 Batch size for prompt processing.
 .Pp
-Default: 512
+Default: 2048
 .It Fl Fl top-k Ar N
 Top-k sampling.
 .Pp

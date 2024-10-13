@@ -29,6 +29,10 @@
 
 double g_prompt_per_second_jart;
 
+bool g_server_background_mode;
+llama_model *g_server_force_llama_model;
+void (*g_server_on_listening)(const char *host, int port);
+
 using json = nlohmann::json;
 
 struct server_params
@@ -443,9 +447,16 @@ struct llama_server_context
             }
         }
 
-        llama_init_result llama_init = llama_init_from_gpt_params(params);
-        model = llama_init.model;
-        ctx = llama_init.context;
+        if (!g_server_force_llama_model) {
+            llama_init_result llama_init = llama_init_from_gpt_params(params);
+            model = llama_init.model;
+            ctx = llama_init.context;
+        } else {
+            llama_context_params ctx_params = llama_context_params_from_gpt_params(params);
+            model = g_server_force_llama_model;
+            ctx = llama_new_context_with_model(model, ctx_params);
+        }
+
         if (model == nullptr)
         {
             LOG_ERROR("unable to load model", {{"model", params.model}});
@@ -3129,13 +3140,16 @@ int server_cli(int argc, char **argv)
     }
 
     // launch browser tab
-    if (!sparams.nobrowser) {
+    if (!sparams.nobrowser && !g_server_background_mode) {
         char url[128];
         snprintf(url, sizeof(url), "http://%s:%d/", connect_host, sparams.port);
         llamafile_launch_browser(url);
     }
+    if (g_server_on_listening) {
+        g_server_on_listening(connect_host, sparams.port);
+    }
 
-    if (!FLAG_unsecure) {
+    if (!FLAG_unsecure && !g_server_background_mode) {
         if (IsXnu()) {
             // Cosmopolitan libc explicitly does not support cosmo_dlopen on x64
             // macOS and mac_sandbox_init depends on cosmo_dlopen. We'll attempt
@@ -3685,6 +3699,7 @@ int server_cli(int argc, char **argv)
         llama.queue_tasks.terminate();
     };
 
+    if (!g_server_background_mode) {
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
     struct sigaction sigint_action;
     sigint_action.sa_handler = signal_handler;
@@ -3697,6 +3712,8 @@ int server_cli(int argc, char **argv)
     };
     SetConsoleCtrlHandler(reinterpret_cast<PHANDLER_ROUTINE>(console_ctrl_handler), true);
 #endif
+    }
+
     llama.queue_tasks.start_loop();
     svr.stop();
     t.join();

@@ -138,6 +138,9 @@ struct completion_token_output
 
 static inline void server_log(const char *level, const char *function, int line, const char *message, const nlohmann::ordered_json &extra)
 {
+    if (FLAG_log_disable) // [jart]
+        return;
+
     std::stringstream ss_tid;
     ss_tid << std::this_thread::get_id();
     json log = nlohmann::ordered_json{

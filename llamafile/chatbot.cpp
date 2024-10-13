@@ -27,6 +27,7 @@
 
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
+#include "llama.cpp/server/server.h"
 #include "llamafile/bestline.h"
 #include "llamafile/highlight.h"
 #include "llamafile/llamafile.h"
@@ -43,9 +44,17 @@
 #define BRIGHT_GREEN "\e[92m"
 #define CLEAR_FORWARD "\e[K"
 
+struct ServerArgs {
+    int argc;
+    char **argv;
+};
+
 static int n_past;
 static llama_model *g_model;
 static llama_context *g_ctx;
+static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
+static std::string g_listen_url;
 static volatile sig_atomic_t g_got_sigint;
 
 static void on_sigint(int sig) {
@@ -195,18 +204,24 @@ static void eval_string(const std::string &str, int n_batch, bool add_special, b
     eval_tokens(llama_tokenize(g_ctx, str, add_special, parse_special), n_batch);
 }
 
-int chatbot_main(int argc, char **argv) {
-    llamafile_check_cpu();
-    ShowCrashReports();
-    log_disable();
+static void on_server_listening(const char *host, int port) {
+    pthread_mutex_lock(&g_lock);
+    g_listen_url = format("http://%s:%d/", host, port);
+    pthread_cond_signal(&g_cond);
+    pthread_mutex_unlock(&g_lock);
+}
 
-    gpt_params params;
-    params.n_batch = 512; // for better progress indication
-    params.sparams.temp = 0; // don't believe in randomness by default
-    if (!gpt_params_parse(argc, argv, params)) {
-        fprintf(stderr, "error: failed to parse flags\n");
-        exit(1);
-    }
+static void *server_thread(void *arg) {
+    ServerArgs *sargs = (ServerArgs *)arg;
+    server_log_json = false;
+    g_server_background_mode = true;
+    g_server_force_llama_model = g_model;
+    g_server_on_listening = on_server_listening;
+    exit(server_cli(sargs->argc, sargs->argv));
+}
+
+int chatbot_main(int argc, char **argv) {
+    log_disable();
 
     print_logo(u"\n\
 ██╗     ██╗      █████╗ ███╗   ███╗ █████╗ ███████╗██╗██╗     ███████╗\n\
@@ -216,15 +231,18 @@ int chatbot_main(int argc, char **argv) {
 ███████╗███████╗██║  ██║██║ ╚═╝ ██║██║  ██║██║     ██║███████╗███████╗\n\
 ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝\n");
 
-    printf(BOLD "software" UNBOLD ": llamafile " LLAMAFILE_VERSION_STRING "\n" //
-           BOLD "model" UNBOLD ":    %s\n\n",
-           basename(params.model).c_str());
-
-    print_ephemeral("initializing backend...");
+    print_ephemeral("loading backend...");
     llama_backend_init();
+    gpt_params params;
+    params.n_batch = 512; // for better progress indication
+    params.sparams.temp = 0; // don't believe in randomness by default
+    if (!gpt_params_parse(argc, argv, params)) { // also loads gpu module
+        fprintf(stderr, "error: failed to parse flags\n");
+        exit(1);
+    }
     clear_ephemeral();
 
-    print_ephemeral("initializing model...");
+    print_ephemeral("loading model...");
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = llamafile_gpu_layers(35);
     g_model = llama_load_model_from_file(params.model.c_str(), model_params);
@@ -233,11 +251,34 @@ int chatbot_main(int argc, char **argv) {
         fprintf(stderr, "%s: failed to load model\n", params.model.c_str());
         exit(2);
     }
-    if (!params.n_ctx)
+    if (params.n_ctx <= 0 || params.n_ctx > llama_n_ctx_train(g_model))
         params.n_ctx = llama_n_ctx_train(g_model);
     if (params.n_ctx < params.n_batch)
         params.n_batch = params.n_ctx;
     clear_ephemeral();
+
+    bool want_server = !llamafile_has(argv, "--chat");
+    if (want_server) {
+        print_ephemeral("launching server...");
+        pthread_t thread;
+        pthread_attr_t attr;
+        ServerArgs sargs = {argc, argv};
+        pthread_mutex_lock(&g_lock);
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        pthread_create(&thread, &attr, server_thread, &sargs);
+        pthread_attr_destroy(&attr);
+        pthread_cond_wait(&g_cond, &g_lock);
+        pthread_mutex_unlock(&g_lock);
+        clear_ephemeral();
+    }
+
+    printf(BOLD "software" UNBOLD ": llamafile " LLAMAFILE_VERSION_STRING "\n" //
+           BOLD "model" UNBOLD ":    %s\n",
+           basename(params.model).c_str());
+    if (want_server)
+        printf(BOLD "server" UNBOLD ":   %s\n", g_listen_url.c_str());
+    printf("\n");
 
     print_ephemeral("initializing context...");
     llama_context_params ctx_params = llama_context_params_from_gpt_params(params);
@@ -250,9 +291,9 @@ int chatbot_main(int argc, char **argv) {
     clear_ephemeral();
 
     if (params.prompt.empty())
-        params.prompt =
-            "A chat between a curious human and an artificial intelligence assistant. The "
-            "assistant gives helpful, detailed, and polite answers to the human's questions.";
+        params.prompt = "A chat between a curious human and an artificial intelligence assistant. "
+                        "The assistant gives helpful, detailed, and polite answers to the "
+                        "human's questions.";
 
     bool add_bos = llama_should_add_bos_token(llama_get_model(g_ctx));
     std::vector<llama_chat_msg> chat = {{"system", params.prompt}};
