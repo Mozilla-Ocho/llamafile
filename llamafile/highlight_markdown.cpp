@@ -83,6 +83,8 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             if (c == '*') {
                 t_ = NORMAL;
                 *r += RESET;
+            } else {
+                t_ = STRONG;
             }
             break;
 
