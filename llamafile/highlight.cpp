@@ -32,6 +32,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightPython();
     } else if (lang == "rs" || lang == "rust") {
         return new HighlightRust();
+    } else if (lang == "f" || lang == "fortran") {
+        return new HighlightFortran();
     } else {
         return new HighlightPlain;
     }

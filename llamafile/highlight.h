@@ -26,6 +26,9 @@
 #define HI_COMMENT "\033[31m" // red
 #define HI_MACRO "\033[35m" // magenta
 #define HI_ATTRIB "\033[35m" // magenta
+#define HI_CONTIN "\033[33m" // yellow
+#define HI_TYPE "\033[36m" // cyan
+#define HI_LABEL "\033[35m" // magenta
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -36,6 +39,8 @@ is_keyword_f is_keyword_js;
 is_keyword_f is_keyword_java;
 is_keyword_f is_keyword_python;
 is_keyword_f is_keyword_rust;
+is_keyword_f is_keyword_fortran;
+is_keyword_f is_keyword_fortran_type;
 }
 
 class Highlight {
@@ -102,5 +107,18 @@ class HighlightRust : public Highlight {
   private:
     int t_ = 0;
     int nest_ = 0;
+    std::string word_;
+};
+
+class HighlightFortran : public Highlight {
+  public:
+    HighlightFortran();
+    ~HighlightFortran() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int col_ = 0;
     std::string word_;
 };
