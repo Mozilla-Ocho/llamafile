@@ -26,11 +26,14 @@
 #define HI_COMMENT "\033[31m" // red
 #define HI_MACRO "\033[35m" // magenta
 #define HI_ATTRIB "\033[35m" // magenta
+#define HI_LINENO "\033[2m" // fade
 #define HI_CONTIN "\033[33m" // yellow
 #define HI_LABEL "\033[33m" // yellow
 #define HI_TYPE "\033[36m" // cyan
 #define HI_SELECTOR "\033[33m" // yellow
 #define HI_PROPERTY "\033[36m" // cyan
+#define HI_TAG "\033[33m" // yellow
+#define HI_INCODE "\033[1;35m" // magenta
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -178,4 +181,20 @@ class HighlightCss : public Highlight {
 
   private:
     int t_ = 0;
+};
+
+class HighlightHtml : public Highlight {
+  public:
+    HighlightHtml();
+    ~HighlightHtml() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int i_ = 0;
+    std::string name_;
+    std::string closer_;
+    std::string pending_;
+    Highlight *highlighter_ = nullptr;
 };

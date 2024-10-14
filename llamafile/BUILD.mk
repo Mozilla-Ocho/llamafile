@@ -169,6 +169,7 @@ o/$(MODE)/llamafile/highlight_c_test:			\
 		o/$(MODE)/llamafile/highlight_c_test.o	\
 		o/$(MODE)/llamafile/highlight_c.o	\
 		o/$(MODE)/llamafile/is_keyword_c.o	\
+		o/$(MODE)/llamafile/is_keyword_js.o	\
 
 o/$(MODE)/llamafile/highlight_python_test:			\
 		o/$(MODE)/llamafile/highlight_python_test.o	\

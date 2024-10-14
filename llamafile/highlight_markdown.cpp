@@ -28,6 +28,7 @@
 #define STRONG 8
 #define STRONG_STAR 9
 #define BACKSLASH 10
+#define INCODE 11
 
 HighlightMarkdown::HighlightMarkdown() {
 }
@@ -45,7 +46,6 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (c == '`') {
                 t_ = TICK;
-                *r += c;
             } else if (c == '*') {
                 t_ = STAR;
             } else if (c == '\\') {
@@ -91,10 +91,21 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case TICK:
             if (c == '`') {
                 t_ = TICK_TICK;
+                *r += '`';
                 *r += c;
             } else {
+                *r += HI_INCODE;
+                *r += '`';
+                *r += c;
+                t_ = INCODE;
+            }
+            break;
+
+        case INCODE:
+            *r += c;
+            if (c == '`') {
+                *r += HI_RESET;
                 t_ = NORMAL;
-                goto Normal;
             }
             break;
 

@@ -27,6 +27,7 @@
 #define SLASH_SLASH 5
 #define SLASH_STAR 6
 #define SLASH_STAR_STAR 7
+#define TICK 8
 #define BACKSLASH 64
 
 HighlightC::HighlightC(is_keyword_f *is_keyword, is_keyword_f *is_type)
@@ -66,6 +67,10 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                 *r += c;
             } else if (c == '"') {
                 t_ = DQUOTE;
+                *r += HI_STRING;
+                *r += c;
+            } else if (c == '`' && is_keyword_ == is_keyword_js) {
+                t_ = TICK;
                 *r += HI_STRING;
                 *r += c;
             } else {
@@ -148,6 +153,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
         case DQUOTE:
             *r += c;
             if (c == '"') {
+                *r += HI_RESET;
+                t_ = NORMAL;
+            }
+            break;
+
+        case TICK:
+            *r += c;
+            if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
             }

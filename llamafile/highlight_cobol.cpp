@@ -51,7 +51,7 @@ void HighlightCobol::feed(std::string *r, std::string_view input) {
                 *r += HI_RESET;
                 continue;
             } else if (col_ < 6 && isdigit(c)) {
-                *r += HI_LABEL;
+                *r += HI_LINENO;
                 *r += c;
                 *r += HI_RESET;
                 continue;

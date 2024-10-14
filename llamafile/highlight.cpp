@@ -44,6 +44,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightSql();
     } else if (lang == "css") {
         return new HighlightCss();
+    } else if (lang == "html") {
+        return new HighlightHtml();
     } else {
         return new HighlightPlain;
     }
