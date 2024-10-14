@@ -46,6 +46,7 @@ is_keyword_f is_keyword_pascal;
 is_keyword_f is_keyword_pascal_type;
 is_keyword_f is_keyword_go;
 is_keyword_f is_keyword_go_type;
+is_keyword_f is_keyword_sql;
 }
 
 class Highlight {
@@ -146,6 +147,18 @@ class HighlightPascal : public Highlight {
   public:
     HighlightPascal();
     ~HighlightPascal() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
+};
+
+class HighlightSql : public Highlight {
+  public:
+    HighlightSql();
+    ~HighlightSql() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 

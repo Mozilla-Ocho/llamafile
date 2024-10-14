@@ -40,6 +40,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightPascal();
     } else if (lang == "go") {
         return new HighlightC(is_keyword_go, is_keyword_go_type);
+    } else if (lang == "sql") {
+        return new HighlightSql();
     } else {
         return new HighlightPlain;
     }
