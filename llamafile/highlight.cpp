@@ -30,6 +30,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightC(is_keyword_java);
     } else if (lang == "py" || lang == "python") {
         return new HighlightPython();
+    } else if (lang == "rs" || lang == "rust") {
+        return new HighlightRust();
     } else {
         return new HighlightPlain;
     }

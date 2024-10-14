@@ -25,49 +25,53 @@ using namespace std::string_literals;
 HighlightC g_highlight;
 
 void test(std::string input, std::string expect) {
-    std::string got;
-    g_highlight.feed(&got, input);
-    if (got != expect) {
-        fprintf(stderr,
-                "error: highlighting failed\n"
-                "\t   input: %`'s\n"
-                "\texpected: %`'s\n"
-                "\t     got: %`'s\n",
-                input.c_str(), expect.c_str(), got.c_str());
-        exit(1);
-    }
+  std::string got;
+  g_highlight.feed(&got, input);
+  if (got != expect) {
+    fprintf(stderr,
+            "error: highlighting failed\n"
+            "\t   input: %`'s\n"
+            "\texpected: %`'s\n"
+            "\t     got: %`'s\n",
+            input.c_str(), expect.c_str(), got.c_str());
+    exit(1);
+  }
 }
 
 void testf(std::string input, std::string expect) {
-    std::string got;
-    g_highlight.feed(&got, input);
-    g_highlight.flush(&got);
-    if (got != expect) {
-        fprintf(stderr,
-                "error: highlighting failed\n"
-                "\t   input: %`'s\n"
-                "\texpected: %`'s\n"
-                "\t     got: %`'s\n",
-                input.c_str(), expect.c_str(), got.c_str());
-        exit(1);
-    }
+  std::string got;
+  g_highlight.feed(&got, input);
+  g_highlight.flush(&got);
+  if (got != expect) {
+    fprintf(stderr,
+            "error: highlighting failed\n"
+            "\t   input: %`'s\n"
+            "\texpected: %`'s\n"
+            "\t     got: %`'s\n",
+            input.c_str(), expect.c_str(), got.c_str());
+    exit(1);
+  }
 }
 
 int main(int argc, char *argv[]) {
-    test("", "");
-    test("vola", "");
-    test("tile ", ""s + KEYWORD + "volatile" + RESET + " ");
-    test("yo // hi\nthere ", "yo "s + COMMENT + "// hi" + RESET + "\nthere ");
-    testf("// sup", ""s + COMMENT + "// sup" + RESET);
-    test("yo /* hi */ there ", "yo "s + COMMENT + "/* hi */" + RESET + " there ");
-    testf("yo /* hi */ there", "yo "s + COMMENT + "/* hi */" + RESET + " there");
-    testf("yo /* h*i */ there", "yo "s + COMMENT + "/* h*i */" + RESET + " there");
-    testf("vola", "vola");
-    testf("volatile", ""s + KEYWORD + "volatile" + RESET);
-    testf("/hi/", "/hi/");
-    testf("x '' y", "x "s + STRING + "''" + RESET + " y");
-    testf("x 'c' y", "x "s + STRING + "'c'" + RESET + " y");
-    testf("x '\\'' y", "x "s + STRING + "'\\''" + RESET + " y");
-    testf("x \"c\" y", "x "s + STRING + "\"c\"" + RESET + " y");
-    testf("x \"\\\"\" y", "x "s + STRING + "\"\\\"\"" + RESET + " y");
+  test("", "");
+  test("vola", "");
+  test("tile ", ""s + HI_KEYWORD + "volatile" + HI_RESET + " ");
+  test("yo // hi\nthere ",
+       "yo "s + HI_COMMENT + "// hi" + HI_RESET + "\nthere ");
+  testf("// sup", ""s + HI_COMMENT + "// sup" + HI_RESET);
+  test("yo /* hi */ there ",
+       "yo "s + HI_COMMENT + "/* hi */" + HI_RESET + " there ");
+  testf("yo /* hi */ there",
+        "yo "s + HI_COMMENT + "/* hi */" + HI_RESET + " there");
+  testf("yo /* h*i */ there",
+        "yo "s + HI_COMMENT + "/* h*i */" + HI_RESET + " there");
+  testf("vola", "vola");
+  testf("volatile", ""s + HI_KEYWORD + "volatile" + HI_RESET);
+  testf("/hi/", "/hi/");
+  testf("x '' y", "x "s + HI_STRING + "''" + HI_RESET + " y");
+  testf("x 'c' y", "x "s + HI_STRING + "'c'" + HI_RESET + " y");
+  testf("x '\\'' y", "x "s + HI_STRING + "'\\''" + HI_RESET + " y");
+  testf("x \"c\" y", "x "s + HI_STRING + "\"c\"" + HI_RESET + " y");
+  testf("x \"\\\"\" y", "x "s + HI_STRING + "\"\\\"\"" + HI_RESET + " y");
 }

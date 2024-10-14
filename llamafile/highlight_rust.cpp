@@ -22,20 +22,24 @@
 #define NORMAL 0
 #define WORD 1
 #define QUOTE 2
-#define DQUOTE 3
-#define SLASH 4
-#define SLASH_SLASH 5
-#define SLASH_STAR 6
-#define SLASH_STAR_STAR 7
+#define QUOTE2 3
+#define DQUOTE 4
+#define SLASH 5
+#define SLASH_SLASH 6
+#define SLASH_STAR 7
+#define SLASH_STAR_STAR 8
+#define HASH 9
+#define HASH_EXCLAIM 10
+#define ATTRIB 11
 #define BACKSLASH 64
 
-HighlightC::HighlightC(is_keyword_f *is_keyword) : is_keyword_(is_keyword) {
+HighlightRust::HighlightRust() {
 }
 
-HighlightC::~HighlightC() {
+HighlightRust::~HighlightRust() {
 }
 
-void HighlightC::feed(std::string *r, std::string_view input) {
+void HighlightRust::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
@@ -43,6 +47,8 @@ void HighlightC::feed(std::string *r, std::string_view input) {
         if (t_ & BACKSLASH) {
             t_ &= ~BACKSLASH;
             *r += c;
+            if (t_ == QUOTE)
+                t_ = QUOTE2;
             continue;
         } else if (c == '\\') {
             *r += c;
@@ -54,11 +60,13 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 
         Normal:
         case NORMAL:
-            if (!isascii(c) || isalpha(c) || c == '_' || c == '#') {
+            if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
                 goto Word;
             } else if (c == '/') {
                 t_ = SLASH;
+            } else if (c == '#') {
+                t_ = HASH;
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
@@ -74,11 +82,15 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_' || c == '$' || c == '#') {
+            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_' || c == '!') {
                 word_ += c;
             } else {
-                if (is_keyword_(word_.data(), word_.size())) {
+                if (is_keyword_rust(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (!word_.empty() && word_[word_.size() - 1] == '!') {
+                    *r += HI_MACRO;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -137,6 +149,20 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else {
+                t_ = QUOTE2;
+            }
+            break;
+
+        case QUOTE2:
+            if (c == '\'') {
+                *r += c;
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else {
+                *r += HI_RESET;
+                *r += c;
+                t_ = NORMAL;
             }
             break;
 
@@ -148,17 +174,61 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case HASH:
+            if (c == '!') {
+                t_ = HASH_EXCLAIM;
+            } else if (c == '[') {
+                *r += HI_ATTRIB;
+                *r += "#[";
+                t_ = ATTRIB;
+            } else {
+                *r += '#';
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
+        case HASH_EXCLAIM:
+            if (c == '[') {
+                *r += HI_ATTRIB;
+                *r += "#![";
+                t_ = ATTRIB;
+            } else {
+                *r += "#!";
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
+        case ATTRIB:
+            *r += c;
+            if (c == '[') {
+                ++nest_;
+            } else if (c == ']') {
+                if (nest_) {
+                    --nest_;
+                } else {
+                    *r += HI_RESET;
+                    t_ = NORMAL;
+                }
+            }
+            break;
+
         default:
             __builtin_unreachable();
         }
     }
 }
 
-void HighlightC::flush(std::string *r) {
+void HighlightRust::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_(word_.data(), word_.size())) {
+        if (is_keyword_rust(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (!word_.empty() && word_[word_.size() - 1] == '!') {
+            *r += HI_MACRO;
             *r += word_;
             *r += HI_RESET;
         } else {
@@ -170,14 +240,23 @@ void HighlightC::flush(std::string *r) {
         *r += '/';
         break;
     case QUOTE:
+    case QUOTE2:
     case DQUOTE:
+    case ATTRIB:
     case SLASH_SLASH:
     case SLASH_STAR:
     case SLASH_STAR_STAR:
         *r += HI_RESET;
         break;
+    case HASH:
+        *r += '#';
+        break;
+    case HASH_EXCLAIM:
+        *r += "#!";
+        break;
     default:
         break;
     }
+    nest_ = 0;
     t_ = NORMAL;
 }

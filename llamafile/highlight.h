@@ -19,11 +19,13 @@
 #include <string>
 #include <string_view>
 
-#define RESET "\033[0m"
-#define BOLDE "\033[1m"
-#define KEYWORD "\033[1;34m" // bold blue
-#define STRING "\033[0;32m" // green
-#define COMMENT "\033[0;31m" // red
+#define HI_RESET "\033[0m"
+#define HI_BOLD "\033[1m"
+#define HI_KEYWORD "\033[1;34m" // bold blue
+#define HI_STRING "\033[32m" // green
+#define HI_COMMENT "\033[31m" // red
+#define HI_MACRO "\033[35m" // magenta
+#define HI_ATTRIB "\033[35m" // magenta
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -33,6 +35,7 @@ is_keyword_f is_keyword_cxx;
 is_keyword_f is_keyword_js;
 is_keyword_f is_keyword_java;
 is_keyword_f is_keyword_python;
+is_keyword_f is_keyword_rust;
 }
 
 class Highlight {
@@ -87,4 +90,17 @@ class HighlightMarkdown : public Highlight {
     int t_ = 0;
     std::string lang_;
     Highlight *highlighter_ = nullptr;
+};
+
+class HighlightRust : public Highlight {
+  public:
+    HighlightRust();
+    ~HighlightRust() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int nest_ = 0;
+    std::string word_;
 };

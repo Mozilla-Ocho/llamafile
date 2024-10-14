@@ -64,7 +64,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case STAR:
             if (c == '*') {
                 t_ = STRONG;
-                *r += BOLDE;
+                *r += HI_BOLD;
             } else {
                 t_ = NORMAL;
             }
@@ -82,7 +82,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             *r += c;
             if (c == '*') {
                 t_ = NORMAL;
-                *r += RESET;
+                *r += HI_RESET;
             } else {
                 t_ = STRONG;
             }
@@ -170,7 +170,7 @@ void HighlightMarkdown::flush(std::string *r) {
         break;
     case STRONG:
     case STRONG_STAR:
-        *r += RESET;
+        *r += HI_RESET;
         break;
     case CODE:
     case CODE_TICK:

@@ -56,22 +56,22 @@ void testf(std::string input, std::string expect) {
 int main(int argc, char *argv[]) {
     test("", "");
     test("d", "");
-    test("ef ", ""s + KEYWORD + "def" + RESET + " ");
-    test("yo # hi\nthere ", "yo "s + COMMENT + "# hi" + RESET + "\nthere ");
-    testf("# sup", ""s + COMMENT + "# sup" + RESET);
+    test("ef ", ""s + HI_KEYWORD + "def" + HI_RESET + " ");
+    test("yo # hi\nthere ", "yo "s + HI_COMMENT + "# hi" + HI_RESET + "\nthere ");
+    testf("# sup", ""s + HI_COMMENT + "# sup" + HI_RESET);
     testf("de", "de");
-    testf("def", ""s + KEYWORD + "def" + RESET);
+    testf("def", ""s + HI_KEYWORD + "def" + HI_RESET);
     testf("/hi/", "/hi/");
-    testf("x '' y", "x "s + STRING + "''" + RESET + " y");
-    testf("x '''''' y", "x "s + STRING + "''''''" + RESET + " y");
-    testf("x '''xxx''' y", "x "s + STRING + "'''xxx'''" + RESET + " y");
-    testf("x '''xx'x''' y", "x "s + STRING + "'''xx'x'''" + RESET + " y");
-    testf("x '''xx''x''' y", "x "s + STRING + "'''xx''x'''" + RESET + " y");
-    testf("x \"\" y", "x "s + STRING + "\"\"" + RESET + " y");
-    testf("x \"\"\"\"\"\" y", "x "s + STRING + "\"\"\"\"\"\"" + RESET + " y");
-    testf("x \"\"\"xxx\"\"\" y", "x "s + STRING + "\"\"\"xxx\"\"\"" + RESET + " y");
-    testf("x 'c' y", "x "s + STRING + "'c'" + RESET + " y");
-    testf("x '\\'' y", "x "s + STRING + "'\\''" + RESET + " y");
-    testf("x \"c\" y", "x "s + STRING + "\"c\"" + RESET + " y");
-    testf("x \"\\\"\" y", "x "s + STRING + "\"\\\"\"" + RESET + " y");
+    testf("x '' y", "x "s + HI_STRING + "''" + HI_RESET + " y");
+    testf("x '''''' y", "x "s + HI_STRING + "''''''" + HI_RESET + " y");
+    testf("x '''xxx''' y", "x "s + HI_STRING + "'''xxx'''" + HI_RESET + " y");
+    testf("x '''xx'x''' y", "x "s + HI_STRING + "'''xx'x'''" + HI_RESET + " y");
+    testf("x '''xx''x''' y", "x "s + HI_STRING + "'''xx''x'''" + HI_RESET + " y");
+    testf("x \"\" y", "x "s + HI_STRING + "\"\"" + HI_RESET + " y");
+    testf("x \"\"\"\"\"\" y", "x "s + HI_STRING + "\"\"\"\"\"\"" + HI_RESET + " y");
+    testf("x \"\"\"xxx\"\"\" y", "x "s + HI_STRING + "\"\"\"xxx\"\"\"" + HI_RESET + " y");
+    testf("x 'c' y", "x "s + HI_STRING + "'c'" + HI_RESET + " y");
+    testf("x '\\'' y", "x "s + HI_STRING + "'\\''" + HI_RESET + " y");
+    testf("x \"c\" y", "x "s + HI_STRING + "\"c\"" + HI_RESET + " y");
+    testf("x \"\\\"\" y", "x "s + HI_STRING + "\"\\\"\"" + HI_RESET + " y");
 }

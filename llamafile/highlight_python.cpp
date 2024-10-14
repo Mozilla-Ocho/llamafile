@@ -69,15 +69,15 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 goto Word;
             } else if (c == '#') {
                 t_ = COM;
-                *r += COMMENT;
+                *r += HI_COMMENT;
                 *r += c;
             } else if (c == '\'') {
                 t_ = SQUOTE;
-                *r += STRING;
+                *r += HI_STRING;
                 *r += c;
             } else if (c == '"') {
                 t_ = DQUOTE;
-                *r += STRING;
+                *r += HI_STRING;
                 *r += c;
             } else {
                 *r += c;
@@ -90,9 +90,9 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 word_ += c;
             } else {
                 if (is_keyword_python(word_.data(), word_.size())) {
-                    *r += KEYWORD;
+                    *r += HI_KEYWORD;
                     *r += word_;
-                    *r += RESET;
+                    *r += HI_RESET;
                 } else {
                     *r += word_;
                 }
@@ -104,7 +104,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
 
         case COM:
             if (c == '\n') {
-                *r += RESET;
+                *r += HI_RESET;
                 *r += c;
                 t_ = NORMAL;
             } else {
@@ -124,7 +124,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
         case SQUOTESTR:
             *r += c;
             if (c == '\'') {
-                *r += RESET;
+                *r += HI_RESET;
                 t_ = NORMAL;
             }
             break;
@@ -135,7 +135,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 *r += c;
                 t_ = SQUOTE3;
             } else {
-                *r += RESET;
+                *r += HI_RESET;
                 t_ = NORMAL;
                 goto Normal;
             }
@@ -156,7 +156,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
         case SQUOTE32:
             *r += c;
             if (c == '\'') {
-                *r += RESET;
+                *r += HI_RESET;
                 t_ = NORMAL;
             } else {
                 t_ = SQUOTE3;
@@ -175,7 +175,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
         case DQUOTESTR:
             *r += c;
             if (c == '"') {
-                *r += RESET;
+                *r += HI_RESET;
                 t_ = NORMAL;
             }
             break;
@@ -186,7 +186,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 *r += c;
                 t_ = DQUOTE3;
             } else {
-                *r += RESET;
+                *r += HI_RESET;
                 t_ = NORMAL;
                 goto Normal;
             }
@@ -207,7 +207,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
         case DQUOTE32:
             *r += c;
             if (c == '"') {
-                *r += RESET;
+                *r += HI_RESET;
                 t_ = NORMAL;
             } else {
                 t_ = DQUOTE3;
@@ -224,9 +224,9 @@ void HighlightPython::flush(std::string *r) {
     switch (t_) {
     case WORD:
         if (is_keyword_python(word_.data(), word_.size())) {
-            *r += KEYWORD;
+            *r += HI_KEYWORD;
             *r += word_;
-            *r += RESET;
+            *r += HI_RESET;
         } else {
             *r += word_;
         }
@@ -245,7 +245,7 @@ void HighlightPython::flush(std::string *r) {
     case DQUOTE3:
     case DQUOTE31:
     case DQUOTE32:
-        *r += RESET;
+        *r += HI_RESET;
         break;
     default:
         break;
