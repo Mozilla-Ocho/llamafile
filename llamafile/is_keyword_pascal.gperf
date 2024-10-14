@@ -1,0 +1,53 @@
+%{
+#include <string.h>
+#include <libc/str/tab.h>
+#define GPERF_DOWNCASE
+%}
+%ignore-case
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_pascal
+%%
+and
+begin
+case
+const
+div
+do
+downto
+else
+end
+for
+function
+get
+goto
+if
+in
+input
+label
+mod
+nil
+not
+of
+or
+output
+procedure
+program
+put
+read
+readln
+record
+repeat
+reset
+rewrite
+set
+then
+to
+type
+until
+var
+while
+with
+write
+writeln

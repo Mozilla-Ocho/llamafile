@@ -42,6 +42,8 @@ is_keyword_f is_keyword_rust;
 is_keyword_f is_keyword_fortran;
 is_keyword_f is_keyword_fortran_type;
 is_keyword_f is_keyword_cobol;
+is_keyword_f is_keyword_pascal;
+is_keyword_f is_keyword_pascal_type;
 }
 
 class Highlight {
@@ -134,5 +136,17 @@ class HighlightCobol : public Highlight {
   private:
     int t_ = 0;
     int col_ = -1;
+    std::string word_;
+};
+
+class HighlightPascal : public Highlight {
+  public:
+    HighlightPascal();
+    ~HighlightPascal() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
     std::string word_;
 };

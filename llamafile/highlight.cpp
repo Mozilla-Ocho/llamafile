@@ -36,6 +36,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightFortran();
     } else if (lang == "cob" || lang == "cbl" || lang == "cobol") {
         return new HighlightCobol();
+    } else if (lang == "pas" || lang == "pascal") {
+        return new HighlightPascal();
     } else {
         return new HighlightPlain;
     }

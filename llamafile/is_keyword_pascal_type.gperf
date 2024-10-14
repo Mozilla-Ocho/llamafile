@@ -1,0 +1,49 @@
+%{
+#include <string.h>
+#include <libc/str/tab.h>
+#define GPERF_DOWNCASE
+%}
+%ignore-case
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_pascal_type
+%%
+ansichar
+ansistring
+array
+boolean
+char
+comp
+currency
+double
+extended
+file
+fixedint
+int16
+int32
+int64
+integer
+longint
+longword
+packed
+real
+real48
+record
+set
+shortint
+shortstring
+single
+smallint
+string
+text
+ucs2char
+ucs4char
+uint16
+uint32
+uint64
+uint8
+widechar
+widestring
+word
+nativeint
