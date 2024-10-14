@@ -41,6 +41,7 @@ is_keyword_f is_keyword_python;
 is_keyword_f is_keyword_rust;
 is_keyword_f is_keyword_fortran;
 is_keyword_f is_keyword_fortran_type;
+is_keyword_f is_keyword_cobol;
 }
 
 class Highlight {
@@ -119,6 +120,19 @@ class HighlightFortran : public Highlight {
 
   private:
     int t_ = 0;
-    int col_ = 0;
+    int col_ = -1;
+    std::string word_;
+};
+
+class HighlightCobol : public Highlight {
+  public:
+    HighlightCobol();
+    ~HighlightCobol() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int col_ = -1;
     std::string word_;
 };
