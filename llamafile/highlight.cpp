@@ -42,6 +42,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightC(is_keyword_go, is_keyword_go_type);
     } else if (lang == "sql") {
         return new HighlightSql();
+    } else if (lang == "css") {
+        return new HighlightCss();
     } else {
         return new HighlightPlain;
     }

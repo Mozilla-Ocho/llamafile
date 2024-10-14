@@ -221,6 +221,7 @@ void HighlightRust::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightRust::flush(std::string *r) {
+    t_ &= ~BACKSLASH;
     switch (t_) {
     case WORD:
         if (is_keyword_rust(word_.data(), word_.size())) {

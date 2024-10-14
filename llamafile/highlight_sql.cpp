@@ -166,6 +166,7 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightSql::flush(std::string *r) {
+    t_ &= ~BACKSLASH;
     switch (t_) {
     case WORD:
         if (is_keyword_sql(word_.data(), word_.size())) {

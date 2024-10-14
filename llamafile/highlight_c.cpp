@@ -160,6 +160,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightC::flush(std::string *r) {
+    t_ &= ~BACKSLASH;
     switch (t_) {
     case WORD:
         if (is_keyword_(word_.data(), word_.size())) {

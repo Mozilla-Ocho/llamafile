@@ -27,8 +27,10 @@
 #define HI_MACRO "\033[35m" // magenta
 #define HI_ATTRIB "\033[35m" // magenta
 #define HI_CONTIN "\033[33m" // yellow
+#define HI_LABEL "\033[33m" // yellow
 #define HI_TYPE "\033[36m" // cyan
-#define HI_LABEL "\033[35m" // magenta
+#define HI_SELECTOR "\033[33m" // yellow
+#define HI_PROPERTY "\033[36m" // cyan
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -165,4 +167,15 @@ class HighlightSql : public Highlight {
   private:
     int t_ = 0;
     std::string word_;
+};
+
+class HighlightCss : public Highlight {
+  public:
+    HighlightCss();
+    ~HighlightCss() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
 };

@@ -121,38 +121,38 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             break;
 
         Code:
-        case CODE: {
-            char cs[2] = {c};
-            highlighter_->feed(r, cs);
-            if (c == '`')
+        case CODE:
+            if (c == '`') {
                 t_ = CODE_TICK;
+            } else {
+                char cs[2] = {c};
+                highlighter_->feed(r, cs);
+            }
             break;
-        }
 
-        case CODE_TICK: {
-            char cs[2] = {c};
-            highlighter_->feed(r, cs);
+        case CODE_TICK:
             if (c == '`') {
                 t_ = CODE_TICK_TICK;
             } else {
+                char cs[3] = {'`', c};
+                highlighter_->feed(r, cs);
                 t_ = CODE;
             }
             break;
-        }
 
-        case CODE_TICK_TICK: {
-            char cs[2] = {c};
-            highlighter_->feed(r, cs);
+        case CODE_TICK_TICK:
             if (c == '`') {
                 t_ = NORMAL;
                 highlighter_->flush(r);
                 delete highlighter_;
                 highlighter_ = nullptr;
+                *r += "```";
             } else {
+                char cs[4] = {'`', '`', c};
+                highlighter_->feed(r, cs);
                 t_ = CODE;
             }
             break;
-        }
 
         default:
             __builtin_unreachable();
@@ -173,11 +173,21 @@ void HighlightMarkdown::flush(std::string *r) {
         *r += HI_RESET;
         break;
     case CODE:
+        highlighter_->flush(r);
+        delete highlighter_;
+        highlighter_ = nullptr;
+        break;
     case CODE_TICK:
+        highlighter_->flush(r);
+        delete highlighter_;
+        highlighter_ = nullptr;
+        *r += '`';
+        break;
     case CODE_TICK_TICK:
         highlighter_->flush(r);
         delete highlighter_;
         highlighter_ = nullptr;
+        *r += "``";
         break;
     default:
         break;
