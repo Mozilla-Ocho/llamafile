@@ -1,0 +1,25 @@
+%{
+#include <string.h>
+%}
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_go_type
+%%
+byte
+complex128
+complex64
+float32
+float64
+int
+int16
+int32
+int64
+int8
+rune
+uint
+uint16
+uint32
+uint64
+uint8
+uintptr

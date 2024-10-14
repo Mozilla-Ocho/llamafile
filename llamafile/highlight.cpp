@@ -38,6 +38,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightCobol();
     } else if (lang == "pas" || lang == "pascal") {
         return new HighlightPascal();
+    } else if (lang == "go") {
+        return new HighlightC(is_keyword_go, is_keyword_go_type);
     } else {
         return new HighlightPlain;
     }

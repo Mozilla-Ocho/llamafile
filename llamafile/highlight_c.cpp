@@ -29,7 +29,8 @@
 #define SLASH_STAR_STAR 7
 #define BACKSLASH 64
 
-HighlightC::HighlightC(is_keyword_f *is_keyword) : is_keyword_(is_keyword) {
+HighlightC::HighlightC(is_keyword_f *is_keyword, is_keyword_f *is_type)
+    : is_keyword_(is_keyword), is_type_(is_type) {
 }
 
 HighlightC::~HighlightC() {
@@ -79,6 +80,10 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             } else {
                 if (is_keyword_(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (is_type_ && is_type_(word_.data(), word_.size())) {
+                    *r += HI_TYPE;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -159,6 +164,10 @@ void HighlightC::flush(std::string *r) {
     case WORD:
         if (is_keyword_(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_type_ && is_type_(word_.data(), word_.size())) {
+            *r += HI_TYPE;
             *r += word_;
             *r += HI_RESET;
         } else {

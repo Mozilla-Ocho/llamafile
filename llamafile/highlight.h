@@ -44,6 +44,8 @@ is_keyword_f is_keyword_fortran_type;
 is_keyword_f is_keyword_cobol;
 is_keyword_f is_keyword_pascal;
 is_keyword_f is_keyword_pascal_type;
+is_keyword_f is_keyword_go;
+is_keyword_f is_keyword_go_type;
 }
 
 class Highlight {
@@ -64,7 +66,7 @@ class HighlightPlain : public Highlight {
 
 class HighlightC : public Highlight {
   public:
-    explicit HighlightC(is_keyword_f is_keyword = is_keyword_c);
+    explicit HighlightC(is_keyword_f is_keyword = is_keyword_c, is_keyword_f is_type = nullptr);
     ~HighlightC() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
@@ -72,6 +74,7 @@ class HighlightC : public Highlight {
   private:
     int t_ = 0;
     std::string word_;
+    is_keyword_f *is_type_;
     is_keyword_f *is_keyword_;
 };
 
