@@ -50,6 +50,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightHtml; // sic
     } else if (lang == "csharp" || lang == "cs" || lang == "c#") {
         return new HighlightC(is_keyword_csharp);
+    } else if (lang == "kotlin") {
+        return new HighlightC(is_keyword_kotlin);
     } else {
         return new HighlightPlain;
     }

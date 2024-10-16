@@ -56,6 +56,7 @@ is_keyword_f is_keyword_go_type;
 is_keyword_f is_keyword_sql;
 is_keyword_f is_keyword_php;
 is_keyword_f is_keyword_csharp;
+is_keyword_f is_keyword_kotlin;
 }
 
 class Highlight {
