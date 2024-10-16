@@ -48,6 +48,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightHtml;
     } else if (lang == "php") {
         return new HighlightHtml; // sic
+    } else if (lang == "csharp" || lang == "cs" || lang == "c#") {
+        return new HighlightC(is_keyword_csharp);
     } else {
         return new HighlightPlain;
     }
