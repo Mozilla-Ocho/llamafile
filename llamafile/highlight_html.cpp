@@ -30,6 +30,10 @@
 #define COMMENT_HYPHEN 10
 #define COMMENT_HYPHEN_HYPHEN 11
 #define RELAY 12
+#define TAG_QUESTION 13
+#define TAG_QUESTION_P 14
+#define TAG_QUESTION_P_H 15
+#define ENTITY 16
 
 HighlightHtml::HighlightHtml() {
 }
@@ -47,14 +51,28 @@ void HighlightHtml::feed(std::string *r, std::string_view input) {
             if (c == '<') {
                 t_ = TAG;
                 name_.clear();
+            } else if (c == '&') {
+                t_ = ENTITY;
+                *r += HI_ENTITY;
+                *r += c;
             } else {
                 *r += c;
+            }
+            break;
+
+        case ENTITY:
+            *r += c;
+            if (c == ';') {
+                *r += HI_RESET;
+                t_ = NORMAL;
             }
             break;
 
         case TAG:
             if (c == '!') {
                 t_ = TAG_EXCLAIM;
+            } else if (c == '?') {
+                t_ = TAG_QUESTION;
             } else if (c == '>' || isspace(c)) {
                 *r += '<';
                 *r += c;
@@ -186,13 +204,13 @@ void HighlightHtml::feed(std::string *r, std::string_view input) {
             if (name_ == "script") {
                 pending_.clear();
                 closer_ = "</script>";
-                highlighter_ = Highlight::create("js");
+                highlighter_ = new HighlightC(is_keyword_js);
                 t_ = RELAY;
                 i_ = 0;
             } else if (name_ == "style") {
                 pending_.clear();
                 closer_ = "</style>";
-                highlighter_ = Highlight::create("css");
+                highlighter_ = new HighlightCss;
                 t_ = RELAY;
                 i_ = 0;
             }
@@ -221,6 +239,53 @@ void HighlightHtml::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case TAG_QUESTION:
+            if (c == 'p') {
+                t_ = TAG_QUESTION_P;
+            } else if (c == '=') {
+                *r += HI_TAG;
+                *r += "<?=";
+                *r += HI_RESET;
+                pending_.clear();
+                closer_ = "?>";
+                highlighter_ = new HighlightPhp;
+                t_ = RELAY;
+                i_ = 0;
+            } else {
+                *r += "<?";
+                *r += c;
+                t_ = NORMAL;
+            }
+            break;
+
+        case TAG_QUESTION_P:
+            if (c == 'h') {
+                t_ = TAG_QUESTION_P_H;
+            } else {
+                *r += "<?p";
+                *r += c;
+                t_ = NORMAL;
+            }
+            break;
+
+        case TAG_QUESTION_P_H:
+            if (c == 'p') {
+                *r += "<";
+                *r += HI_TAG;
+                *r += "?php";
+                *r += HI_RESET;
+                pending_.clear();
+                closer_ = "?>";
+                highlighter_ = new HighlightPhp;
+                t_ = RELAY;
+                i_ = 0;
+            } else {
+                *r += "<?ph";
+                *r += c;
+                t_ = NORMAL;
+            }
+            break;
+
         default:
             __builtin_unreachable();
         }
@@ -237,6 +302,15 @@ void HighlightHtml::flush(std::string *r) {
         break;
     case TAG_EXCLAIM_HYPHEN:
         *r += "<!-";
+        break;
+    case TAG_QUESTION:
+        *r += "<?";
+        break;
+    case TAG_QUESTION_P:
+        *r += "<?p";
+        break;
+    case TAG_QUESTION_P_H:
+        *r += "<?ph";
         break;
     case COMMENT_HYPHEN_HYPHEN:
     case COMMENT_HYPHEN:

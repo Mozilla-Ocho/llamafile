@@ -24,6 +24,7 @@
 #define HI_KEYWORD "\033[1;34m" // bold blue
 #define HI_STRING "\033[32m" // green
 #define HI_COMMENT "\033[31m" // red
+#define HI_VAR "\033[1;35m" // magenta
 #define HI_MACRO "\033[35m" // magenta
 #define HI_ATTRIB "\033[35m" // magenta
 #define HI_LINENO "\033[2m" // fade
@@ -34,6 +35,7 @@
 #define HI_PROPERTY "\033[36m" // cyan
 #define HI_TAG "\033[33m" // yellow
 #define HI_INCODE "\033[1;35m" // magenta
+#define HI_ENTITY "\033[36m" // cyan
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -52,6 +54,7 @@ is_keyword_f is_keyword_pascal_type;
 is_keyword_f is_keyword_go;
 is_keyword_f is_keyword_go_type;
 is_keyword_f is_keyword_sql;
+is_keyword_f is_keyword_php;
 }
 
 class Highlight {
@@ -197,4 +200,16 @@ class HighlightHtml : public Highlight {
     std::string closer_;
     std::string pending_;
     Highlight *highlighter_ = nullptr;
+};
+
+class HighlightPhp : public Highlight {
+  public:
+    HighlightPhp();
+    ~HighlightPhp() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
 };

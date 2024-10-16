@@ -29,23 +29,25 @@ Highlight *Highlight::create(const std::string_view &lang) {
     } else if (lang == "java") {
         return new HighlightC(is_keyword_java);
     } else if (lang == "py" || lang == "python") {
-        return new HighlightPython();
+        return new HighlightPython;
     } else if (lang == "rs" || lang == "rust") {
-        return new HighlightRust();
+        return new HighlightRust;
     } else if (lang == "f" || lang == "fortran") {
-        return new HighlightFortran();
+        return new HighlightFortran;
     } else if (lang == "cob" || lang == "cbl" || lang == "cobol") {
-        return new HighlightCobol();
+        return new HighlightCobol;
     } else if (lang == "pas" || lang == "pascal") {
-        return new HighlightPascal();
+        return new HighlightPascal;
     } else if (lang == "go") {
         return new HighlightC(is_keyword_go, is_keyword_go_type);
     } else if (lang == "sql") {
-        return new HighlightSql();
+        return new HighlightSql;
     } else if (lang == "css") {
-        return new HighlightCss();
+        return new HighlightCss;
     } else if (lang == "html") {
-        return new HighlightHtml();
+        return new HighlightHtml;
+    } else if (lang == "php") {
+        return new HighlightHtml; // sic
     } else {
         return new HighlightPlain;
     }

@@ -122,7 +122,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case LANG:
             if (!isascii(c) || !isspace(c)) {
                 *r += c;
-                lang_ += c;
+                lang_ += tolower(c);
             } else {
                 highlighter_ = Highlight::create(lang_);
                 lang_.clear();
