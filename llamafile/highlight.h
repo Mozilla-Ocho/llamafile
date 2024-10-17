@@ -63,6 +63,7 @@ is_keyword_f is_keyword_kotlin;
 is_keyword_f is_keyword_lua;
 is_keyword_f is_keyword_lua_builtin;
 is_keyword_f is_keyword_lisp;
+is_keyword_f is_keyword_ada;
 }
 
 class Highlight {
@@ -246,5 +247,17 @@ class HighlightLisp : public Highlight {
   private:
     int t_ = 0;
     bool is_first_ = false;
+    std::string symbol_;
+};
+
+class HighlightAda : public Highlight {
+  public:
+    HighlightAda();
+    ~HighlightAda() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
     std::string symbol_;
 };
