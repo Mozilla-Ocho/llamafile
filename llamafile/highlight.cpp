@@ -54,6 +54,12 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightC(is_keyword_kotlin);
     } else if (lang == "lua") {
         return new HighlightLua;
+    } else if (lang == "cl" || //
+               lang == "lisp" || //
+               lang == "clisp" || //
+               lang == "scheme" || //
+               lang == "clojure") {
+        return new HighlightLisp;
     } else {
         return new HighlightPlain;
     }

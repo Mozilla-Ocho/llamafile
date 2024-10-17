@@ -36,6 +36,7 @@
 #define HI_TAG "\033[33m" // yellow
 #define HI_INCODE "\033[1;35m" // magenta
 #define HI_BUILTIN "\033[35m" // magenta
+#define HI_LISPKW "\033[35m" // magenta
 #define HI_ENTITY "\033[36m" // cyan
 
 typedef const char *is_keyword_f(const char *, size_t);
@@ -61,6 +62,7 @@ is_keyword_f is_keyword_csharp;
 is_keyword_f is_keyword_kotlin;
 is_keyword_f is_keyword_lua;
 is_keyword_f is_keyword_lua_builtin;
+is_keyword_f is_keyword_lisp;
 }
 
 class Highlight {
@@ -232,4 +234,17 @@ class HighlightLua : public Highlight {
     int level1_;
     int level2_;
     std::string word_;
+};
+
+class HighlightLisp : public Highlight {
+  public:
+    HighlightLisp();
+    ~HighlightLisp() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    bool is_first_ = false;
+    std::string symbol_;
 };
