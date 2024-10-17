@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.1 */
-/* Command-line: gperf llamafile/is_keyword_cxx.gperf  */
+/* Command-line: gperf is_keyword_cxx.gperf  */
 /* Computed positions: -k'1,3,5,$' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
@@ -29,11 +29,11 @@
 #error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gperf@gnu.org>."
 #endif
 
-#line 1 "llamafile/is_keyword_cxx.gperf"
+#line 1 "is_keyword_cxx.gperf"
 
 #include <string.h>
 
-#define TOTAL_KEYWORDS 142
+#define TOTAL_KEYWORDS 148
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 19
 #define MIN_HASH_VALUE 3
@@ -56,8 +56,8 @@ hash (register const char *str, register size_t len)
       362, 362, 362, 362, 362, 362, 362, 362, 362, 362,
       362, 362, 362, 362, 362, 362, 362, 362, 362, 362,
       362, 362,  95, 362, 362,  15, 362, 362, 362, 362,
-      362, 362, 362, 362, 362, 362, 362, 362, 362,  70,
-      362,  40, 362, 362, 362, 362,  10, 362, 362, 362,
+      362, 362, 362, 362, 362, 362, 362, 362,   5,  70,
+      140, 125,  75, 362,  30, 362,  15, 362, 362, 362,
       362, 362, 362, 362, 362, 362, 362, 362, 362,  15,
         0, 362, 362, 362, 362, 362, 362, 362,   0, 362,
        10, 362, 362, 362, 362, 362, 362, 362, 362, 362,
@@ -145,12 +145,12 @@ is_keyword_cxx (register const char *str, register size_t len)
       "constinit",
       "const_cast",
       "__attribute",
-      "char8_t",
+      "",
       "__inline",
       "consteval",
       "",
       "not_eq",
-      "",
+      "char8_t",
       "continue",
       "",
       "union",
@@ -162,7 +162,7 @@ is_keyword_cxx (register const char *str, register size_t len)
       "extern",
       "",
       "#warning",
-      "",
+      "_Float128",
       "catch",
       "reinterpret_cast",
       "thread_local",
@@ -175,7 +175,7 @@ is_keyword_cxx (register const char *str, register size_t len)
       "using",
       "__imag",
       "__const",
-      "char32_t",
+      "_Float16",
       "co_return",
       "", "", "",
       "__attribute__",
@@ -216,7 +216,7 @@ is_keyword_cxx (register const char *str, register size_t len)
       "",
       "double",
       "default",
-      "",
+      "_Float64",
       "void",
       "",
       "friend",
@@ -244,11 +244,13 @@ is_keyword_cxx (register const char *str, register size_t len)
       "switch",
       "or",
       "typename",
-      "", "",
+      "__float80",
+      "",
       "__complex__",
       "private",
       "__volatile__ ",
-      "", "", "", "", "",
+      "", "", "", "",
+      "char32_t",
       "namespace",
       "",
       "#embed",
@@ -267,7 +269,8 @@ is_keyword_cxx (register const char *str, register size_t len)
       "__thread",
       "", "",
       "export",
-      "", "",
+      "",
+      "_Float32",
       "__real__ ",
       "__signed__",
       "", "",
@@ -315,11 +318,13 @@ is_keyword_cxx (register const char *str, register size_t len)
       "bitand",
       "", "", "", "", "", "", "", "", "",
       "", "", "", "", "", "", "", "", "",
+      "",
+      "__bf16",
       "", "", "", "", "", "", "", "", "",
       "", "", "", "", "", "", "", "", "",
       "", "", "", "", "", "", "", "", "",
       "", "", "", "", "", "", "", "", "",
-      "", "", "", "", "", "", "", "",
+      "", "", "", "", "", "",
       "protected",
       "",
       "public"

@@ -29,6 +29,10 @@ _Complex
 _Decimal128
 _Decimal32
 _Decimal64
+_Float128
+_Float16
+_Float32
+_Float64
 _Generic
 _Imaginary
 _Noreturn
@@ -42,12 +46,14 @@ __asm
 __asm__
 __attribute
 __attribute__
+__bf16
 __builtin_offsetof
 __builtin_va_arg
 __complex
 __complex__
 __const
 __extension__
+__float80
 __func__
 __imag
 __imag__ 

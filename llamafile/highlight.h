@@ -35,12 +35,14 @@
 #define HI_PROPERTY "\033[36m" // cyan
 #define HI_TAG "\033[33m" // yellow
 #define HI_INCODE "\033[1;35m" // magenta
+#define HI_BUILTIN "\033[35m" // magenta
 #define HI_ENTITY "\033[36m" // cyan
 
 typedef const char *is_keyword_f(const char *, size_t);
 
 extern "C" {
 is_keyword_f is_keyword_c;
+is_keyword_f is_keyword_c_type;
 is_keyword_f is_keyword_cxx;
 is_keyword_f is_keyword_js;
 is_keyword_f is_keyword_java;
@@ -57,6 +59,8 @@ is_keyword_f is_keyword_sql;
 is_keyword_f is_keyword_php;
 is_keyword_f is_keyword_csharp;
 is_keyword_f is_keyword_kotlin;
+is_keyword_f is_keyword_lua;
+is_keyword_f is_keyword_lua_builtin;
 }
 
 class Highlight {
@@ -77,7 +81,7 @@ class HighlightPlain : public Highlight {
 
 class HighlightC : public Highlight {
   public:
-    explicit HighlightC(is_keyword_f is_keyword = is_keyword_c, is_keyword_f is_type = nullptr);
+    HighlightC(is_keyword_f is_keyword = is_keyword_c, is_keyword_f is_type = nullptr);
     ~HighlightC() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
@@ -213,5 +217,19 @@ class HighlightPhp : public Highlight {
 
   private:
     int t_ = 0;
+    std::string word_;
+};
+
+class HighlightLua : public Highlight {
+  public:
+    HighlightLua();
+    ~HighlightLua() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int level1_;
+    int level2_;
     std::string word_;
 };

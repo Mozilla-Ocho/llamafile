@@ -21,9 +21,9 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "markdown" || lang == "md") {
         return new HighlightMarkdown;
     } else if (lang == "c") {
-        return new HighlightC(is_keyword_c);
+        return new HighlightC(is_keyword_c, is_keyword_c_type);
     } else if (lang == "c++" || lang == "cxx" || lang == "cpp") {
-        return new HighlightC(is_keyword_cxx);
+        return new HighlightC(is_keyword_cxx, is_keyword_c_type);
     } else if (lang == "js" || lang == "javascript") {
         return new HighlightC(is_keyword_js);
     } else if (lang == "java") {
@@ -52,6 +52,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightC(is_keyword_csharp);
     } else if (lang == "kotlin") {
         return new HighlightC(is_keyword_kotlin);
+    } else if (lang == "lua") {
+        return new HighlightLua;
     } else {
         return new HighlightPlain;
     }
