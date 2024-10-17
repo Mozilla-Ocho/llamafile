@@ -263,16 +263,25 @@ use of them regardless of what kind of computer they have.
 Even though our example llamafiles have the weights built-in, you don't
 *have* to use llamafile that way. Instead, you can download *just* the
 llamafile software (without any weights included) from our releases page.
-You can then use it alongside any external weights you may have on hand.
+You can then use it alongside any external weights that you may have on hand.
+This includes other llamafiles as well since the weights are zipped inside.
 External weights are particularly useful for Windows users because they
 enable you to work around Windows' 4GB executable file size limit.
 
-For Windows users, here's an example for the Mistral LLM:
+For Windows users, here's an example for the Mistral LLM gguf weights:
 
 ```sh
 curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.8.11/llamafile-0.8.11
 curl -L -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
 ./llamafile.exe -m mistral.gguf
+```
+
+For Windows users, here's an example for the Mistral LLM llamafile weights:
+
+```sh
+curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.8.11/llamafile-0.8.11
+curl -L -o mistral.llamafile  https://huggingface.co/Mozilla/Mistral-7B-Instruct-v0.3-llamafile/blob/main/Mistral-7B-Instruct-v0.3.Q4_K_M.llamafile
+llamafile -m mistral.llamafile
 ```
 
 Windows users may need to change `./llamafile.exe` to `.\llamafile.exe`
