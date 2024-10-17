@@ -116,7 +116,7 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
-            } else {
+            } else if (c != '*') {
                 t_ = SLASH_STAR;
             }
             break;

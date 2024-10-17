@@ -160,7 +160,7 @@ void HighlightPascal::feed(std::string *r, std::string_view input) {
             if (c == ')') {
                 *r += HI_RESET;
                 t_ = NORMAL;
-            } else {
+            } else if (c != '*') {
                 t_ = PAREN_STAR;
             }
             break;

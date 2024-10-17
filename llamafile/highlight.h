@@ -38,6 +38,7 @@
 #define HI_BUILTIN "\033[35m" // magenta
 #define HI_LISPKW "\033[35m" // magenta
 #define HI_ENTITY "\033[36m" // cyan
+#define HI_OPERATOR "\033[36m" // cyan
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -64,6 +65,7 @@ is_keyword_f is_keyword_lua;
 is_keyword_f is_keyword_lua_builtin;
 is_keyword_f is_keyword_lisp;
 is_keyword_f is_keyword_ada;
+is_keyword_f is_keyword_haskell;
 }
 
 class Highlight {
@@ -254,6 +256,18 @@ class HighlightAda : public Highlight {
   public:
     HighlightAda();
     ~HighlightAda() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string symbol_;
+};
+
+class HighlightHaskell : public Highlight {
+  public:
+    HighlightHaskell();
+    ~HighlightHaskell() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 

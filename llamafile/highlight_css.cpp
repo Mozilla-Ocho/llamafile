@@ -159,7 +159,7 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
             if (c == '/') {
                 *r += HI_RESET;
                 goto Pop;
-            } else {
+            } else if (c != '*') {
                 t_ &= -256;
                 t_ |= SLASH_STAR;
             }

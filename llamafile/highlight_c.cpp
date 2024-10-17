@@ -137,7 +137,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
-            } else {
+            } else if (c != '*') {
                 t_ = SLASH_STAR;
             }
             break;
@@ -192,6 +192,7 @@ void HighlightC::flush(std::string *r) {
     case SLASH:
         *r += '/';
         break;
+    case TICK:
     case QUOTE:
     case DQUOTE:
     case SLASH_SLASH:

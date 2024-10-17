@@ -62,6 +62,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightLisp;
     } else if (lang == "ada") {
         return new HighlightAda;
+    } else if (lang == "haskell" || lang == "hs") {
+        return new HighlightHaskell;
     } else {
         return new HighlightPlain;
     }

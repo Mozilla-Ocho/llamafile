@@ -147,7 +147,7 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
-            } else {
+            } else if (c != '*') {
                 t_ = SLASH_STAR;
             }
             break;
@@ -199,6 +199,7 @@ void HighlightPhp::flush(std::string *r) {
         *r += '/';
         break;
     case VAR:
+    case TICK:
     case QUOTE:
     case DQUOTE:
     case SLASH_SLASH:
