@@ -22,16 +22,17 @@
 #define NORMAL 0
 #define WORD 1
 #define QUOTE 2
-#define QUOTE2 3
-#define DQUOTE 4
-#define SLASH 5
-#define SLASH_SLASH 6
-#define SLASH_STAR 7
-#define SLASH_STAR_STAR 8
-#define HASH 9
-#define HASH_EXCLAIM 10
-#define ATTRIB 11
-#define BACKSLASH 64
+#define QUOTE_BACKSLASH 3
+#define QUOTE2 4
+#define DQUOTE 5
+#define DQUOTE_BACKSLASH 6
+#define SLASH 7
+#define SLASH_SLASH 8
+#define SLASH_STAR 9
+#define SLASH_STAR_STAR 10
+#define HASH 11
+#define HASH_EXCLAIM 12
+#define ATTRIB 13
 
 HighlightRust::HighlightRust() {
 }
@@ -43,19 +44,6 @@ void HighlightRust::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
-
-        if (t_ & BACKSLASH) {
-            t_ &= ~BACKSLASH;
-            *r += c;
-            if (t_ == QUOTE)
-                t_ = QUOTE2;
-            continue;
-        } else if (c == '\\') {
-            *r += c;
-            t_ |= BACKSLASH;
-            continue;
-        }
-
         switch (t_) {
 
         Normal:
@@ -149,9 +137,16 @@ void HighlightRust::feed(std::string *r, std::string_view input) {
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = QUOTE_BACKSLASH;
             } else {
                 t_ = QUOTE2;
             }
+            break;
+
+        case QUOTE_BACKSLASH:
+            *r += c;
+            t_ = QUOTE2;
             break;
 
         case QUOTE2:
@@ -171,7 +166,14 @@ void HighlightRust::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = DQUOTE_BACKSLASH;
             }
+            break;
+
+        case DQUOTE_BACKSLASH:
+            *r += c;
+            t_ = DQUOTE;
             break;
 
         case HASH:
@@ -221,7 +223,6 @@ void HighlightRust::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightRust::flush(std::string *r) {
-    t_ &= ~BACKSLASH;
     switch (t_) {
     case WORD:
         if (is_keyword_rust(word_.data(), word_.size())) {
@@ -241,8 +242,10 @@ void HighlightRust::flush(std::string *r) {
         *r += '/';
         break;
     case QUOTE:
+    case QUOTE_BACKSLASH:
     case QUOTE2:
     case DQUOTE:
+    case DQUOTE_BACKSLASH:
     case ATTRIB:
     case SLASH_SLASH:
     case SLASH_STAR:

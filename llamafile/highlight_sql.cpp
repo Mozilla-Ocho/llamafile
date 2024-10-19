@@ -22,13 +22,14 @@
 #define NORMAL 0
 #define WORD 1
 #define QUOTE 2
-#define DQUOTE 3
-#define HYPHEN 4
-#define HYPHEN_HYPHEN 5
-#define SLASH 6
-#define SLASH_STAR 7
-#define SLASH_STAR_STAR 8
-#define BACKSLASH 64
+#define QUOTE_BACKSLASH 3
+#define DQUOTE 4
+#define DQUOTE_BACKSLASH 5
+#define HYPHEN 6
+#define HYPHEN_HYPHEN 7
+#define SLASH 8
+#define SLASH_STAR 9
+#define SLASH_STAR_STAR 10
 
 HighlightSql::HighlightSql() {
 }
@@ -40,17 +41,6 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
-
-        if (t_ & BACKSLASH) {
-            t_ &= ~BACKSLASH;
-            *r += c;
-            continue;
-        } else if (c == '\\') {
-            *r += c;
-            t_ |= BACKSLASH;
-            continue;
-        }
-
         switch (t_) {
 
         Normal:
@@ -126,7 +116,14 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = QUOTE_BACKSLASH;
             }
+            break;
+
+        case QUOTE_BACKSLASH:
+            *r += c;
+            t_ = QUOTE;
             break;
 
         case DQUOTE:
@@ -134,7 +131,14 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = DQUOTE_BACKSLASH;
             }
+            break;
+
+        case DQUOTE_BACKSLASH:
+            *r += c;
+            t_ = DQUOTE;
             break;
 
         case HYPHEN:
@@ -166,7 +170,6 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightSql::flush(std::string *r) {
-    t_ &= ~BACKSLASH;
     switch (t_) {
     case WORD:
         if (is_keyword_sql(word_.data(), word_.size())) {
@@ -185,7 +188,9 @@ void HighlightSql::flush(std::string *r) {
         *r += '-';
         break;
     case QUOTE:
+    case QUOTE_BACKSLASH:
     case DQUOTE:
+    case DQUOTE_BACKSLASH:
     case SLASH_STAR:
     case SLASH_STAR_STAR:
     case HYPHEN_HYPHEN:

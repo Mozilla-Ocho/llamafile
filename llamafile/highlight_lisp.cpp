@@ -21,9 +21,9 @@
 
 #define NORMAL 0
 #define SYMBOL 1
-#define DQUOTE 3
+#define DQUOTE 2
+#define DQUOTE_BACKSLASH 3
 #define COMMENT 4
-#define BACKSLASH 64
 
 HighlightLisp::HighlightLisp() {
 }
@@ -35,17 +35,6 @@ void HighlightLisp::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
-
-        if (t_ & BACKSLASH) {
-            t_ &= ~BACKSLASH;
-            *r += c;
-            continue;
-        } else if (c == '\\') {
-            *r += c;
-            t_ |= BACKSLASH;
-            continue;
-        }
-
         switch (t_) {
 
         Normal:
@@ -116,7 +105,14 @@ void HighlightLisp::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = DQUOTE_BACKSLASH;
             }
+            break;
+
+        case DQUOTE_BACKSLASH:
+            *r += c;
+            t_ = DQUOTE;
             break;
 
         case COMMENT:
@@ -136,7 +132,6 @@ void HighlightLisp::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightLisp::flush(std::string *r) {
-    t_ &= ~BACKSLASH;
     switch (t_) {
     case SYMBOL:
         if (is_first_ && is_keyword_lisp(symbol_.data(), symbol_.size())) {
@@ -153,6 +148,7 @@ void HighlightLisp::flush(std::string *r) {
         symbol_.clear();
         break;
     case DQUOTE:
+    case DQUOTE_BACKSLASH:
     case COMMENT:
         *r += HI_RESET;
         break;

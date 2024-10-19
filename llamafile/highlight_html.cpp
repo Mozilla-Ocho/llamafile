@@ -315,6 +315,7 @@ void HighlightHtml::flush(std::string *r) {
     case COMMENT_HYPHEN_HYPHEN:
     case COMMENT_HYPHEN:
     case COMMENT:
+    case ENTITY:
     case DQUOTE:
     case QUOTE:
     case TAG2:

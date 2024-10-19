@@ -24,11 +24,12 @@
 #define PROPERTY 2
 #define VALUE 3
 #define QUOTE 4
-#define DQUOTE 5
-#define SLASH 6
-#define SLASH_STAR 7
-#define SLASH_STAR_STAR 8
-#define BACKSLASH 0x10000
+#define QUOTE_BACKSLASH 5
+#define DQUOTE 6
+#define DQUOTE_BACKSLASH 7
+#define SLASH 8
+#define SLASH_STAR 9
+#define SLASH_STAR_STAR 10
 
 HighlightCss::HighlightCss() {
 }
@@ -40,16 +41,6 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
-
-        if (t_ & BACKSLASH) {
-            t_ &= ~BACKSLASH;
-            *r += c;
-            continue;
-        } else if (c == '\\') {
-            *r += c;
-            t_ |= BACKSLASH;
-            continue;
-        }
 
     TryAgain:
         switch (t_ & 255) {
@@ -170,7 +161,16 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
             if (c == '\'') {
                 *r += HI_RESET;
                 goto Pop;
+            } else if (c == '\\') {
+                t_ &= -256;
+                t_ |= QUOTE_BACKSLASH;
             }
+            break;
+
+        case QUOTE_BACKSLASH:
+            *r += c;
+            t_ &= -256;
+            t_ |= QUOTE;
             break;
 
         case DQUOTE:
@@ -178,7 +178,16 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 goto Pop;
+            } else if (c == '\\') {
+                t_ &= -256;
+                t_ |= DQUOTE_BACKSLASH;
             }
+            break;
+
+        case DQUOTE_BACKSLASH:
+            *r += c;
+            t_ &= -256;
+            t_ |= DQUOTE;
             break;
 
         Pop:
@@ -199,6 +208,12 @@ void HighlightCss::flush(std::string *r) {
     switch (t_ & 255) {
     case SLASH:
         *r += '/';
+        break;
+    case SELECTOR:
+    case PROPERTY:
+    case DQUOTE:
+    case DQUOTE_BACKSLASH:
+        *r += HI_RESET;
         break;
     default:
         break;

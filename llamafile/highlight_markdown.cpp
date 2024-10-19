@@ -179,6 +179,10 @@ void HighlightMarkdown::flush(std::string *r) {
     case STAR:
         *r += '*';
         break;
+    case TICK:
+        *r += '`';
+        break;
+    case INCODE:
     case STRONG:
     case STRONG_STAR:
         *r += HI_RESET;

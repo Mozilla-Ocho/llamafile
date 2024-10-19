@@ -22,13 +22,15 @@
 #define NORMAL 0
 #define WORD 1
 #define QUOTE 2
-#define DQUOTE 3
-#define SLASH 4
-#define SLASH_SLASH 5
-#define SLASH_STAR 6
-#define SLASH_STAR_STAR 7
-#define TICK 8
-#define BACKSLASH 64
+#define QUOTE_BACKSLASH 3
+#define DQUOTE 4
+#define DQUOTE_BACKSLASH 5
+#define SLASH 6
+#define SLASH_SLASH 7
+#define SLASH_STAR 8
+#define SLASH_STAR_STAR 9
+#define TICK 10
+#define TICK_BACKSLASH 11
 
 HighlightC::HighlightC(is_keyword_f *is_keyword, is_keyword_f *is_type)
     : is_keyword_(is_keyword), is_type_(is_type) {
@@ -41,17 +43,6 @@ void HighlightC::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
-
-        if (t_ & BACKSLASH) {
-            t_ &= ~BACKSLASH;
-            *r += c;
-            continue;
-        } else if (c == '\\') {
-            *r += c;
-            t_ |= BACKSLASH;
-            continue;
-        }
-
         switch (t_) {
 
         Normal:
@@ -147,7 +138,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = QUOTE_BACKSLASH;
             }
+            break;
+
+        case QUOTE_BACKSLASH:
+            *r += c;
+            t_ = QUOTE;
             break;
 
         case DQUOTE:
@@ -155,7 +153,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = DQUOTE_BACKSLASH;
             }
+            break;
+
+        case DQUOTE_BACKSLASH:
+            *r += c;
+            t_ = DQUOTE;
             break;
 
         case TICK:
@@ -163,7 +168,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = TICK_BACKSLASH;
             }
+            break;
+
+        case TICK_BACKSLASH:
+            *r += c;
+            t_ = TICK;
             break;
 
         default:
@@ -173,7 +185,6 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightC::flush(std::string *r) {
-    t_ &= ~BACKSLASH;
     switch (t_) {
     case WORD:
         if (is_keyword_(word_.data(), word_.size())) {
@@ -193,8 +204,11 @@ void HighlightC::flush(std::string *r) {
         *r += '/';
         break;
     case TICK:
+    case TICK_BACKSLASH:
     case QUOTE:
+    case QUOTE_BACKSLASH:
     case DQUOTE:
+    case DQUOTE_BACKSLASH:
     case SLASH_SLASH:
     case SLASH_STAR:
     case SLASH_STAR_STAR:

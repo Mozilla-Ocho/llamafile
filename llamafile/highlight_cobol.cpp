@@ -22,9 +22,10 @@
 #define NORMAL 0
 #define WORD 1
 #define QUOTE 2
-#define DQUOTE 3
-#define COMMENT 4
-#define BACKSLASH 64
+#define QUOTE_BACKSLASH 3
+#define DQUOTE 4
+#define DQUOTE_BACKSLASH 5
+#define COMMENT 6
 
 HighlightCobol::HighlightCobol() {
 }
@@ -56,16 +57,6 @@ void HighlightCobol::feed(std::string *r, std::string_view input) {
                 *r += HI_RESET;
                 continue;
             }
-        }
-
-        if (t_ & BACKSLASH) {
-            t_ &= ~BACKSLASH;
-            *r += c;
-            continue;
-        } else if (c == '\\') {
-            *r += c;
-            t_ |= BACKSLASH;
-            continue;
         }
 
         switch (t_) {
@@ -136,7 +127,14 @@ void HighlightCobol::feed(std::string *r, std::string_view input) {
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = QUOTE_BACKSLASH;
             }
+            break;
+
+        case QUOTE_BACKSLASH:
+            *r += c;
+            t_ = QUOTE;
             break;
 
         case DQUOTE:
@@ -144,7 +142,14 @@ void HighlightCobol::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = DQUOTE_BACKSLASH;
             }
+            break;
+
+        case DQUOTE_BACKSLASH:
+            *r += c;
+            t_ = DQUOTE;
             break;
 
         default:
@@ -166,7 +171,9 @@ void HighlightCobol::flush(std::string *r) {
         word_.clear();
         break;
     case QUOTE:
+    case QUOTE_BACKSLASH:
     case DQUOTE:
+    case DQUOTE_BACKSLASH:
     case COMMENT:
         *r += HI_RESET;
         break;

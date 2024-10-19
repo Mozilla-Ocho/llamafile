@@ -22,14 +22,15 @@
 #define NORMAL 0
 #define WORD 1
 #define QUOTE 2
-#define DQUOTE 3
-#define HYPHEN 4
-#define COMMENT 5
-#define TICK 6
-#define LSB 7
-#define LITERAL 8
-#define LITERAL_RSB 9
-#define BACKSLASH 64
+#define QUOTE_BACKSLASH 3
+#define DQUOTE 4
+#define DQUOTE_BACKSLASH 5
+#define HYPHEN 6
+#define COMMENT 7
+#define TICK 8
+#define LSB 9
+#define LITERAL 10
+#define LITERAL_RSB 11
 
 HighlightLua::HighlightLua() {
 }
@@ -41,17 +42,6 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
-
-        if (t_ & BACKSLASH) {
-            t_ &= ~BACKSLASH;
-            *r += c;
-            continue;
-        } else if (c == '\\') {
-            *r += c;
-            t_ |= BACKSLASH;
-            continue;
-        }
-
         switch (t_) {
 
         Normal:
@@ -105,7 +95,7 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
                 *r += "--";
                 t_ = COMMENT;
             } else {
-                *r += '/';
+                *r += '-';
                 t_ = NORMAL;
                 goto Normal;
             }
@@ -126,7 +116,14 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = QUOTE_BACKSLASH;
             }
+            break;
+
+        case QUOTE_BACKSLASH:
+            *r += c;
+            t_ = QUOTE;
             break;
 
         case DQUOTE:
@@ -134,7 +131,14 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = DQUOTE_BACKSLASH;
             }
+            break;
+
+        case DQUOTE_BACKSLASH:
+            *r += c;
+            t_ = DQUOTE;
             break;
 
         case LSB:
@@ -185,7 +189,6 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightLua::flush(std::string *r) {
-    t_ &= ~BACKSLASH;
     switch (t_) {
     case WORD:
         if (is_keyword_lua(word_.data(), word_.size())) {
@@ -205,11 +208,14 @@ void HighlightLua::flush(std::string *r) {
         *r += '[';
         for (int i = 0; i < level1_; ++i)
             *r += '=';
+        break;
     case HYPHEN:
         *r += '-';
         break;
     case QUOTE:
+    case QUOTE_BACKSLASH:
     case DQUOTE:
+    case DQUOTE_BACKSLASH:
     case COMMENT:
     case LITERAL:
     case LITERAL_RSB:

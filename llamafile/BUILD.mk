@@ -53,6 +53,7 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/tokenize			\
 		o/$(MODE)/llamafile/addnl			\
 		o/$(MODE)/llamafile/high			\
+		o/$(MODE)/llamafile/highlight_test.runs		\
 		o/$(MODE)/llamafile/highlight_c_test.runs	\
 		o/$(MODE)/llamafile/highlight_python_test.runs	\
 		o/$(MODE)/llamafile/pool_test.runs		\
@@ -164,6 +165,10 @@ o/$(MODE)/llamafile/pool_test:				\
 		o/$(MODE)/llamafile/pool_test.o		\
 		o/$(MODE)/llamafile/crash.o		\
 		o/$(MODE)/llamafile/pool.o		\
+
+o/$(MODE)/llamafile/highlight_test:			\
+		o/$(MODE)/llamafile/highlight_test.o	\
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
 
 o/$(MODE)/llamafile/highlight_c_test:			\
 		o/$(MODE)/llamafile/highlight_c_test.o	\
