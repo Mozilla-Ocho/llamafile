@@ -3,6 +3,7 @@
 #include <libc/str/tab.h>
 #define GPERF_DOWNCASE
 %}
+%pic
 %ignore-case
 %compare-strncmp
 %language=ANSI-C
@@ -12,14 +13,23 @@
 allocatable
 byte
 character
+common
 complex
+data
 dimension
 double
 integer
+intrinsic
 logical
+map
+none
+parameter
 pointer
 precision
 real
+record
+save
 sequence
+structure
 target
 type

@@ -36,6 +36,7 @@
 #define HI_TAG "\033[33m" // yellow
 #define HI_INCODE "\033[1;35m" // magenta
 #define HI_BUILTIN "\033[35m" // magenta
+#define HI_CONSTANT "\033[1;35m" // bold magenta
 #define HI_LISPKW "\033[35m" // magenta
 #define HI_ENTITY "\033[36m" // cyan
 #define HI_OPERATOR "\033[36m" // cyan
@@ -45,6 +46,8 @@ typedef const char *is_keyword_f(const char *, size_t);
 extern "C" {
 is_keyword_f is_keyword_c;
 is_keyword_f is_keyword_c_type;
+is_keyword_f is_keyword_c_builtin;
+is_keyword_f is_keyword_c_constant;
 is_keyword_f is_keyword_cxx;
 is_keyword_f is_keyword_js;
 is_keyword_f is_keyword_java;
@@ -52,6 +55,7 @@ is_keyword_f is_keyword_python;
 is_keyword_f is_keyword_rust;
 is_keyword_f is_keyword_fortran;
 is_keyword_f is_keyword_fortran_type;
+is_keyword_f is_keyword_fortran_builtin;
 is_keyword_f is_keyword_cobol;
 is_keyword_f is_keyword_pascal;
 is_keyword_f is_keyword_pascal_type;
@@ -72,6 +76,10 @@ is_keyword_f is_keyword_shell_builtin;
 is_keyword_f is_keyword_swift;
 is_keyword_f is_keyword_swift_type;
 is_keyword_f is_keyword_d;
+is_keyword_f is_keyword_zig;
+is_keyword_f is_keyword_zig_type;
+is_keyword_f is_keyword_zig_builtin;
+is_keyword_f is_keyword_zig_constant;
 }
 
 class Highlight {
@@ -92,7 +100,8 @@ class HighlightPlain : public Highlight {
 
 class HighlightC : public Highlight {
   public:
-    HighlightC(is_keyword_f is_keyword = is_keyword_c, is_keyword_f is_type = nullptr);
+    HighlightC(is_keyword_f is_keyword = is_keyword_c, is_keyword_f is_type = nullptr,
+               is_keyword_f is_builtin = nullptr, is_keyword_f is_constant = nullptr);
     ~HighlightC() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
@@ -102,6 +111,8 @@ class HighlightC : public Highlight {
     std::string word_;
     is_keyword_f *is_type_;
     is_keyword_f *is_keyword_;
+    is_keyword_f *is_builtin_;
+    is_keyword_f *is_constant_;
 };
 
 class HighlightPython : public Highlight {
@@ -291,13 +302,31 @@ class HighlightPerl : public Highlight {
 
   private:
     int t_ = 0;
+    int i_ = 0;
+    bool pending_heredoc_ = false;
     std::string word_;
+    std::string heredoc_;
 };
 
 class HighlightShell : public Highlight {
   public:
     HighlightShell();
     ~HighlightShell() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int i_ = 0;
+    bool pending_heredoc_ = false;
+    std::string word_;
+    std::string heredoc_;
+};
+
+class HighlightZig : public Highlight {
+  public:
+    HighlightZig();
+    ~HighlightZig() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 

@@ -19,13 +19,15 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define QUOTE_BACKSLASH 3
-#define DQUOTE 4
-#define DQUOTE_BACKSLASH 5
-#define COMMENT 6
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    COMMENT,
+};
 
 HighlightFortran::HighlightFortran() {
 }
@@ -43,7 +45,7 @@ void HighlightFortran::feed(std::string *r, std::string_view input) {
             col_ = -1;
 
         if (t_ == NORMAL) {
-            if (col_ == 0 && c == '*') {
+            if (col_ == 0 && (c == '*' || c == 'c' || c == 'C')) {
                 t_ = COMMENT;
                 *r += HI_COMMENT;
             } else if (col_ == 5 && c != ' ') {
@@ -107,6 +109,10 @@ void HighlightFortran::feed(std::string *r, std::string_view input) {
                     *r += HI_TYPE;
                     *r += word_;
                     *r += HI_RESET;
+                } else if (is_keyword_fortran_builtin(word_.data(), word_.size())) {
+                    *r += HI_BUILTIN;
+                    *r += word_;
+                    *r += HI_RESET;
                 } else {
                     *r += word_;
                 }
@@ -167,6 +173,14 @@ void HighlightFortran::flush(std::string *r) {
     case WORD:
         if (is_keyword_fortran(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_fortran_type(word_.data(), word_.size())) {
+            *r += HI_TYPE;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_fortran_builtin(word_.data(), word_.size())) {
+            *r += HI_BUILTIN;
             *r += word_;
             *r += HI_RESET;
         } else {

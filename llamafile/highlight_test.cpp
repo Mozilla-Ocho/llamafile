@@ -54,6 +54,7 @@ const char *const kLanguages[] = {
     "shell", //
     "sql", //
     "swift", //
+    "zig", //
 };
 
 int rand32(void) {

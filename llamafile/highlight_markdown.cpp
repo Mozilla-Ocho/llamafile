@@ -17,18 +17,20 @@
 
 #include "highlight.h"
 
-#define NORMAL 0
-#define TICK 1
-#define TICK_TICK 2
-#define LANG 3
-#define CODE 4
-#define CODE_TICK 5
-#define CODE_TICK_TICK 6
-#define STAR 7
-#define STRONG 8
-#define STRONG_STAR 9
-#define BACKSLASH 10
-#define INCODE 11
+enum {
+    NORMAL,
+    TICK,
+    TICK_TICK,
+    LANG,
+    CODE,
+    CODE_TICK,
+    CODE_TICK_TICK,
+    STAR,
+    STRONG,
+    STRONG_STAR,
+    BACKSLASH,
+    INCODE,
+};
 
 HighlightMarkdown::HighlightMarkdown() {
 }

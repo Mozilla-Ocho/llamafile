@@ -1,6 +1,7 @@
 %{
 #include <string.h>
 %}
+%pic
 %compare-strncmp
 %language=ANSI-C
 %readonly-tables
@@ -180,6 +181,7 @@ uintmax_t
 uintptr_t
 useconds_t
 ushort_t
+va_list
 wchar_t
 wctrans_t
 wctype_t

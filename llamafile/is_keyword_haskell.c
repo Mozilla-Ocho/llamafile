@@ -85,11 +85,42 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_haskell (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "",
+      char stringpool_str2[sizeof("in")];
+      char stringpool_str4[sizeof("then")];
+      char stringpool_str5[sizeof("infix")];
+      char stringpool_str6[sizeof("import")];
+      char stringpool_str7[sizeof("as")];
+      char stringpool_str8[sizeof("let")];
+      char stringpool_str9[sizeof("type")];
+      char stringpool_str10[sizeof("where")];
+      char stringpool_str11[sizeof("infixl")];
+      char stringpool_str12[sizeof("newtype")];
+      char stringpool_str13[sizeof("instance")];
+      char stringpool_str14[sizeof("else")];
+      char stringpool_str15[sizeof("class")];
+      char stringpool_str16[sizeof("module")];
+      char stringpool_str17[sizeof("if")];
+      char stringpool_str18[sizeof("mdo")];
+      char stringpool_str19[sizeof("case")];
+      char stringpool_str21[sizeof("infixr")];
+      char stringpool_str22[sizeof("foreign")];
+      char stringpool_str24[sizeof("proc")];
+      char stringpool_str26[sizeof("forall")];
+      char stringpool_str27[sizeof("of")];
+      char stringpool_str28[sizeof("rec")];
+      char stringpool_str31[sizeof("family")];
+      char stringpool_str32[sizeof("default")];
+      char stringpool_str33[sizeof("deriving")];
+      char stringpool_str34[sizeof("data")];
+      char stringpool_str36[sizeof("hiding")];
+      char stringpool_str37[sizeof("do")];
+      char stringpool_str39[sizeof("qualified")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "in",
-      "",
       "then",
       "infix",
       "import",
@@ -106,25 +137,61 @@ is_keyword_haskell (register const char *str, register size_t len)
       "if",
       "mdo",
       "case",
-      "",
       "infixr",
       "foreign",
-      "",
       "proc",
-      "",
       "forall",
       "of",
       "rec",
-      "", "",
       "family",
       "default",
       "deriving",
       "data",
-      "",
       "hiding",
       "do",
-      "",
       "qualified"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -133,10 +200,14 @@ is_keyword_haskell (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

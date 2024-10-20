@@ -19,16 +19,23 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define DQUOTE 4
-#define DQUOTE_BACKSLASH 5
-#define TICK 6
-#define TICK_BACKSLASH 7
-#define VAR 8
-#define VAR2 9
-#define COMMENT 10
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    TICK,
+    TICK_BACKSLASH,
+    VAR,
+    VAR2,
+    COMMENT,
+    LT,
+    LT_LT,
+    LT_LT_NAME,
+    HEREDOC_BOL,
+    HEREDOC,
+};
 
 HighlightShell::HighlightShell() {
 }
@@ -62,10 +69,21 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             } else if (c == '$') {
                 *r += c;
                 t_ = VAR;
+            } else if (c == '<') {
+                *r += c;
+                t_ = LT;
             } else if (c == '#') {
                 *r += HI_COMMENT;
                 *r += c;
                 t_ = COMMENT;
+            } else if (c == '\n') {
+                *r += c;
+                if (pending_heredoc_) {
+                    *r += HI_STRING;
+                    pending_heredoc_ = false;
+                    t_ = HEREDOC_BOL;
+                    i_ = 0;
+                }
             } else {
                 *r += c;
             }
@@ -176,6 +194,72 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             t_ = TICK;
             break;
 
+        case LT:
+            if (c == '<') {
+                *r += c;
+                t_ = LT_LT;
+                heredoc_.clear();
+                pending_heredoc_ = false;
+            } else {
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
+        case LT_LT:
+            if (c == '\'') {
+                t_ = LT_LT_NAME;
+                *r += c;
+            } else if (isalpha(c) || c == '_') {
+                t_ = LT_LT_NAME;
+                heredoc_ += c;
+                *r += c;
+            } else if (!isblank(c)) {
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
+        case LT_LT_NAME:
+            if (isalnum(c) || c == '_') {
+                t_ = LT_LT_NAME;
+                heredoc_ += c;
+                *r += c;
+            } else if (c == '\n') {
+                *r += c;
+                *r += HI_STRING;
+                t_ = HEREDOC_BOL;
+            } else {
+                pending_heredoc_ = true;
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
+        case HEREDOC_BOL:
+            *r += c;
+            if (c == '\n') {
+                if (i_ == heredoc_.size()) {
+                    t_ = NORMAL;
+                    *r += HI_RESET;
+                }
+                i_ = 0;
+            } else if (isalnum(c) || c == '_') {
+                if (i_ < heredoc_.size() && (heredoc_[i_] & 255) == c) {
+                    i_++;
+                } else {
+                    t_ = HEREDOC;
+                    i_ = 0;
+                }
+            }
+            break;
+
+        case HEREDOC:
+            *r += c;
+            if (c == '\n')
+                t_ = HEREDOC_BOL;
+            break;
+
         default:
             __builtin_unreachable();
         }
@@ -205,6 +289,8 @@ void HighlightShell::flush(std::string *r) {
     case DQUOTE:
     case DQUOTE_BACKSLASH:
     case COMMENT:
+    case HEREDOC_BOL:
+    case HEREDOC:
         *r += HI_RESET;
         break;
     default:

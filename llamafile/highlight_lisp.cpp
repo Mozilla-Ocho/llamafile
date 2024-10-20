@@ -19,11 +19,13 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define SYMBOL 1
-#define DQUOTE 2
-#define DQUOTE_BACKSLASH 3
-#define COMMENT 4
+enum {
+    NORMAL,
+    SYMBOL,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    COMMENT,
+};
 
 HighlightLisp::HighlightLisp() {
 }

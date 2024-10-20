@@ -17,23 +17,25 @@
 
 #include "highlight.h"
 
-#define NORMAL 0
-#define TAG 1
-#define TAG2 2
-#define TAG_EXCLAIM 3
-#define TAG_EXCLAIM_HYPHEN 4
-#define KEY 5
-#define VAL 6
-#define QUOTE 7
-#define DQUOTE 8
-#define COMMENT 9
-#define COMMENT_HYPHEN 10
-#define COMMENT_HYPHEN_HYPHEN 11
-#define RELAY 12
-#define TAG_QUESTION 13
-#define TAG_QUESTION_P 14
-#define TAG_QUESTION_P_H 15
-#define ENTITY 16
+enum {
+    NORMAL,
+    TAG,
+    TAG2,
+    TAG_EXCLAIM,
+    TAG_EXCLAIM_HYPHEN,
+    KEY,
+    VAL,
+    QUOTE,
+    DQUOTE,
+    COMMENT,
+    COMMENT_HYPHEN,
+    COMMENT_HYPHEN_HYPHEN,
+    RELAY,
+    TAG_QUESTION,
+    TAG_QUESTION_P,
+    TAG_QUESTION_P_H,
+    ENTITY,
+};
 
 HighlightHtml::HighlightHtml() {
 }

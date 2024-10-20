@@ -85,13 +85,54 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_shell_builtin (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "", "",
+      char stringpool_str4[sizeof("stop")];
+      char stringpool_str5[sizeof("jobs")];
+      char stringpool_str6[sizeof("source")];
+      char stringpool_str8[sizeof("set")];
+      char stringpool_str9[sizeof("test")];
+      char stringpool_str10[sizeof("local")];
+      char stringpool_str11[sizeof("logout")];
+      char stringpool_str12[sizeof("command")];
+      char stringpool_str13[sizeof("let")];
+      char stringpool_str14[sizeof("echo")];
+      char stringpool_str15[sizeof("shift")];
+      char stringpool_str17[sizeof("suspend")];
+      char stringpool_str19[sizeof("help")];
+      char stringpool_str20[sizeof("chdir")];
+      char stringpool_str21[sizeof("ulimit")];
+      char stringpool_str22[sizeof("getopts")];
+      char stringpool_str24[sizeof("true")];
+      char stringpool_str25[sizeof("times")];
+      char stringpool_str26[sizeof("enable")];
+      char stringpool_str27[sizeof("fg")];
+      char stringpool_str29[sizeof("read")];
+      char stringpool_str30[sizeof("unset")];
+      char stringpool_str31[sizeof("printf")];
+      char stringpool_str32[sizeof("unalias")];
+      char stringpool_str34[sizeof("readarray")];
+      char stringpool_str35[sizeof("alias")];
+      char stringpool_str36[sizeof("caller")];
+      char stringpool_str37[sizeof("bg")];
+      char stringpool_str39[sizeof("hash")];
+      char stringpool_str42[sizeof("builtin")];
+      char stringpool_str44[sizeof("type")];
+      char stringpool_str45[sizeof("false")];
+      char stringpool_str47[sizeof("typeset")];
+      char stringpool_str49[sizeof("bind")];
+      char stringpool_str52[sizeof("cd")];
+      char stringpool_str54[sizeof("wait")];
+      char stringpool_str57[sizeof("declare")];
+      char stringpool_str59[sizeof("eval")];
+      char stringpool_str62[sizeof("mapfile")];
+      char stringpool_str64[sizeof("kill")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "stop",
       "jobs",
       "source",
-      "",
       "set",
       "test",
       "local",
@@ -100,51 +141,97 @@ is_keyword_shell_builtin (register const char *str, register size_t len)
       "let",
       "echo",
       "shift",
-      "",
       "suspend",
-      "",
       "help",
       "chdir",
       "ulimit",
       "getopts",
-      "",
       "true",
       "times",
       "enable",
       "fg",
-      "",
       "read",
       "unset",
       "printf",
       "unalias",
-      "",
       "readarray",
       "alias",
       "caller",
       "bg",
-      "",
       "hash",
-      "", "",
       "builtin",
-      "",
       "type",
       "false",
-      "",
       "typeset",
-      "",
       "bind",
-      "", "",
       "cd",
-      "",
       "wait",
-      "", "",
       "declare",
-      "",
       "eval",
-      "", "",
       "mapfile",
-      "",
       "kill"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str42,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str47,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str52,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str54,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str57,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str59,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str62,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str64
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -153,10 +240,14 @@ is_keyword_shell_builtin (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

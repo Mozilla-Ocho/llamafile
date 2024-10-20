@@ -19,12 +19,14 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define SYMBOL 1
-#define QUOTE 2
-#define DQUOTE 3
-#define HYPHEN 4
-#define COMMENT 5
+enum {
+    NORMAL,
+    SYMBOL,
+    QUOTE,
+    DQUOTE,
+    HYPHEN,
+    COMMENT,
+};
 
 HighlightAda::HighlightAda() {
 }

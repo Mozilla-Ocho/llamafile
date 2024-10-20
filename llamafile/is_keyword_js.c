@@ -85,9 +85,50 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_js (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "",
+      char stringpool_str3[sizeof("try")];
+      char stringpool_str4[sizeof("true")];
+      char stringpool_str5[sizeof("const")];
+      char stringpool_str6[sizeof("return")];
+      char stringpool_str7[sizeof("do")];
+      char stringpool_str8[sizeof("continue")];
+      char stringpool_str9[sizeof("case")];
+      char stringpool_str10[sizeof("catch")];
+      char stringpool_str11[sizeof("delete")];
+      char stringpool_str12[sizeof("default")];
+      char stringpool_str13[sizeof("debugger")];
+      char stringpool_str14[sizeof("with")];
+      char stringpool_str15[sizeof("super")];
+      char stringpool_str16[sizeof("static")];
+      char stringpool_str17[sizeof("if")];
+      char stringpool_str18[sizeof("for")];
+      char stringpool_str20[sizeof("await")];
+      char stringpool_str21[sizeof("import")];
+      char stringpool_str22[sizeof("finally")];
+      char stringpool_str23[sizeof("function")];
+      char stringpool_str25[sizeof("false")];
+      char stringpool_str26[sizeof("switch")];
+      char stringpool_str27[sizeof("in")];
+      char stringpool_str28[sizeof("new")];
+      char stringpool_str29[sizeof("null")];
+      char stringpool_str30[sizeof("yield")];
+      char stringpool_str31[sizeof("typeof")];
+      char stringpool_str35[sizeof("instanceof")];
+      char stringpool_str36[sizeof("export")];
+      char stringpool_str37[sizeof("extends")];
+      char stringpool_str38[sizeof("let")];
+      char stringpool_str39[sizeof("else")];
+      char stringpool_str40[sizeof("class")];
+      char stringpool_str44[sizeof("this")];
+      char stringpool_str45[sizeof("throw")];
+      char stringpool_str49[sizeof("void")];
+      char stringpool_str50[sizeof("break")];
+      char stringpool_str53[sizeof("var")];
+      char stringpool_str55[sizeof("while")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "try",
       "true",
       "const",
@@ -104,12 +145,10 @@ is_keyword_js (register const char *str, register size_t len)
       "static",
       "if",
       "for",
-      "",
       "await",
       "import",
       "finally",
       "function",
-      "",
       "false",
       "switch",
       "in",
@@ -117,23 +156,69 @@ is_keyword_js (register const char *str, register size_t len)
       "null",
       "yield",
       "typeof",
-      "", "", "",
       "instanceof",
       "export",
       "extends",
       "let",
       "else",
       "class",
-      "", "", "",
       "this",
       "throw",
-      "", "", "",
       "void",
       "break",
-      "", "",
       "var",
-      "",
       "while"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str53,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str55
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -142,10 +227,14 @@ is_keyword_js (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

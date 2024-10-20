@@ -19,23 +19,25 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define QUOTE_BACKSLASH 3
-#define DQUOTE 4
-#define DQUOTE_BACKSLASH 5
-#define TICK 6
-#define TICK_BACKSLASH 7
-#define CURL 8
-#define CURL_HYPHEN 9
-#define CURL_HYPHEN_HYPHEN 10
-#define HYPHEN 11
-#define HYPHEN_HYPHEN 12
-#define HYPHEN_LT 13
-#define EQUAL 14
-#define COLON 15
-#define LT 16
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    TICK,
+    TICK_BACKSLASH,
+    CURL,
+    CURL_HYPHEN,
+    CURL_HYPHEN_HYPHEN,
+    HYPHEN,
+    HYPHEN_HYPHEN,
+    HYPHEN_LT,
+    EQUAL,
+    COLON,
+    LT,
+};
 
 HighlightHaskell::HighlightHaskell() {
 }

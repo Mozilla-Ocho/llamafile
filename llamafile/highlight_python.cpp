@@ -19,25 +19,27 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define COM 2
+enum {
+    NORMAL,
+    WORD,
+    COM,
 
-#define SQUOTE 3 // '
-#define SQUOTESTR 4 // '...
-#define SQUOTESTR_BACKSLASH 5 // '...
-#define SQUOTE2 6 // ''
-#define SQUOTE3 7 // '''...
-#define SQUOTE31 8 // '''...'
-#define SQUOTE32 9 // '''...''
+    SQUOTE, // '
+    SQUOTESTR, // '...
+    SQUOTESTR_BACKSLASH, // '...
+    SQUOTE2, // ''
+    SQUOTE3, // '''...
+    SQUOTE31, // '''...'
+    SQUOTE32, // '''...''
 
-#define DQUOTE 10 // "
-#define DQUOTESTR 11 // "...
-#define DQUOTESTR_BACKSLASH 12 // "...
-#define DQUOTE2 13 // ""
-#define DQUOTE3 14 // """...
-#define DQUOTE31 15 // """..."
-#define DQUOTE32 16 // """...""
+    DQUOTE, // "
+    DQUOTESTR, // "...
+    DQUOTESTR_BACKSLASH, // "...
+    DQUOTE2, // ""
+    DQUOTE3, // """...
+    DQUOTE31, // """..."
+    DQUOTE32, // """...""
+};
 
 HighlightPython::HighlightPython() {
 }

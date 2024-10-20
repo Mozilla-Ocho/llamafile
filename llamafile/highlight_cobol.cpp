@@ -19,13 +19,15 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define QUOTE_BACKSLASH 3
-#define DQUOTE 4
-#define DQUOTE_BACKSLASH 5
-#define COMMENT 6
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    COMMENT,
+};
 
 HighlightCobol::HighlightCobol() {
 }

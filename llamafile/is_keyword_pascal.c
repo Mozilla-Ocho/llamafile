@@ -132,29 +132,67 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_pascal (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "",
+      char stringpool_str2[sizeof("or")];
+      char stringpool_str4[sizeof("goto")];
+      char stringpool_str7[sizeof("do")];
+      char stringpool_str8[sizeof("for")];
+      char stringpool_str11[sizeof("downto")];
+      char stringpool_str12[sizeof("of")];
+      char stringpool_str13[sizeof("mod")];
+      char stringpool_str14[sizeof("read")];
+      char stringpool_str16[sizeof("record")];
+      char stringpool_str17[sizeof("rewrite")];
+      char stringpool_str20[sizeof("begin")];
+      char stringpool_str21[sizeof("readln")];
+      char stringpool_str22[sizeof("to")];
+      char stringpool_str23[sizeof("end")];
+      char stringpool_str27[sizeof("if")];
+      char stringpool_str28[sizeof("get")];
+      char stringpool_str29[sizeof("else")];
+      char stringpool_str30[sizeof("reset")];
+      char stringpool_str31[sizeof("repeat")];
+      char stringpool_str32[sizeof("program")];
+      char stringpool_str33[sizeof("not")];
+      char stringpool_str34[sizeof("procedure")];
+      char stringpool_str35[sizeof("write")];
+      char stringpool_str37[sizeof("in")];
+      char stringpool_str38[sizeof("function")];
+      char stringpool_str39[sizeof("then")];
+      char stringpool_str40[sizeof("while")];
+      char stringpool_str41[sizeof("output")];
+      char stringpool_str42[sizeof("writeln")];
+      char stringpool_str43[sizeof("nil")];
+      char stringpool_str44[sizeof("type")];
+      char stringpool_str45[sizeof("until")];
+      char stringpool_str48[sizeof("and")];
+      char stringpool_str49[sizeof("with")];
+      char stringpool_str50[sizeof("input")];
+      char stringpool_str53[sizeof("div")];
+      char stringpool_str55[sizeof("const")];
+      char stringpool_str58[sizeof("put")];
+      char stringpool_str63[sizeof("var")];
+      char stringpool_str65[sizeof("label")];
+      char stringpool_str68[sizeof("set")];
+      char stringpool_str69[sizeof("case")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "or",
-      "",
       "goto",
-      "", "",
       "do",
       "for",
-      "", "",
       "downto",
       "of",
       "mod",
       "read",
-      "",
       "record",
       "rewrite",
-      "", "",
       "begin",
       "readln",
       "to",
       "end",
-      "", "", "",
       "if",
       "get",
       "else",
@@ -164,7 +202,6 @@ is_keyword_pascal (register const char *str, register size_t len)
       "not",
       "procedure",
       "write",
-      "",
       "in",
       "function",
       "then",
@@ -174,23 +211,77 @@ is_keyword_pascal (register const char *str, register size_t len)
       "nil",
       "type",
       "until",
-      "", "",
       "and",
       "with",
       "input",
-      "", "",
       "div",
-      "",
       "const",
-      "", "",
       "put",
-      "", "", "", "",
       "var",
-      "",
       "label",
-      "", "",
       "set",
       "case"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str42,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str43,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str53,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str55,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str58,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str63,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str65,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str68,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str69
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -199,10 +290,14 @@ is_keyword_pascal (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
-            return s;
+              if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

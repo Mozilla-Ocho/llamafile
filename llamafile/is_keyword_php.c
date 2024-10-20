@@ -147,70 +147,130 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_php (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "",
+      char stringpool_str2[sizeof("if")];
+      char stringpool_str6[sizeof("switch")];
+      char stringpool_str9[sizeof("insteadof")];
+      char stringpool_str10[sizeof("instanceof")];
+      char stringpool_str12[sizeof("do")];
+      char stringpool_str14[sizeof("exit")];
+      char stringpool_str15[sizeof("isset")];
+      char stringpool_str19[sizeof("interface")];
+      char stringpool_str23[sizeof("die")];
+      char stringpool_str24[sizeof("else")];
+      char stringpool_str25[sizeof("endif")];
+      char stringpool_str26[sizeof("elseif")];
+      char stringpool_str27[sizeof("extends")];
+      char stringpool_str29[sizeof("endswitch")];
+      char stringpool_str32[sizeof("as")];
+      char stringpool_str34[sizeof("case")];
+      char stringpool_str35[sizeof("trait")];
+      char stringpool_str36[sizeof("static")];
+      char stringpool_str38[sizeof("abstract")];
+      char stringpool_str39[sizeof("list")];
+      char stringpool_str40[sizeof("enddeclare")];
+      char stringpool_str42[sizeof("fn")];
+      char stringpool_str43[sizeof("and")];
+      char stringpool_str45[sizeof("catch")];
+      char stringpool_str47[sizeof("__DIR__")];
+      char stringpool_str48[sizeof("xor")];
+      char stringpool_str50[sizeof("break")];
+      char stringpool_str55[sizeof("class")];
+      char stringpool_str60[sizeof("const")];
+      char stringpool_str62[sizeof("include")];
+      char stringpool_str63[sizeof("continue")];
+      char stringpool_str65[sizeof("empty")];
+      char stringpool_str66[sizeof("endfor")];
+      char stringpool_str67[sizeof("include_once")];
+      char stringpool_str68[sizeof("var")];
+      char stringpool_str70[sizeof("endforeach")];
+      char stringpool_str72[sizeof("declare")];
+      char stringpool_str73[sizeof("__LINE__")];
+      char stringpool_str75[sizeof("match")];
+      char stringpool_str77[sizeof("or")];
+      char stringpool_str78[sizeof("__FILE__")];
+      char stringpool_str79[sizeof("eval")];
+      char stringpool_str80[sizeof("false")];
+      char stringpool_str81[sizeof("__TRAIT__\011\011")];
+      char stringpool_str82[sizeof("private")];
+      char stringpool_str83[sizeof("for")];
+      char stringpool_str84[sizeof("goto")];
+      char stringpool_str86[sizeof("__\360\235\224\245\360\235\224\236\360\235\224\251\360\235\224\261_\360\235\224\240\360\235\224\254\360\235\224\252\360\235\224\255\360\235\224\246\360\235\224\251\360\235\224\242\360\235\224\257")];
+      char stringpool_str87[sizeof("default")];
+      char stringpool_str88[sizeof("readonly")];
+      char stringpool_str89[sizeof("echo")];
+      char stringpool_str90[sizeof("print")];
+      char stringpool_str91[sizeof("global")];
+      char stringpool_str93[sizeof("try")];
+      char stringpool_str94[sizeof("__CLASS__")];
+      char stringpool_str95[sizeof("implements")];
+      char stringpool_str96[sizeof("public")];
+      char stringpool_str97[sizeof("foreach")];
+      char stringpool_str98[sizeof("callable")];
+      char stringpool_str100[sizeof("__METHOD__")];
+      char stringpool_str103[sizeof("function")];
+      char stringpool_str104[sizeof("namespace")];
+      char stringpool_str105[sizeof("array")];
+      char stringpool_str108[sizeof("__NAMESPACE__")];
+      char stringpool_str110[sizeof("final")];
+      char stringpool_str112[sizeof("finally")];
+      char stringpool_str113[sizeof("use")];
+      char stringpool_str114[sizeof("true")];
+      char stringpool_str115[sizeof("unset")];
+      char stringpool_str118[sizeof("endwhile")];
+      char stringpool_str120[sizeof("throw")];
+      char stringpool_str128[sizeof("new")];
+      char stringpool_str130[sizeof("while")];
+      char stringpool_str134[sizeof("protected")];
+      char stringpool_str135[sizeof("clone")];
+      char stringpool_str140[sizeof("yield")];
+      char stringpool_str146[sizeof("return")];
+      char stringpool_str147[sizeof("require")];
+      char stringpool_str152[sizeof("require_once")];
+      char stringpool_str182[sizeof("__FUNCTION__")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "if",
-      "", "", "",
       "switch",
-      "", "",
       "insteadof",
       "instanceof",
-      "",
       "do",
-      "",
       "exit",
       "isset",
-      "", "", "",
       "interface",
-      "", "", "",
       "die",
       "else",
       "endif",
       "elseif",
       "extends",
-      "",
       "endswitch",
-      "", "",
       "as",
-      "",
       "case",
       "trait",
       "static",
-      "",
       "abstract",
       "list",
       "enddeclare",
-      "",
       "fn",
       "and",
-      "",
       "catch",
-      "",
       "__DIR__",
       "xor",
-      "",
       "break",
-      "", "", "", "",
       "class",
-      "", "", "", "",
       "const",
-      "",
       "include",
       "continue",
-      "",
       "empty",
       "endfor",
       "include_once",
       "var",
-      "",
       "endforeach",
-      "",
       "declare",
       "__LINE__",
-      "",
       "match",
-      "",
       "or",
       "__FILE__",
       "eval",
@@ -219,58 +279,165 @@ is_keyword_php (register const char *str, register size_t len)
       "private",
       "for",
       "goto",
-      "",
       "__\360\235\224\245\360\235\224\236\360\235\224\251\360\235\224\261_\360\235\224\240\360\235\224\254\360\235\224\252\360\235\224\255\360\235\224\246\360\235\224\251\360\235\224\242\360\235\224\257",
       "default",
       "readonly",
       "echo",
       "print",
       "global",
-      "",
       "try",
       "__CLASS__",
       "implements",
       "public",
       "foreach",
       "callable",
-      "",
       "__METHOD__",
-      "", "",
       "function",
       "namespace",
       "array",
-      "", "",
       "__NAMESPACE__",
-      "",
       "final",
-      "",
       "finally",
       "use",
       "true",
       "unset",
-      "", "",
       "endwhile",
-      "",
       "throw",
-      "", "", "", "", "", "", "",
       "new",
-      "",
       "while",
-      "", "", "",
       "protected",
       "clone",
-      "", "", "", "",
       "yield",
-      "", "", "", "", "",
       "return",
       "require",
-      "", "", "", "",
       "require_once",
-      "", "", "", "", "", "", "", "", "",
-      "", "", "", "", "", "", "", "", "",
-      "", "", "", "", "", "", "", "", "",
-      "", "",
       "__FUNCTION__"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str42,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str43,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str47,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str55,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str60,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str62,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str63,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str65,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str66,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str67,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str68,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str70,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str72,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str73,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str75,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str77,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str78,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str79,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str80,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str81,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str82,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str83,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str84,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str86,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str87,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str88,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str89,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str90,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str91,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str93,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str94,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str95,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str96,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str97,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str98,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str100,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str103,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str104,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str105,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str108,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str110,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str112,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str113,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str114,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str115,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str118,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str120,
+      -1, -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str128,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str130,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str134,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str135,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str140,
+      -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str146,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str147,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str152,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str182
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -279,10 +446,14 @@ is_keyword_php (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
-            return s;
+              if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

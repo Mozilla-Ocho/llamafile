@@ -21,11 +21,18 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "markdown" || lang == "md") {
         return new HighlightMarkdown;
     } else if (lang == "c") {
-        return new HighlightC(is_keyword_c, is_keyword_c_type);
+        return new HighlightC(is_keyword_c, //
+                              is_keyword_c_type, //
+                              is_keyword_c_builtin, //
+                              is_keyword_c_constant);
     } else if (lang == "c++" || //
                lang == "cxx" || //
-               lang == "cpp") {
-        return new HighlightC(is_keyword_cxx, is_keyword_c_type);
+               lang == "cpp" || //
+               lang == "cu") {
+        return new HighlightC(is_keyword_cxx, //
+                              is_keyword_c_type, //
+                              is_keyword_c_builtin, //
+                              is_keyword_c_constant);
     } else if (lang == "js" || //
                lang == "javascript") {
         return new HighlightC(is_keyword_js);
@@ -68,8 +75,10 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightC(is_keyword_kotlin);
     } else if (lang == "lua") {
         return new HighlightLua;
-    } else if (lang == "cl" || //
-               lang == "lisp" || //
+    } else if (lang == "lisp" || //
+               lang == "el" || //
+               lang == "elisp" || //
+               lang == "cl" || //
                lang == "clisp" || //
                lang == "scheme" || //
                lang == "clojure") {
@@ -91,6 +100,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightC(is_keyword_swift, is_keyword_swift_type);
     } else if (lang == "d") {
         return new HighlightC(is_keyword_d);
+    } else if (lang == "zig") {
+        return new HighlightZig();
     } else {
         return new HighlightPlain;
     }

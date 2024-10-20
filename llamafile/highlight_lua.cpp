@@ -19,18 +19,20 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define QUOTE_BACKSLASH 3
-#define DQUOTE 4
-#define DQUOTE_BACKSLASH 5
-#define HYPHEN 6
-#define COMMENT 7
-#define TICK 8
-#define LSB 9
-#define LITERAL 10
-#define LITERAL_RSB 11
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    HYPHEN,
+    COMMENT,
+    TICK,
+    LSB,
+    LITERAL,
+    LITERAL_RSB,
+};
 
 HighlightLua::HighlightLua() {
 }

@@ -101,17 +101,76 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_lua_builtin (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "",
+      char stringpool_str2[sizeof("os")];
+      char stringpool_str4[sizeof("next")];
+      char stringpool_str7[sizeof("_G")];
+      char stringpool_str9[sizeof("__lt")];
+      char stringpool_str11[sizeof("__bnot")];
+      char stringpool_str12[sizeof("io")];
+      char stringpool_str13[sizeof("__concat")];
+      char stringpool_str14[sizeof("__eq")];
+      char stringpool_str15[sizeof("__mod")];
+      char stringpool_str16[sizeof("__mode")];
+      char stringpool_str17[sizeof("__index")];
+      char stringpool_str18[sizeof("_VERSION")];
+      char stringpool_str19[sizeof("type")];
+      char stringpool_str20[sizeof("__add")];
+      char stringpool_str22[sizeof("__bxor")];
+      char stringpool_str24[sizeof("__le")];
+      char stringpool_str25[sizeof("__len")];
+      char stringpool_str26[sizeof("__idiv")];
+      char stringpool_str29[sizeof("load")];
+      char stringpool_str30[sizeof("print")];
+      char stringpool_str32[sizeof("__close")];
+      char stringpool_str33[sizeof("tostring")];
+      char stringpool_str34[sizeof("utf8")];
+      char stringpool_str35[sizeof("__bor")];
+      char stringpool_str36[sizeof("__band")];
+      char stringpool_str38[sizeof("loadfile")];
+      char stringpool_str39[sizeof("__gc")];
+      char stringpool_str40[sizeof("table")];
+      char stringpool_str41[sizeof("dofile")];
+      char stringpool_str45[sizeof("error")];
+      char stringpool_str50[sizeof("__unm")];
+      char stringpool_str51[sizeof("ipairs")];
+      char stringpool_str53[sizeof("rawequal")];
+      char stringpool_str54[sizeof("warn")];
+      char stringpool_str55[sizeof("__mul")];
+      char stringpool_str56[sizeof("__call")];
+      char stringpool_str57[sizeof("package")];
+      char stringpool_str60[sizeof("__pow")];
+      char stringpool_str61[sizeof("string")];
+      char stringpool_str62[sizeof("xpcall")];
+      char stringpool_str64[sizeof("coroutine")];
+      char stringpool_str65[sizeof("__div")];
+      char stringpool_str66[sizeof("rawlen")];
+      char stringpool_str67[sizeof("require")];
+      char stringpool_str70[sizeof("pcall")];
+      char stringpool_str71[sizeof("assert")];
+      char stringpool_str73[sizeof("tonumber")];
+      char stringpool_str75[sizeof("debug")];
+      char stringpool_str76[sizeof("__name")];
+      char stringpool_str79[sizeof("collectgarbage")];
+      char stringpool_str80[sizeof("__newindex")];
+      char stringpool_str85[sizeof("__shl")];
+      char stringpool_str86[sizeof("rawget")];
+      char stringpool_str90[sizeof("__shr")];
+      char stringpool_str91[sizeof("rawset")];
+      char stringpool_str95[sizeof("__sub")];
+      char stringpool_str96[sizeof("select")];
+      char stringpool_str99[sizeof("math")];
+      char stringpool_str100[sizeof("pairs")];
+      char stringpool_str107[sizeof("getmetatable")];
+      char stringpool_str112[sizeof("setmetatable")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "os",
-      "",
       "next",
-      "", "",
       "_G",
-      "",
       "__lt",
-      "",
       "__bnot",
       "io",
       "__concat",
@@ -122,73 +181,143 @@ is_keyword_lua_builtin (register const char *str, register size_t len)
       "_VERSION",
       "type",
       "__add",
-      "",
       "__bxor",
-      "",
       "__le",
       "__len",
       "__idiv",
-      "", "",
       "load",
       "print",
-      "",
       "__close",
       "tostring",
       "utf8",
       "__bor",
       "__band",
-      "",
       "loadfile",
       "__gc",
       "table",
       "dofile",
-      "", "", "",
       "error",
-      "", "", "", "",
       "__unm",
       "ipairs",
-      "",
       "rawequal",
       "warn",
       "__mul",
       "__call",
       "package",
-      "", "",
       "__pow",
       "string",
       "xpcall",
-      "",
       "coroutine",
       "__div",
       "rawlen",
       "require",
-      "", "",
       "pcall",
       "assert",
-      "",
       "tonumber",
-      "",
       "debug",
       "__name",
-      "", "",
       "collectgarbage",
       "__newindex",
-      "", "", "", "",
       "__shl",
       "rawget",
-      "", "", "",
       "__shr",
       "rawset",
-      "", "", "",
       "__sub",
       "select",
-      "", "",
       "math",
       "pairs",
-      "", "", "", "", "", "",
       "getmetatable",
-      "", "", "", "",
       "setmetatable"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str51,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str53,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str54,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str55,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str56,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str57,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str60,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str61,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str62,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str64,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str65,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str66,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str67,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str70,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str71,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str73,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str75,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str76,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str79,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str80,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str85,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str86,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str90,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str91,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str95,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str96,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str99,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str100,
+      -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str107,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str112
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -197,10 +326,14 @@ is_keyword_lua_builtin (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

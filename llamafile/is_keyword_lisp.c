@@ -151,100 +151,183 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_lisp (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "",
+      char stringpool_str3[sizeof("the")];
+      char stringpool_str7[sizeof("tagbody")];
+      char stringpool_str8[sizeof("typecase")];
+      char stringpool_str10[sizeof("ecase")];
+      char stringpool_str12[sizeof("deftype")];
+      char stringpool_str13[sizeof("deftheme")];
+      char stringpool_str14[sizeof("case")];
+      char stringpool_str15[sizeof("block")];
+      char stringpool_str17[sizeof("do")];
+      char stringpool_str18[sizeof("defsubst")];
+      char stringpool_str20[sizeof("ccase")];
+      char stringpool_str23[sizeof("defconst")];
+      char stringpool_str24[sizeof("cond")];
+      char stringpool_str26[sizeof("defconstant")];
+      char stringpool_str28[sizeof("destructuring-bind")];
+      char stringpool_str29[sizeof("defstruct")];
+      char stringpool_str30[sizeof("check-type")];
+      char stringpool_str31[sizeof("dolist")];
+      char stringpool_str33[sizeof("flet")];
+      char stringpool_str36[sizeof("ert-deftest")];
+      char stringpool_str37[sizeof("dotimes")];
+      char stringpool_str38[sizeof("define-widget")];
+      char stringpool_str39[sizeof("condition-case")];
+      char stringpool_str41[sizeof("defface")];
+      char stringpool_str44[sizeof("etypecase")];
+      char stringpool_str46[sizeof("defsetf")];
+      char stringpool_str48[sizeof("ignore-errors")];
+      char stringpool_str49[sizeof("define-derived-mode")];
+      char stringpool_str51[sizeof("if")];
+      char stringpool_str52[sizeof("restart-case")];
+      char stringpool_str53[sizeof("do*")];
+      char stringpool_str54[sizeof("ctypecase")];
+      char stringpool_str57[sizeof("restart-bind")];
+      char stringpool_str58[sizeof("define-inline")];
+      char stringpool_str59[sizeof("define-symbol-macro")];
+      char stringpool_str60[sizeof("symbol-macrolet")];
+      char stringpool_str63[sizeof("macrolet")];
+      char stringpool_str64[sizeof("multiple-value-bind")];
+      char stringpool_str65[sizeof("define-setf-expander")];
+      char stringpool_str66[sizeof("define-compiler-macro")];
+      char stringpool_str67[sizeof("compiler-let")];
+      char stringpool_str69[sizeof("defmethod")];
+      char stringpool_str70[sizeof("break")];
+      char stringpool_str71[sizeof("assert")];
+      char stringpool_str72[sizeof("go")];
+      char stringpool_str73[sizeof("defmacro")];
+      char stringpool_str74[sizeof("defcustom")];
+      char stringpool_str78[sizeof("let")];
+      char stringpool_str79[sizeof("flet*")];
+      char stringpool_str80[sizeof("while")];
+      char stringpool_str82[sizeof("define-minor-mode")];
+      char stringpool_str84[sizeof("with-open-file")];
+      char stringpool_str85[sizeof("multiple-value-prog1")];
+      char stringpool_str86[sizeof("labels")];
+      char stringpool_str87[sizeof("declare")];
+      char stringpool_str88[sizeof("defalias")];
+      char stringpool_str89[sizeof("defadvice")];
+      char stringpool_str94[sizeof("define-modify-macro")];
+      char stringpool_str95[sizeof("with-slots")];
+      char stringpool_str99[sizeof("with-accessors")];
+      char stringpool_str100[sizeof("defgeneric")];
+      char stringpool_str102[sizeof("defparameter")];
+      char stringpool_str103[sizeof("define-advice")];
+      char stringpool_str104[sizeof("define-generic-mode")];
+      char stringpool_str105[sizeof("define-skeleton")];
+      char stringpool_str106[sizeof("unless")];
+      char stringpool_str109[sizeof("define-global-minor-mode")];
+      char stringpool_str110[sizeof("defpackage")];
+      char stringpool_str111[sizeof("define-condition")];
+      char stringpool_str112[sizeof("handler-case")];
+      char stringpool_str113[sizeof("define-globalized-minor-mode")];
+      char stringpool_str114[sizeof("with-hash-table-iterator")];
+      char stringpool_str115[sizeof("prog2")];
+      char stringpool_str116[sizeof("with-package-iterator")];
+      char stringpool_str117[sizeof("handler-bind")];
+      char stringpool_str120[sizeof("prog1")];
+      char stringpool_str121[sizeof("cl-defsubst")];
+      char stringpool_str124[sizeof("when")];
+      char stringpool_str125[sizeof("in-package")];
+      char stringpool_str126[sizeof("with-open-stream")];
+      char stringpool_str127[sizeof("declaim")];
+      char stringpool_str128[sizeof("proclaim")];
+      char stringpool_str129[sizeof("with-simple-restart")];
+      char stringpool_str131[sizeof("with-compilation-unit")];
+      char stringpool_str133[sizeof("defgroup")];
+      char stringpool_str135[sizeof("progv")];
+      char stringpool_str136[sizeof("defvaralias")];
+      char stringpool_str137[sizeof("letf")];
+      char stringpool_str139[sizeof("loop")];
+      char stringpool_str140[sizeof("prog*")];
+      char stringpool_str144[sizeof("eval-when")];
+      char stringpool_str146[sizeof("lambda")];
+      char stringpool_str147[sizeof("locally")];
+      char stringpool_str150[sizeof("define-method-combination")];
+      char stringpool_str151[sizeof("with-output-to-string")];
+      char stringpool_str154[sizeof("prog")];
+      char stringpool_str155[sizeof("progn")];
+      char stringpool_str158[sizeof("with-condition-restarts")];
+      char stringpool_str159[sizeof("unwind-protect")];
+      char stringpool_str163[sizeof("with-standard-io-syntax")];
+      char stringpool_str165[sizeof("defun")];
+      char stringpool_str169[sizeof("let*")];
+      char stringpool_str176[sizeof("return")];
+      char stringpool_str182[sizeof("with-input-from-string")];
+      char stringpool_str190[sizeof("return-from")];
+      char stringpool_str207[sizeof("defvar-local")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "the",
-      "", "", "",
       "tagbody",
       "typecase",
-      "",
       "ecase",
-      "",
       "deftype",
       "deftheme",
       "case",
       "block",
-      "",
       "do",
       "defsubst",
-      "",
       "ccase",
-      "", "",
       "defconst",
       "cond",
-      "",
       "defconstant",
-      "",
       "destructuring-bind",
       "defstruct",
       "check-type",
       "dolist",
-      "",
       "flet",
-      "", "",
       "ert-deftest",
       "dotimes",
       "define-widget",
       "condition-case",
-      "",
       "defface",
-      "", "",
       "etypecase",
-      "",
       "defsetf",
-      "",
       "ignore-errors",
       "define-derived-mode",
-      "",
       "if",
       "restart-case",
       "do*",
       "ctypecase",
-      "", "",
       "restart-bind",
       "define-inline",
       "define-symbol-macro",
       "symbol-macrolet",
-      "", "",
       "macrolet",
       "multiple-value-bind",
       "define-setf-expander",
       "define-compiler-macro",
       "compiler-let",
-      "",
       "defmethod",
       "break",
       "assert",
       "go",
       "defmacro",
       "defcustom",
-      "", "", "",
       "let",
       "flet*",
       "while",
-      "",
       "define-minor-mode",
-      "",
       "with-open-file",
       "multiple-value-prog1",
       "labels",
       "declare",
       "defalias",
       "defadvice",
-      "", "", "", "",
       "define-modify-macro",
       "with-slots",
-      "", "", "",
       "with-accessors",
       "defgeneric",
-      "",
       "defparameter",
       "define-advice",
       "define-generic-mode",
       "define-skeleton",
       "unless",
-      "", "",
       "define-global-minor-mode",
       "defpackage",
       "define-condition",
@@ -254,56 +337,192 @@ is_keyword_lisp (register const char *str, register size_t len)
       "prog2",
       "with-package-iterator",
       "handler-bind",
-      "", "",
       "prog1",
       "cl-defsubst",
-      "", "",
       "when",
       "in-package",
       "with-open-stream",
       "declaim",
       "proclaim",
       "with-simple-restart",
-      "",
       "with-compilation-unit",
-      "",
       "defgroup",
-      "",
       "progv",
       "defvaralias",
       "letf",
-      "",
       "loop",
       "prog*",
-      "", "", "",
       "eval-when",
-      "",
       "lambda",
       "locally",
-      "", "",
       "define-method-combination",
       "with-output-to-string",
-      "", "",
       "prog",
       "progn",
-      "", "",
       "with-condition-restarts",
       "unwind-protect",
-      "", "", "",
       "with-standard-io-syntax",
-      "",
       "defun",
-      "", "", "",
       "let*",
-      "", "", "", "", "", "",
       "return",
-      "", "", "", "", "",
       "with-input-from-string",
-      "", "", "", "", "", "", "",
       "return-from",
-      "", "", "", "", "", "", "", "", "",
-      "", "", "", "", "", "", "",
       "defvar-local"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str46,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str51,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str52,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str53,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str54,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str57,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str58,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str59,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str60,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str63,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str64,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str65,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str66,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str67,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str69,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str70,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str71,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str72,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str73,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str74,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str78,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str79,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str80,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str82,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str84,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str85,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str86,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str87,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str88,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str89,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str94,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str95,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str99,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str100,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str102,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str103,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str104,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str105,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str106,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str109,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str110,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str111,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str112,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str113,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str114,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str115,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str116,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str117,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str120,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str121,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str124,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str125,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str126,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str127,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str128,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str129,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str131,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str133,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str135,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str136,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str137,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str139,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str140,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str144,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str146,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str147,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str150,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str151,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str154,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str155,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str158,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str159,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str163,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str165,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str169,
+      -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str176,
+      -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str182,
+      -1, -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str190,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str207
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -312,10 +531,14 @@ is_keyword_lisp (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
-            return s;
+              if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

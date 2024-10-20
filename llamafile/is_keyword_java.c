@@ -97,9 +97,61 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_java (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "",
+      char stringpool_str3[sizeof("new")];
+      char stringpool_str4[sizeof("void")];
+      char stringpool_str5[sizeof("short")];
+      char stringpool_str6[sizeof("switch")];
+      char stringpool_str7[sizeof("private")];
+      char stringpool_str8[sizeof("strictfp")];
+      char stringpool_str9[sizeof("protected")];
+      char stringpool_str10[sizeof("while")];
+      char stringpool_str11[sizeof("static")];
+      char stringpool_str12[sizeof("boolean")];
+      char stringpool_str13[sizeof("volatile")];
+      char stringpool_str14[sizeof("long")];
+      char stringpool_str17[sizeof("if")];
+      char stringpool_str21[sizeof("public")];
+      char stringpool_str22[sizeof("synchronized")];
+      char stringpool_str24[sizeof("char")];
+      char stringpool_str25[sizeof("class")];
+      char stringpool_str27[sizeof("do")];
+      char stringpool_str29[sizeof("enum")];
+      char stringpool_str30[sizeof("const")];
+      char stringpool_str31[sizeof("double")];
+      char stringpool_str32[sizeof("package")];
+      char stringpool_str33[sizeof("continue")];
+      char stringpool_str34[sizeof("this")];
+      char stringpool_str35[sizeof("throw")];
+      char stringpool_str36[sizeof("throws")];
+      char stringpool_str38[sizeof("for")];
+      char stringpool_str40[sizeof("float")];
+      char stringpool_str41[sizeof("assert")];
+      char stringpool_str43[sizeof("abstract")];
+      char stringpool_str44[sizeof("transient")];
+      char stringpool_str45[sizeof("break")];
+      char stringpool_str47[sizeof("default")];
+      char stringpool_str48[sizeof("try")];
+      char stringpool_str49[sizeof("case")];
+      char stringpool_str50[sizeof("final")];
+      char stringpool_str51[sizeof("native")];
+      char stringpool_str52[sizeof("finally")];
+      char stringpool_str54[sizeof("byte")];
+      char stringpool_str55[sizeof("instanceof")];
+      char stringpool_str56[sizeof("return")];
+      char stringpool_str59[sizeof("else")];
+      char stringpool_str60[sizeof("super")];
+      char stringpool_str63[sizeof("int")];
+      char stringpool_str64[sizeof("goto")];
+      char stringpool_str65[sizeof("catch")];
+      char stringpool_str69[sizeof("interface")];
+      char stringpool_str76[sizeof("import")];
+      char stringpool_str77[sizeof("extends")];
+      char stringpool_str80[sizeof("implements")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "new",
       "void",
       "short",
@@ -112,17 +164,12 @@ is_keyword_java (register const char *str, register size_t len)
       "boolean",
       "volatile",
       "long",
-      "", "",
       "if",
-      "", "", "",
       "public",
       "synchronized",
-      "",
       "char",
       "class",
-      "",
       "do",
-      "",
       "enum",
       "const",
       "double",
@@ -131,40 +178,100 @@ is_keyword_java (register const char *str, register size_t len)
       "this",
       "throw",
       "throws",
-      "",
       "for",
-      "",
       "float",
       "assert",
-      "",
       "abstract",
       "transient",
       "break",
-      "",
       "default",
       "try",
       "case",
       "final",
       "native",
       "finally",
-      "",
       "byte",
       "instanceof",
       "return",
-      "", "",
       "else",
       "super",
-      "", "",
       "int",
       "goto",
       "catch",
-      "", "", "",
       "interface",
-      "", "", "", "", "", "",
       "import",
       "extends",
-      "", "",
       "implements"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str43,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str47,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str51,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str52,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str54,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str55,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str56,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str59,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str60,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str63,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str64,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str65,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str69,
+      -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str76,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str77,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str80
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -173,10 +280,14 @@ is_keyword_java (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

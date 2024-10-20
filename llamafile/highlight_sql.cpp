@@ -19,17 +19,19 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define QUOTE_BACKSLASH 3
-#define DQUOTE 4
-#define DQUOTE_BACKSLASH 5
-#define HYPHEN 6
-#define HYPHEN_HYPHEN 7
-#define SLASH 8
-#define SLASH_STAR 9
-#define SLASH_STAR_STAR 10
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    HYPHEN,
+    HYPHEN_HYPHEN,
+    SLASH,
+    SLASH_STAR,
+    SLASH_STAR_STAR,
+};
 
 HighlightSql::HighlightSql() {
 }

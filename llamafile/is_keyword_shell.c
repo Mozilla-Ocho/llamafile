@@ -96,13 +96,37 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_shell (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "",
+      char stringpool_str2[sizeof("do")];
+      char stringpool_str3[sizeof("for")];
+      char stringpool_str4[sizeof("done")];
+      char stringpool_str6[sizeof("coproc")];
+      char stringpool_str7[sizeof("in")];
+      char stringpool_str8[sizeof("function")];
+      char stringpool_str9[sizeof("expr")];
+      char stringpool_str10[sizeof("until")];
+      char stringpool_str11[sizeof("return")];
+      char stringpool_str12[sizeof("fi")];
+      char stringpool_str14[sizeof("exit")];
+      char stringpool_str16[sizeof("select")];
+      char stringpool_str17[sizeof("if")];
+      char stringpool_str19[sizeof("time")];
+      char stringpool_str20[sizeof("while")];
+      char stringpool_str22[sizeof("elif")];
+      char stringpool_str24[sizeof("exec")];
+      char stringpool_str25[sizeof("break")];
+      char stringpool_str27[sizeof("else")];
+      char stringpool_str29[sizeof("then")];
+      char stringpool_str34[sizeof("esac")];
+      char stringpool_str39[sizeof("trap")];
+      char stringpool_str44[sizeof("case")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "do",
       "for",
       "done",
-      "",
       "coproc",
       "in",
       "function",
@@ -110,29 +134,58 @@ is_keyword_shell (register const char *str, register size_t len)
       "until",
       "return",
       "fi",
-      "",
       "exit",
-      "",
       "select",
       "if",
-      "",
       "time",
       "while",
-      "",
       "elif",
-      "",
       "exec",
       "break",
-      "",
       "else",
-      "",
       "then",
-      "", "", "", "",
       "esac",
-      "", "", "", "",
       "trap",
-      "", "", "", "",
       "case"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -141,10 +194,14 @@ is_keyword_shell (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

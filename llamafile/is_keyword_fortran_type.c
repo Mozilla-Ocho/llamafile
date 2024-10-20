@@ -1,6 +1,6 @@
 /* ANSI-C code produced by gperf version 3.1 */
 /* Command-line: gperf llamafile/is_keyword_fortran_type.gperf  */
-/* Computed positions: -k'1' */
+/* Computed positions: -k'1-2' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
       && ('%' == 37) && ('&' == 38) && ('\'' == 39) && ('(' == 40) \
@@ -35,12 +35,12 @@
 #include <libc/str/tab.h>
 #define GPERF_DOWNCASE
 
-#define TOTAL_KEYWORDS 14
-#define MIN_WORD_LENGTH 4
+#define TOTAL_KEYWORDS 23
+#define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 11
 #define MIN_HASH_VALUE 4
-#define MAX_HASH_VALUE 22
-/* maximum key range = 19, duplicates = 0 */
+#define MAX_HASH_VALUE 49
+/* maximum key range = 46, duplicates = 0 */
 
 #ifndef GPERF_DOWNCASE
 #define GPERF_DOWNCASE 1
@@ -99,60 +99,133 @@ hash (register const char *str, register size_t len)
 {
   static const unsigned char asso_values[] =
     {
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23,  5, 14, 10,  5, 23,
-      23, 23, 23, 15, 23, 23,  5, 23, 23, 23,
-       0, 23,  9,  0,  0, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23,  5, 14, 10,
-       5, 23, 23, 23, 23, 15, 23, 23,  5, 23,
-      23, 23,  0, 23,  9,  0,  0, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23, 23, 23, 23, 23,
-      23, 23, 23, 23, 23, 23
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 10, 15, 15,  5, 15,
+      50, 50, 25,  0, 50, 50, 10,  0,  0,  0,
+       5, 50, 15, 25, 10, 50, 50, 50, 50, 13,
+      50, 50, 50, 50, 50, 50, 50, 10, 15, 15,
+       5, 15, 50, 50, 25,  0, 50, 50, 10,  0,
+       0,  0,  5, 50, 15, 25, 10, 50, 50, 50,
+      50, 13, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      50, 50, 50, 50, 50, 50
     };
-  return len + asso_values[(unsigned char)str[0]];
+  return len + asso_values[(unsigned char)str[1]] + asso_values[(unsigned char)str[0]];
 }
 
 const char *
 is_keyword_fortran_type (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "", "",
-      "type",
-      "",
-      "target",
-      "pointer",
-      "sequence",
-      "precision",
-      "",
+      char stringpool_str4[sizeof("none")];
+      char stringpool_str7[sizeof("integer")];
+      char stringpool_str9[sizeof("intrinsic")];
+      char stringpool_str11[sizeof("double")];
+      char stringpool_str12[sizeof("pointer")];
+      char stringpool_str13[sizeof("map")];
+      char stringpool_str14[sizeof("dimension")];
+      char stringpool_str17[sizeof("logical")];
+      char stringpool_str19[sizeof("data")];
+      char stringpool_str21[sizeof("common")];
+      char stringpool_str22[sizeof("complex")];
+      char stringpool_str24[sizeof("parameter")];
+      char stringpool_str26[sizeof("target")];
+      char stringpool_str27[sizeof("type")];
+      char stringpool_str29[sizeof("precision")];
+      char stringpool_str31[sizeof("allocatable")];
+      char stringpool_str32[sizeof("byte")];
+      char stringpool_str34[sizeof("real")];
+      char stringpool_str36[sizeof("record")];
+      char stringpool_str39[sizeof("save")];
+      char stringpool_str44[sizeof("structure")];
+      char stringpool_str48[sizeof("sequence")];
+      char stringpool_str49[sizeof("character")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
+      "none",
+      "integer",
+      "intrinsic",
       "double",
-      "logical",
-      "real",
+      "pointer",
+      "map",
       "dimension",
-      "",
-      "allocatable",
+      "logical",
+      "data",
+      "common",
       "complex",
+      "parameter",
+      "target",
+      "type",
+      "precision",
+      "allocatable",
       "byte",
-      "character",
-      "", "",
-      "integer"
+      "real",
+      "record",
+      "save",
+      "structure",
+      "sequence",
+      "character"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -161,10 +234,14 @@ is_keyword_fortran_type (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
-            return s;
+              if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

@@ -97,9 +97,47 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_perl (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "",
+      char stringpool_str3[sizeof("our")];
+      char stringpool_str4[sizeof("goto")];
+      char stringpool_str5[sizeof("given")];
+      char stringpool_str6[sizeof("return")];
+      char stringpool_str7[sizeof("do")];
+      char stringpool_str8[sizeof("for")];
+      char stringpool_str9[sizeof("redo")];
+      char stringpool_str10[sizeof("BEGIN")];
+      char stringpool_str12[sizeof("foreach")];
+      char stringpool_str13[sizeof("die")];
+      char stringpool_str14[sizeof("exec")];
+      char stringpool_str15[sizeof("until")];
+      char stringpool_str17[sizeof("default")];
+      char stringpool_str18[sizeof("use")];
+      char stringpool_str19[sizeof("else")];
+      char stringpool_str20[sizeof("elsif")];
+      char stringpool_str22[sizeof("if")];
+      char stringpool_str23[sizeof("has")];
+      char stringpool_str24[sizeof("when")];
+      char stringpool_str25[sizeof("local")];
+      char stringpool_str27[sizeof("package")];
+      char stringpool_str28[sizeof("sub")];
+      char stringpool_str29[sizeof("exit")];
+      char stringpool_str32[sizeof("no")];
+      char stringpool_str33[sizeof("END")];
+      char stringpool_str34[sizeof("last")];
+      char stringpool_str36[sizeof("unless")];
+      char stringpool_str37[sizeof("my")];
+      char stringpool_str38[sizeof("continue")];
+      char stringpool_str39[sizeof("eval")];
+      char stringpool_str40[sizeof("while")];
+      char stringpool_str42[sizeof("require")];
+      char stringpool_str44[sizeof("dump")];
+      char stringpool_str45[sizeof("state")];
+      char stringpool_str46[sizeof("import")];
+      char stringpool_str49[sizeof("next")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "our",
       "goto",
       "given",
@@ -108,43 +146,84 @@ is_keyword_perl (register const char *str, register size_t len)
       "for",
       "redo",
       "BEGIN",
-      "",
       "foreach",
       "die",
       "exec",
       "until",
-      "",
       "default",
       "use",
       "else",
       "elsif",
-      "",
       "if",
       "has",
       "when",
       "local",
-      "",
       "package",
       "sub",
       "exit",
-      "", "",
       "no",
       "END",
       "last",
-      "",
       "unless",
       "my",
       "continue",
       "eval",
       "while",
-      "",
       "require",
-      "",
       "dump",
       "state",
       "import",
-      "", "",
       "next"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str42,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str46,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -153,10 +232,14 @@ is_keyword_perl (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

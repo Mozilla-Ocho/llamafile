@@ -19,17 +19,19 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define SELECTOR 1
-#define PROPERTY 2
-#define VALUE 3
-#define QUOTE 4
-#define QUOTE_BACKSLASH 5
-#define DQUOTE 6
-#define DQUOTE_BACKSLASH 7
-#define SLASH 8
-#define SLASH_STAR 9
-#define SLASH_STAR_STAR 10
+enum {
+    NORMAL,
+    SELECTOR,
+    PROPERTY,
+    VALUE,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    SLASH,
+    SLASH_STAR,
+    SLASH_STAR_STAR,
+};
 
 HighlightCss::HighlightCss() {
 }

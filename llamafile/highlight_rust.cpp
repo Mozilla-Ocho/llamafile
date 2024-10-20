@@ -19,20 +19,22 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define QUOTE_BACKSLASH 3
-#define QUOTE2 4
-#define DQUOTE 5
-#define DQUOTE_BACKSLASH 6
-#define SLASH 7
-#define SLASH_SLASH 8
-#define SLASH_STAR 9
-#define SLASH_STAR_STAR 10
-#define HASH 11
-#define HASH_EXCLAIM 12
-#define ATTRIB 13
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    QUOTE2,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    SLASH,
+    SLASH_SLASH,
+    SLASH_STAR,
+    SLASH_STAR_STAR,
+    HASH,
+    HASH_EXCLAIM,
+    ATTRIB,
+};
 
 HighlightRust::HighlightRust() {
 }

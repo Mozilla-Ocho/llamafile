@@ -145,17 +145,55 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_pascal_type (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "",
+      char stringpool_str3[sizeof("set")];
+      char stringpool_str4[sizeof("real")];
+      char stringpool_str5[sizeof("array")];
+      char stringpool_str6[sizeof("double")];
+      char stringpool_str8[sizeof("smallint")];
+      char stringpool_str9[sizeof("file")];
+      char stringpool_str11[sizeof("single")];
+      char stringpool_str12[sizeof("boolean")];
+      char stringpool_str13[sizeof("widechar")];
+      char stringpool_str14[sizeof("char")];
+      char stringpool_str15[sizeof("widestring")];
+      char stringpool_str16[sizeof("record")];
+      char stringpool_str17[sizeof("integer")];
+      char stringpool_str18[sizeof("ansichar")];
+      char stringpool_str19[sizeof("text")];
+      char stringpool_str20[sizeof("ansistring")];
+      char stringpool_str21[sizeof("uint64")];
+      char stringpool_str22[sizeof("longint")];
+      char stringpool_str23[sizeof("currency")];
+      char stringpool_str24[sizeof("nativeint")];
+      char stringpool_str25[sizeof("int64")];
+      char stringpool_str26[sizeof("real48")];
+      char stringpool_str28[sizeof("ucs4char")];
+      char stringpool_str29[sizeof("comp")];
+      char stringpool_str30[sizeof("int16")];
+      char stringpool_str31[sizeof("uint32")];
+      char stringpool_str33[sizeof("shortint")];
+      char stringpool_str34[sizeof("word")];
+      char stringpool_str35[sizeof("uint8")];
+      char stringpool_str36[sizeof("shortstring")];
+      char stringpool_str38[sizeof("extended")];
+      char stringpool_str41[sizeof("string")];
+      char stringpool_str43[sizeof("fixedint")];
+      char stringpool_str46[sizeof("uint16")];
+      char stringpool_str48[sizeof("ucs2char")];
+      char stringpool_str51[sizeof("packed")];
+      char stringpool_str53[sizeof("longword")];
+      char stringpool_str55[sizeof("int32")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "set",
       "real",
       "array",
       "double",
-      "",
       "smallint",
       "file",
-      "",
       "single",
       "boolean",
       "widechar",
@@ -172,32 +210,77 @@ is_keyword_pascal_type (register const char *str, register size_t len)
       "nativeint",
       "int64",
       "real48",
-      "",
       "ucs4char",
       "comp",
       "int16",
       "uint32",
-      "",
       "shortint",
       "word",
       "uint8",
       "shortstring",
-      "",
       "extended",
-      "", "",
       "string",
-      "",
       "fixedint",
-      "", "",
       "uint16",
-      "",
       "ucs2char",
-      "", "",
       "packed",
-      "",
       "longword",
-      "",
       "int32"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str43,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str46,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str51,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str53,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str55
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -206,10 +289,14 @@ is_keyword_pascal_type (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
-            return s;
+              if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strncmp (str, s, len) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

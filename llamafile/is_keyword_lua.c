@@ -85,37 +85,88 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_lua (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "",
+      char stringpool_str2[sizeof("in")];
+      char stringpool_str3[sizeof("nil")];
+      char stringpool_str5[sizeof("local")];
+      char stringpool_str6[sizeof("return")];
+      char stringpool_str7[sizeof("if")];
+      char stringpool_str8[sizeof("for")];
+      char stringpool_str10[sizeof("while")];
+      char stringpool_str12[sizeof("or")];
+      char stringpool_str13[sizeof("function")];
+      char stringpool_str14[sizeof("else")];
+      char stringpool_str15[sizeof("false")];
+      char stringpool_str16[sizeof("elseif")];
+      char stringpool_str18[sizeof("not")];
+      char stringpool_str19[sizeof("then")];
+      char stringpool_str20[sizeof("until")];
+      char stringpool_str21[sizeof("repeat")];
+      char stringpool_str23[sizeof("end")];
+      char stringpool_str24[sizeof("true")];
+      char stringpool_str25[sizeof("break")];
+      char stringpool_str27[sizeof("do")];
+      char stringpool_str28[sizeof("and")];
+      char stringpool_str29[sizeof("goto")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "in",
       "nil",
-      "",
       "local",
       "return",
       "if",
       "for",
-      "",
       "while",
-      "",
       "or",
       "function",
       "else",
       "false",
       "elseif",
-      "",
       "not",
       "then",
       "until",
       "repeat",
-      "",
       "end",
       "true",
       "break",
-      "",
       "do",
       "and",
       "goto"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -124,10 +175,14 @@ is_keyword_lua (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

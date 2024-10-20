@@ -19,16 +19,18 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define DQUOTE 3
-#define SLASH 4
-#define SLASH_SLASH 5
-#define CURLY 6
-#define PAREN 7
-#define PAREN_STAR 8
-#define PAREN_STAR_STAR 9
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    DQUOTE,
+    SLASH,
+    SLASH_SLASH,
+    CURLY,
+    PAREN,
+    PAREN_STAR,
+    PAREN_STAR_STAR,
+};
 
 HighlightPascal::HighlightPascal() {
 }

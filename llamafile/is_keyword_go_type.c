@@ -85,30 +85,71 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_go_type (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "", "", "",
+      char stringpool_str4[sizeof("int8")];
+      char stringpool_str5[sizeof("uint8")];
+      char stringpool_str7[sizeof("uintptr")];
+      char stringpool_str8[sizeof("int")];
+      char stringpool_str9[sizeof("uint")];
+      char stringpool_str10[sizeof("int64")];
+      char stringpool_str11[sizeof("uint64")];
+      char stringpool_str12[sizeof("float64")];
+      char stringpool_str14[sizeof("rune")];
+      char stringpool_str15[sizeof("int32")];
+      char stringpool_str16[sizeof("uint32")];
+      char stringpool_str17[sizeof("float32")];
+      char stringpool_str19[sizeof("byte")];
+      char stringpool_str20[sizeof("complex128")];
+      char stringpool_str24[sizeof("complex64")];
+      char stringpool_str25[sizeof("int16")];
+      char stringpool_str26[sizeof("uint16")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "int8",
       "uint8",
-      "",
       "uintptr",
       "int",
       "uint",
       "int64",
       "uint64",
       "float64",
-      "",
       "rune",
       "int32",
       "uint32",
       "float32",
-      "",
       "byte",
       "complex128",
-      "", "", "",
       "complex64",
       "int16",
       "uint16"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -117,10 +158,14 @@ is_keyword_go_type (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;

@@ -3,6 +3,7 @@
 #include <libc/str/tab.h>
 #define GPERF_DOWNCASE
 %}
+%pic
 %ignore-case
 %compare-strncmp
 %language=ANSI-C
@@ -12,6 +13,7 @@
 .and.
 .eq.
 .eqv.
+.false.
 .ge.
 .gt.
 .le.
@@ -20,6 +22,7 @@
 .neqv.
 .not.
 .or.
+.true.
 abstract
 all
 allocatable
@@ -49,8 +52,10 @@ dimension
 do
 elemental
 else
+elseif
 elsewhere
 end
+enddo
 endfile
 endif
 entry

@@ -1,6 +1,7 @@
 %{
 #include <string.h>
 %}
+%pic
 %compare-strncmp
 %language=ANSI-C
 %readonly-tables

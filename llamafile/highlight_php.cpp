@@ -19,19 +19,21 @@
 
 #include <ctype.h>
 
-#define NORMAL 0
-#define WORD 1
-#define QUOTE 2
-#define QUOTE_BACKSLASH 3
-#define DQUOTE 4
-#define DQUOTE_BACKSLASH 5
-#define SLASH 6
-#define SLASH_SLASH 7
-#define SLASH_STAR 8
-#define SLASH_STAR_STAR 9
-#define TICK 10
-#define TICK_BACKSLASH 11
-#define VAR 12
+enum {
+    NORMAL,
+    WORD,
+    QUOTE,
+    QUOTE_BACKSLASH,
+    DQUOTE,
+    DQUOTE_BACKSLASH,
+    SLASH,
+    SLASH_SLASH,
+    SLASH_STAR,
+    SLASH_STAR_STAR,
+    TICK,
+    TICK_BACKSLASH,
+    VAR,
+};
 
 HighlightPhp::HighlightPhp() {
 }

@@ -85,15 +85,51 @@ hash (register const char *str, register size_t len)
 const char *
 is_keyword_python (register const char *str, register size_t len)
 {
-  static const char * const wordlist[] =
+  struct stringpool_t
     {
-      "", "",
+      char stringpool_str2[sizeof("if")];
+      char stringpool_str3[sizeof("def")];
+      char stringpool_str4[sizeof("from")];
+      char stringpool_str5[sizeof("break")];
+      char stringpool_str6[sizeof("import")];
+      char stringpool_str8[sizeof("try")];
+      char stringpool_str9[sizeof("elif")];
+      char stringpool_str10[sizeof("yield")];
+      char stringpool_str11[sizeof("except")];
+      char stringpool_str12[sizeof("finally")];
+      char stringpool_str13[sizeof("and")];
+      char stringpool_str14[sizeof("else")];
+      char stringpool_str15[sizeof("await")];
+      char stringpool_str16[sizeof("assert")];
+      char stringpool_str17[sizeof("in")];
+      char stringpool_str18[sizeof("not")];
+      char stringpool_str19[sizeof("with")];
+      char stringpool_str20[sizeof("while")];
+      char stringpool_str22[sizeof("is")];
+      char stringpool_str23[sizeof("for")];
+      char stringpool_str24[sizeof("pass")];
+      char stringpool_str25[sizeof("False")];
+      char stringpool_str27[sizeof("or")];
+      char stringpool_str29[sizeof("True")];
+      char stringpool_str30[sizeof("raise")];
+      char stringpool_str32[sizeof("as")];
+      char stringpool_str33[sizeof("del")];
+      char stringpool_str34[sizeof("None")];
+      char stringpool_str36[sizeof("global")];
+      char stringpool_str38[sizeof("continue")];
+      char stringpool_str40[sizeof("async")];
+      char stringpool_str41[sizeof("return")];
+      char stringpool_str46[sizeof("lambda")];
+      char stringpool_str50[sizeof("class")];
+      char stringpool_str53[sizeof("nonlocal")];
+    };
+  static const struct stringpool_t stringpool_contents =
+    {
       "if",
       "def",
       "from",
       "break",
       "import",
-      "",
       "try",
       "elif",
       "yield",
@@ -107,33 +143,74 @@ is_keyword_python (register const char *str, register size_t len)
       "not",
       "with",
       "while",
-      "",
       "is",
       "for",
       "pass",
       "False",
-      "",
       "or",
-      "",
       "True",
       "raise",
-      "",
       "as",
       "del",
       "None",
-      "",
       "global",
-      "",
       "continue",
-      "",
       "async",
       "return",
-      "", "", "", "",
       "lambda",
-      "", "", "",
       "class",
-      "", "",
       "nonlocal"
+    };
+  #define stringpool ((const char *) &stringpool_contents)
+  static const int wordlist[] =
+    {
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str18,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str46,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str53
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
@@ -142,10 +219,14 @@ is_keyword_python (register const char *str, register size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          register const char *s = wordlist[key];
+          register int o = wordlist[key];
+          if (o >= 0)
+            {
+              register const char *s = o + stringpool;
 
-          if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
-            return s;
+              if (*str == *s && !strncmp (str + 1, s + 1, len - 1) && s[len] == '\0')
+                return s;
+            }
         }
     }
   return 0;
