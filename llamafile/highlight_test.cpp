@@ -47,7 +47,8 @@ const char *const kLanguages[] = {
     "lua", //
     "markdown", //
     "pascal", //
-    "php", //
+    "perl", //
+    "php!", //
     "plain", //
     "python", //
     "rust", //

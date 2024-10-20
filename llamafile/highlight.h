@@ -66,6 +66,7 @@ is_keyword_f is_keyword_lua_builtin;
 is_keyword_f is_keyword_lisp;
 is_keyword_f is_keyword_ada;
 is_keyword_f is_keyword_haskell;
+is_keyword_f is_keyword_perl;
 }
 
 class Highlight {
@@ -274,4 +275,16 @@ class HighlightHaskell : public Highlight {
   private:
     int t_ = 0;
     std::string symbol_;
+};
+
+class HighlightPerl : public Highlight {
+  public:
+    HighlightPerl();
+    ~HighlightPerl() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
 };
