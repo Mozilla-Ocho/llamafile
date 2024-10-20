@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.1 */
-/* Command-line: gperf is_keyword_fortran.gperf  */
+/* Command-line: gperf llamafile/is_keyword_fortran.gperf  */
 /* Computed positions: -k'2-3,$' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
@@ -29,7 +29,7 @@
 #error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gperf@gnu.org>."
 #endif
 
-#line 1 "is_keyword_fortran.gperf"
+#line 1 "llamafile/is_keyword_fortran.gperf"
 
 #include <string.h>
 #include <libc/str/tab.h>

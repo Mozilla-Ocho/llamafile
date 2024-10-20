@@ -18,7 +18,6 @@ declare
 echo
 enable
 eval
-exit
 false
 fg
 getopts

@@ -93,13 +93,15 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             break;
 
         case VAR:
-            if (c == '#' || //
+            if (c == '!' || //
+                c == '#' || //
+                c == '$' || //
                 c == '*' || //
                 c == '-' || //
                 c == '?' || //
                 c == '@' || //
-                c == '!' || //
-                c == '$') {
+                c == '\\' || //
+                c == '^') {
                 *r += HI_VAR;
                 *r += c;
                 *r += HI_RESET;

@@ -22,21 +22,30 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightMarkdown;
     } else if (lang == "c") {
         return new HighlightC(is_keyword_c, is_keyword_c_type);
-    } else if (lang == "c++" || lang == "cxx" || lang == "cpp") {
+    } else if (lang == "c++" || //
+               lang == "cxx" || //
+               lang == "cpp") {
         return new HighlightC(is_keyword_cxx, is_keyword_c_type);
-    } else if (lang == "js" || lang == "javascript") {
+    } else if (lang == "js" || //
+               lang == "javascript") {
         return new HighlightC(is_keyword_js);
     } else if (lang == "java") {
         return new HighlightC(is_keyword_java);
-    } else if (lang == "py" || lang == "python") {
+    } else if (lang == "py" || //
+               lang == "python") {
         return new HighlightPython;
-    } else if (lang == "rs" || lang == "rust") {
+    } else if (lang == "rs" || //
+               lang == "rust") {
         return new HighlightRust;
-    } else if (lang == "f" || lang == "fortran") {
+    } else if (lang == "f" || //
+               lang == "fortran") {
         return new HighlightFortran;
-    } else if (lang == "cob" || lang == "cbl" || lang == "cobol") {
+    } else if (lang == "cob" || //
+               lang == "cbl" || //
+               lang == "cobol") {
         return new HighlightCobol;
-    } else if (lang == "pas" || lang == "pascal") {
+    } else if (lang == "pas" || //
+               lang == "pascal") {
         return new HighlightPascal;
     } else if (lang == "go") {
         return new HighlightC(is_keyword_go, is_keyword_go_type);
@@ -44,13 +53,16 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightSql;
     } else if (lang == "css") {
         return new HighlightCss;
-    } else if (lang == "html") {
+    } else if (lang == "html" || //
+               lang == "xml") {
         return new HighlightHtml;
     } else if (lang == "php") {
         return new HighlightHtml; // sic
     } else if (lang == "php!") {
         return new HighlightPhp;
-    } else if (lang == "csharp" || lang == "cs" || lang == "c#") {
+    } else if (lang == "csharp" || //
+               lang == "cs" || //
+               lang == "c#") {
         return new HighlightC(is_keyword_csharp);
     } else if (lang == "kotlin") {
         return new HighlightC(is_keyword_kotlin);
@@ -64,12 +76,19 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightLisp;
     } else if (lang == "ada") {
         return new HighlightAda;
-    } else if (lang == "haskell" || lang == "hs") {
+    } else if (lang == "haskell" || //
+               lang == "hs") {
         return new HighlightHaskell;
-    } else if (lang == "perl" || lang == "pl") {
+    } else if (lang == "perl" || //
+               lang == "pl") {
         return new HighlightPerl;
-    } else if (lang == "shell" || lang == "bash" || lang == "sh") {
+    } else if (lang == "shell" || //
+               lang == "bash" || //
+               lang == "sh" || //
+               lang == "ksh") {
         return new HighlightShell;
+    } else if (lang == "swift") {
+        return new HighlightC(is_keyword_swift, is_keyword_swift_type);
     } else {
         return new HighlightPlain;
     }

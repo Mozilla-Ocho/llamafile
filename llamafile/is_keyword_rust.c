@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.1 */
-/* Command-line: gperf is_keyword_rust.gperf  */
+/* Command-line: gperf llamafile/is_keyword_rust.gperf  */
 /* Computed positions: -k'1-3' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
@@ -29,7 +29,7 @@
 #error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gperf@gnu.org>."
 #endif
 
-#line 1 "is_keyword_rust.gperf"
+#line 1 "llamafile/is_keyword_rust.gperf"
 
 #include <string.h>
 

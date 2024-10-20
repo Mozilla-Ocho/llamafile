@@ -54,6 +54,7 @@ const char *const kLanguages[] = {
     "rust", //
     "shell", //
     "sql", //
+    "swift", //
 };
 
 int rand32(void) {

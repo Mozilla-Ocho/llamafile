@@ -15,6 +15,7 @@ elif
 else
 esac
 exec
+exit
 expr
 fi
 for
