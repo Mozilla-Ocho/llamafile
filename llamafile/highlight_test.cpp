@@ -52,6 +52,7 @@ const char *const kLanguages[] = {
     "plain", //
     "python", //
     "rust", //
+    "shell", //
     "sql", //
 };
 

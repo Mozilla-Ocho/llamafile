@@ -68,6 +68,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightHaskell;
     } else if (lang == "perl" || lang == "pl") {
         return new HighlightPerl;
+    } else if (lang == "shell" || lang == "bash" || lang == "sh") {
+        return new HighlightShell;
     } else {
         return new HighlightPlain;
     }

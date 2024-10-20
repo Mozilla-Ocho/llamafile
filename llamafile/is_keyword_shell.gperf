@@ -1,0 +1,30 @@
+%{
+#include <string.h>
+%}
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_shell
+%%
+break
+case
+coproc
+do
+done
+elif
+else
+esac
+exec
+expr
+fi
+for
+function
+if
+in
+return
+select
+then
+time
+trap
+until
+while

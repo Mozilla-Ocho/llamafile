@@ -22,24 +22,21 @@
 #define NORMAL 0
 #define WORD 1
 #define QUOTE 2
-#define QUOTE_BACKSLASH 3
 #define DQUOTE 4
 #define DQUOTE_BACKSLASH 5
-#define SLASH 6
-#define SLASH_SLASH 7
-#define SLASH_STAR 8
-#define SLASH_STAR_STAR 9
-#define TICK 10
-#define TICK_BACKSLASH 11
-#define VAR 12
+#define TICK 6
+#define TICK_BACKSLASH 7
+#define VAR 8
+#define VAR2 9
+#define COMMENT 10
 
-HighlightPhp::HighlightPhp() {
+HighlightShell::HighlightShell() {
 }
 
-HighlightPhp::~HighlightPhp() {
+HighlightShell::~HighlightShell() {
 }
 
-void HighlightPhp::feed(std::string *r, std::string_view input) {
+void HighlightShell::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
@@ -50,8 +47,6 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
                 word_ += c;
-            } else if (c == '/') {
-                t_ = SLASH;
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
@@ -67,7 +62,10 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             } else if (c == '$') {
                 *r += c;
                 t_ = VAR;
-                *r += HI_VAR;
+            } else if (c == '#') {
+                *r += HI_COMMENT;
+                *r += c;
+                t_ = COMMENT;
             } else {
                 *r += c;
             }
@@ -77,8 +75,12 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else {
-                if (is_keyword_php(word_.data(), word_.size())) {
+                if (is_keyword_shell(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (is_keyword_shell_builtin(word_.data(), word_.size())) {
+                    *r += HI_BUILTIN;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -91,7 +93,31 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             break;
 
         case VAR:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (c == '#' || //
+                c == '*' || //
+                c == '-' || //
+                c == '?' || //
+                c == '@' || //
+                c == '!' || //
+                c == '$') {
+                *r += HI_VAR;
+                *r += c;
+                *r += HI_RESET;
+                t_ = NORMAL;
+                break;
+            } else if (c == '{') {
+                *r += c;
+                *r += HI_VAR;
+                t_ = VAR2;
+                break;
+            } else {
+                *r += HI_VAR;
+                t_ = VAR2;
+            }
+            // fallthrough
+
+        case VAR2:
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 *r += c;
             } else {
                 *r += HI_RESET;
@@ -100,23 +126,7 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        case SLASH:
-            if (c == '/') {
-                *r += HI_COMMENT;
-                *r += "//";
-                t_ = SLASH_SLASH;
-            } else if (c == '*') {
-                *r += HI_COMMENT;
-                *r += "/*";
-                t_ = SLASH_STAR;
-            } else {
-                *r += '/';
-                t_ = NORMAL;
-                goto Normal;
-            }
-            break;
-
-        case SLASH_SLASH:
+        case COMMENT:
             if (c == '\n') {
                 *r += HI_RESET;
                 *r += c;
@@ -126,35 +136,12 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        case SLASH_STAR:
-            *r += c;
-            if (c == '*')
-                t_ = SLASH_STAR_STAR;
-            break;
-
-        case SLASH_STAR_STAR:
-            *r += c;
-            if (c == '/') {
-                *r += HI_RESET;
-                t_ = NORMAL;
-            } else if (c != '*') {
-                t_ = SLASH_STAR;
-            }
-            break;
-
         case QUOTE:
             *r += c;
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
-            } else if (c == '\\') {
-                t_ = QUOTE_BACKSLASH;
             }
-            break;
-
-        case QUOTE_BACKSLASH:
-            *r += c;
-            t_ = QUOTE;
             break;
 
         case DQUOTE:
@@ -193,11 +180,15 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightPhp::flush(std::string *r) {
+void HighlightShell::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_php(word_.data(), word_.size())) {
+        if (is_keyword_shell(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_shell_builtin(word_.data(), word_.size())) {
+            *r += HI_BUILTIN;
             *r += word_;
             *r += HI_RESET;
         } else {
@@ -205,19 +196,13 @@ void HighlightPhp::flush(std::string *r) {
         }
         word_.clear();
         break;
-    case SLASH:
-        *r += '/';
-        break;
-    case VAR:
+    case VAR2:
     case TICK:
     case TICK_BACKSLASH:
     case QUOTE:
-    case QUOTE_BACKSLASH:
     case DQUOTE:
     case DQUOTE_BACKSLASH:
-    case SLASH_SLASH:
-    case SLASH_STAR:
-    case SLASH_STAR_STAR:
+    case COMMENT:
         *r += HI_RESET;
         break;
     default:

@@ -76,7 +76,6 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        Word:
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;

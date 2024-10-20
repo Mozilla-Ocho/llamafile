@@ -67,6 +67,8 @@ is_keyword_f is_keyword_lisp;
 is_keyword_f is_keyword_ada;
 is_keyword_f is_keyword_haskell;
 is_keyword_f is_keyword_perl;
+is_keyword_f is_keyword_shell;
+is_keyword_f is_keyword_shell_builtin;
 }
 
 class Highlight {
@@ -281,6 +283,18 @@ class HighlightPerl : public Highlight {
   public:
     HighlightPerl();
     ~HighlightPerl() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
+};
+
+class HighlightShell : public Highlight {
+  public:
+    HighlightShell();
+    ~HighlightShell() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 
