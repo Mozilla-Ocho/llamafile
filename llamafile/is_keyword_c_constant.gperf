@@ -746,6 +746,7 @@ __amd64__
 __arm__
 __chibicc__
 __clang__
+__cplusplus
 __func__
 __gun_linux__
 __i386__

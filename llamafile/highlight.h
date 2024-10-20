@@ -80,6 +80,9 @@ is_keyword_f is_keyword_zig;
 is_keyword_f is_keyword_zig_type;
 is_keyword_f is_keyword_zig_builtin;
 is_keyword_f is_keyword_zig_constant;
+is_keyword_f is_keyword_tcl;
+is_keyword_f is_keyword_tcl_type;
+is_keyword_f is_keyword_tcl_builtin;
 }
 
 class Highlight {
@@ -327,6 +330,18 @@ class HighlightZig : public Highlight {
   public:
     HighlightZig();
     ~HighlightZig() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
+};
+
+class HighlightTcl : public Highlight {
+  public:
+    HighlightTcl();
+    ~HighlightTcl() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 

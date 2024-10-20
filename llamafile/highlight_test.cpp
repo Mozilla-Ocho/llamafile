@@ -53,6 +53,7 @@ const char *const kLanguages[] = {
     "rust", //
     "shell", //
     "sql", //
+    "tcl", //
     "swift", //
     "zig", //
 };

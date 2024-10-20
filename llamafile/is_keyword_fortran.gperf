@@ -72,6 +72,7 @@ forall
 format
 function
 generic
+go
 goto
 if
 images
@@ -122,6 +123,7 @@ subroutine
 sync
 target
 then
+to
 unlock
 use
 value

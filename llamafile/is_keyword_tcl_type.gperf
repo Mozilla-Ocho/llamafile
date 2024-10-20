@@ -1,0 +1,18 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_tcl_type
+%%
+common
+global
+inherit
+itk_option
+private
+protected
+public
+upvar
+variable
