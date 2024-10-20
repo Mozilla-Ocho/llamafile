@@ -89,6 +89,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightShell;
     } else if (lang == "swift") {
         return new HighlightC(is_keyword_swift, is_keyword_swift_type);
+    } else if (lang == "d") {
+        return new HighlightC(is_keyword_d);
     } else {
         return new HighlightPlain;
     }

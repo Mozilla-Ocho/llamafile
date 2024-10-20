@@ -71,6 +71,7 @@ is_keyword_f is_keyword_shell;
 is_keyword_f is_keyword_shell_builtin;
 is_keyword_f is_keyword_swift;
 is_keyword_f is_keyword_swift_type;
+is_keyword_f is_keyword_d;
 }
 
 class Highlight {

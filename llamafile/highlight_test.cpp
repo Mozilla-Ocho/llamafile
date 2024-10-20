@@ -33,9 +33,8 @@ const char *const kLanguages[] = {
     "c#", //
     "c++", //
     "cobol", //
-    "cs", //
-    "csharp", //
     "css", //
+    "d", //
     "fortran", //
     "go", //
     "haskell", //
