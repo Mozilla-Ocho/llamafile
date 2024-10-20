@@ -19,38 +19,48 @@
 
 #include <ctype.h>
 
+// The main challenge with C# is that C# v11 introduced a triple quote
+// multi-line string literal syntax that's sort of like python and lua
+//
+//     Console.WriteLine("");
+//     Console.WriteLine("\"");
+//     Console.WriteLine("""""");
+//     Console.WriteLine("""""");
+//     Console.WriteLine(""" yo "" hi """);
+//     Console.WriteLine("""" yo """ hi """");
+//     Console.WriteLine(""""First
+//                       """100 Prime"""
+//                       Numbers:
+//                       """");
+//
+// As we can see above, you can use four, five, or more dquotes so you
+// can embed triple quoted strings inside.
+
 enum {
     NORMAL,
     WORD,
     QUOTE,
     QUOTE_BACKSLASH,
-    DQUOTE,
-    DQUOTE_BACKSLASH,
     SLASH,
     SLASH_SLASH,
     SLASH_STAR,
     SLASH_STAR_STAR,
-    TICK,
-    TICK_BACKSLASH,
-    R,
-    R_DQUOTE,
-    RAW,
+    DQUOTE,
+    STR,
+    STR_BACKSLASH,
+    DQUOTE_DQUOTE,
+    DQUOTE_DQUOTE_DQUOTE,
+    TRIPS,
+    TRIPS_DQUOTE,
 };
 
-HighlightC::HighlightC(is_keyword_f *is_keyword, //
-                       is_keyword_f *is_type, //
-                       is_keyword_f is_builtin, //
-                       is_keyword_f is_constant)
-    : is_keyword_(is_keyword),
-      is_type_(is_type),
-      is_builtin_(is_builtin),
-      is_constant_(is_constant) {
+HighlightCsharp::HighlightCsharp() {
 }
 
-HighlightC::~HighlightC() {
+HighlightCsharp::~HighlightCsharp() {
 }
 
-void HighlightC::feed(std::string *r, std::string_view input) {
+void HighlightCsharp::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
@@ -58,9 +68,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 
         Normal:
         case NORMAL:
-            if (c == 'R') {
-                t_ = R;
-            } else if (!isascii(c) || isalpha(c) || c == '_' || c == '#') {
+            if (!isascii(c) || isalpha(c) || c == '_' || c == '#') {
                 t_ = WORD;
                 word_ += c;
             } else if (c == '/') {
@@ -73,33 +81,20 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTE;
                 *r += HI_STRING;
                 *r += c;
-            } else if (c == '`' && is_keyword_ == is_keyword_js) {
-                t_ = TICK;
-                *r += HI_STRING;
-                *r += c;
             } else {
                 *r += c;
             }
             break;
 
-        Word:
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_' || c == '$' || c == '#') {
                 word_ += c;
             } else {
-                if (is_keyword_(word_.data(), word_.size())) {
+                if (is_keyword_csharp(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                } else if (is_type_ && is_type_(word_.data(), word_.size())) {
-                    *r += HI_TYPE;
-                    *r += word_;
-                    *r += HI_RESET;
-                } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-                    *r += HI_BUILTIN;
-                    *r += word_;
-                    *r += HI_RESET;
-                } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
+                } else if (is_keyword_csharp_constant(word_.data(), word_.size())) {
                     *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
@@ -172,67 +167,74 @@ void HighlightC::feed(std::string *r, std::string_view input) {
         case DQUOTE:
             *r += c;
             if (c == '"') {
-                *r += HI_RESET;
-                t_ = NORMAL;
+                t_ = DQUOTE_DQUOTE;
             } else if (c == '\\') {
-                t_ = DQUOTE_BACKSLASH;
+                t_ = STR_BACKSLASH;
+            } else {
+                t_ = STR;
             }
             break;
 
-        case DQUOTE_BACKSLASH:
+        case STR:
             *r += c;
-            t_ = DQUOTE;
-            break;
-
-        case TICK:
-            *r += c;
-            if (c == '`') {
-                *r += HI_RESET;
-                t_ = NORMAL;
-            } else if (c == '\\') {
-                t_ = TICK_BACKSLASH;
-            }
-            break;
-
-        case TICK_BACKSLASH:
-            *r += c;
-            t_ = TICK;
-            break;
-
-        case R:
             if (c == '"') {
-                t_ = R_DQUOTE;
-                *r += 'R';
-                *r += HI_STRING;
-                *r += '"';
-                heredoc_ = ")";
-            } else {
-                word_ += 'R';
-                t_ = WORD;
-                goto Word;
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = STR_BACKSLASH;
             }
             break;
 
-        case R_DQUOTE:
+        case STR_BACKSLASH:
             *r += c;
-            if (c == '(') {
-                t_ = RAW;
-                i_ = 0;
-                heredoc_ += '"';
+            t_ = STR;
+            break;
+
+        case DQUOTE_DQUOTE:
+            if (c == '"') {
+                *r += c;
+                t_ = DQUOTE_DQUOTE_DQUOTE;
+                trips1_ = 3;
+                trips2_ = 0;
             } else {
-                heredoc_ += c;
+                *r += HI_RESET;
+                t_ = NORMAL;
+                goto Normal;
             }
             break;
 
-        case RAW:
-            *r += c;
-            if (heredoc_[i_] == c) {
-                if (++i_ == heredoc_.size()) {
-                    t_ = NORMAL;
+        case DQUOTE_DQUOTE_DQUOTE:
+            if (c == '"') {
+                *r += c;
+                ++trips1_;
+                if (++trips2_ == 3) {
                     *r += HI_RESET;
+                    t_ = NORMAL;
+                }
+                break;
+            } else {
+                trips2_ = 0;
+                t_ = TRIPS;
+            }
+            // fallthrough
+
+        case TRIPS:
+            *r += c;
+            if (c == '"') {
+                t_ = TRIPS_DQUOTE;
+                trips2_ = 1;
+            }
+            break;
+
+        case TRIPS_DQUOTE:
+            *r += c;
+            if (c == '"') {
+                if (++trips2_ == trips1_) {
+                    *r += HI_RESET;
+                    t_ = NORMAL;
                 }
             } else {
-                i_ = 0;
+                t_ = TRIPS;
             }
             break;
 
@@ -242,22 +244,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightC::flush(std::string *r) {
+void HighlightCsharp::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_(word_.data(), word_.size())) {
+        if (is_keyword_csharp(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
-        } else if (is_type_ && is_type_(word_.data(), word_.size())) {
-            *r += HI_TYPE;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-            *r += HI_BUILTIN;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
+        } else if (is_keyword_csharp_constant(word_.data(), word_.size())) {
             *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
@@ -269,20 +263,18 @@ void HighlightC::flush(std::string *r) {
     case SLASH:
         *r += '/';
         break;
-    case R:
-        *r += 'R';
-        break;
-    case TICK:
-    case TICK_BACKSLASH:
     case QUOTE:
     case QUOTE_BACKSLASH:
     case DQUOTE:
-    case DQUOTE_BACKSLASH:
+    case STR:
+    case STR_BACKSLASH:
+    case DQUOTE_DQUOTE:
+    case DQUOTE_DQUOTE_DQUOTE:
+    case TRIPS:
+    case TRIPS_DQUOTE:
     case SLASH_SLASH:
     case SLASH_STAR:
     case SLASH_STAR_STAR:
-    case R_DQUOTE:
-    case RAW:
         *r += HI_RESET;
         break;
     default:

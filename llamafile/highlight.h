@@ -63,10 +63,13 @@ is_keyword_f is_keyword_go;
 is_keyword_f is_keyword_go_type;
 is_keyword_f is_keyword_sql;
 is_keyword_f is_keyword_php;
+is_keyword_f is_keyword_php_constant;
 is_keyword_f is_keyword_csharp;
+is_keyword_f is_keyword_csharp_constant;
 is_keyword_f is_keyword_kotlin;
 is_keyword_f is_keyword_lua;
 is_keyword_f is_keyword_lua_builtin;
+is_keyword_f is_keyword_lua_constant;
 is_keyword_f is_keyword_lisp;
 is_keyword_f is_keyword_ada;
 is_keyword_f is_keyword_haskell;
@@ -111,7 +114,9 @@ class HighlightC : public Highlight {
 
   private:
     int t_ = 0;
+    int i_;
     std::string word_;
+    std::string heredoc_;
     is_keyword_f *is_type_;
     is_keyword_f *is_keyword_;
     is_keyword_f *is_builtin_;
@@ -347,5 +352,19 @@ class HighlightTcl : public Highlight {
 
   private:
     int t_ = 0;
+    std::string word_;
+};
+
+class HighlightCsharp : public Highlight {
+  public:
+    HighlightCsharp();
+    ~HighlightCsharp() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int trips1_;
+    int trips2_;
     std::string word_;
 };

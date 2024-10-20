@@ -48,7 +48,6 @@ endwhile
 eval
 exit
 extends
-false
 final
 finally
 fn
@@ -82,7 +81,6 @@ static
 switch
 throw
 trait
-true
 try
 unset
 use

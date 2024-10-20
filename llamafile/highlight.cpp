@@ -20,7 +20,9 @@
 Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "markdown" || lang == "md") {
         return new HighlightMarkdown;
-    } else if (lang == "c") {
+    } else if (lang == "c" || //
+               lang == "h" || //
+               lang == "m") {
         return new HighlightC(is_keyword_c, //
                               is_keyword_c_type, //
                               is_keyword_c_builtin, //
@@ -28,12 +30,15 @@ Highlight *Highlight::create(const std::string_view &lang) {
     } else if (lang == "c++" || //
                lang == "cxx" || //
                lang == "cpp" || //
+               lang == "hpp" || //
+               lang == "cc" || //
                lang == "cu") {
         return new HighlightC(is_keyword_cxx, //
                               is_keyword_c_type, //
                               is_keyword_c_builtin, //
                               is_keyword_c_constant);
     } else if (lang == "js" || //
+               lang == "json" || //
                lang == "javascript") {
         return new HighlightC(is_keyword_js);
     } else if (lang == "java") {
@@ -70,7 +75,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
     } else if (lang == "csharp" || //
                lang == "cs" || //
                lang == "c#") {
-        return new HighlightC(is_keyword_csharp);
+        return new HighlightCsharp;
     } else if (lang == "kotlin") {
         return new HighlightC(is_keyword_kotlin);
     } else if (lang == "lua") {

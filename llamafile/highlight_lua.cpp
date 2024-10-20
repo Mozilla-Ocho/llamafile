@@ -50,7 +50,7 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                goto Word;
+                word_ += c;
             } else if (c == '-') {
                 t_ = HYPHEN;
             } else if (c == '\'') {
@@ -69,13 +69,16 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else {
                 if (is_keyword_lua(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (is_keyword_lua_constant(word_.data(), word_.size())) {
+                    *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
                 } else if (is_keyword_lua_builtin(word_.data(), word_.size())) {
@@ -195,6 +198,10 @@ void HighlightLua::flush(std::string *r) {
     case WORD:
         if (is_keyword_lua(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_lua_constant(word_.data(), word_.size())) {
+            *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
         } else if (is_keyword_lua_builtin(word_.data(), word_.size())) {

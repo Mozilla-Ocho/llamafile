@@ -83,6 +83,10 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
+                } else if (is_keyword_php_constant(word_.data(), word_.size())) {
+                    *r += HI_TYPE;
+                    *r += word_;
+                    *r += HI_RESET;
                 } else {
                     *r += word_;
                 }
@@ -200,6 +204,10 @@ void HighlightPhp::flush(std::string *r) {
     case WORD:
         if (is_keyword_php(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_php_constant(word_.data(), word_.size())) {
+            *r += HI_TYPE;
             *r += word_;
             *r += HI_RESET;
         } else {

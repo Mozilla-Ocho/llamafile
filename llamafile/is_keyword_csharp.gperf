@@ -42,7 +42,6 @@ equals
 event
 explicit
 extern
-false
 file
 finally
 fixed
@@ -75,7 +74,6 @@ nint
 not
 notnull
 nuint
-null
 object
 on
 operator
@@ -108,7 +106,6 @@ struct
 switch
 this
 throw
-true
 try
 typeof
 uint

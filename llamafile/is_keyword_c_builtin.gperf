@@ -17,6 +17,8 @@
 "#error"
 "#if"
 "#ifdef"
+"#ifndef"
+"#import"
 "#include"
 "#include_next"
 "#line"
@@ -2785,3 +2787,4 @@ __vex
 __weak_reference
 __yoink
 defined
+static_assert
