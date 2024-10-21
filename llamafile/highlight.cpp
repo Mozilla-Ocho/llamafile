@@ -40,7 +40,10 @@ Highlight *Highlight::create(const std::string_view &lang) {
     } else if (lang == "js" || //
                lang == "json" || //
                lang == "javascript") {
-        return new HighlightC(is_keyword_js);
+        return new HighlightJs(is_keyword_js, nullptr);
+    } else if (lang == "ts" || //
+               lang == "typescript") {
+        return new HighlightJs(is_keyword_typescript, is_keyword_typescript_type);
     } else if (lang == "java") {
         return new HighlightC(is_keyword_java);
     } else if (lang == "py" || //
@@ -60,7 +63,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
                lang == "pascal") {
         return new HighlightPascal;
     } else if (lang == "go") {
-        return new HighlightC(is_keyword_go, is_keyword_go_type);
+        return new HighlightGo;
     } else if (lang == "sql") {
         return new HighlightSql;
     } else if (lang == "css") {

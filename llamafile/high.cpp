@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
 
     // process input
     std::string res;
+    ColorBleeder H(h);
     for (;;) {
 
         // read input chunk
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
 
         // highlight chunk
         res.clear();
-        h->feed(&res, std::string_view(buf, got));
+        H.feed(&res, std::string_view(buf, got));
 
         // write highlighted output chunk
         write(outfd, res.data(), res.size());
@@ -95,6 +96,6 @@ int main(int argc, char *argv[]) {
 
     // flush highlighter
     res.clear();
-    h->flush(&res);
+    H.flush(&res);
     write(outfd, res.data(), res.size());
 }

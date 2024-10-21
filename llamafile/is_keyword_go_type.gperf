@@ -18,6 +18,7 @@ int32
 int64
 int8
 rune
+string
 uint
 uint16
 uint32

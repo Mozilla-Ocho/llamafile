@@ -19,6 +19,8 @@
 
 #include <ctype.h>
 
+// TODO: Support --[[ syntax
+
 enum {
     NORMAL,
     WORD,

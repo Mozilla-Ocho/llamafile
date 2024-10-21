@@ -366,6 +366,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
         case DOLLAR:
             if (isdigit(c) || //
                 c == '!' || //
+                c == '"' || //
                 c == '#' || //
                 c == '$' || //
                 c == '&' || //
@@ -375,6 +376,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 c == '=' || //
                 c == '>' || //
                 c == '@' || //
+                c == '\'' || //
                 c == '\\' || //
                 c == '^' || //
                 c == '_' || //
@@ -383,7 +385,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 *r += '$';
                 *r += c;
                 *r += HI_RESET;
-                t_ = AT_WORD;
+                t_ = NORMAL;
             } else if (isalpha(c)) {
                 *r += HI_VAR;
                 *r += '$';
@@ -487,7 +489,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 t_ = LT_LT_NAME;
                 heredoc_ += c;
                 *r += c;
-            } else if (!isblank(c)) {
+            } else {
                 t_ = NORMAL;
                 goto Normal;
             }

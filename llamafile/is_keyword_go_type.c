@@ -33,7 +33,7 @@
 
 #include <string.h>
 
-#define TOTAL_KEYWORDS 17
+#define TOTAL_KEYWORDS 18
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 10
 #define MIN_HASH_VALUE 4
@@ -62,8 +62,8 @@ hash (register const char *str, register size_t len)
       27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
       27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
       27, 27, 27, 27, 27, 27, 27, 27,  5, 10,
-      27, 10,  0, 27, 27,  0, 27, 27, 27, 27,
-      27, 27, 27, 27,  0, 27,  5,  0, 27, 27,
+      27, 10,  0,  0, 27,  0, 27, 27, 27, 27,
+      27, 27, 27, 27,  0,  0,  5,  0, 27, 27,
       27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
       27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
       27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
@@ -89,6 +89,7 @@ is_keyword_go_type (register const char *str, register size_t len)
     {
       char stringpool_str4[sizeof("int8")];
       char stringpool_str5[sizeof("uint8")];
+      char stringpool_str6[sizeof("string")];
       char stringpool_str7[sizeof("uintptr")];
       char stringpool_str8[sizeof("int")];
       char stringpool_str9[sizeof("uint")];
@@ -109,6 +110,7 @@ is_keyword_go_type (register const char *str, register size_t len)
     {
       "int8",
       "uint8",
+      "string",
       "uintptr",
       "int",
       "uint",
@@ -131,7 +133,7 @@ is_keyword_go_type (register const char *str, register size_t len)
       -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str7,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,

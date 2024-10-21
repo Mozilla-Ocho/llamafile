@@ -304,6 +304,7 @@ int chatbot_main(int argc, char **argv) {
 
     // perform important setup
     HighlightMarkdown highlighter;
+    ColorBleeder bleeder(&highlighter);
     struct llama_sampling_context *sampler = llama_sampling_init(params.sparams);
     signal(SIGINT, on_sigint);
 
@@ -336,7 +337,7 @@ int chatbot_main(int argc, char **argv) {
             if (llama_token_is_eog(g_model, id))
                 break;
             std::string s;
-            highlighter.feed(&s, llama_token_to_piece(g_ctx, id, params.special));
+            bleeder.feed(&s, llama_token_to_piece(g_ctx, id, params.special));
             printf("%s", s.c_str());
             fflush(stdout);
             eval_id(id);
@@ -344,7 +345,7 @@ int chatbot_main(int argc, char **argv) {
         g_got_sigint = 0;
         free(line);
         std::string s;
-        highlighter.flush(&s);
+        bleeder.flush(&s);
         printf("%s\n", s.c_str());
     }
 

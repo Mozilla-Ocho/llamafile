@@ -96,7 +96,6 @@ enum
 explicit
 export
 extern
-false
 float
 for
 forcealign
@@ -157,7 +156,6 @@ this
 threadIdx
 thread_local
 throw
-true
 try
 typedef
 typeid

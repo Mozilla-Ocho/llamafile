@@ -22,8 +22,6 @@
 enum {
     NORMAL,
     WORD,
-    QUOTE,
-    QUOTE_BACKSLASH,
     DQUOTE,
     DQUOTE_BACKSLASH,
     TICK,
@@ -31,6 +29,7 @@ enum {
     CURL,
     CURL_HYPHEN,
     CURL_HYPHEN_HYPHEN,
+    CURL_HYPHEN_CURL,
     HYPHEN,
     HYPHEN_HYPHEN,
     HYPHEN_LT,
@@ -60,10 +59,6 @@ void HighlightHaskell::feed(std::string *r, std::string_view input) {
                 t_ = HYPHEN;
             } else if (c == '{') {
                 t_ = CURL;
-            } else if (c == '\'') {
-                t_ = QUOTE;
-                *r += HI_STRING;
-                *r += c;
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
@@ -204,6 +199,7 @@ void HighlightHaskell::feed(std::string *r, std::string_view input) {
                 *r += HI_COMMENT;
                 *r += "{-";
                 t_ = CURL_HYPHEN;
+                level_ = 1;
             } else {
                 *r += '{';
                 t_ = NORMAL;
@@ -213,33 +209,33 @@ void HighlightHaskell::feed(std::string *r, std::string_view input) {
 
         case CURL_HYPHEN:
             *r += c;
-            if (c == '-')
+            if (c == '-') {
                 t_ = CURL_HYPHEN_HYPHEN;
+            } else if (c == '{') {
+                t_ = CURL_HYPHEN_CURL;
+            }
+            break;
+
+        case CURL_HYPHEN_CURL:
+            *r += c;
+            if (c == '-') {
+                t_ = CURL_HYPHEN;
+                ++level_;
+            } else if (c != '{') {
+                t_ = CURL_HYPHEN;
+            }
             break;
 
         case CURL_HYPHEN_HYPHEN:
             *r += c;
             if (c == '}') {
-                *r += HI_RESET;
-                t_ = NORMAL;
+                if (!--level_) {
+                    *r += HI_RESET;
+                    t_ = NORMAL;
+                }
             } else if (c != '-') {
                 t_ = CURL_HYPHEN;
             }
-            break;
-
-        case QUOTE:
-            *r += c;
-            if (c == '\'') {
-                *r += HI_RESET;
-                t_ = NORMAL;
-            } else if (c == '\\') {
-                t_ = QUOTE_BACKSLASH;
-            }
-            break;
-
-        case QUOTE_BACKSLASH:
-            *r += c;
-            t_ = QUOTE;
             break;
 
         case DQUOTE:
@@ -312,13 +308,12 @@ void HighlightHaskell::flush(std::string *r) {
         break;
     case TICK:
     case TICK_BACKSLASH:
-    case QUOTE:
-    case QUOTE_BACKSLASH:
     case DQUOTE:
     case DQUOTE_BACKSLASH:
     case HYPHEN_HYPHEN:
     case CURL_HYPHEN:
     case CURL_HYPHEN_HYPHEN:
+    case CURL_HYPHEN_CURL:
         *r += HI_RESET;
         break;
     default:

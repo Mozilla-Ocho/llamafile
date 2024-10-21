@@ -51,6 +51,8 @@ is_keyword_f is_keyword_c_builtin;
 is_keyword_f is_keyword_c_constant;
 is_keyword_f is_keyword_cxx;
 is_keyword_f is_keyword_js;
+is_keyword_f is_keyword_js_builtin;
+is_keyword_f is_keyword_js_constant;
 is_keyword_f is_keyword_java;
 is_keyword_f is_keyword_python;
 is_keyword_f is_keyword_rust;
@@ -90,6 +92,9 @@ is_keyword_f is_keyword_tcl_builtin;
 is_keyword_f is_keyword_ruby;
 is_keyword_f is_keyword_ruby_builtin;
 is_keyword_f is_keyword_ruby_constant;
+is_keyword_f is_keyword_typescript;
+is_keyword_f is_keyword_typescript_type;
+is_keyword_f is_keyword_typescript_constant;
 }
 
 class Highlight {
@@ -108,10 +113,29 @@ class HighlightPlain : public Highlight {
     void flush(std::string *result) override;
 };
 
+class ColorBleeder : public Highlight {
+  public:
+    ColorBleeder(Highlight *h);
+    ~ColorBleeder() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    void relay(std::string *r, const std::string &s);
+    unsigned char t_ = 0;
+    unsigned char x_ = 0;
+    unsigned char n_ = 0;
+    unsigned char intensity_ = 0;
+    unsigned char foreground_ = 0;
+    unsigned char background_ = 0;
+    unsigned char sgr_codes_[8];
+    Highlight *h_;
+};
+
 class HighlightC : public Highlight {
   public:
-    HighlightC(is_keyword_f is_keyword = is_keyword_c, is_keyword_f is_type = nullptr,
-               is_keyword_f is_builtin = nullptr, is_keyword_f is_constant = nullptr);
+    HighlightC(is_keyword_f *is_keyword = is_keyword_c, is_keyword_f *is_type = nullptr,
+               is_keyword_f *is_builtin = nullptr, is_keyword_f *is_constant = nullptr);
     ~HighlightC() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
@@ -125,6 +149,33 @@ class HighlightC : public Highlight {
     is_keyword_f *is_keyword_;
     is_keyword_f *is_builtin_;
     is_keyword_f *is_constant_;
+};
+
+class HighlightGo : public Highlight {
+  public:
+    HighlightGo();
+    ~HighlightGo() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
+};
+
+class HighlightJs : public Highlight {
+  public:
+    HighlightJs(is_keyword_f *is_keyword, is_keyword_f *is_type);
+    ~HighlightJs() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int expect_;
+    std::string word_;
+    is_keyword_f *is_type_;
+    is_keyword_f *is_keyword_;
 };
 
 class HighlightPython : public Highlight {
@@ -302,6 +353,7 @@ class HighlightHaskell : public Highlight {
 
   private:
     int t_ = 0;
+    int level_ = 0;
     std::string symbol_;
 };
 
@@ -315,6 +367,11 @@ class HighlightPerl : public Highlight {
   private:
     int t_ = 0;
     int i_ = 0;
+    int c_ = 0;
+    int last_ = 0;
+    int expect_ = 0;
+    unsigned char opener_ = 0;
+    unsigned char closer_ = 0;
     bool pending_heredoc_ = false;
     bool indented_heredoc_ = false;
     std::string word_;

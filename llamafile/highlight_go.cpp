@@ -30,25 +30,17 @@ enum {
     SLASH_SLASH,
     SLASH_STAR,
     SLASH_STAR_STAR,
-    R,
-    R_DQUOTE,
-    RAW,
+    TICK,
+    TICK_BACKSLASH,
 };
 
-HighlightC::HighlightC(is_keyword_f *is_keyword, //
-                       is_keyword_f *is_type, //
-                       is_keyword_f *is_builtin, //
-                       is_keyword_f *is_constant)
-    : is_keyword_(is_keyword),
-      is_type_(is_type),
-      is_builtin_(is_builtin),
-      is_constant_(is_constant) {
+HighlightGo::HighlightGo() {
 }
 
-HighlightC::~HighlightC() {
+HighlightGo::~HighlightGo() {
 }
 
-void HighlightC::feed(std::string *r, std::string_view input) {
+void HighlightGo::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
@@ -56,9 +48,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 
         Normal:
         case NORMAL:
-            if (c == 'R') {
-                t_ = R;
-            } else if (!isascii(c) || isalpha(c) || c == '_' || c == '#') {
+            if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
                 word_ += c;
             } else if (c == '/') {
@@ -71,6 +61,10 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTE;
                 *r += HI_STRING;
                 *r += c;
+            } else if (c == '`') {
+                t_ = TICK;
+                *r += HI_STRING;
+                *r += c;
             } else {
                 *r += c;
             }
@@ -78,23 +72,15 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalnum(c) || c == '_' || c == '$' || c == '#') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else {
-                if (is_keyword_(word_.data(), word_.size())) {
+                if (is_keyword_go(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                } else if (is_type_ && is_type_(word_.data(), word_.size())) {
+                } else if (is_keyword_go_type(word_.data(), word_.size())) {
                     *r += HI_TYPE;
-                    *r += word_;
-                    *r += HI_RESET;
-                } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-                    *r += HI_BUILTIN;
-                    *r += word_;
-                    *r += HI_RESET;
-                } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
-                    *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -178,41 +164,19 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             t_ = DQUOTE;
             break;
 
-        case R:
-            if (c == '"') {
-                t_ = R_DQUOTE;
-                *r += 'R';
-                *r += HI_STRING;
-                *r += '"';
-                heredoc_ = ")";
-            } else {
-                word_ += 'R';
-                t_ = WORD;
-                goto Word;
+        case TICK:
+            *r += c;
+            if (c == '`') {
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = TICK_BACKSLASH;
             }
             break;
 
-        case R_DQUOTE:
+        case TICK_BACKSLASH:
             *r += c;
-            if (c == '(') {
-                t_ = RAW;
-                i_ = 0;
-                heredoc_ += '"';
-            } else {
-                heredoc_ += c;
-            }
-            break;
-
-        case RAW:
-            *r += c;
-            if (heredoc_[i_] == c) {
-                if (++i_ == heredoc_.size()) {
-                    t_ = NORMAL;
-                    *r += HI_RESET;
-                }
-            } else {
-                i_ = 0;
-            }
+            t_ = TICK;
             break;
 
         default:
@@ -221,23 +185,15 @@ void HighlightC::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightC::flush(std::string *r) {
+void HighlightGo::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_(word_.data(), word_.size())) {
+        if (is_keyword_go(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
-        } else if (is_type_ && is_type_(word_.data(), word_.size())) {
+        } else if (is_keyword_go_type(word_.data(), word_.size())) {
             *r += HI_TYPE;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-            *r += HI_BUILTIN;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
-            *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
         } else {
@@ -248,9 +204,6 @@ void HighlightC::flush(std::string *r) {
     case SLASH:
         *r += '/';
         break;
-    case R:
-        *r += 'R';
-        break;
     case QUOTE:
     case QUOTE_BACKSLASH:
     case DQUOTE:
@@ -258,8 +211,8 @@ void HighlightC::flush(std::string *r) {
     case SLASH_SLASH:
     case SLASH_STAR:
     case SLASH_STAR_STAR:
-    case R_DQUOTE:
-    case RAW:
+    case TICK:
+    case TICK_BACKSLASH:
         *r += HI_RESET;
         break;
     default:
