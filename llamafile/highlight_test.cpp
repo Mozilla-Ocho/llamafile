@@ -25,7 +25,7 @@
 
 #define LENGTH 10
 #define ITERATIONS 200000
-#define CHARSET "abc123{}[]!@#$%^*().\"'`\\/\n-_=&;:<>,"
+#define CHARSET "aQq123{}[]!@#$%^*().\"'`\\/\n-_=&;:<>,"
 
 const char *const kLanguages[] = {
     "ada", //
@@ -50,11 +50,12 @@ const char *const kLanguages[] = {
     "php!", //
     "plain", //
     "python", //
+    "ruby", //
     "rust", //
     "shell", //
     "sql", //
-    "tcl", //
     "swift", //
+    "tcl", //
     "zig", //
 };
 

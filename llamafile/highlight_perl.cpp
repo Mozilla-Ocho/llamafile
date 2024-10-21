@@ -34,6 +34,7 @@ enum {
     LT,
     LT_LT,
     LT_LT_NAME,
+    LT_LT_QNAME,
     HEREDOC_BOL,
     HEREDOC,
 };
@@ -193,6 +194,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 t_ = LT_LT;
                 heredoc_.clear();
                 pending_heredoc_ = false;
+                indented_heredoc_ = false;
             } else {
                 t_ = NORMAL;
                 goto Normal;
@@ -200,8 +202,12 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case LT_LT:
-            if (c == '\'') {
-                t_ = LT_LT_NAME;
+            if (c == '-') {
+                indented_heredoc_ = true;
+                *r += c;
+            } else if (c == '\'') {
+                t_ = LT_LT_QNAME;
+                *r += HI_STRING;
                 *r += c;
             } else if (isalpha(c) || c == '_') {
                 t_ = LT_LT_NAME;
@@ -229,6 +235,18 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case LT_LT_QNAME:
+            *r += c;
+            if (c == '\'') {
+                *r += HI_RESET;
+                t_ = HEREDOC_BOL;
+                pending_heredoc_ = true;
+                t_ = NORMAL;
+            } else {
+                heredoc_ += c;
+            }
+            break;
+
         case HEREDOC_BOL:
             *r += c;
             if (c == '\n') {
@@ -237,13 +255,13 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                     *r += HI_RESET;
                 }
                 i_ = 0;
-            } else if (isalnum(c) || c == '_') {
-                if (i_ < heredoc_.size() && (heredoc_[i_] & 255) == c) {
-                    i_++;
-                } else {
-                    t_ = HEREDOC;
-                    i_ = 0;
-                }
+            } else if (c == '\t' && indented_heredoc_) {
+                // do nothing
+            } else if (i_ < heredoc_.size() && (heredoc_[i_] & 255) == c) {
+                i_++;
+            } else {
+                t_ = HEREDOC;
+                i_ = 0;
             }
             break;
 
@@ -281,6 +299,7 @@ void HighlightPerl::flush(std::string *r) {
     case COMMENT:
     case HEREDOC_BOL:
     case HEREDOC:
+    case LT_LT_QNAME:
         *r += HI_RESET;
         break;
     default:

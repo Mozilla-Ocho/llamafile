@@ -31,6 +31,7 @@
 #define HI_CONTIN "\033[33m" // yellow
 #define HI_LABEL "\033[33m" // yellow
 #define HI_TYPE "\033[36m" // cyan
+#define HI_CLASS "\033[1;36m" // bold cyan
 #define HI_SELECTOR "\033[33m" // yellow
 #define HI_PROPERTY "\033[36m" // cyan
 #define HI_TAG "\033[33m" // yellow
@@ -86,6 +87,9 @@ is_keyword_f is_keyword_zig_constant;
 is_keyword_f is_keyword_tcl;
 is_keyword_f is_keyword_tcl_type;
 is_keyword_f is_keyword_tcl_builtin;
+is_keyword_f is_keyword_ruby;
+is_keyword_f is_keyword_ruby_builtin;
+is_keyword_f is_keyword_ruby_constant;
 }
 
 class Highlight {
@@ -312,6 +316,7 @@ class HighlightPerl : public Highlight {
     int t_ = 0;
     int i_ = 0;
     bool pending_heredoc_ = false;
+    bool indented_heredoc_ = false;
     std::string word_;
     std::string heredoc_;
 };
@@ -327,6 +332,7 @@ class HighlightShell : public Highlight {
     int t_ = 0;
     int i_ = 0;
     bool pending_heredoc_ = false;
+    bool indented_heredoc_ = false;
     std::string word_;
     std::string heredoc_;
 };
@@ -367,4 +373,25 @@ class HighlightCsharp : public Highlight {
     int trips1_;
     int trips2_;
     std::string word_;
+};
+
+class HighlightRuby : public Highlight {
+  public:
+    HighlightRuby();
+    ~HighlightRuby() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int i_ = 0;
+    int level_ = 0;
+    unsigned char q_ = 0;
+    unsigned char last_ = 0;
+    unsigned char opener_ = 0;
+    unsigned char closer_ = 0;
+    bool pending_heredoc_ = false;
+    bool indented_heredoc_ = false;
+    std::string word_;
+    std::string heredoc_;
 };

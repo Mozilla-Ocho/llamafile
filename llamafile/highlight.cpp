@@ -106,9 +106,12 @@ Highlight *Highlight::create(const std::string_view &lang) {
     } else if (lang == "d") {
         return new HighlightC(is_keyword_d);
     } else if (lang == "zig") {
-        return new HighlightZig();
+        return new HighlightZig;
     } else if (lang == "tcl") {
-        return new HighlightTcl();
+        return new HighlightTcl;
+    } else if (lang == "ruby" || //
+               lang == "rb") {
+        return new HighlightRuby;
     } else {
         return new HighlightPlain;
     }
