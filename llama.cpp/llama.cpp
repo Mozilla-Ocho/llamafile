@@ -17256,6 +17256,10 @@ int32_t llama_n_layer(const struct llama_model * model) {
     return model->hparams.n_layer;
 }
 
+int32_t llama_n_gpu_layers(const struct llama_model * model) { // [jart]
+    return model->n_gpu_layers;
+}
+
 float llama_rope_freq_scale_train(const struct llama_model * model) {
     return model->hparams.rope_freq_scale_train;
 }

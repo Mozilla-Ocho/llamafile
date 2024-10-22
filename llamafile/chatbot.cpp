@@ -26,23 +26,34 @@
 #include <vector>
 
 #include "llama.cpp/common.h"
+#include "llama.cpp/ggml-cuda.h"
 #include "llama.cpp/llama.h"
 #include "llama.cpp/server/server.h"
 #include "llamafile/bestline.h"
+#include "llamafile/compute.h"
 #include "llamafile/highlight.h"
 #include "llamafile/llamafile.h"
 
+#define RESET "\e[0m"
 #define BOLD "\e[1m"
 #define FAINT "\e[2m"
 #define UNBOLD "\e[22m"
 #define RED "\e[31m"
 #define GREEN "\e[32m"
 #define MAGENTA "\e[35m"
+#define YELLOW "\e[33m"
+#define CYAN "\e[36m"
 #define UNFOREGROUND "\e[39m"
 #define BRIGHT_BLACK "\e[90m"
 #define BRIGHT_RED "\e[91m"
 #define BRIGHT_GREEN "\e[92m"
 #define CLEAR_FORWARD "\e[K"
+
+enum Role {
+    ROLE_USER,
+    ROLE_ASSISTANT,
+    ROLE_SYSTEM,
+};
 
 struct ServerArgs {
     int argc;
@@ -50,8 +61,12 @@ struct ServerArgs {
 };
 
 static int n_past;
+static bool g_once;
+static bool g_manual;
 static llama_model *g_model;
 static llama_context *g_ctx;
+static std::vector<llama_token> g_history;
+static enum Role g_role = ROLE_USER;
 static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static std::string g_listen_url;
@@ -67,6 +82,58 @@ static bool is_empty(const char *s) {
         if (!isspace(c))
             return false;
     return true;
+}
+
+static const char *get_role_name(enum Role role) {
+    switch (role) {
+    case ROLE_USER:
+        return "user";
+    case ROLE_ASSISTANT:
+        return "assistant";
+    case ROLE_SYSTEM:
+        return "system";
+    default:
+        __builtin_unreachable();
+    }
+}
+
+static const char *get_role_color(enum Role role) {
+    switch (role) {
+    case ROLE_USER:
+        return GREEN;
+    case ROLE_ASSISTANT:
+        return MAGENTA;
+    case ROLE_SYSTEM:
+        return YELLOW;
+    default:
+        __builtin_unreachable();
+    }
+}
+
+static enum Role get_next_role(enum Role role) {
+    switch (role) {
+    case ROLE_USER:
+        return ROLE_ASSISTANT;
+    case ROLE_ASSISTANT:
+        return ROLE_USER;
+    case ROLE_SYSTEM:
+        return ROLE_USER;
+    default:
+        __builtin_unreachable();
+    }
+}
+
+static enum Role cycle_role(enum Role role) {
+    switch (role) {
+    case ROLE_USER:
+        return ROLE_ASSISTANT;
+    case ROLE_ASSISTANT:
+        return ROLE_SYSTEM;
+    case ROLE_SYSTEM:
+        return ROLE_USER;
+    default:
+        __builtin_unreachable();
+    }
 }
 
 static std::string basename(const std::string_view path) {
@@ -98,11 +165,167 @@ __attribute__((format(printf, 1, 2))) static std::string format(const char *fmt,
     return res;
 }
 
+static std::string join(const std::vector<std::string> &vec, const std::string_view &delim) {
+    std::string result;
+    for (size_t i = 0; i < vec.size(); i++) {
+        result += vec[i];
+        if (i < vec.size() - 1)
+            result += delim;
+    }
+    return result;
+}
+
+static std::string describe_compute(void) {
+    if (llama_n_gpu_layers(g_model) > 0 && llamafile_has_gpu()) {
+        if (llamafile_has_metal()) {
+            return "Apple Metal GPU";
+        } else {
+            std::vector<std::string> vec;
+            int count = ggml_backend_cuda_get_device_count();
+            for (int i = 0; i < count; i++) {
+                char buf[128];
+                ggml_backend_cuda_get_device_description(i, buf, sizeof(buf));
+                vec.emplace_back(buf);
+            }
+            return join(vec, ", ");
+        }
+    } else {
+        return llamafile_describe_cpu();
+    }
+}
+
+static void on_help(const std::vector<std::string> &args) {
+    if (args.size() == 1) {
+        fprintf(stderr, "\
+" BOLD "available commands" RESET "\n\
+  /context\n\
+  /dump [FILE]\n\
+  /exit\n\
+  /help [COMMAND]\n\
+  /manual [on|off]\n\
+  /stats\n\
+");
+    } else if (args[1] == "context") {
+        fprintf(stderr, "\
+usage: /context" RESET "\n\
+prints information about context window usage. this helps you know how\n\
+soon you're going to run out of tokens for the current conversation.\n\
+");
+    } else if (args[1] == "dump") {
+        fprintf(stderr, "\
+" BOLD "usage: /dump [FILE]" RESET "\n\
+dumps raw tokens for current conversation history. special tokens are\n\
+printed in the a model specific chat syntax. this is useful for seeing\n\
+specifically what data is being evaluated by the model. by default it\n\
+will be printed to the terminal. if a FILE argument is specified, then\n\
+the raw conversation history will be written to that filename.\n\
+");
+    } else if (args[1] == "exit") {
+        fprintf(stderr, "\
+" BOLD "usage: /exit" RESET "\n\
+this command will cause the process to exit. it is essentially the same\n\
+as typing ctrl-d which signals an eof condition. it also does the same\n\
+thing as typing ctrl-c when the >>> user input prompt is displayed.\n\
+");
+    } else if (args[1] == "manual") {
+        fprintf(stderr, "\
+" BOLD "usage: /manual [on|off]" RESET "\n\
+puts the chatbot in manual mode. this is useful if you want to inject\n\
+a response as the model rather than the user. it's also possible to add\n\
+additional system prompts to the conversation history. when the manual\n\
+mode is activated, a hint is displayed next to the '>>>' indicating\n\
+the current role, which can be 'user', 'assistant', or 'system'. if\n\
+enter is pressed on an empty line, then llamafile will cycle between\n\
+all three roles. when /manual is specified without an argument, it will\n\
+toggle manual mode. otherwise an 'on' or 'off' argument is supplied.\n\
+");
+    } else if (args[1] == "help") {
+        fprintf(stderr, "\
+" BOLD "usage: /help [COMMAND]" RESET "\n\
+shows help on how to issue commands to your llamafile. if no argument is\n\
+specified, then a synopsis of all available commands will be printed. if\n\
+a specific command name is given (e.g. /help dump) then documentation on\n\
+the usage of that specific command will be printed.\n\
+");
+    } else if (args[1] == "stats") {
+        fprintf(stderr, "\
+" BOLD "usage: /stats" RESET "\n\
+prints performance statistics for current session. this includes prompt\n\
+evaluation time in tokens per second, which indicates prefill speed, or\n\
+how quickly llamafile is able to read text. the 'eval time' statistic\n\
+gives you prediction or token generation speed, in tokens per second,\n\
+which tells you how quickly llamafile is able to write text.\n\
+");
+    } else {
+        fprintf(stderr, BRIGHT_RED "%s: unknown command" RESET "\n", args[1].c_str());
+    }
+}
+
+static void on_manual(const std::vector<std::string> &args) {
+    if (args.size() == 1) {
+        g_manual = !g_manual;
+    } else if (args.size() == 2 && (args[1] == "on" || args[1] == "off")) {
+        g_manual = args[1] == "on";
+    } else {
+        fprintf(stderr, BRIGHT_RED "error: bad /manual command" RESET "\n"
+                                   "usage: /manual [on|off]\n");
+    }
+    fprintf(stderr, FAINT "manual mode %s" RESET "\n", g_manual ? "enabled" : "disabled");
+    if (!g_manual)
+        g_role = ROLE_USER;
+}
+
+static void on_context(const std::vector<std::string> &args) {
+    int configured_context = llama_n_ctx(g_ctx);
+    int max_context = llama_n_ctx_train(g_model);
+    printf("%d out of %d context tokens used (%d tokens remaining)\n", n_past, configured_context,
+           configured_context - n_past);
+    if (configured_context < max_context)
+        printf("use the `-c %d` flag at startup for maximum context\n", max_context);
+}
+
+static void on_stats(const std::vector<std::string> &args) {
+    FLAG_log_disable = false;
+    llama_print_timings(g_ctx);
+    FLAG_log_disable = true;
+}
+
+static void on_dump(const std::vector<std::string> &args) {
+    int fd = 1;
+    if (args.size() >= 2) {
+        if ((fd = creat(args[1].c_str(), 0644)) == -1) {
+            perror(args[1].c_str());
+            return;
+        }
+    }
+    std::string s;
+    for (auto id : g_history)
+        s += llama_token_to_piece(g_ctx, id, true);
+    if (!s.empty() && s[s.size() - 1] != '\n')
+        s += '\n';
+    write(fd, s.data(), s.size());
+    if (args.size() >= 2)
+        close(fd);
+}
+
+static char *on_hint(const char *line, const char **ansi1, const char **ansi2) {
+    *ansi1 = FAINT;
+    *ansi2 = UNBOLD;
+    if (!*line && g_manual)
+        return strdup(get_role_name(g_role));
+    else if (!*line && !g_manual && !g_once)
+        return strdup("say something (or type /help for help)");
+    return strdup("");
+}
+
 static void on_completion(const char *line, int pos, bestlineCompletions *comp) {
     static const char *const kCompletions[] = {
-        "/context", //
-        "/exit", //
-        "/stats", //
+        "/context", // usage: /context
+        "/dump", // usage: /dump [FILE]
+        "/exit", // usage: /exit
+        "/help", // usage: /help [COMMAND]
+        "/manual", // usage: /manual [on|off]
+        "/stats", // usage: /stats
     };
     for (int i = 0; i < sizeof(kCompletions) / sizeof(*kCompletions); ++i)
         if (startswith(kCompletions[i], line))
@@ -118,21 +341,20 @@ static bool handle_command(const char *command) {
     std::string arg;
     while (iss >> arg)
         args.push_back(arg);
-    if (args[0] == "exit") {
+    if (args[0] == "exit" || args[0] == "bye") {
         exit(0);
+    } else if (args[0] == "help" || args[0] == "?") {
+        on_help(args);
     } else if (args[0] == "stats") {
-        FLAG_log_disable = false;
-        llama_print_timings(g_ctx);
-        FLAG_log_disable = true;
+        on_stats(args);
     } else if (args[0] == "context") {
-        int configured_context = llama_n_ctx(g_ctx);
-        int max_context = llama_n_ctx_train(g_model);
-        printf("%d out of %d context tokens used (%d tokens remaining)\n", n_past,
-               configured_context, configured_context - n_past);
-        if (configured_context < max_context)
-            printf("use the `-c %d` flag at startup for maximum context\n", max_context);
+        on_context(args);
+    } else if (args[0] == "manual") {
+        on_manual(args);
+    } else if (args[0] == "dump") {
+        on_dump(args);
     } else {
-        printf("%s: unrecognized command\n", args[0].c_str());
+        fprintf(stderr, BRIGHT_RED "%s: unrecognized command" RESET "\n", args[0].c_str());
     }
     return true;
 }
@@ -190,6 +412,7 @@ static void eval_tokens(std::vector<llama_token> tokens, int n_batch) {
             n_eval = n_batch;
         if (llama_decode(g_ctx, llama_batch_get_one(&tokens[i], n_eval, n_past, 0)))
             die_out_of_context();
+        g_history.insert(g_history.end(), tokens.begin() + i, tokens.begin() + i + n_eval);
         n_past += n_eval;
     }
 }
@@ -276,6 +499,7 @@ int chatbot_main(int argc, char **argv) {
     printf(BOLD "software" UNBOLD ": llamafile " LLAMAFILE_VERSION_STRING "\n" //
            BOLD "model" UNBOLD ":    %s\n",
            basename(params.model).c_str());
+    printf(BOLD "compute" UNBOLD ":  %s\n", describe_compute().c_str());
     if (want_server)
         printf(BOLD "server" UNBOLD ":   %s\n", g_listen_url.c_str());
     printf("\n");
@@ -311,8 +535,10 @@ int chatbot_main(int argc, char **argv) {
     // run chatbot
     for (;;) {
         bestlineLlamaMode(true);
+        bestlineSetHintsCallback(on_hint);
+        bestlineSetFreeHintsCallback(free);
         bestlineSetCompletionCallback(on_completion);
-        write(1, GREEN, strlen(GREEN));
+        write(1, get_role_color(g_role), strlen(get_role_color(g_role)));
         char *line = bestlineWithHistory(">>> ", "llamafile");
         write(1, UNFOREGROUND, strlen(UNFOREGROUND));
         if (!line) {
@@ -321,6 +547,10 @@ int chatbot_main(int argc, char **argv) {
             break;
         }
         if (is_empty(line)) {
+            if (g_manual) {
+                g_role = cycle_role(g_role);
+                write(1, "\033[F", 3);
+            }
             free(line);
             continue;
         }
@@ -328,9 +558,16 @@ int chatbot_main(int argc, char **argv) {
             free(line);
             continue;
         }
-        std::vector<llama_chat_msg> chat = {{"user", line}};
-        std::string msg = llama_chat_apply_template(g_model, params.chat_template, chat, true);
+        g_once = true;
+        bool add_assi = !g_manual;
+        std::vector<llama_chat_msg> chat = {{get_role_name(g_role), line}};
+        std::string msg = llama_chat_apply_template(g_model, params.chat_template, chat, add_assi);
         eval_string(msg, params.n_batch, false, true);
+        if (g_manual) {
+            g_role = get_next_role(g_role);
+            free(line);
+            continue;
+        }
         while (!g_got_sigint) {
             llama_token id = llama_sampling_sample(sampler, g_ctx, NULL);
             llama_sampling_accept(sampler, g_ctx, id, true);

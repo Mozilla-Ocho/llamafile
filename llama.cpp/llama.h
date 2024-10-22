@@ -473,6 +473,8 @@ extern "C" {
     LLAMA_API int32_t llama_n_embd     (const struct llama_model * model);
     LLAMA_API int32_t llama_n_layer    (const struct llama_model * model);
 
+    LLAMA_API int32_t llama_n_gpu_layers(const struct llama_model * model); // [jart]
+
     // Get the model's RoPE frequency scaling factor
     LLAMA_API float llama_rope_freq_scale_train(const struct llama_model * model);
 

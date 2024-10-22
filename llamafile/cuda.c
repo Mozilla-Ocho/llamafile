@@ -115,6 +115,7 @@ static struct Cuda {
     typeof(ggml_backend_cuda_get_device_count) *GGML_CALL get_device_count;
     typeof(ggml_backend_cuda_unregister_host_buffer) *GGML_CALL unreg_host_buf;
     typeof(ggml_backend_cuda_register_host_buffer) *GGML_CALL register_host_buffer;
+    typeof(ggml_backend_cuda_get_device_description) *GGML_CALL get_description;
 } ggml_cuda;
 
 static const char *Dlerror(void) {
@@ -731,6 +732,7 @@ static bool link_cuda_dso(const char *dso, const char *dir) {
     ok &= !!(ggml_cuda.get_device_count = imp(lib, "ggml_backend_cuda_get_device_count"));
     ok &= !!(ggml_cuda.unreg_host_buf = imp(lib, "ggml_backend_cuda_unregister_host_buffer"));
     ok &= !!(ggml_cuda.register_host_buffer = imp(lib, "ggml_backend_cuda_register_host_buffer"));
+    ok &= !!(ggml_cuda.get_description = imp(lib, "ggml_backend_cuda_get_device_description"));
     if (!ok) {
         tinylog(__func__, ": error: not all cuda symbols could be imported\n", NULL);
         cosmo_dlclose(lib);
@@ -1029,4 +1031,11 @@ GGML_CALL bool ggml_backend_cuda_register_host_buffer(void *buffer, size_t size)
     if (!llamafile_has_cuda())
         return false;
     return ggml_cuda.register_host_buffer(buffer, size);
+}
+
+GGML_CALL void ggml_backend_cuda_get_device_description(int device, char *description,
+                                                        size_t description_size) {
+    if (!llamafile_has_cuda())
+        return;
+    return ggml_cuda.get_description(device, description, description_size);
 }
