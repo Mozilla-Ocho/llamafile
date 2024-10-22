@@ -8,7 +8,8 @@ typedef struct bestlineCompletions {
     char **cvec;
 } bestlineCompletions;
 
-typedef void(bestlineCompletionCallback)(const char *, bestlineCompletions *);
+typedef void(bestlineCompletionCallback)(const char *, int,
+                                         bestlineCompletions *);
 typedef char *(bestlineHintsCallback)(const char *, const char **, const char **);
 typedef void(bestlineFreeHintsCallback)(void *);
 typedef unsigned(bestlineXlatCallback)(unsigned);

@@ -98,7 +98,7 @@ __attribute__((format(printf, 1, 2))) static std::string format(const char *fmt,
     return res;
 }
 
-static void on_completion(const char *line, bestlineCompletions *comp) {
+static void on_completion(const char *line, int pos, bestlineCompletions *comp) {
     static const char *const kCompletions[] = {
         "/context", //
         "/exit", //

@@ -2008,20 +2008,22 @@ static ssize_t bestlineCompleteLine(struct bestlineState *ls, char *seq, int siz
     ssize_t nread;
     size_t i, n, stop;
     bestlineCompletions lc;
-    struct bestlineState saved;
+    struct bestlineState original, saved;
     nread = 0;
     memset(&lc, 0, sizeof(lc));
-    completionCallback(ls->buf, &lc);
+    completionCallback(ls->buf, ls->pos, &lc);
     if (!lc.len) {
         bestlineBeep();
     } else {
         i = 0;
         stop = 0;
+        original = *ls;
         while (!stop) {
             /* Show completion or original buffer */
             if (i < lc.len) {
                 saved = *ls;
-                ls->len = ls->pos = strlen(lc.cvec[i]);
+                ls->len = strlen(lc.cvec[i]);
+                ls->pos = original.pos + ls->len - original.len;
                 ls->buf = lc.cvec[i];
                 bestlineRefreshLine(ls);
                 ls->len = saved.len;
@@ -2046,7 +2048,8 @@ static ssize_t bestlineCompleteLine(struct bestlineState *ls, char *seq, int siz
                     n = strlen(lc.cvec[i]);
                     if (bestlineGrow(ls, n + 1)) {
                         memcpy(ls->buf, lc.cvec[i], n + 1);
-                        ls->len = ls->pos = n;
+                        ls->len = n;
+                        ls->pos = original.pos + n - original.len;
                     }
                 }
                 stop = 1;
