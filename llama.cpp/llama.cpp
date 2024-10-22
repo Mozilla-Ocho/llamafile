@@ -19017,6 +19017,12 @@ static int32_t llama_chat_apply_template_internal(
             if (role == "system") {
                 // there is no system message for gemma, but we will merge it with user prompt, so nothing is broken
                 system_prompt = trim(message->content);
+                // [jart] alow system prompt
+                if (chat.size() == 1) {
+                    ss << "<start_of_turn>user\n";
+                    ss << system_prompt;
+                    ss << "<end_of_turn>\n";
+                }
                 continue;
             }
             // in gemma, "assistant" is "model"
