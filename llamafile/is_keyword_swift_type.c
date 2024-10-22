@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.1 */
-/* Command-line: gperf llamafile/is_keyword_swift_type.gperf  */
+/* Command-line: gperf --output-file=llamafile/is_keyword_swift_type.c llamafile/is_keyword_swift_type.gperf  */
 /* Computed positions: -k'1,3-6,8-9,11,13,15,17,20,22-23,26,33' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \

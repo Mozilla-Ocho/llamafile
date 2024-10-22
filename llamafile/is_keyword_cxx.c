@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.1 */
-/* Command-line: gperf llamafile/is_keyword_cxx.gperf  */
+/* Command-line: gperf --output-file=llamafile/is_keyword_cxx.c llamafile/is_keyword_cxx.gperf  */
 /* Computed positions: -k'1,3,5,$' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \

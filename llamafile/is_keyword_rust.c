@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.1 */
-/* Command-line: gperf llamafile/is_keyword_rust.gperf  */
+/* Command-line: gperf --output-file=llamafile/is_keyword_rust.c llamafile/is_keyword_rust.gperf  */
 /* Computed positions: -k'1-3' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \

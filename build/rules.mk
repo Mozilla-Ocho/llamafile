@@ -6,7 +6,7 @@ COMPILE.c = $(CC) $(CCFLAGS) $(CFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -
 COMPILE.cc = $(CXX) $(CCFLAGS) $(CXXFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -c
 
 %.c: %.gperf
-	gperf $< >$@
+	-gperf --output-file=$@ $<
 
 o/$(MODE)/%.o: %.c $(COSMOCC)
 	@mkdir -p $(@D)

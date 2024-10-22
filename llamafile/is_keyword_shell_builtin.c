@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.1 */
-/* Command-line: gperf llamafile/is_keyword_shell_builtin.gperf  */
+/* Command-line: gperf --output-file=llamafile/is_keyword_shell_builtin.c llamafile/is_keyword_shell_builtin.gperf  */
 /* Computed positions: -k'1-2' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
