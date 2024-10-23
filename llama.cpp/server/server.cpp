@@ -3132,8 +3132,8 @@ int server_cli(int argc, char **argv)
     const char *connect_host;
     if (sparams.hostname != "0.0.0.0") {
         connect_host = sparams.hostname.c_str();
-        LOG_TEE("\nllama server listening at http://%s:%d\n\n",
-                sparams.hostname.c_str(), sparams.port);
+        LOG_TEE("\nllama server listening at http://%s:%d%s\n\n",
+                sparams.hostname.c_str(), sparams.port, sparams.url_prefix.c_str());
     } else {
         struct ifaddrs *ifaddrs;
         connect_host = "127.0.0.1";
@@ -3142,23 +3142,25 @@ int server_cli(int argc, char **argv)
             for (struct ifaddrs *ifa = ifaddrs; ifa; ifa = ifa->ifa_next) {
                 char buf[128];
                 if (!(ifa->ifa_flags & IFF_UP)) continue;
-                LOG_TEE("llama server listening at http://%s%s%s:%d\n",
+                LOG_TEE("llama server listening at http://%s%s%s:%d%s\n",
                         ifa->ifa_addr->sa_family == AF_INET6 ? "[" : "",
                         sockaddr2str(ifa->ifa_addr, buf, sizeof(buf)),
                         ifa->ifa_addr->sa_family == AF_INET6 ? "]" : "",
-                        sparams.port);
+                        sparams.port,
+                        sparams.url_prefix.c_str());
             }
             LOG_TEE("\n");
         } else {
             perror("getifaddrs");
-            LOG_TEE("\nllama server listening at http://%s:%d\n\n",
-                    sparams.hostname.c_str(), sparams.port);
+            LOG_TEE("\nllama server listening at http://%s:%d%s\n\n",
+                    sparams.hostname.c_str(), sparams.port, sparams.url_prefix.c_str());
         }
     }
 
     std::unordered_map<std::string, std::string> log_data;
     log_data["hostname"] = sparams.hostname;
     log_data["port"] = std::to_string(sparams.port);
+    log_data["url_prefix"] = sparams.url_prefix;
 
     if (sparams.api_keys.size() == 1) {
         log_data["api_key"] = "api_key: ****" + sparams.api_keys[0].substr(sparams.api_keys[0].length() - 4);
