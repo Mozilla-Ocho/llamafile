@@ -214,6 +214,7 @@ struct gpt_params {
 
     std::string hostname      = "127.0.0.1";
     std::string public_path   = "";
+    std::string url_prefix    = "";
     std::string chat_template = "";
     std::string system_prompt = "";
     bool enable_chat_template = true;

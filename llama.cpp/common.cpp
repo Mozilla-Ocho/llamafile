@@ -1078,6 +1078,11 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         params.public_path = argv[i];
         return true;
     }
+    if (arg == "--url-prefix") {
+        CHECK_ARG
+        params.url_prefix = argv[i];
+        return true;
+    }
     if (arg == "--api-key") {
         CHECK_ARG
         params.api_keys.push_back(argv[i]);
@@ -1605,6 +1610,7 @@ void gpt_params_print_usage(int /*argc*/, char ** argv, const gpt_params & param
     options.push_back({ "server",      "       --host HOST",            "ip address to listen (default: %s)", params.hostname.c_str() });
     options.push_back({ "server",      "       --port PORT",            "port to listen (default: %d)", params.port });
     options.push_back({ "server",      "       --path PATH",            "path to serve static files from (default: %s)", params.public_path.c_str() });
+    options.push_back({ "server",      "       --url-prefix PREFIX",    "Specify a URL prefix (subdirectory) under which the API will be served, e.g. /llamafile (default: %s)", params.url_prefix.c_str() });
     options.push_back({ "server",      "       --embedding(s)",         "enable embedding endpoint (default: %s)", params.embedding ? "enabled" : "disabled" });
     options.push_back({ "server",      "       --api-key KEY",          "API key to use for authentication (default: none)" });
     options.push_back({ "server",      "       --api-key-file FNAME",   "path to file containing API keys (default: none)" });
