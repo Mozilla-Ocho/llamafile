@@ -47,6 +47,7 @@ struct server_params
     bool nobrowser = false;
     bool slots_endpoint = true;
     bool metrics_endpoint = false;
+    std::string url_prefix = "";
 };
 
 bool server_verbose = false;
@@ -2171,6 +2172,7 @@ static void server_print_usage(const char *argv0, const gpt_params &params,
     printf("  --host                    ip address to listen (default  (default: %s)\n", sparams.hostname.c_str());
     printf("  --port PORT               port to listen (default  (default: %d)\n", sparams.port);
     printf("  --path PUBLIC_PATH        path from which to serve static files (default %s)\n", sparams.public_path.c_str());
+    printf("  --url-prefix PREFIX       Specify a URL prefix (subdirectory) under which the API will be served, e.g. /llamafile (default: '/')\n");
     printf("  --api-key API_KEY         optional api key to enhance server security. If set, requests must include this key for access.\n");
     printf("  --api-key-file FNAME      path to file containing api keys delimited by new lines. If set, requests must include one of the keys for access.\n");
     printf("  -to N, --timeout N        server read/write timeout in seconds (default: %d)\n", sparams.read_timeout);
@@ -2256,6 +2258,31 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
                 break;
             }
             sparams.public_path = argv[i];
+        }
+        else if (arg == "--url-prefix")
+        {
+            if (++i >= argc)
+            {
+                invalid_param = true;
+                break;
+            }
+            sparams.url_prefix = argv[i];
+            // 1. Consolidate consecutive slashes
+            while (sparams.url_prefix.find("//") != std::string::npos) {
+                sparams.url_prefix.replace(sparams.url_prefix.find("//"), 2, "/");
+            }
+            // 2 Ensure single slash at start
+            if (sparams.url_prefix.empty() || sparams.url_prefix[0] != '/') {
+               sparams.url_prefix = "/" + sparams.url_prefix;
+            }
+            // 3. Remove trailing slash if present
+            if (!sparams.url_prefix.empty() && sparams.url_prefix.back() == '/') {
+                sparams.url_prefix.pop_back();
+            }
+            // 4. If only a single slash remains, convert to empty string
+            if (sparams.url_prefix == "/") {
+                sparams.url_prefix = "";
+            }
         }
         else if (arg == "--api-key")
         {
@@ -2883,7 +2910,7 @@ int server_cli(int argc, char **argv)
         res.set_header("Access-Control-Allow-Headers", "*");
     });
 
-    svr.Get("/health", [&](const httplib::Request& req, httplib::Response& res) {
+    svr.Get(sparams.url_prefix + "/health", [&](const httplib::Request& req, httplib::Response& res) {
         server_state current_state = state.load();
         switch(current_state) {
             case SERVER_STATE_READY: {
@@ -2933,7 +2960,7 @@ int server_cli(int argc, char **argv)
     });
 
     if (sparams.slots_endpoint) {
-        svr.Get("/slots", [&](const httplib::Request&, httplib::Response& res) {
+        svr.Get(sparams.url_prefix + "/slots", [&](const httplib::Request&, httplib::Response& res) {
             // request slots data using task queue
             task_server task;
             task.id = llama.queue_tasks.get_new_id();
@@ -2953,7 +2980,7 @@ int server_cli(int argc, char **argv)
     }
 
     if (sparams.metrics_endpoint) {
-        svr.Get("/metrics", [&](const httplib::Request&, httplib::Response& res) {
+        svr.Get(sparams.url_prefix + "/metrics", [&](const httplib::Request&, httplib::Response& res) {
             // request slots data using task queue
             task_server task;
             task.id = llama.queue_tasks.get_new_id();
@@ -3099,7 +3126,7 @@ int server_cli(int argc, char **argv)
     }
 
     // Set the base directory for serving static files
-    svr.set_base_dir(sparams.public_path);
+    svr.set_base_dir(sparams.public_path, sparams.url_prefix);
 
     // to make it ctrl+clickable:
     const char *connect_host;
@@ -3141,8 +3168,18 @@ int server_cli(int argc, char **argv)
 
     // launch browser tab
     if (!sparams.nobrowser && !g_server_background_mode) {
-        char url[128];
-        snprintf(url, sizeof(url), "http://%s:%d/", connect_host, sparams.port);
+        const size_t max_url_size = 2048;  // commonly accepted maximum URL length
+        char url[max_url_size];
+        int written = snprintf(url, sizeof(url), "http://%s:%d%s/", 
+                            connect_host, sparams.port, sparams.url_prefix.c_str());
+        if (written < 0 || written >= (int)sizeof(url)) {
+            LOG_ERROR("URL truncation occurred", {
+                {"connect_host", connect_host},
+                {"port", sparams.port},
+                {"url_prefix", sparams.url_prefix},
+            });
+            return 1;
+        }
         llamafile_launch_browser(url);
     }
     if (g_server_on_listening) {
@@ -3250,7 +3287,7 @@ int server_cli(int argc, char **argv)
         return false;
     };
 
-    svr.Get("/props", [&llama](const httplib::Request & req, httplib::Response &res)
+    svr.Get(sparams.url_prefix + "/props", [&llama](const httplib::Request & req, httplib::Response &res)
             {
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 json data = {
@@ -3262,7 +3299,7 @@ int server_cli(int argc, char **argv)
                 res.set_content(data.dump(), "application/json; charset=utf-8");
             });
 
-    svr.Post("/completion", [&llama, &validate_api_key](const httplib::Request &req, httplib::Response &res)
+    svr.Post(sparams.url_prefix + "/completion", [&llama, &validate_api_key](const httplib::Request &req, httplib::Response &res)
             {
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 if (!validate_api_key(req, res)) {
@@ -3339,7 +3376,7 @@ int server_cli(int argc, char **argv)
                 }
             });
 
-    svr.Get("/v1/models", [&params](const httplib::Request& req, httplib::Response& res)
+    svr.Get(sparams.url_prefix + "/v1/models", [&params](const httplib::Request& req, httplib::Response& res)
             {
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 std::time_t t = std::time(0);
@@ -3361,7 +3398,7 @@ int server_cli(int argc, char **argv)
 
 
     // TODO: add mount point without "/v1" prefix -- how?
-    svr.Post("/v1/chat/completions", [&llama, &validate_api_key, &sparams](const httplib::Request &req, httplib::Response &res)
+    svr.Post(sparams.url_prefix + "/v1/chat/completions", [&llama, &validate_api_key, &sparams](const httplib::Request &req, httplib::Response &res)
             {
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 if (!validate_api_key(req, res)) {
@@ -3441,7 +3478,7 @@ int server_cli(int argc, char **argv)
                 }
             });
 
-    svr.Post("/infill", [&llama, &validate_api_key](const httplib::Request &req, httplib::Response &res)
+    svr.Post(sparams.url_prefix + "/infill", [&llama, &validate_api_key](const httplib::Request &req, httplib::Response &res)
             {
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 if (!validate_api_key(req, res)) {
@@ -3511,7 +3548,7 @@ int server_cli(int argc, char **argv)
     svr.Options(R"(/.*)", [](const httplib::Request &, httplib::Response &res)
                 { return res.set_content("", "application/json; charset=utf-8"); });
 
-    svr.Post("/tokenize", [&llama](const httplib::Request &req, httplib::Response &res)
+    svr.Post(sparams.url_prefix + "/tokenize", [&llama](const httplib::Request &req, httplib::Response &res)
             {
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 const json body = json::parse(req.body);
@@ -3524,7 +3561,7 @@ int server_cli(int argc, char **argv)
                 return res.set_content(data.dump(), "application/json; charset=utf-8");
             });
 
-    svr.Post("/detokenize", [&llama](const httplib::Request &req, httplib::Response &res)
+    svr.Post(sparams.url_prefix + "/detokenize", [&llama](const httplib::Request &req, httplib::Response &res)
             {
                 res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
                 const json body = json::parse(req.body);
@@ -3539,7 +3576,7 @@ int server_cli(int argc, char **argv)
                 return res.set_content(data.dump(), "application/json; charset=utf-8");
             });
 
-    svr.Post("/embedding", [&llama](const httplib::Request &req, httplib::Response &res)
+    svr.Post(sparams.url_prefix + "/embedding", [&llama](const httplib::Request &req, httplib::Response &res)
             {
 
                 // TODO(jart): something llama.cpp did upstream causes
@@ -3592,7 +3629,7 @@ int server_cli(int argc, char **argv)
                 return res.set_content(result.result_json.dump(), "application/json; charset=utf-8");
             });
 
-    svr.Post("/v1/embeddings", [&llama](const httplib::Request &req, httplib::Response &res)
+    svr.Post(sparams.url_prefix + "/v1/embeddings", [&llama](const httplib::Request &req, httplib::Response &res)
             {
 
                 // TODO(jart): something llama.cpp did upstream causes

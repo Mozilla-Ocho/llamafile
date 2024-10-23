@@ -21,14 +21,14 @@ let generation_settings = null;
 //
 export async function* llama(prompt, params = {}, config = {}) {
   let controller = config.controller;
-
+  const url_prefix = config.url_prefix || "";
   if (!controller) {
     controller = new AbortController();
   }
 
   const completionParams = { ...paramDefaults, ...params, prompt };
 
-  const response = await fetch("/completion", {
+  const response = await fetch(`${url_prefix}/completion`, {
     method: 'POST',
     body: JSON.stringify(completionParams),
     headers: {
@@ -193,9 +193,10 @@ export const llamaComplete = async (params, controller, callback) => {
 }
 
 // Get the model info from the server. This is useful for getting the context window and so on.
-export const llamaModelInfo = async () => {
+export const llamaModelInfo = async (config = {}) => {
   if (!generation_settings) {
-    const props = await fetch("/props").then(r => r.json());
+    const url_prefix = config.url_prefix || "";
+    const props = await fetch(`${url_prefix}/props`).then(r => r.json());
     generation_settings = props.default_generation_settings;
   }
   return generation_settings;

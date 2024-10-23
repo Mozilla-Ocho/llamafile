@@ -759,6 +759,11 @@ Path from which to serve static files.
 .Pp
 Default:
 .Pa /zip/llama.cpp/server/public
+.It Fl Fl url-prefix Ar PREFIX
+Specify a URL prefix (subdirectory) under which the API will be served, e.g. /llamafile
+.Pp
+Default:
+.Pa /
 .It Fl Fl nobrowser
 Do not attempt to open a web browser tab at startup.
 .It Fl gan Ar N , Fl Fl grp-attn-n Ar N
