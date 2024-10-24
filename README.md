@@ -20,40 +20,40 @@ llamafile is a Mozilla Builders project.<br/><br/>
 
 ## Quickstart
 
-The easiest way to try it for yourself is to download our example
-llamafile for the [LLaVA](https://llava-vl.github.io/) model (license: [LLaMA 2](https://ai.meta.com/resources/models-and-libraries/llama-downloads/),
-[OpenAI](https://openai.com/policies/terms-of-use)). LLaVA is a new LLM that can do more
-than just chat; you can also upload images and ask it questions
-about them. With llamafile, this all happens locally; no data
-ever leaves your computer.
-
-1. Download [llava-v1.5-7b-q4.llamafile](https://huggingface.co/Mozilla/llava-v1.5-7b-llamafile/resolve/main/llava-v1.5-7b-q4.llamafile?download=true) (4.29 GB).
-
-2. Open your computer's terminal.
-
-3. If you're using macOS, Linux, or BSD, you'll need to grant permission
-for your computer to execute this new file. (You only need to do this
-once.)
-
 ```sh
-chmod +x llava-v1.5-7b-q4.llamafile
+curl -L https://llamafile.ai/llamafile.sh > llamafile
+
+chmod a+x llamafile && ./llamfile 
 ```
 
-4. If you're on Windows, rename the file by adding ".exe" on the end.
+```                     
+Welcome to LLaMA model downloader!
+Models will be stored in: /Users/name/.llamafile
 
-5. Run the llamafile. e.g.:
+Available models:
+  1) LLaVA 1.5
+  2) TinyLlama-1.1B
+  3) Mistral-7B-Instruct
+  4) Phi-3-mini-4k-instruct
+  5) Mixtral-8x7B-Instruct
+  6) WizardCoder-Python-34B
+  7) WizardCoder-Python-13B
+  8) LLaMA-3-Instruct-70B
+  9) LLaMA-3-Instruct-8B
+  10) Rocket-3B
+  11) OLMo-7B
+  12) E5-Mistral-7B-Instruct
+  13) mxbai-embed-large-v1
 
-```sh
-./llava-v1.5-7b-q4.llamafile
+Select a model number (1-13): 1
+Model 'LLaVA 1.5' is already installed.
+Options:
+1) Run existing model
+2) Download again
+3) Cancel
+Choose an option (1-3): 1
+Running existing model...
 ```
-
-6. Your browser should open automatically and display a chat interface.
-(If it doesn't, just open your browser and point it at http://localhost:8080)
-
-7. When you're done chatting, return to your terminal and hit
-`Control-C` to shut down llamafile.
-
-**Having trouble? See the "Gotchas" section below.**
 
 ### JSON API Quickstart
 
