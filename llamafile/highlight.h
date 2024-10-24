@@ -210,6 +210,7 @@ class HighlightMarkdown : public Highlight {
 
   private:
     int t_ = 0;
+    bool bol_ = true;
     bool tail_ = false;
     std::string lang_;
     Highlight *highlighter_ = nullptr;

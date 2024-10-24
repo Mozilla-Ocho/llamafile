@@ -64,7 +64,14 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             } else {
                 *r += c;
             }
-            tail_ = c != '\n';
+            if (c == '\n') {
+                bol_ = true;
+                tail_ = false;
+            } else {
+                tail_ = true;
+                if (!isblank(c))
+                    bol_ = false;
+            }
             break;
 
         case BACKSLASH:
@@ -79,6 +86,10 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 *r += HI_BOLD;
                 *r += '*';
                 *r += c;
+            } else if (bol_ && isblank(c)) {
+                *r += '*';
+                *r += c;
+                t_ = NORMAL;
             } else {
                 // handle *emphasized* text
                 // inverted because \e[3m has a poorly supported western bias
