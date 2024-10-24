@@ -69,7 +69,7 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_' || c == '-') {
+            if (!isascii(c) || isalnum(c) || c == '_' || c == '-') {
                 word_ += c;
             } else {
                 if (is_keyword_sql(word_.data(), word_.size())) {

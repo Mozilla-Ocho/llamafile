@@ -44,6 +44,7 @@ enum {
     S_REGEX_S,
     S_REGEX_S_BACKSLASH,
     EQUAL,
+    BACKSLASH,
 };
 
 enum {
@@ -169,6 +170,10 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '=' && (!last_ || last_ == '\n')) {
                 t_ = EQUAL;
+            } else if (c == '\\') {
+                t_ = BACKSLASH;
+                *r += HI_ESCAPE;
+                *r += c;
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
@@ -255,6 +260,12 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 t_ = NORMAL;
                 goto Normal;
             }
+            break;
+
+        case BACKSLASH:
+            *r += c;
+            *r += HI_RESET;
+            t_ = NORMAL;
             break;
 
         case VAR:
@@ -523,6 +534,7 @@ void HighlightPerl::flush(std::string *r) {
     case S_REGEX_BACKSLASH:
     case S_REGEX_S:
     case S_REGEX_S_BACKSLASH:
+    case BACKSLASH:
         *r += HI_RESET;
         break;
     default:

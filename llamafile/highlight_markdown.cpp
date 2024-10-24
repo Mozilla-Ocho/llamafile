@@ -27,9 +27,14 @@ enum {
     CODE_TICK_TICK,
     STAR,
     STRONG,
+    STRONG_BACKSLASH,
     STRONG_STAR,
     BACKSLASH,
     INCODE,
+    INCODE2,
+    INCODE2_TICK,
+    EMPHASIS,
+    EMPHASIS_BACKSLASH,
 };
 
 HighlightMarkdown::HighlightMarkdown() {
@@ -48,14 +53,18 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (c == '`') {
                 t_ = TICK;
+                break;
             } else if (c == '*') {
                 t_ = STAR;
+                break;
             } else if (c == '\\') {
+                // handle \*\*not bold\*\* etc.
                 t_ = BACKSLASH;
                 *r += c;
             } else {
                 *r += c;
             }
+            tail_ = c != '\n';
             break;
 
         case BACKSLASH:
@@ -65,26 +74,66 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
 
         case STAR:
             if (c == '*') {
+                // handle **strong** text
                 t_ = STRONG;
                 *r += HI_BOLD;
+                *r += '*';
+                *r += c;
             } else {
-                t_ = NORMAL;
+                // handle *emphasized* text
+                // inverted because \e[3m has a poorly supported western bias
+                *r += '*';
+                *r += HI_ITALIC;
+                *r += c;
+                t_ = EMPHASIS;
+                if (c == '\\')
+                    t_ = EMPHASIS_BACKSLASH;
             }
-            *r += '*';
+            break;
+
+        case EMPHASIS:
+            // this is for *emphasized* text
+            if (c == '*') {
+                t_ = NORMAL;
+                *r += HI_RESET;
+                *r += c;
+            } else if (c == '\\') {
+                t_ = EMPHASIS_BACKSLASH;
+                *r += c;
+            } else {
+                *r += c;
+            }
+            break;
+
+        case EMPHASIS_BACKSLASH:
+            // so we can say *unbroken \* italic* and have it work
             *r += c;
+            t_ = EMPHASIS;
             break;
 
         case STRONG:
             *r += c;
-            if (c == '*')
+            if (c == '*') {
                 t_ = STRONG_STAR;
+            } else if (c == '\\') {
+                t_ = STRONG_BACKSLASH;
+            }
+            break;
+
+        case STRONG_BACKSLASH:
+            // so we can say **unbroken \*\* bold** and have it work
+            *r += c;
+            t_ = STRONG;
             break;
 
         case STRONG_STAR:
             *r += c;
-            if (c == '*') {
+            if (c == '*' || // handle **bold** ending
+                (c == '\n' && !tail_)) { // handle *** line break
                 t_ = NORMAL;
                 *r += HI_RESET;
+            } else if (c == '\\') {
+                t_ = STRONG_BACKSLASH;
             } else {
                 t_ = STRONG;
             }
@@ -93,8 +142,6 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case TICK:
             if (c == '`') {
                 t_ = TICK_TICK;
-                *r += '`';
-                *r += c;
             } else {
                 *r += HI_INCODE;
                 *r += '`';
@@ -104,6 +151,8 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             break;
 
         case INCODE:
+            // this is for `inline code` like that
+            // no backslash escapes are supported here
             *r += c;
             if (c == '`') {
                 *r += HI_RESET;
@@ -111,13 +160,34 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case INCODE2:
+            // this is for ``inline ` code`` like that
+            // it lets you put backtick inside the code
+            *r += c;
+            if (c == '`') {
+                t_ = INCODE2_TICK;
+            }
+            break;
+
+        case INCODE2_TICK:
+            *r += c;
+            if (c == '`') {
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else {
+                t_ = INCODE2;
+            }
+            break;
+
         case TICK_TICK:
             if (c == '`') {
                 t_ = LANG;
-                *r += c;
+                *r += "```";
             } else {
-                t_ = NORMAL;
-                goto Normal;
+                *r += HI_INCODE;
+                *r += "``";
+                *r += c;
+                t_ = INCODE2;
             }
             break;
 
@@ -184,9 +254,17 @@ void HighlightMarkdown::flush(std::string *r) {
     case TICK:
         *r += '`';
         break;
+    case TICK_TICK:
+        *r += "``";
+        break;
     case INCODE:
+    case INCODE2:
+    case INCODE2_TICK:
     case STRONG:
+    case STRONG_BACKSLASH:
     case STRONG_STAR:
+    case EMPHASIS:
+    case EMPHASIS_BACKSLASH:
         *r += HI_RESET;
         break;
     case CODE:

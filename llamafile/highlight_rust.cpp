@@ -50,7 +50,7 @@ void HighlightRust::feed(std::string *r, std::string_view input) {
 
         Normal:
         case NORMAL:
-            if (!isascii(c) || isalpha(c) || c == '_') {
+            if (!isascii(c) || isalpha(c) || c == '_' || c == '!') {
                 t_ = WORD;
                 goto Word;
             } else if (c == '/') {
@@ -72,15 +72,23 @@ void HighlightRust::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_' || c == '!') {
+            if (!isascii(c) || isalnum(c) || c == '_' || c == '!') {
                 word_ += c;
             } else {
                 if (is_keyword_rust(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                } else if (!word_.empty() && word_[word_.size() - 1] == '!') {
+                } else if (word_.size() >= 2 && word_[word_.size() - 1] == '!') {
                     *r += HI_MACRO;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (is_keyword_rust_type(word_.data(), word_.size())) {
+                    *r += HI_TYPE;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (is_keyword_rust_constant(word_.data(), word_.size())) {
+                    *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -231,8 +239,16 @@ void HighlightRust::flush(std::string *r) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
-        } else if (!word_.empty() && word_[word_.size() - 1] == '!') {
+        } else if (word_.size() >= 2 && word_[word_.size() - 1] == '!') {
             *r += HI_MACRO;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_rust_type(word_.data(), word_.size())) {
+            *r += HI_TYPE;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_rust_constant(word_.data(), word_.size())) {
+            *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
         } else {

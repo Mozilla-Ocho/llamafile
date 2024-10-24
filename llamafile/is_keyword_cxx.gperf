@@ -50,6 +50,7 @@ __thread
 __typeof
 __volatile
 __volatile__ 
+__wur
 alignas
 alignof
 and
@@ -59,6 +60,7 @@ atomic_cancel
 atomic_commit
 atomic_noexcept
 auto
+autotype
 bitand
 bitor
 blockDim
@@ -100,9 +102,11 @@ float
 for
 forcealign
 forcealignargpointer
+forceinline
 friend
 goto
 gridDim
+hasatleast
 if
 inline
 int
@@ -120,6 +124,7 @@ nosideeffect
 not
 not_eq
 nullptr
+nullterminated
 operator
 or
 or_eq
@@ -134,10 +139,13 @@ reallocesque
 reflexpr
 register
 reinterpret_cast
+relegated
 requires
 return
 returnsaligned
+returnsnonnull
 returnspointerwithnoaliases
+returnstwice
 scanfesque
 short
 signed

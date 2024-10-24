@@ -1,0 +1,11 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_rust_constant
+%%
+false
+true

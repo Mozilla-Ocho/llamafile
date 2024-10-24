@@ -61,11 +61,17 @@ void ColorBleeder::relay(std::string *r, const std::string &s) {
                 t_ = ESC;
                 break;
             case '\n':
-                if (intensity_ || foreground_ || background_) {
+                if (intensity_ || inverted_ || foreground_ || background_) {
                     bool got_some = false;
                     *r += "\033[";
                     if (intensity_) {
                         *r += std::to_string(intensity_);
+                        got_some = true;
+                    }
+                    if (inverted_) {
+                        if (got_some)
+                            *r += ';';
+                        *r += '7';
                         got_some = true;
                     }
                     if (foreground_) {
@@ -115,6 +121,7 @@ void ColorBleeder::relay(std::string *r, const std::string &s) {
                 for (int i = 0; i < n_; ++i) {
                     int g = sgr_codes_[i];
                     if (g == 0) {
+                        inverted_ = 0;
                         intensity_ = 0;
                         foreground_ = 0;
                         background_ = 0;
@@ -122,6 +129,10 @@ void ColorBleeder::relay(std::string *r, const std::string &s) {
                         intensity_ = g;
                     } else if (g == 22) {
                         intensity_ = 0;
+                    } else if (g == 7) {
+                        inverted_ = 1;
+                    } else if (g == 27) {
+                        inverted_ = 0;
                     } else if ((30 <= g && g <= 37) || //
                                (90 <= g && g <= 97)) {
                         foreground_ = g;

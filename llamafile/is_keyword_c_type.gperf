@@ -21,6 +21,7 @@ atomic_bool32
 atomic_char
 atomic_char16_t
 atomic_char32_t
+atomic_flag
 atomic_int
 atomic_int_fast16_t
 atomic_int_fast32_t
@@ -52,6 +53,7 @@ atomic_ullong
 atomic_ulong
 atomic_ushort
 atomic_wchar_t
+axdx_t
 bfloat16_t
 blkcnt_t
 blksize_t

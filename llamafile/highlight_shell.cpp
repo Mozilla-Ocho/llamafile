@@ -36,6 +36,7 @@ enum {
     LT_LT_QNAME,
     HEREDOC_BOL,
     HEREDOC,
+    BACKSLASH,
 };
 
 HighlightShell::HighlightShell() {
@@ -58,6 +59,10 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
+                *r += c;
+            } else if (c == '\\') {
+                t_ = BACKSLASH;
+                *r += HI_ESCAPE;
                 *r += c;
             } else if (c == '"') {
                 t_ = DQUOTE;
@@ -88,6 +93,12 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             } else {
                 *r += c;
             }
+            break;
+
+        case BACKSLASH:
+            *r += c;
+            *r += HI_RESET;
+            t_ = NORMAL;
             break;
 
         case WORD:
@@ -212,6 +223,8 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             if (c == '-') {
                 indented_heredoc_ = true;
                 *r += c;
+            } else if (c == '\\') {
+                *r += c;
             } else if (c == '\'') {
                 t_ = LT_LT_QNAME;
                 *r += HI_STRING;
@@ -310,6 +323,7 @@ void HighlightShell::flush(std::string *r) {
     case HEREDOC_BOL:
     case HEREDOC:
     case LT_LT_QNAME:
+    case BACKSLASH:
         *r += HI_RESET;
         break;
     default:

@@ -84,6 +84,10 @@ void HighlightPascal::feed(std::string *r, std::string_view input) {
                     *r += HI_TYPE;
                     *r += word_;
                     *r += HI_RESET;
+                } else if (is_keyword_pascal_builtin(word_.data(), word_.size())) {
+                    *r += HI_BUILTIN;
+                    *r += word_;
+                    *r += HI_RESET;
                 } else {
                     *r += word_;
                 }
@@ -182,6 +186,10 @@ void HighlightPascal::flush(std::string *r) {
             *r += HI_RESET;
         } else if (is_keyword_pascal_type(word_.data(), word_.size())) {
             *r += HI_TYPE;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_pascal_builtin(word_.data(), word_.size())) {
+            *r += HI_BUILTIN;
             *r += word_;
             *r += HI_RESET;
         } else {

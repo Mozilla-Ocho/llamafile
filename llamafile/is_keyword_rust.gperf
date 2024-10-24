@@ -23,7 +23,6 @@ dyn
 else
 enum
 extern
-false
 final
 fn
 for
@@ -47,7 +46,6 @@ static
 struct
 super
 trait
-true
 try
 type
 typeof

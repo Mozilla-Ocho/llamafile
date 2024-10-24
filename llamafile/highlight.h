@@ -21,6 +21,8 @@
 
 #define HI_RESET "\033[0m"
 #define HI_BOLD "\033[1m"
+#define HI_ITALIC HI_INVERT
+#define HI_INVERT "\033[7m"
 #define HI_KEYWORD "\033[1;34m" // bold blue
 #define HI_STRING "\033[32m" // green
 #define HI_COMMENT "\033[31m" // red
@@ -29,7 +31,7 @@
 #define HI_ATTRIB "\033[35m" // magenta
 #define HI_LINENO "\033[2m" // fade
 #define HI_CONTIN "\033[33m" // yellow
-#define HI_LABEL "\033[33m" // yellow
+#define HI_LABEL "\033[2;33m" // dim yellow
 #define HI_TYPE "\033[36m" // cyan
 #define HI_CLASS "\033[1;36m" // bold cyan
 #define HI_SELECTOR "\033[33m" // yellow
@@ -41,11 +43,13 @@
 #define HI_LISPKW "\033[35m" // magenta
 #define HI_ENTITY "\033[36m" // cyan
 #define HI_OPERATOR "\033[36m" // cyan
+#define HI_ESCAPE "\033[33m" // yellow
 
 typedef const char *is_keyword_f(const char *, size_t);
 
 extern "C" {
 is_keyword_f is_keyword_c;
+is_keyword_f is_keyword_c_pod;
 is_keyword_f is_keyword_c_type;
 is_keyword_f is_keyword_c_builtin;
 is_keyword_f is_keyword_c_constant;
@@ -56,12 +60,15 @@ is_keyword_f is_keyword_js_constant;
 is_keyword_f is_keyword_java;
 is_keyword_f is_keyword_python;
 is_keyword_f is_keyword_rust;
+is_keyword_f is_keyword_rust_type;
+is_keyword_f is_keyword_rust_constant;
 is_keyword_f is_keyword_fortran;
 is_keyword_f is_keyword_fortran_type;
 is_keyword_f is_keyword_fortran_builtin;
 is_keyword_f is_keyword_cobol;
 is_keyword_f is_keyword_pascal;
 is_keyword_f is_keyword_pascal_type;
+is_keyword_f is_keyword_pascal_builtin;
 is_keyword_f is_keyword_go;
 is_keyword_f is_keyword_go_type;
 is_keyword_f is_keyword_sql;
@@ -95,6 +102,8 @@ is_keyword_f is_keyword_ruby_constant;
 is_keyword_f is_keyword_typescript;
 is_keyword_f is_keyword_typescript_type;
 is_keyword_f is_keyword_typescript_constant;
+is_keyword_f is_keyword_forth;
+is_keyword_f is_keyword_forth_def;
 }
 
 class Highlight {
@@ -125,6 +134,7 @@ class ColorBleeder : public Highlight {
     unsigned char t_ = 0;
     unsigned char x_ = 0;
     unsigned char n_ = 0;
+    unsigned char inverted_ = 0;
     unsigned char intensity_ = 0;
     unsigned char foreground_ = 0;
     unsigned char background_ = 0;
@@ -143,6 +153,7 @@ class HighlightC : public Highlight {
   private:
     int t_ = 0;
     int i_;
+    bool is_pod_ = 0;
     std::string word_;
     std::string heredoc_;
     is_keyword_f *is_type_;
@@ -199,6 +210,7 @@ class HighlightMarkdown : public Highlight {
 
   private:
     int t_ = 0;
+    bool tail_ = false;
     std::string lang_;
     Highlight *highlighter_ = nullptr;
 };
@@ -451,4 +463,18 @@ class HighlightRuby : public Highlight {
     bool indented_heredoc_ = false;
     std::string word_;
     std::string heredoc_;
+};
+
+class HighlightForth : public Highlight {
+  public:
+    HighlightForth();
+    ~HighlightForth() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    char closer_ = 0;
+    bool is_label_ = false;
+    std::string word_;
 };

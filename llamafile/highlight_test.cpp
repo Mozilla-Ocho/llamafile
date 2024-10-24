@@ -35,12 +35,14 @@ const char *const kLanguages[] = {
     "cobol", //
     "css", //
     "d", //
+    "forth", //
     "fortran", //
     "go", //
     "haskell", //
     "html", //
     "java", //
     "javascript", //
+    "json", //
     "kotlin", //
     "lisp", //
     "lua", //

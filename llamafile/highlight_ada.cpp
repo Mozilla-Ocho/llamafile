@@ -63,7 +63,7 @@ void HighlightAda::feed(std::string *r, std::string_view input) {
 
         Symbol:
         case SYMBOL:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_' || c == '\'') {
+            if (!isascii(c) || isalnum(c) || c == '_' || c == '\'') {
                 symbol_ += c;
             } else {
                 if (is_keyword_ada(symbol_.data(), symbol_.size())) {

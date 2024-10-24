@@ -1,0 +1,27 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_rust_type
+%%
+!
+bool
+char
+f32
+f64
+i128
+i16
+i32
+i64
+i8
+isize
+str
+u128
+u16
+u32
+u64
+u8
+usize

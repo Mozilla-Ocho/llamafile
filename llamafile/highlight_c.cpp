@@ -85,20 +85,26 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                } else if (is_type_ && is_type_(word_.data(), word_.size())) {
+                    if (is_keyword_c_pod(word_.data(), word_.size()))
+                        is_pod_ = true;
+                } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
                     *r += HI_TYPE;
                     *r += word_;
                     *r += HI_RESET;
+                    is_pod_ = false;
                 } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
                     *r += HI_BUILTIN;
                     *r += word_;
                     *r += HI_RESET;
+                    is_pod_ = false;
                 } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
                     *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
+                    is_pod_ = false;
                 } else {
                     *r += word_;
+                    is_pod_ = false;
                 }
                 word_.clear();
                 t_ = NORMAL;
@@ -228,7 +234,7 @@ void HighlightC::flush(std::string *r) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
-        } else if (is_type_ && is_type_(word_.data(), word_.size())) {
+        } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
             *r += HI_TYPE;
             *r += word_;
             *r += HI_RESET;
@@ -265,5 +271,6 @@ void HighlightC::flush(std::string *r) {
     default:
         break;
     }
+    is_pod_ = false;
     t_ = NORMAL;
 }

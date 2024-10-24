@@ -115,6 +115,12 @@ Highlight *Highlight::create(const std::string_view &lang) {
     } else if (lang == "ruby" || //
                lang == "rb") {
         return new HighlightRuby;
+    } else if (lang == "fs" || //
+               lang == "4th" || //
+               lang == "frt" || //
+               lang == "fth" || //
+               lang == "forth") {
+        return new HighlightForth;
     } else {
         return new HighlightPlain;
     }

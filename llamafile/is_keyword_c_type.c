@@ -33,12 +33,12 @@
 
 #include <string.h>
 
-#define TOTAL_KEYWORDS 190
+#define TOTAL_KEYWORDS 192
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 26
 #define MIN_HASH_VALUE 3
-#define MAX_HASH_VALUE 546
-/* maximum key range = 544, duplicates = 0 */
+#define MAX_HASH_VALUE 536
+/* maximum key range = 534, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -52,32 +52,32 @@ hash (register const char *str, register size_t len)
 {
   static const unsigned short asso_values[] =
     {
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547,  90,
-      115, 145, 205,   5,  50, 547, 105, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547,   0,   0,
-        0, 547, 547,   0, 547, 547, 547, 547,   5, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547,   0, 547,   0, 170,  10,
-      115,   5,  75, 205,  75,   0, 547, 230,  30,   5,
-        5,  80,   0,   5,   0,  65,   0,  35,  95, 195,
-      105, 130,  85, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547, 547, 547, 547, 547,
-      547, 547, 547, 547, 547, 547
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537,  90,
+      115, 145, 215,  30,  50, 537, 105, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537,   0,   0,
+        0, 537, 537,   0, 537, 537, 537, 537,   5, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537,   0, 537,   0, 160,  10,
+      115,   5,  75, 205,  75,   0, 537, 240,  30,   5,
+        5,  80,   0,   5,   0,  65,   0,  35,  20, 210,
+       20, 130,  20, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537, 537, 537, 537, 537,
+      537, 537, 537, 537, 537, 537
     };
   register unsigned int hval = len;
 
@@ -153,12 +153,18 @@ is_keyword_c_type (register const char *str, register size_t len)
       char stringpool_str31[sizeof("atomic_ptrdiff_t")];
       char stringpool_str35[sizeof("mcontext_t")];
       char stringpool_str36[sizeof("atomic_char")];
+      char stringpool_str37[sizeof("regex_t")];
+      char stringpool_str38[sizeof("intmax_t")];
       char stringpool_str40[sizeof("uid_t")];
       char stringpool_str41[sizeof("rlim_t")];
+      char stringpool_str42[sizeof("iconv_t")];
       char stringpool_str43[sizeof("rlimit_t")];
       char stringpool_str44[sizeof("uintptr_t")];
+      char stringpool_str46[sizeof("axdx_t")];
       char stringpool_str49[sizeof("uintmax_t")];
       char stringpool_str50[sizeof("t_scalar_t")];
+      char stringpool_str56[sizeof("trace_event_id_t")];
+      char stringpool_str57[sizeof("trace_event_set_t")];
       char stringpool_str60[sizeof("pthread_mutex_t")];
       char stringpool_str61[sizeof("atomic_long")];
       char stringpool_str64[sizeof("pthread_mutexattr_t")];
@@ -170,6 +176,7 @@ is_keyword_c_type (register const char *str, register size_t len)
       char stringpool_str78[sizeof("uint_least8_t")];
       char stringpool_str80[sizeof("register_t")];
       char stringpool_str86[sizeof("t_uscalar_t")];
+      char stringpool_str87[sizeof("lldiv_t")];
       char stringpool_str89[sizeof("cpu_set_t")];
       char stringpool_str91[sizeof("int_fast8_t")];
       char stringpool_str92[sizeof("sig_atomic_t")];
@@ -178,24 +185,24 @@ is_keyword_c_type (register const char *str, register size_t len)
       char stringpool_str96[sizeof("mode_t")];
       char stringpool_str97[sizeof("errno_t")];
       char stringpool_str98[sizeof("atomic_ullong")];
+      char stringpool_str101[sizeof("atomic_flag")];
       char stringpool_str104[sizeof("fexcept_t")];
+      char stringpool_str106[sizeof("fenv_t")];
       char stringpool_str108[sizeof("atomic_int_fast8_t")];
       char stringpool_str112[sizeof("float_t")];
+      char stringpool_str113[sizeof("atomic_size_t")];
       char stringpool_str116[sizeof("int8_t")];
-      char stringpool_str117[sizeof("iconv_t")];
       char stringpool_str118[sizeof("msglen_t")];
       char stringpool_str119[sizeof("id_t")];
       char stringpool_str120[sizeof("div_t")];
       char stringpool_str121[sizeof("data_t")];
-      char stringpool_str122[sizeof("regex_t")];
-      char stringpool_str123[sizeof("intmax_t")];
+      char stringpool_str122[sizeof("va_list")];
       char stringpool_str124[sizeof("msgqnum_t")];
       char stringpool_str125[sizeof("dev_t")];
       char stringpool_str126[sizeof("atomic_uint_least64_t")];
+      char stringpool_str128[sizeof("posix_trace_attr_t")];
       char stringpool_str129[sizeof("uint_least16_t")];
       char stringpool_str130[sizeof("atomic_char16_t")];
-      char stringpool_str131[sizeof("trace_event_id_t")];
-      char stringpool_str132[sizeof("trace_event_set_t")];
       char stringpool_str137[sizeof("atomic_uchar")];
       char stringpool_str138[sizeof("atomic_ushort")];
       char stringpool_str140[sizeof("trace_id_t")];
@@ -204,6 +211,7 @@ is_keyword_c_type (register const char *str, register size_t len)
       char stringpool_str146[sizeof("fpos_t")];
       char stringpool_str147[sizeof("uint8_t")];
       char stringpool_str148[sizeof("shmatt_t")];
+      char stringpool_str149[sizeof("imaxdiv_t")];
       char stringpool_str151[sizeof("nfds_t")];
       char stringpool_str152[sizeof("int16_t")];
       char stringpool_str153[sizeof("locale_t")];
@@ -211,22 +219,20 @@ is_keyword_c_type (register const char *str, register size_t len)
       char stringpool_str156[sizeof("semaphore_t")];
       char stringpool_str159[sizeof("atomic_int_fast16_t")];
       char stringpool_str160[sizeof("off_t")];
-      char stringpool_str162[sizeof("lldiv_t")];
+      char stringpool_str162[sizeof("ssize_t")];
+      char stringpool_str163[sizeof("ssizet_t")];
       char stringpool_str164[sizeof("float64_t")];
       char stringpool_str166[sizeof("atomic_uint_least16_t")];
       char stringpool_str167[sizeof("atomic_schar")];
       char stringpool_str168[sizeof("int_least64_t")];
       char stringpool_str169[sizeof("atomic_int_least8_t")];
+      char stringpool_str171[sizeof("ldiv_t")];
       char stringpool_str172[sizeof("atomic_short")];
       char stringpool_str173[sizeof("timed_mutex_t")];
-      char stringpool_str176[sizeof("__m256")];
-      char stringpool_str177[sizeof("__m256i")];
-      char stringpool_str178[sizeof("atomic_size_t")];
+      char stringpool_str174[sizeof("mbstate_t")];
       char stringpool_str179[sizeof("atomic_uint_fast8_t")];
       char stringpool_str180[sizeof("atomic_uint_least8_t")];
-      char stringpool_str181[sizeof("fenv_t")];
       char stringpool_str183[sizeof("uint16_t")];
-      char stringpool_str184[sizeof("mbstate_t")];
       char stringpool_str185[sizeof("atomic_char32_t")];
       char stringpool_str186[sizeof("sa_family_t")];
       char stringpool_str188[sizeof("ushort_t")];
@@ -235,91 +241,87 @@ is_keyword_c_type (register const char *str, register size_t len)
       char stringpool_str192[sizeof("speed_t")];
       char stringpool_str194[sizeof("uint_least32_t")];
       char stringpool_str196[sizeof("thrd_t")];
-      char stringpool_str197[sizeof("va_list")];
       char stringpool_str199[sizeof("ptrdiff_t")];
-      char stringpool_str201[sizeof("wint_t")];
+      char stringpool_str201[sizeof("__m256")];
+      char stringpool_str202[sizeof("__m256i")];
       char stringpool_str204[sizeof("float16_t")];
       char stringpool_str205[sizeof("atomic_int_least16_t")];
       char stringpool_str207[sizeof("int_fast32_t")];
       char stringpool_str208[sizeof("int_least16_t")];
       char stringpool_str210[sizeof("gid_t")];
-      char stringpool_str212[sizeof("wchar_t")];
-      char stringpool_str213[sizeof("posix_trace_attr_t")];
+      char stringpool_str213[sizeof("blkcnt_t")];
       char stringpool_str214[sizeof("pthread_cond_t")];
       char stringpool_str215[sizeof("atomic_uint_fast16_t")];
-      char stringpool_str216[sizeof("__m512")];
-      char stringpool_str217[sizeof("__m512i")];
+      char stringpool_str216[sizeof("wint_t")];
       char stringpool_str218[sizeof("pthread_condattr_t")];
-      char stringpool_str219[sizeof("wctrans_t")];
       char stringpool_str221[sizeof("atomic_uint_least32_t")];
       char stringpool_str222[sizeof("int_least8_t")];
-      char stringpool_str223[sizeof("blkcnt_t")];
       char stringpool_str224[sizeof("atomic_int_fast32_t")];
-      char stringpool_str227[sizeof("ssize_t")];
-      char stringpool_str228[sizeof("ssizet_t")];
+      char stringpool_str226[sizeof("float16x8_t")];
+      char stringpool_str227[sizeof("wchar_t")];
       char stringpool_str233[sizeof("char16_t")];
-      char stringpool_str234[sizeof("imaxdiv_t")];
+      char stringpool_str234[sizeof("wctrans_t")];
       char stringpool_str238[sizeof("uint_fast64_t")];
-      char stringpool_str240[sizeof("key_t")];
+      char stringpool_str241[sizeof("__m512")];
+      char stringpool_str242[sizeof("__m512i")];
       char stringpool_str243[sizeof("regoff_t")];
       char stringpool_str244[sizeof("in_addr_t")];
-      char stringpool_str246[sizeof("ldiv_t")];
       char stringpool_str248[sizeof("syscall_arg_t")];
       char stringpool_str249[sizeof("uint128_t")];
+      char stringpool_str250[sizeof("key_t")];
       char stringpool_str251[sizeof("max_align_t")];
       char stringpool_str253[sizeof("tcflag_t")];
       char stringpool_str258[sizeof("idtype_t")];
       char stringpool_str259[sizeof("float32_t")];
       char stringpool_str263[sizeof("int_least32_t")];
       char stringpool_str264[sizeof("dim3")];
-      char stringpool_str267[sizeof("int64_t")];
+      char stringpool_str266[sizeof("atomic_bool")];
       char stringpool_str270[sizeof("useconds_t")];
       char stringpool_str272[sizeof("int32_t")];
-      char stringpool_str276[sizeof("atomic_bool")];
-      char stringpool_str277[sizeof("nlink_t")];
+      char stringpool_str277[sizeof("int64_t")];
       char stringpool_str278[sizeof("uint_fast16_t")];
-      char stringpool_str284[sizeof("uint_least64_t")];
-      char stringpool_str287[sizeof("clock_t")];
-      char stringpool_str289[sizeof("clockid_t")];
+      char stringpool_str281[sizeof("float32x4_t")];
+      char stringpool_str284[sizeof("blksize_t")];
+      char stringpool_str287[sizeof("nlink_t")];
       char stringpool_str292[sizeof("uint_fast8_t")];
-      char stringpool_str293[sizeof("__m512bh")];
-      char stringpool_str296[sizeof("pthread_rwlock_t")];
-      char stringpool_str297[sizeof("int_fast64_t")];
-      char stringpool_str298[sizeof("uint64_t")];
-      char stringpool_str299[sizeof("atomic_wchar_t")];
-      char stringpool_str300[sizeof("pthread_rwlockattr_t")];
+      char stringpool_str294[sizeof("uint_least64_t")];
+      char stringpool_str297[sizeof("clock_t")];
+      char stringpool_str299[sizeof("clockid_t")];
       char stringpool_str303[sizeof("uint32_t")];
+      char stringpool_str307[sizeof("int_fast64_t")];
+      char stringpool_str308[sizeof("uint64_t")];
       char stringpool_str310[sizeof("float128_t")];
-      char stringpool_str311[sizeof("float16x8_t")];
-      char stringpool_str312[sizeof("stack_t")];
-      char stringpool_str314[sizeof("atomic_int_fast64_t")];
+      char stringpool_str311[sizeof("pthread_rwlock_t")];
+      char stringpool_str314[sizeof("atomic_wchar_t")];
+      char stringpool_str315[sizeof("pthread_rwlockattr_t")];
       char stringpool_str316[sizeof("__m128")];
       char stringpool_str317[sizeof("__m128i")];
-      char stringpool_str320[sizeof("atomic_int_least64_t")];
+      char stringpool_str318[sizeof("__m512bh")];
       char stringpool_str321[sizeof("suseconds_t")];
+      char stringpool_str322[sizeof("stack_t")];
       char stringpool_str323[sizeof("int128_t")];
+      char stringpool_str324[sizeof("atomic_int_fast64_t")];
       char stringpool_str325[sizeof("atomic_int_least32_t")];
+      char stringpool_str327[sizeof("posix_spawnattr_t")];
       char stringpool_str329[sizeof("timed_thread_t")];
-      char stringpool_str330[sizeof("atomic_uint_fast64_t")];
+      char stringpool_str330[sizeof("atomic_int_least64_t")];
       char stringpool_str333[sizeof("uint_fast32_t")];
       char stringpool_str335[sizeof("atomic_uint_fast32_t")];
+      char stringpool_str336[sizeof("posix_spawn_file_actions_t")];
+      char stringpool_str340[sizeof("atomic_uint_fast64_t")];
       char stringpool_str342[sizeof("atomic_llong")];
       char stringpool_str347[sizeof("atomic_ulong")];
-      char stringpool_str348[sizeof("wctype_t")];
       char stringpool_str353[sizeof("char32_t")];
-      char stringpool_str359[sizeof("blksize_t")];
-      char stringpool_str363[sizeof("uint24_t")];
-      char stringpool_str366[sizeof("float32x4_t")];
-      char stringpool_str385[sizeof("bfloat16_t")];
-      char stringpool_str397[sizeof("posix_spawnattr_t")];
-      char stringpool_str406[sizeof("posix_spawn_file_actions_t")];
-      char stringpool_str408[sizeof("double_t")];
-      char stringpool_str411[sizeof("glob_t")];
-      char stringpool_str419[sizeof("socklen_t")];
-      char stringpool_str420[sizeof("fsblkcnt_t")];
-      char stringpool_str423[sizeof("atomic_bool32")];
-      char stringpool_str509[sizeof("wordexp_t")];
-      char stringpool_str546[sizeof("bool32")];
+      char stringpool_str363[sizeof("wctype_t")];
+      char stringpool_str373[sizeof("uint24_t")];
+      char stringpool_str375[sizeof("bfloat16_t")];
+      char stringpool_str398[sizeof("double_t")];
+      char stringpool_str401[sizeof("glob_t")];
+      char stringpool_str413[sizeof("atomic_bool32")];
+      char stringpool_str429[sizeof("socklen_t")];
+      char stringpool_str430[sizeof("fsblkcnt_t")];
+      char stringpool_str439[sizeof("wordexp_t")];
+      char stringpool_str536[sizeof("bool32")];
     };
   static const struct stringpool_t stringpool_contents =
     {
@@ -346,12 +348,18 @@ is_keyword_c_type (register const char *str, register size_t len)
       "atomic_ptrdiff_t",
       "mcontext_t",
       "atomic_char",
+      "regex_t",
+      "intmax_t",
       "uid_t",
       "rlim_t",
+      "iconv_t",
       "rlimit_t",
       "uintptr_t",
+      "axdx_t",
       "uintmax_t",
       "t_scalar_t",
+      "trace_event_id_t",
+      "trace_event_set_t",
       "pthread_mutex_t",
       "atomic_long",
       "pthread_mutexattr_t",
@@ -363,6 +371,7 @@ is_keyword_c_type (register const char *str, register size_t len)
       "uint_least8_t",
       "register_t",
       "t_uscalar_t",
+      "lldiv_t",
       "cpu_set_t",
       "int_fast8_t",
       "sig_atomic_t",
@@ -371,24 +380,24 @@ is_keyword_c_type (register const char *str, register size_t len)
       "mode_t",
       "errno_t",
       "atomic_ullong",
+      "atomic_flag",
       "fexcept_t",
+      "fenv_t",
       "atomic_int_fast8_t",
       "float_t",
+      "atomic_size_t",
       "int8_t",
-      "iconv_t",
       "msglen_t",
       "id_t",
       "div_t",
       "data_t",
-      "regex_t",
-      "intmax_t",
+      "va_list",
       "msgqnum_t",
       "dev_t",
       "atomic_uint_least64_t",
+      "posix_trace_attr_t",
       "uint_least16_t",
       "atomic_char16_t",
-      "trace_event_id_t",
-      "trace_event_set_t",
       "atomic_uchar",
       "atomic_ushort",
       "trace_id_t",
@@ -397,6 +406,7 @@ is_keyword_c_type (register const char *str, register size_t len)
       "fpos_t",
       "uint8_t",
       "shmatt_t",
+      "imaxdiv_t",
       "nfds_t",
       "int16_t",
       "locale_t",
@@ -404,22 +414,20 @@ is_keyword_c_type (register const char *str, register size_t len)
       "semaphore_t",
       "atomic_int_fast16_t",
       "off_t",
-      "lldiv_t",
+      "ssize_t",
+      "ssizet_t",
       "float64_t",
       "atomic_uint_least16_t",
       "atomic_schar",
       "int_least64_t",
       "atomic_int_least8_t",
+      "ldiv_t",
       "atomic_short",
       "timed_mutex_t",
-      "__m256",
-      "__m256i",
-      "atomic_size_t",
+      "mbstate_t",
       "atomic_uint_fast8_t",
       "atomic_uint_least8_t",
-      "fenv_t",
       "uint16_t",
-      "mbstate_t",
       "atomic_char32_t",
       "sa_family_t",
       "ushort_t",
@@ -428,89 +436,85 @@ is_keyword_c_type (register const char *str, register size_t len)
       "speed_t",
       "uint_least32_t",
       "thrd_t",
-      "va_list",
       "ptrdiff_t",
-      "wint_t",
+      "__m256",
+      "__m256i",
       "float16_t",
       "atomic_int_least16_t",
       "int_fast32_t",
       "int_least16_t",
       "gid_t",
-      "wchar_t",
-      "posix_trace_attr_t",
+      "blkcnt_t",
       "pthread_cond_t",
       "atomic_uint_fast16_t",
-      "__m512",
-      "__m512i",
+      "wint_t",
       "pthread_condattr_t",
-      "wctrans_t",
       "atomic_uint_least32_t",
       "int_least8_t",
-      "blkcnt_t",
       "atomic_int_fast32_t",
-      "ssize_t",
-      "ssizet_t",
+      "float16x8_t",
+      "wchar_t",
       "char16_t",
-      "imaxdiv_t",
+      "wctrans_t",
       "uint_fast64_t",
-      "key_t",
+      "__m512",
+      "__m512i",
       "regoff_t",
       "in_addr_t",
-      "ldiv_t",
       "syscall_arg_t",
       "uint128_t",
+      "key_t",
       "max_align_t",
       "tcflag_t",
       "idtype_t",
       "float32_t",
       "int_least32_t",
       "dim3",
-      "int64_t",
+      "atomic_bool",
       "useconds_t",
       "int32_t",
-      "atomic_bool",
-      "nlink_t",
+      "int64_t",
       "uint_fast16_t",
+      "float32x4_t",
+      "blksize_t",
+      "nlink_t",
+      "uint_fast8_t",
       "uint_least64_t",
       "clock_t",
       "clockid_t",
-      "uint_fast8_t",
-      "__m512bh",
-      "pthread_rwlock_t",
+      "uint32_t",
       "int_fast64_t",
       "uint64_t",
+      "float128_t",
+      "pthread_rwlock_t",
       "atomic_wchar_t",
       "pthread_rwlockattr_t",
-      "uint32_t",
-      "float128_t",
-      "float16x8_t",
-      "stack_t",
-      "atomic_int_fast64_t",
       "__m128",
       "__m128i",
-      "atomic_int_least64_t",
+      "__m512bh",
       "suseconds_t",
+      "stack_t",
       "int128_t",
+      "atomic_int_fast64_t",
       "atomic_int_least32_t",
+      "posix_spawnattr_t",
       "timed_thread_t",
-      "atomic_uint_fast64_t",
+      "atomic_int_least64_t",
       "uint_fast32_t",
       "atomic_uint_fast32_t",
+      "posix_spawn_file_actions_t",
+      "atomic_uint_fast64_t",
       "atomic_llong",
       "atomic_ulong",
-      "wctype_t",
       "char32_t",
-      "blksize_t",
+      "wctype_t",
       "uint24_t",
-      "float32x4_t",
       "bfloat16_t",
-      "posix_spawnattr_t",
-      "posix_spawn_file_actions_t",
       "double_t",
       "glob_t",
+      "atomic_bool32",
       "socklen_t",
       "fsblkcnt_t",
-      "atomic_bool32",
       "wordexp_t",
       "bool32"
     };
@@ -545,16 +549,23 @@ is_keyword_c_type (register const char *str, register size_t len)
       -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,
-      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str42,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str43,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
-      -1, -1, -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str46,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str56,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str57,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str60,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str61,
       -1, -1,
@@ -572,7 +583,8 @@ is_keyword_c_type (register const char *str, register size_t len)
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str80,
       -1, -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str86,
-      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str87,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str89,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str91,
@@ -583,30 +595,34 @@ is_keyword_c_type (register const char *str, register size_t len)
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str96,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str97,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str98,
-      -1, -1, -1, -1, -1,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str101,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str104,
-      -1, -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str106,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str108,
       -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str112,
-      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str113,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str116,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str117,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str118,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str119,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str120,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str121,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str122,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str123,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str124,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str125,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str126,
-      -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str128,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str129,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str130,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str131,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str132,
-      -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str137,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str138,
       -1,
@@ -618,7 +634,8 @@ is_keyword_c_type (register const char *str, register size_t len)
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str146,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str147,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str148,
-      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str149,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str151,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str152,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str153,
@@ -630,26 +647,24 @@ is_keyword_c_type (register const char *str, register size_t len)
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str160,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str162,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str163,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str164,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str166,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str167,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str168,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str169,
-      -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str171,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str172,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str173,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str176,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str177,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str178,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str174,
+      -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str179,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str180,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str181,
-      -1,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str183,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str184,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str185,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str186,
       -1,
@@ -662,12 +677,12 @@ is_keyword_c_type (register const char *str, register size_t len)
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str194,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str196,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str197,
-      -1,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str199,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str201,
-      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str202,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str204,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str205,
       -1,
@@ -675,39 +690,35 @@ is_keyword_c_type (register const char *str, register size_t len)
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str208,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str210,
-      -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str212,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str213,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str214,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str215,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str216,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str217,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str218,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str219,
       -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str218,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str221,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str222,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str223,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str224,
-      -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str226,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str227,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str228,
-      -1, -1, -1, -1,
+      -1, -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str233,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str234,
       -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str238,
-      -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str240,
       -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str241,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str242,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str243,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str244,
-      -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str246,
-      -1,
+      -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str248,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str249,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str250,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str251,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str253,
@@ -717,102 +728,100 @@ is_keyword_c_type (register const char *str, register size_t len)
       -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str263,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str264,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str267,
-      -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str266,
+      -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str270,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str272,
-      -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str276,
+      -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str277,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str278,
-      -1, -1, -1, -1, -1,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str281,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str284,
       -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str287,
-      -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str289,
-      -1, -1,
+      -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str292,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str293,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str294,
       -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str296,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str297,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str298,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str299,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str300,
-      -1, -1,
+      -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str303,
-      -1, -1, -1, -1, -1, -1,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str307,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str308,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str310,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str311,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str312,
-      -1,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str314,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str315,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str316,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str317,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str318,
       -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str320,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str321,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str322,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str323,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str324,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str325,
-      -1, -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str327,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str329,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str330,
       -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str333,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str335,
-      -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str336,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str340,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str342,
       -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str347,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str348,
-      -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str353,
       -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str359,
-      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str353,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str363,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str366,
       -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str385,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str397,
-      -1, -1, -1, -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str406,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str373,
       -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str408,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str411,
-      -1, -1, -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str419,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str420,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str423,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str375,
       -1, -1, -1, -1, -1, -1, -1, -1, -1,
       -1, -1, -1, -1, -1, -1, -1, -1, -1,
       -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str509,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str398,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str401,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str413,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str429,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str430,
+      -1, -1, -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str439,
       -1, -1, -1, -1, -1, -1, -1, -1, -1,
       -1, -1, -1, -1, -1, -1, -1, -1, -1,
       -1, -1, -1, -1, -1, -1, -1, -1, -1,
       -1, -1, -1, -1, -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str546
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str536
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)

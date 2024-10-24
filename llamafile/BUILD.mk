@@ -175,6 +175,7 @@ o/$(MODE)/llamafile/highlight_c_test:			\
 		o/$(MODE)/llamafile/highlight_c.o	\
 		o/$(MODE)/llamafile/is_keyword_c.o	\
 		o/$(MODE)/llamafile/is_keyword_c_type.o	\
+		o/$(MODE)/llamafile/is_keyword_c_pod.o	\
 
 o/$(MODE)/llamafile/highlight_python_test:			\
 		o/$(MODE)/llamafile/highlight_python_test.o	\
