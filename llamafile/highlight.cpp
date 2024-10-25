@@ -54,6 +54,11 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "assembler")
         return new HighlightAsm;
 
+    if (lang == "ld" || //
+        lang == "lds" || //
+        lang == "ld-script")
+        return new HighlightLd;
+
     if (lang == "js" || //
         lang == "json" || //
         lang == "javascript")
@@ -112,7 +117,9 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "c#")
         return new HighlightCsharp;
 
-    if (lang == "kotlin")
+    if (lang == "kt" || //
+        lang == "kts" || //
+        lang == "kotlin")
         return new HighlightJava(is_keyword_kotlin);
 
     if (lang == "lua")

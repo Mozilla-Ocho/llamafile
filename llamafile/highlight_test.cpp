@@ -46,6 +46,7 @@ const char *const kLanguages[] = {
     "javascript", //
     "json", //
     "kotlin", //
+    "ld", //
     "lisp", //
     "lua", //
     "m4", //

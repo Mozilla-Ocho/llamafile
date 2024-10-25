@@ -50,6 +50,7 @@
 #define HI_REGISTER "\033[1;35m" // bold magenta
 #define HI_DATE "\033[33m" // yellow
 #define HI_DIRECTIVE "\033[1;31m" // bold red
+#define HI_WARNING "\033[1;31m" // bold red
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -59,6 +60,7 @@ is_keyword_f is_keyword_c_pod;
 is_keyword_f is_keyword_c_type;
 is_keyword_f is_keyword_c_builtin;
 is_keyword_f is_keyword_c_constant;
+is_keyword_f is_keyword_cpp;
 is_keyword_f is_keyword_cxx;
 is_keyword_f is_keyword_js;
 is_keyword_f is_keyword_js_builtin;
@@ -120,6 +122,9 @@ is_keyword_f is_keyword_basic;
 is_keyword_f is_keyword_basic_type;
 is_keyword_f is_keyword_basic_builtin;
 is_keyword_f is_keyword_basic_constant;
+is_keyword_f is_keyword_ld;
+is_keyword_f is_keyword_ld_builtin;
+is_keyword_f is_keyword_ld_warning;
 }
 
 class Highlight {
@@ -572,5 +577,19 @@ class HighlightBasic : public Highlight {
   private:
     int t_ = 0;
     bool bol_ = true;
+    std::string word_;
+};
+
+class HighlightLd : public Highlight {
+  public:
+    HighlightLd();
+    ~HighlightLd() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    bool bol_ = true;
+    bool cpp_ = false;
     std::string word_;
 };

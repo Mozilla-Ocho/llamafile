@@ -1,0 +1,31 @@
+%{
+#include <string.h>
+%}
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_cpp
+%%
+__has_attribute
+__has_builtin
+__has_cpp_attribute
+__has_extension
+define
+defined
+elif
+elifdef
+elifndef
+else
+embed
+endif
+error
+if
+ifdef
+ifndef
+import
+include
+include_next
+line
+pragma
+undef
+warning

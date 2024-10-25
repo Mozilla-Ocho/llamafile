@@ -1,0 +1,36 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_ld_builtin
+%%
+ABSOLUTE
+ADDR
+ALIGN
+ALIGNOF
+BLOCK
+COMMONPAGESIZE
+CONSTANT
+DATA_SEGMENT_ALIGN
+DATA_SEGMENT_END
+DATA_SEGMENT_RELRO_END
+DEFINED
+LENGTH
+LOADADDR
+LOG2CEIL
+MAX
+MAXPAGESIZE
+MIN
+NEXT
+ORIGIN
+SEGMENT_START
+SIZEOF
+SIZEOF_HEADERS
+l
+len
+o
+org
+sizeof_headers
