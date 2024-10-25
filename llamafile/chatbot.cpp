@@ -60,11 +60,13 @@ struct ServerArgs {
     char **argv;
 };
 
-static int n_past;
+static int g_past;
+static int g_clear;
 static bool g_once;
 static bool g_manual;
 static llama_model *g_model;
 static llama_context *g_ctx;
+static std::vector<int> g_stack;
 static std::vector<llama_token> g_history;
 static enum Role g_role = ROLE_USER;
 static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
@@ -198,12 +200,15 @@ static void on_help(const std::vector<std::string> &args) {
     if (args.size() == 1) {
         fprintf(stderr, "\
 " BOLD "available commands" RESET "\n\
-  /context\n\
-  /dump [FILE]\n\
-  /exit\n\
-  /help [COMMAND]\n\
-  /manual [on|off]\n\
-  /stats\n\
+  /clear                   restart conversation\n\
+  /context                 print context window usage\n\
+  /dump [FILE]             print or save context window to file\n\
+  /exit                    end program\n\
+  /help [COMMAND]          show help\n\
+  /manual [on|off]         toggle manual role mode\n\
+  /pop                     restore context window size\n\
+  /push                    push context window size to stack\n\
+  /stats                   print performance metrics\n\
 ");
     } else if (args[1] == "context") {
         fprintf(stderr, "\
@@ -256,6 +261,25 @@ how quickly llamafile is able to read text. the 'eval time' statistic\n\
 gives you prediction or token generation speed, in tokens per second,\n\
 which tells you how quickly llamafile is able to write text.\n\
 ");
+    } else if (args[1] == "clear") {
+        fprintf(stderr, "\
+usage: /clear" RESET "\n\
+start conversation over from the beginning. this command adjusts the\n\
+context window to what it was after the initial system prompt. this\n\
+command also erases the /push stack.\n\
+");
+    } else if (args[1] == "push") {
+        fprintf(stderr, "\
+usage: /push" RESET "\n\
+save current size of context window to stack. this command may be used\n\
+with /pop to backtrack a conversation.\n\
+");
+    } else if (args[1] == "pop") {
+        fprintf(stderr, "\
+usage: /pop" RESET "\n\
+restores size of context window from stack. this command may be used\n\
+with /push to backtrack a conversation.\n\
+");
     } else {
         fprintf(stderr, BRIGHT_RED "%s: unknown command" RESET "\n", args[1].c_str());
     }
@@ -269,6 +293,7 @@ static void on_manual(const std::vector<std::string> &args) {
     } else {
         fprintf(stderr, BRIGHT_RED "error: bad /manual command" RESET "\n"
                                    "usage: /manual [on|off]\n");
+        return;
     }
     fprintf(stderr, FAINT "manual mode %s" RESET "\n", g_manual ? "enabled" : "disabled");
     if (!g_manual)
@@ -278,10 +303,38 @@ static void on_manual(const std::vector<std::string> &args) {
 static void on_context(const std::vector<std::string> &args) {
     int configured_context = llama_n_ctx(g_ctx);
     int max_context = llama_n_ctx_train(g_model);
-    printf("%d out of %d context tokens used (%d tokens remaining)\n", n_past, configured_context,
-           configured_context - n_past);
+    printf("%d out of %d context tokens used (%d tokens remaining)\n", g_past, configured_context,
+           configured_context - g_past);
     if (configured_context < max_context)
         printf("use the `-c %d` flag at startup for maximum context\n", max_context);
+}
+
+static void on_clear(const std::vector<std::string> &args) {
+    g_past = g_clear;
+    g_stack.clear();
+    g_history.resize(g_past);
+}
+
+static void print_stack(void) {
+    for (size_t i = g_stack.size(); i--;)
+        printf("%12d\n", g_stack[i]);
+}
+
+static void on_push(const std::vector<std::string> &args) {
+    g_stack.push_back(g_past);
+    print_stack();
+}
+
+static void on_pop(const std::vector<std::string> &args) {
+    if (g_stack.empty()) {
+        fprintf(stderr, BRIGHT_RED "error: context length stack is empty" RESET "\n");
+        return;
+    }
+    printf(BOLD "%12d" RESET " restored\n", g_stack[g_stack.size() - 1]);
+    g_past = g_stack.back();
+    g_stack.pop_back();
+    g_history.resize(g_past);
+    print_stack();
 }
 
 static void on_stats(const std::vector<std::string> &args) {
@@ -320,11 +373,14 @@ static char *on_hint(const char *line, const char **ansi1, const char **ansi2) {
 
 static void on_completion(const char *line, int pos, bestlineCompletions *comp) {
     static const char *const kCompletions[] = {
+        "/clear", // usage: /clear
         "/context", // usage: /context
         "/dump", // usage: /dump [FILE]
         "/exit", // usage: /exit
         "/help", // usage: /help [COMMAND]
         "/manual", // usage: /manual [on|off]
+        "/pop", // usage: /pop
+        "/push", // usage: /push
         "/stats", // usage: /stats
     };
     for (int i = 0; i < sizeof(kCompletions) / sizeof(*kCompletions); ++i)
@@ -351,8 +407,14 @@ static bool handle_command(const char *command) {
         on_context(args);
     } else if (args[0] == "manual") {
         on_manual(args);
+    } else if (args[0] == "clear") {
+        on_clear(args);
     } else if (args[0] == "dump") {
         on_dump(args);
+    } else if (args[0] == "push") {
+        on_push(args);
+    } else if (args[0] == "pop") {
+        on_pop(args);
     } else {
         fprintf(stderr, BRIGHT_RED "%s: unrecognized command" RESET "\n", args[0].c_str());
     }
@@ -394,14 +456,14 @@ static void die_out_of_context(void) {
             "\n" BRIGHT_RED
             "error: ran out of context window at %d tokens; you can use the maximum "
             "context window size by passing the flag `-c %d` to llamafile." UNFOREGROUND "\n",
-            n_past, llama_n_ctx_train(g_model));
+            g_past, llama_n_ctx_train(g_model));
     exit(1);
 }
 
 static void eval_tokens(std::vector<llama_token> tokens, int n_batch) {
     int N = (int)tokens.size();
-    if (n_past + N > llama_n_ctx(g_ctx)) {
-        n_past += N;
+    if (g_past + N > llama_n_ctx(g_ctx)) {
+        g_past += N;
         die_out_of_context();
     }
     for (int i = 0; i < N; i += n_batch) {
@@ -410,10 +472,10 @@ static void eval_tokens(std::vector<llama_token> tokens, int n_batch) {
         int n_eval = (int)tokens.size() - i;
         if (n_eval > n_batch)
             n_eval = n_batch;
-        if (llama_decode(g_ctx, llama_batch_get_one(&tokens[i], n_eval, n_past, 0)))
+        if (llama_decode(g_ctx, llama_batch_get_one(&tokens[i], n_eval, g_past, 0)))
             die_out_of_context();
         g_history.insert(g_history.end(), tokens.begin() + i, tokens.begin() + i + n_eval);
-        n_past += n_eval;
+        g_past += n_eval;
     }
 }
 
@@ -523,6 +585,7 @@ int chatbot_main(int argc, char **argv) {
     std::vector<llama_chat_msg> chat = {{"system", params.prompt}};
     std::string msg = llama_chat_apply_template(g_model, params.chat_template, chat, false);
     eval_string(msg, params.n_batch, add_bos, true);
+    g_clear = g_past;
     clear_ephemeral();
     printf("%s\n", params.special ? msg.c_str() : params.prompt.c_str());
 
