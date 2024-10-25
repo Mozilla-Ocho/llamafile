@@ -29,6 +29,7 @@
 
 const char *const kLanguages[] = {
     "ada", //
+    "asm", //
     "c", //
     "c#", //
     "c++", //

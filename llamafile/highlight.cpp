@@ -45,6 +45,15 @@ Highlight *Highlight::create(const std::string_view &lang) {
                               is_keyword_c_builtin, //
                               is_keyword_c_constant);
 
+    if (lang == "s" || //
+        lang == "asm" || //
+        lang == "nasm" || //
+        lang == "yasm" || //
+        lang == "fasm" || //
+        lang == "assembly" || //
+        lang == "assembler")
+        return new HighlightAsm;
+
     if (lang == "js" || //
         lang == "json" || //
         lang == "javascript")

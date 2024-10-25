@@ -1,0 +1,42 @@
+%{
+#include <string.h>
+#include <libc/str/tab.h>
+#define GPERF_DOWNCASE
+%}
+%pic
+%ignore-case
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_asm_prefix
+%%
+addr32
+cs
+data16
+ds
+es
+fs
+gs
+lock
+rep
+repe
+repne
+repnz
+repz
+rex
+rex.b
+rex.r
+rex.rb
+rex.rx
+rex.rxb
+rex.w
+rex.wb
+rex.wr
+rex.wrb
+rex.wrx
+rex.wrxb
+rex.wx
+rex.wxb
+rex.x
+rex.xb
+ss

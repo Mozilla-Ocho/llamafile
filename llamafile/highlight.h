@@ -45,6 +45,9 @@
 #define HI_ENTITY "\033[36m" // cyan
 #define HI_OPERATOR "\033[36m" // cyan
 #define HI_ESCAPE "\033[33m" // yellow
+#define HI_QUALIFIER "\033[35m" // magenta
+#define HI_IMMEDIATE "\033[36m" // cyan
+#define HI_REGISTER "\033[1;35m" // bold magenta
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -109,6 +112,8 @@ is_keyword_f is_keyword_forth_def;
 is_keyword_f is_keyword_m4;
 is_keyword_f is_keyword_make;
 is_keyword_f is_keyword_make_builtin;
+is_keyword_f is_keyword_asm_prefix;
+is_keyword_f is_keyword_asm_qualifier;
 }
 
 class Highlight {
@@ -227,6 +232,8 @@ class HighlightMarkdown : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
     bool bol_ = true;
     bool tail_ = false;
@@ -396,9 +403,10 @@ class HighlightPerl : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
     int i_ = 0;
-    int c_ = 0;
     int last_ = 0;
     int expect_ = 0;
     unsigned char opener_ = 0;
@@ -417,6 +425,8 @@ class HighlightShell : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
     int i_ = 0;
     bool pending_heredoc_ = false;
@@ -433,6 +443,8 @@ class HighlightZig : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
     std::string word_;
 };
@@ -445,6 +457,8 @@ class HighlightTcl : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
     std::string word_;
 };
@@ -518,6 +532,26 @@ class HighlightMake : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
+    std::string word_;
+};
+
+class HighlightAsm : public Highlight {
+  public:
+    HighlightAsm();
+    ~HighlightAsm() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int c_ = 0;
+    int u_ = 0;
+    int t_ = 0;
+    int col_ = 0;
+    int last_ = 0;
+    bool is_preprocessor_ = false;
+    bool is_first_thing_on_line_ = true;
     std::string word_;
 };

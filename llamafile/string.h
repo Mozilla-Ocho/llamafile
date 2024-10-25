@@ -19,4 +19,3 @@
 #include <string>
 
 void append_wchar(std::string *, wchar_t);
-wchar_t read_wchar(const std::string_view &, size_t *);

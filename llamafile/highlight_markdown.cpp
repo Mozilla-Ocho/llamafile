@@ -46,8 +46,22 @@ HighlightMarkdown::~HighlightMarkdown() {
 }
 
 void HighlightMarkdown::feed(std::string *r, std::string_view input) {
-    for (size_t i = 0; i < input.size();) {
-        wchar_t c = read_wchar(input, &i);
+    for (size_t i = 0; i < input.size(); ++i) {
+        wchar_t c;
+        int b = input[i] & 255;
+        if (!u_) {
+            if (b < 0300) {
+                c = b;
+            } else {
+                c_ = ThomPikeByte(b);
+                u_ = ThomPikeLen(b) - 1;
+                continue;
+            }
+        } else {
+            c = c_ = ThomPikeMerge(c_, b);
+            if (--u_)
+                continue;
+        }
         switch (t_) {
 
         Normal:

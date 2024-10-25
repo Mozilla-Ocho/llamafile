@@ -1,0 +1,37 @@
+%{
+#include <string.h>
+#include <libc/str/tab.h>
+#define GPERF_DOWNCASE
+%}
+%pic
+%ignore-case
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_asm_qualifier
+%%
+:req
+:vararg
+@dtpmod
+@dtpoff
+@fini_array
+@function
+@gnu_indirect_function
+@got
+@gotoff
+@gotpcrel
+@gottpoff
+@init_array
+@nobits
+@note
+@notype
+@object
+@plt
+@pltoff
+@progbits
+@size
+@tlsgd
+@tlsld
+@tpoff
+@unwind
+comdat

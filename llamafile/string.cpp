@@ -19,28 +19,6 @@
 
 #include <cosmo.h>
 
-wchar_t read_wchar(const std::string_view &s, size_t *i) {
-    wint_t c = s[(*i)++] & 255;
-    if (c >= 0300) {
-        wint_t a = ThomPikeByte(c);
-        size_t m = ThomPikeLen(c) - 1;
-        if (*i + m <= s.size()) {
-            for (int j = 0;;) {
-                wint_t b = s[*i + j] & 255;
-                if (!ThomPikeCont(b))
-                    break;
-                a = ThomPikeMerge(a, b);
-                if (++j == m) {
-                    c = a;
-                    *i += j;
-                    break;
-                }
-            }
-        }
-    }
-    return c;
-}
-
 void append_wchar(std::string *r, wchar_t c) {
     if (isascii(c)) {
         *r += c;
