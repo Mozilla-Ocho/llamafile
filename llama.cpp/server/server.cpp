@@ -2577,6 +2577,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             FLAG_fast = true;
         }
+        else if (arg == "--iq")
+        {
+            FLAG_iq = true;
+        }
         else if (arg == "--precise")
         {
             FLAG_precise = true;

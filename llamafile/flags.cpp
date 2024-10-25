@@ -33,6 +33,7 @@
 
 bool FLAGS_READY = false;
 bool FLAG_fast = false;
+bool FLAG_iq = false;
 bool FLAG_log_disable = false;
 bool FLAG_mlock = false;
 bool FLAG_mmap = true;
@@ -288,6 +289,11 @@ void llamafile_get_flags(int argc, char **argv) {
 
         //////////////////////////////////////////////////////////////////////
         // cpu flags
+
+        if (!strcmp(flag, "--iq")) {
+            FLAG_iq = true;
+            continue;
+        }
 
         if (!strcmp(flag, "--fast")) {
             FLAG_fast = true;

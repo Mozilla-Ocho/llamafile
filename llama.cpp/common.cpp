@@ -214,6 +214,10 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         FLAG_fast = true;
         return true;
     }
+    if (arg == "--iq") {
+        FLAG_iq = true;
+        return true;
+    }
     if (arg == "--precise") {
         FLAG_precise = true;
         return true;

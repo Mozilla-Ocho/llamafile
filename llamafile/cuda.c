@@ -68,7 +68,7 @@ __static_yoink("_Cz_inflateEnd");
         "-DGGML_CUDA_DMMV_X=32", "-DK_QUANTS_PER_ITERATION=2", \
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128", "-DGGML_CUDA_MMV_Y=1", \
         (FLAG_tinyblas ? "-DGGML_USE_TINYBLAS" : "-DGGML_USE_CUBLAS"), \
-        (FLAG_flash_attn ? "-DTEHFLASH" : "-DGGML_MINIMIZE_CODE_SIZE")
+        (FLAG_iq || FLAG_flash_attn ? "-DTEHFLASH" : "-DGGML_MINIMIZE_CODE_SIZE")
 
 #define NVCC_FLAGS \
     (!IsWindows() ? "-std=c++11" : "-DIGNORE123"), "-O3", "--shared", "--use_fast_math", \
@@ -574,7 +574,7 @@ static bool compile_amd_windows(const char *clangxx, const char *dso, const char
         "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=128",
         "-DGGML_CUDA_MMV_Y=1",
         "-DGGML_USE_TINYBLAS",
-        FLAG_flash_attn ? "-DTEHFLASH" : "-DGGML_MINIMIZE_CODE_SIZE",
+        FLAG_iq || FLAG_flash_attn ? "-DTEHFLASH" : "-DGGML_MINIMIZE_CODE_SIZE",
         "-o",
         (char *)tmpdso,
         (char *)src,

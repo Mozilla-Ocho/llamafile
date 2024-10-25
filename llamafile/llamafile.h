@@ -8,6 +8,7 @@ extern "C" {
 
 extern bool FLAGS_READY;
 extern bool FLAG_fast;
+extern bool FLAG_iq;
 extern bool FLAG_log_disable;
 extern bool FLAG_mlock;
 extern bool FLAG_mmap;
