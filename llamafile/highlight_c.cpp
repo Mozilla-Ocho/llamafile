@@ -165,12 +165,10 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_SLASH:
+            *r += c;
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
                 t_ = NORMAL;
-            } else {
-                *r += c;
             }
             break;
 

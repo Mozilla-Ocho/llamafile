@@ -102,7 +102,7 @@ hash (register const char *str, register size_t len)
       1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818,
       1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818,
       1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818, 1818,
-      1818, 1818,    0, 1818, 1818, 1818, 1818, 1818, 1818, 1818,
+      1818, 1818,    5, 1818, 1818, 1818, 1818, 1818, 1818, 1818,
       1818, 1818, 1818, 1818, 1818,  423, 1818, 1818, 1818,    0,
         30,   15,   35,   10, 1818, 1818, 1818, 1818, 1818, 1818,
       1818, 1818, 1818, 1818, 1818,   50,  455,  105,   15,    5,
@@ -496,8 +496,8 @@ is_keyword_cobol (register const char *str, register size_t len)
       char stringpool_str875[sizeof("DYNAMIC")];
       char stringpool_str877[sizeof("METHOD-ID")];
       char stringpool_str878[sizeof("CORRESPONDING")];
-      char stringpool_str879[sizeof("JUSTIFIED\011 ")];
       char stringpool_str881[sizeof("DIVISION")];
+      char stringpool_str883[sizeof("JUSTIFIED ")];
       char stringpool_str887[sizeof("SHIFT-IN")];
       char stringpool_str894[sizeof("ALPHANUMERIC-EDITED")];
       char stringpool_str897[sizeof("SORT-FILE-SIZE")];
@@ -917,8 +917,8 @@ is_keyword_cobol (register const char *str, register size_t len)
       "DYNAMIC",
       "METHOD-ID",
       "CORRESPONDING",
-      "JUSTIFIED\011 ",
       "DIVISION",
+      "JUSTIFIED ",
       "SHIFT-IN",
       "ALPHANUMERIC-EDITED",
       "SORT-FILE-SIZE",
@@ -1530,10 +1530,11 @@ is_keyword_cobol (register const char *str, register size_t len)
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str877,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str878,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str879,
-      -1,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str881,
-      -1, -1, -1, -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str883,
+      -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str887,
       -1, -1, -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str894,

@@ -173,12 +173,10 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             break;
 
         case COMMENT:
+            append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
-                append_wchar(r, c);
                 t_ = NORMAL;
-            } else {
-                append_wchar(r, c);
             }
             break;
 

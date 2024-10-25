@@ -19,6 +19,8 @@
 
 #include <ctype.h>
 
+// COmmon Business-Oriented Language
+
 enum {
     NORMAL,
     WORD,
@@ -115,12 +117,10 @@ void HighlightCobol::feed(std::string *r, std::string_view input) {
             break;
 
         case COMMENT:
+            *r += c;
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
                 t_ = NORMAL;
-            } else {
-                *r += c;
             }
             break;
 

@@ -409,12 +409,10 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case COMMENT:
+            *r += c;
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
                 t_ = NORMAL;
-            } else {
-                *r += c;
             }
             break;
 

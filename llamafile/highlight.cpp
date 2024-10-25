@@ -178,5 +178,15 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "gmakefile")
         return new HighlightMake;
 
+    if (lang == "vb" || //
+        lang == "vba" || //
+        lang == "vbs" || //
+        lang == "bas" || //
+        lang == "basic" || //
+        lang == "vb.net" || //
+        lang == "qbasic" || //
+        lang == "freebasic")
+        return new HighlightBasic;
+
     return nullptr;
 }

@@ -19,6 +19,13 @@
 
 #include <cosmo.h>
 
+std::string tolower(const std::string_view &s) {
+    std::string b;
+    for (char c : s)
+        b += tolower(c);
+    return b;
+}
+
 void append_wchar(std::string *r, wchar_t c) {
     if (isascii(c)) {
         *r += c;

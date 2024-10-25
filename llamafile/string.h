@@ -18,4 +18,5 @@
 #pragma once
 #include <string>
 
+std::string tolower(const std::string_view &);
 void append_wchar(std::string *, wchar_t);

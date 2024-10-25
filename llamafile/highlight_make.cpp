@@ -182,12 +182,10 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
             break;
 
         case COMMENT:
+            append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += '\n';
                 t_ = NORMAL;
-            } else {
-                append_wchar(r, c);
             }
             break;
 

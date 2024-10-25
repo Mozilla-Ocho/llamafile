@@ -48,6 +48,8 @@
 #define HI_QUALIFIER "\033[35m" // magenta
 #define HI_IMMEDIATE "\033[36m" // cyan
 #define HI_REGISTER "\033[1;35m" // bold magenta
+#define HI_DATE "\033[33m" // yellow
+#define HI_DIRECTIVE "\033[1;31m" // bold red
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -114,6 +116,10 @@ is_keyword_f is_keyword_make;
 is_keyword_f is_keyword_make_builtin;
 is_keyword_f is_keyword_asm_prefix;
 is_keyword_f is_keyword_asm_qualifier;
+is_keyword_f is_keyword_basic;
+is_keyword_f is_keyword_basic_type;
+is_keyword_f is_keyword_basic_builtin;
+is_keyword_f is_keyword_basic_constant;
 }
 
 class Highlight {
@@ -553,5 +559,18 @@ class HighlightAsm : public Highlight {
     int last_ = 0;
     bool is_preprocessor_ = false;
     bool is_first_thing_on_line_ = true;
+    std::string word_;
+};
+
+class HighlightBasic : public Highlight {
+  public:
+    HighlightBasic();
+    ~HighlightBasic() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    bool bol_ = true;
     std::string word_;
 };

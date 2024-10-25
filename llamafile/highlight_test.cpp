@@ -30,6 +30,7 @@
 const char *const kLanguages[] = {
     "ada", //
     "asm", //
+    "basic", //
     "c", //
     "c#", //
     "c++", //
@@ -65,21 +66,11 @@ const char *const kLanguages[] = {
     "zig", //
 };
 
-int rand32(void) {
-    /* Knuth, D.E., "The Art of Computer Programming," Vol 2,
-       Seminumerical Algorithms, Third Edition, Addison-Wesley, 1998,
-       p. 106 (line 26) & p. 108 */
-    static unsigned long long lcg = 1;
-    lcg *= 6364136223846793005;
-    lcg += 1442695040888963407;
-    return lcg >> 32;
-}
-
 std::string generate_random_string(int n) {
     std::string s;
     s.reserve(n);
     for (int i = 0; i < n; ++i)
-        s += CHARSET[rand32() % (sizeof(CHARSET) - 1)];
+        s += CHARSET[rand() % (sizeof(CHARSET) - 1)];
     return s;
 }
 

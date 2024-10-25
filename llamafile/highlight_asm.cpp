@@ -362,16 +362,6 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        case SLASH_SLASH:
-            if (c == '\n') {
-                *r += HI_RESET;
-                append_wchar(r, c);
-                t_ = NORMAL;
-            } else {
-                append_wchar(r, c);
-            }
-            break;
-
         case SLASH_STAR:
             append_wchar(r, c);
             if (c == '*')
@@ -390,12 +380,11 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
 
         Comment:
         case COMMENT:
+        case SLASH_SLASH:
+            append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += '\n';
                 t_ = NORMAL;
-            } else {
-                append_wchar(r, c);
             }
             break;
 

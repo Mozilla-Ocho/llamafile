@@ -16,6 +16,7 @@
 // limitations under the License.
 
 #include "highlight.h"
+#include "string.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,13 +46,6 @@ static std::string extname(const std::string_view path) {
     if (dot_pos == std::string::npos || dot_pos == name.length() - 1)
         return name;
     return std::string(name.substr(dot_pos + 1));
-}
-
-std::string tolower(const std::string_view &s) {
-    std::string b;
-    for (char c : s)
-        b += tolower(c);
-    return b;
 }
 
 int main(int argc, char *argv[]) {

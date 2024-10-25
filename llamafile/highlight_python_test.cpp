@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     test("", "");
     test("d", "");
     test("ef ", ""s + HI_KEYWORD + "def" + HI_RESET + " ");
-    test("yo # hi\nthere ", "yo "s + HI_COMMENT + "# hi" + HI_RESET + "\nthere ");
+    test("yo # hi\nthere ", "yo "s + HI_COMMENT + "# hi\n" + HI_RESET + "there ");
     testf("# sup", ""s + HI_COMMENT + "# sup" + HI_RESET);
     testf("de", "de");
     testf("def", ""s + HI_KEYWORD + "def" + HI_RESET);

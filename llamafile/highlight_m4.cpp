@@ -94,12 +94,10 @@ void HighlightM4::feed(std::string *r, std::string_view input) {
 
         Comment:
         case COMMENT:
+            *r += c;
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += '\n';
                 t_ = NORMAL;
-            } else {
-                *r += c;
             }
             break;
 

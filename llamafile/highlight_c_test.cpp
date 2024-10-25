@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     test("", "");
     test("vola", "");
     test("tile ", ""s + HI_KEYWORD + "volatile" + HI_RESET + " ");
-    test("yo // hi\nthere ", "yo "s + HI_COMMENT + "// hi" + HI_RESET + "\nthere ");
+    test("yo // hi\nthere ", "yo "s + HI_COMMENT + "// hi\n" + HI_RESET + "there ");
     testf("// sup", ""s + HI_COMMENT + "// sup" + HI_RESET);
     test("yo /* hi */ there ", "yo "s + HI_COMMENT + "/* hi */" + HI_RESET + " there ");
     testf("yo /* hi */ there", "yo "s + HI_COMMENT + "/* hi */" + HI_RESET + " there");

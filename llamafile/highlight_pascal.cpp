@@ -19,6 +19,15 @@
 
 #include <ctype.h>
 
+// syntax highlighting for pascal (european c)
+//
+// this syntax highlighter aims to support a blended dialect of
+//
+// - pascal
+// - delphi
+//
+// doing that requires extra keywords
+
 enum {
     NORMAL,
     WORD,
@@ -73,7 +82,7 @@ void HighlightPascal::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else {
                 if (is_keyword_pascal(word_.data(), word_.size())) {
@@ -110,12 +119,10 @@ void HighlightPascal::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_SLASH:
+            *r += c;
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
                 t_ = NORMAL;
-            } else {
-                *r += c;
             }
             break;
 

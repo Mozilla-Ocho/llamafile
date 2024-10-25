@@ -121,13 +121,12 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case SLASH_SLASH:
         case BACKSLASH_BACKSLASH:
+            append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
-                append_wchar(r, c);
                 t_ = NORMAL;
-            } else {
-                append_wchar(r, c);
             }
             break;
 
@@ -140,16 +139,6 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
                 *r += '/';
                 t_ = NORMAL;
                 goto Normal;
-            }
-            break;
-
-        case SLASH_SLASH:
-            if (c == '\n') {
-                *r += HI_RESET;
-                append_wchar(r, c);
-                t_ = NORMAL;
-            } else {
-                append_wchar(r, c);
             }
             break;
 
