@@ -25,6 +25,35 @@
 
 // syntax highlighter demo
 
+static std::string basename(const std::string_view path) {
+    size_t i, e;
+    if ((e = path.size())) {
+        while (e > 1 && path[e - 1] == '/')
+            --e;
+        i = e - 1;
+        while (i && path[i - 1] != '/')
+            --i;
+        return std::string(path.substr(i, e - i));
+    } else {
+        return ".";
+    }
+}
+
+static std::string extname(const std::string_view path) {
+    std::string name = basename(path);
+    size_t dot_pos = name.find_last_of('.');
+    if (dot_pos == std::string::npos || dot_pos == name.length() - 1)
+        return name;
+    return std::string(name.substr(dot_pos + 1));
+}
+
+std::string tolower(const std::string_view &s) {
+    std::string b;
+    for (char c : s)
+        b += tolower(c);
+    return b;
+}
+
 int main(int argc, char *argv[]) {
 
     // process flags
@@ -64,8 +93,9 @@ int main(int argc, char *argv[]) {
     const char *ext;
     if (lang) {
         h = Highlight::create(lang);
-    } else if (inpath && (ext = strrchr(inpath, '.'))) {
-        h = Highlight::create(ext + 1);
+    } else if (inpath) {
+        if (!(h = Highlight::create(tolower(extname(inpath)))))
+            h = new HighlightMarkdown;
     } else {
         h = Highlight::create("markdown");
     }

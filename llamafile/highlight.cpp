@@ -19,6 +19,9 @@
 
 Highlight *Highlight::create(const std::string_view &lang) {
 
+    if (lang == "txt")
+        return new HighlightTxt;
+
     if (lang == "md" || //
         lang == "markdown")
         return new HighlightMarkdown;
@@ -85,6 +88,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightCss;
 
     if (lang == "html" || //
+        lang == "xhtml" || //
         lang == "xml")
         return new HighlightHtml;
 
@@ -158,5 +162,12 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "forth")
         return new HighlightForth;
 
-    return new HighlightPlain;
+    if (lang == "mk" || //
+        lang == "make" || //
+        lang == "gmake" || //
+        lang == "makefile" || //
+        lang == "gmakefile")
+        return new HighlightMake;
+
+    return nullptr;
 }

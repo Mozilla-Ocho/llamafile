@@ -47,11 +47,11 @@ const char *const kLanguages[] = {
     "lisp", //
     "lua", //
     "m4", //
+    "make", //
     "markdown", //
     "pascal", //
     "perl", //
     "php!", //
-    "plain", //
     "python", //
     "ruby", //
     "rust", //
@@ -59,6 +59,7 @@ const char *const kLanguages[] = {
     "sql", //
     "swift", //
     "tcl", //
+    "txt", //
     "typescript", //
     "zig", //
 };

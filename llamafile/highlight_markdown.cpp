@@ -207,7 +207,8 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 append_wchar(r, c);
                 lang_ += tolower(c);
             } else {
-                highlighter_ = Highlight::create(lang_);
+                if (!(highlighter_ = Highlight::create(lang_)))
+                    highlighter_ = new HighlightTxt;
                 lang_.clear();
                 t_ = CODE;
                 goto Code;

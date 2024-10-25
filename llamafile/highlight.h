@@ -31,7 +31,8 @@
 #define HI_ATTRIB "\033[35m" // magenta
 #define HI_LINENO "\033[2m" // fade
 #define HI_CONTIN "\033[33m" // yellow
-#define HI_LABEL "\033[2;33m" // dim yellow
+#define HI_LABEL "\033[33m" // yellow
+#define HI_DEF "\033[2;33m" // dim yellow
 #define HI_TYPE "\033[36m" // cyan
 #define HI_CLASS "\033[1;36m" // bold cyan
 #define HI_SELECTOR "\033[33m" // yellow
@@ -106,6 +107,8 @@ is_keyword_f is_keyword_typescript_constant;
 is_keyword_f is_keyword_forth;
 is_keyword_f is_keyword_forth_def;
 is_keyword_f is_keyword_m4;
+is_keyword_f is_keyword_make;
+is_keyword_f is_keyword_make_builtin;
 }
 
 class Highlight {
@@ -116,10 +119,10 @@ class Highlight {
     virtual void flush(std::string *result) = 0;
 };
 
-class HighlightPlain : public Highlight {
+class HighlightTxt : public Highlight {
   public:
-    HighlightPlain();
-    ~HighlightPlain() override;
+    HighlightTxt();
+    ~HighlightTxt() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 };
@@ -499,6 +502,18 @@ class HighlightM4 : public Highlight {
   public:
     HighlightM4();
     ~HighlightM4() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
+};
+
+class HighlightMake : public Highlight {
+  public:
+    HighlightMake();
+    ~HighlightMake() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 

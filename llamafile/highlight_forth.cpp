@@ -67,7 +67,7 @@ void HighlightForth::feed(std::string *r, std::string_view input) {
                 } else if (is_keyword_forth_def(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
-                    *r += HI_LABEL;
+                    *r += HI_DEF;
                     is_label_ = true;
                 } else if (is_keyword_forth(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;

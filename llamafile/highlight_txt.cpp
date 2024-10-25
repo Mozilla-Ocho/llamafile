@@ -17,16 +17,16 @@
 
 #include "highlight.h"
 
-HighlightPlain::HighlightPlain() {
+HighlightTxt::HighlightTxt() {
 }
 
-HighlightPlain::~HighlightPlain() {
+HighlightTxt::~HighlightTxt() {
 }
 
-void HighlightPlain::feed(std::string *r, std::string_view input) {
+void HighlightTxt::feed(std::string *r, std::string_view input) {
     for (size_t i = 0; i < input.size(); ++i)
         *r += input[i] & 255;
 }
 
-void HighlightPlain::flush(std::string *r) {
+void HighlightTxt::flush(std::string *r) {
 }

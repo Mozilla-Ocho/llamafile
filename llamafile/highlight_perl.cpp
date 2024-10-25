@@ -161,26 +161,26 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                append_wchar(r, c);
+                *r += '\'';
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                append_wchar(r, c);
+                *r += '"';
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '=' && (!last_ || last_ == '\n')) {
                 t_ = EQUAL;
             } else if (c == '\\') {
                 t_ = BACKSLASH;
                 *r += HI_ESCAPE;
-                append_wchar(r, c);
+                *r += '\\';
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
-                append_wchar(r, c);
+                *r += '`';
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '$') {
-                append_wchar(r, c);
+                *r += '$';
                 t_ = VAR;
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '@' || c == '%') {
@@ -190,10 +190,10 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '#') {
                 *r += HI_COMMENT;
-                append_wchar(r, c);
+                *r += '#';
                 t_ = COMMENT;
             } else if (c == '<') {
-                append_wchar(r, c);
+                *r += '<';
                 t_ = LT;
                 expect_ = EXPECT_VALUE;
             } else if (c == '/' && expect_ == EXPECT_VALUE && last_ != '/') {
@@ -204,7 +204,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 append_wchar(r, c);
                 t_ = REGEX;
             } else if (c == '\n') {
-                append_wchar(r, c);
+                *r += '\n';
                 if (pending_heredoc_) {
                     *r += HI_STRING;
                     pending_heredoc_ = false;
