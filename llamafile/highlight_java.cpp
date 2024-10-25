@@ -24,33 +24,28 @@ enum {
     WORD,
     QUOTE,
     QUOTE_BACKSLASH,
-    DQUOTE,
-    DQUOTE_BACKSLASH,
+    ANNOTATION,
+    ANNOTATION2,
     SLASH,
     SLASH_SLASH,
     SLASH_STAR,
     SLASH_STAR_STAR,
-    R,
-    R_DQUOTE,
-    RAW,
-    QUESTION,
-    TRIGRAPH,
+    DQUOTE, // "
+    DQUOTESTR, // "...
+    DQUOTESTR_BACKSLASH, // "...
+    DQUOTE2, // ""
+    DQUOTE3, // """...
+    DQUOTE31, // """..."
+    DQUOTE32, // """...""
 };
 
-HighlightC::HighlightC(is_keyword_f *is_keyword, //
-                       is_keyword_f *is_type, //
-                       is_keyword_f *is_builtin, //
-                       is_keyword_f *is_constant)
-    : is_keyword_(is_keyword),
-      is_type_(is_type),
-      is_builtin_(is_builtin),
-      is_constant_(is_constant) {
+HighlightJava::HighlightJava(is_keyword_f is_keyword) : is_keyword_(is_keyword) {
 }
 
-HighlightC::~HighlightC() {
+HighlightJava::~HighlightJava() {
 }
 
-void HighlightC::feed(std::string *r, std::string_view input) {
+void HighlightJava::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
@@ -58,91 +53,42 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 
         Normal:
         case NORMAL:
-            if (c == 'R') {
-                t_ = R;
-            } else if (!isascii(c) || isalpha(c) || c == '_' || c == '#') {
+            if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
                 word_ += c;
             } else if (c == '/') {
                 t_ = SLASH;
-            } else if (c == '?') {
-                t_ = QUESTION;
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '\'';
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '"';
+            } else if (c == '@') {
+                t_ = ANNOTATION;
             } else {
                 *r += c;
             }
             break;
 
-        Word:
         case WORD:
-            if (!isascii(c) || isalnum(c) || c == '_' || c == '$' || c == '#') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else {
                 if (is_keyword_(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                    if (is_keyword_c_pod(word_.data(), word_.size()))
-                        is_pod_ = true;
-                } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
-                    *r += HI_TYPE;
-                    *r += word_;
-                    *r += HI_RESET;
-                    is_pod_ = false;
-                } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-                    *r += HI_BUILTIN;
-                    *r += word_;
-                    *r += HI_RESET;
-                    is_pod_ = false;
-                } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
+                } else if (is_keyword_java_constant(word_.data(), word_.size())) {
                     *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
-                    is_pod_ = false;
                 } else {
                     *r += word_;
-                    is_pod_ = false;
                 }
                 word_.clear();
-                t_ = NORMAL;
-                goto Normal;
-            }
-            break;
-
-        case QUESTION:
-            if (c == '?') {
-                t_ = TRIGRAPH;
-            } else {
-                *r += '?';
-                t_ = NORMAL;
-                goto Normal;
-            }
-            break;
-
-        case TRIGRAPH:
-            if (c == '=' || // '#'
-                c == '(' || // '['
-                c == '/' || // '\\'
-                c == ')' || // ']'
-                c == '\'' || // '^'
-                c == '<' || // '{'
-                c == '!' || // '|'
-                c == '>' || // '}'
-                c == '-') { // '~'
-                *r += HI_ESCAPE;
-                *r += "??";
-                *r += c;
-                *r += HI_RESET;
-                t_ = NORMAL;
-            } else {
-                *r += "??";
                 t_ = NORMAL;
                 goto Normal;
             }
@@ -167,7 +113,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
         case SLASH_SLASH:
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
+                *r += '\n';
                 t_ = NORMAL;
             } else {
                 *r += c;
@@ -205,55 +151,85 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             t_ = QUOTE;
             break;
 
+        // handle "string"
         case DQUOTE:
+            *r += c;
+            if (c == '"') {
+                t_ = DQUOTE2;
+            } else if (c == '\\') {
+                t_ = DQUOTESTR_BACKSLASH;
+            } else {
+                t_ = DQUOTESTR;
+            }
+            break;
+        case DQUOTESTR:
             *r += c;
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
             } else if (c == '\\') {
-                t_ = DQUOTE_BACKSLASH;
+                t_ = DQUOTESTR_BACKSLASH;
             }
             break;
-
-        case DQUOTE_BACKSLASH:
+        case DQUOTESTR_BACKSLASH:
             *r += c;
-            t_ = DQUOTE;
+            t_ = DQUOTESTR;
             break;
 
-        case R:
+        // handle """string""" from java 15+
+        case DQUOTE2:
             if (c == '"') {
-                t_ = R_DQUOTE;
-                *r += 'R';
-                *r += HI_STRING;
                 *r += '"';
-                heredoc_ = ")";
+                t_ = DQUOTE3;
             } else {
-                word_ += 'R';
-                t_ = WORD;
-                goto Word;
+                *r += HI_RESET;
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+        case DQUOTE3:
+            *r += c;
+            if (c == '"')
+                t_ = DQUOTE31;
+            break;
+        case DQUOTE31:
+            *r += c;
+            if (c == '"') {
+                t_ = DQUOTE32;
+            } else {
+                t_ = DQUOTE3;
+            }
+            break;
+        case DQUOTE32:
+            *r += c;
+            if (c == '"') {
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else {
+                t_ = DQUOTE3;
             }
             break;
 
-        case R_DQUOTE:
-            *r += c;
-            if (c == '(') {
-                t_ = RAW;
-                i_ = 0;
-                heredoc_ += '"';
+        case ANNOTATION:
+            if (!isascii(c) || isalpha(c) || c == '_') {
+                *r += HI_ATTRIB;
+                *r += '@';
+                *r += c;
+                t_ = ANNOTATION2;
             } else {
-                heredoc_ += c;
+                *r += '@';
+                t_ = NORMAL;
+                goto Normal;
             }
             break;
 
-        case RAW:
-            *r += c;
-            if (heredoc_[i_] == c) {
-                if (++i_ == heredoc_.size()) {
-                    t_ = NORMAL;
-                    *r += HI_RESET;
-                }
+        case ANNOTATION2:
+            if (!isascii(c) || isalnum(c) || c == '_') {
+                *r += c;
             } else {
-                i_ = 0;
+                *r += HI_RESET;
+                t_ = NORMAL;
+                goto Normal;
             }
             break;
 
@@ -263,22 +239,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightC::flush(std::string *r) {
+void HighlightJava::flush(std::string *r) {
     switch (t_) {
     case WORD:
         if (is_keyword_(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
-        } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
-            *r += HI_TYPE;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-            *r += HI_BUILTIN;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
+        } else if (is_keyword_java_constant(word_.data(), word_.size())) {
             *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
@@ -290,29 +258,26 @@ void HighlightC::flush(std::string *r) {
     case SLASH:
         *r += '/';
         break;
-    case QUESTION:
-        *r += '?';
-        break;
-    case TRIGRAPH:
-        *r += "??";
-        break;
-    case R:
-        *r += 'R';
+    case ANNOTATION:
+        *r += '@';
         break;
     case QUOTE:
     case QUOTE_BACKSLASH:
-    case DQUOTE:
-    case DQUOTE_BACKSLASH:
     case SLASH_SLASH:
     case SLASH_STAR:
     case SLASH_STAR_STAR:
-    case R_DQUOTE:
-    case RAW:
+    case DQUOTE:
+    case DQUOTESTR:
+    case DQUOTESTR_BACKSLASH:
+    case DQUOTE2:
+    case DQUOTE3:
+    case DQUOTE31:
+    case DQUOTE32:
+    case ANNOTATION2:
         *r += HI_RESET;
         break;
     default:
         break;
     }
-    is_pod_ = false;
     t_ = NORMAL;
 }

@@ -33,12 +33,12 @@
 
 #include <string.h>
 
-#define TOTAL_KEYWORDS 75
+#define TOTAL_KEYWORDS 72
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 11
 #define MIN_HASH_VALUE 3
-#define MAX_HASH_VALUE 154
-/* maximum key range = 152, duplicates = 0 */
+#define MAX_HASH_VALUE 125
+/* maximum key range = 123, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -52,32 +52,32 @@ hash (register const char *str, register size_t len)
 {
   static const unsigned char asso_values[] =
     {
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155,  60,  15,  10,
-       45,   5,  30,   0,   0,  15,  15,  35,   0,  55,
-       10,  60,  40, 155,  25,  40,   0,   0,  85,   5,
-        0,  35, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155, 155, 155, 155, 155,
-      155, 155, 155, 155, 155, 155
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126,  50,  20,   5,
+       35,   5,  65,  40,  30,  15,  20,   5,  50,  55,
+        5,  35,  20, 126,   0,  25,   0,   0,   0,   5,
+        5,  45, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126, 126, 126, 126, 126,
+      126, 126, 126, 126, 126, 126
     };
   register unsigned int hval = len;
 
@@ -99,268 +99,259 @@ is_keyword_kotlin (register const char *str, register size_t len)
 {
   struct stringpool_t
     {
-      char stringpool_str3[sizeof("get")];
-      char stringpool_str8[sizeof("lateinit")];
-      char stringpool_str9[sizeof("true")];
-      char stringpool_str13[sizeof("external")];
-      char stringpool_str14[sizeof("null")];
-      char stringpool_str15[sizeof("catch")];
+      char stringpool_str3[sizeof("var")];
+      char stringpool_str10[sizeof("throw")];
+      char stringpool_str11[sizeof("return")];
+      char stringpool_str13[sizeof("receiver")];
+      char stringpool_str15[sizeof("const")];
       char stringpool_str17[sizeof("it")];
+      char stringpool_str19[sizeof("when")];
       char stringpool_str20[sizeof("where")];
-      char stringpool_str23[sizeof("internal")];
-      char stringpool_str24[sizeof("when")];
-      char stringpool_str25[sizeof("const")];
-      char stringpool_str26[sizeof("inline")];
-      char stringpool_str27[sizeof("in")];
+      char stringpool_str21[sizeof("constructor")];
+      char stringpool_str22[sizeof("in")];
+      char stringpool_str23[sizeof("continue")];
+      char stringpool_str25[sizeof("inner")];
+      char stringpool_str27[sizeof("tailrec")];
+      char stringpool_str28[sizeof("set")];
       char stringpool_str29[sizeof("interface")];
       char stringpool_str30[sizeof("while")];
-      char stringpool_str32[sizeof("tailrec")];
-      char stringpool_str33[sizeof("continue")];
+      char stringpool_str31[sizeof("expect")];
+      char stringpool_str33[sizeof("noinline")];
       char stringpool_str34[sizeof("init")];
-      char stringpool_str35[sizeof("throw")];
-      char stringpool_str38[sizeof("noinline")];
-      char stringpool_str39[sizeof("file")];
-      char stringpool_str40[sizeof("false")];
-      char stringpool_str41[sizeof("return")];
-      char stringpool_str43[sizeof("set")];
-      char stringpool_str45[sizeof("final")];
-      char stringpool_str47[sizeof("if")];
-      char stringpool_str50[sizeof("infix")];
-      char stringpool_str51[sizeof("expect")];
-      char stringpool_str52[sizeof("by")];
-      char stringpool_str53[sizeof("fun")];
-      char stringpool_str54[sizeof("else")];
-      char stringpool_str55[sizeof("inner")];
-      char stringpool_str56[sizeof("constructor")];
-      char stringpool_str57[sizeof("is")];
-      char stringpool_str58[sizeof("delegate")];
-      char stringpool_str59[sizeof("this")];
-      char stringpool_str60[sizeof("break")];
-      char stringpool_str61[sizeof("import")];
-      char stringpool_str62[sizeof("package")];
-      char stringpool_str63[sizeof("out")];
+      char stringpool_str35[sizeof("break")];
+      char stringpool_str37[sizeof("package")];
+      char stringpool_str38[sizeof("out")];
+      char stringpool_str39[sizeof("else")];
+      char stringpool_str40[sizeof("catch")];
+      char stringpool_str41[sizeof("import")];
+      char stringpool_str42[sizeof("is")];
+      char stringpool_str43[sizeof("get")];
+      char stringpool_str44[sizeof("this")];
+      char stringpool_str46[sizeof("vararg")];
+      char stringpool_str47[sizeof("private")];
+      char stringpool_str48[sizeof("operator")];
+      char stringpool_str49[sizeof("open")];
+      char stringpool_str50[sizeof("super")];
+      char stringpool_str51[sizeof("public")];
+      char stringpool_str52[sizeof("dynamic")];
+      char stringpool_str53[sizeof("override")];
+      char stringpool_str54[sizeof("typealias")];
+      char stringpool_str56[sizeof("crossinline")];
+      char stringpool_str57[sizeof("reified")];
+      char stringpool_str58[sizeof("lateinit")];
+      char stringpool_str61[sizeof("object")];
+      char stringpool_str63[sizeof("external")];
       char stringpool_str64[sizeof("enum")];
-      char stringpool_str66[sizeof("actual")];
-      char stringpool_str67[sizeof("private")];
-      char stringpool_str68[sizeof("receiver")];
-      char stringpool_str71[sizeof("public")];
-      char stringpool_str72[sizeof("dynamic")];
-      char stringpool_str73[sizeof("try")];
-      char stringpool_str76[sizeof("typeof")];
-      char stringpool_str78[sizeof("override")];
-      char stringpool_str79[sizeof("open")];
-      char stringpool_str81[sizeof("object")];
-      char stringpool_str82[sizeof("finally")];
-      char stringpool_str83[sizeof("for")];
-      char stringpool_str84[sizeof("companion")];
-      char stringpool_str85[sizeof("field")];
-      char stringpool_str86[sizeof("crossinline")];
-      char stringpool_str88[sizeof("val")];
-      char stringpool_str89[sizeof("typealias")];
-      char stringpool_str90[sizeof("annotation")];
-      char stringpool_str92[sizeof("reified")];
-      char stringpool_str98[sizeof("operator")];
-      char stringpool_str102[sizeof("as")];
-      char stringpool_str103[sizeof("setparam")];
-      char stringpool_str107[sizeof("do")];
-      char stringpool_str108[sizeof("abstract")];
-      char stringpool_str109[sizeof("data")];
-      char stringpool_str110[sizeof("super")];
-      char stringpool_str115[sizeof("class")];
-      char stringpool_str116[sizeof("vararg")];
-      char stringpool_str125[sizeof("param")];
-      char stringpool_str132[sizeof("suspend")];
-      char stringpool_str138[sizeof("var")];
-      char stringpool_str143[sizeof("property")];
-      char stringpool_str151[sizeof("sealed")];
-      char stringpool_str154[sizeof("protected")];
+      char stringpool_str67[sizeof("by")];
+      char stringpool_str68[sizeof("for")];
+      char stringpool_str70[sizeof("annotation")];
+      char stringpool_str72[sizeof("do")];
+      char stringpool_str73[sizeof("internal")];
+      char stringpool_str74[sizeof("companion")];
+      char stringpool_str76[sizeof("inline")];
+      char stringpool_str77[sizeof("as")];
+      char stringpool_str78[sizeof("fun")];
+      char stringpool_str80[sizeof("param")];
+      char stringpool_str82[sizeof("if")];
+      char stringpool_str83[sizeof("abstract")];
+      char stringpool_str85[sizeof("class")];
+      char stringpool_str88[sizeof("setparam")];
+      char stringpool_str89[sizeof("data")];
+      char stringpool_str90[sizeof("infix")];
+      char stringpool_str91[sizeof("typeof")];
+      char stringpool_str92[sizeof("suspend")];
+      char stringpool_str93[sizeof("try")];
+      char stringpool_str98[sizeof("delegate")];
+      char stringpool_str99[sizeof("protected")];
+      char stringpool_str103[sizeof("val")];
+      char stringpool_str106[sizeof("actual")];
+      char stringpool_str108[sizeof("property")];
+      char stringpool_str110[sizeof("field")];
+      char stringpool_str116[sizeof("sealed")];
+      char stringpool_str122[sizeof("finally")];
+      char stringpool_str124[sizeof("file")];
+      char stringpool_str125[sizeof("final")];
     };
   static const struct stringpool_t stringpool_contents =
     {
-      "get",
-      "lateinit",
-      "true",
-      "external",
-      "null",
-      "catch",
-      "it",
-      "where",
-      "internal",
-      "when",
+      "var",
+      "throw",
+      "return",
+      "receiver",
       "const",
-      "inline",
+      "it",
+      "when",
+      "where",
+      "constructor",
       "in",
+      "continue",
+      "inner",
+      "tailrec",
+      "set",
       "interface",
       "while",
-      "tailrec",
-      "continue",
-      "init",
-      "throw",
-      "noinline",
-      "file",
-      "false",
-      "return",
-      "set",
-      "final",
-      "if",
-      "infix",
       "expect",
-      "by",
-      "fun",
-      "else",
-      "inner",
-      "constructor",
-      "is",
-      "delegate",
-      "this",
+      "noinline",
+      "init",
       "break",
-      "import",
       "package",
       "out",
-      "enum",
-      "actual",
+      "else",
+      "catch",
+      "import",
+      "is",
+      "get",
+      "this",
+      "vararg",
       "private",
-      "receiver",
+      "operator",
+      "open",
+      "super",
       "public",
       "dynamic",
-      "try",
-      "typeof",
       "override",
-      "open",
-      "object",
-      "finally",
-      "for",
-      "companion",
-      "field",
-      "crossinline",
-      "val",
       "typealias",
-      "annotation",
+      "crossinline",
       "reified",
-      "operator",
-      "as",
-      "setparam",
+      "lateinit",
+      "object",
+      "external",
+      "enum",
+      "by",
+      "for",
+      "annotation",
       "do",
-      "abstract",
-      "data",
-      "super",
-      "class",
-      "vararg",
+      "internal",
+      "companion",
+      "inline",
+      "as",
+      "fun",
       "param",
+      "if",
+      "abstract",
+      "class",
+      "setparam",
+      "data",
+      "infix",
+      "typeof",
       "suspend",
-      "var",
+      "try",
+      "delegate",
+      "protected",
+      "val",
+      "actual",
       "property",
+      "field",
       "sealed",
-      "protected"
+      "finally",
+      "file",
+      "final"
     };
   #define stringpool ((const char *) &stringpool_contents)
   static const int wordlist[] =
     {
       -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
-      -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
-      -1, -1, -1,
+      -1, -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,
       -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str24,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
       -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str20,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str21,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str23,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str28,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str31,
       -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,
-      -1, -1,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str41,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str42,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str43,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str44,
       -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str46,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str47,
-      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str49,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str51,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str52,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str53,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str54,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str55,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str56,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str57,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str58,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str59,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str60,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str61,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str62,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str63,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str64,
-      -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str66,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str67,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str68,
-      -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str71,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str70,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str72,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str73,
-      -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str74,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str76,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str77,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str78,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str79,
       -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str81,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str80,
+      -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str82,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str83,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str84,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str85,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str86,
       -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str85,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str88,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str89,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str90,
-      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str91,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str92,
-      -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str93,
+      -1, -1, -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str98,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str99,
       -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str102,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str103,
-      -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str107,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str108,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str109,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str110,
-      -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str115,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str116,
-      -1, -1, -1, -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str125,
-      -1, -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str132,
-      -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str138,
-      -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str143,
-      -1, -1, -1, -1, -1, -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str151,
       -1, -1,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str154
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str106,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str108,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str110,
+      -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str116,
+      -1, -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str122,
+      -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str124,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str125
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)

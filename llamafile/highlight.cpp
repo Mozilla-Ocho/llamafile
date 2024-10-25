@@ -18,110 +18,145 @@
 #include "highlight.h"
 
 Highlight *Highlight::create(const std::string_view &lang) {
-    if (lang == "markdown" || lang == "md") {
+
+    if (lang == "md" || //
+        lang == "markdown")
         return new HighlightMarkdown;
-    } else if (lang == "c" || //
-               lang == "h" || //
-               lang == "m") {
+
+    if (lang == "c" || //
+        lang == "h" || //
+        lang == "m")
         return new HighlightC(is_keyword_c, //
                               is_keyword_c_type, //
                               is_keyword_c_builtin, //
                               is_keyword_c_constant);
-    } else if (lang == "c++" || //
-               lang == "cxx" || //
-               lang == "cpp" || //
-               lang == "hpp" || //
-               lang == "cc" || //
-               lang == "cu") {
+
+    if (lang == "c++" || //
+        lang == "cxx" || //
+        lang == "cpp" || //
+        lang == "hpp" || //
+        lang == "cc" || //
+        lang == "cu")
         return new HighlightC(is_keyword_cxx, //
                               is_keyword_c_type, //
                               is_keyword_c_builtin, //
                               is_keyword_c_constant);
-    } else if (lang == "js" || //
-               lang == "json" || //
-               lang == "javascript") {
+
+    if (lang == "js" || //
+        lang == "json" || //
+        lang == "javascript")
         return new HighlightJs(is_keyword_js, nullptr);
-    } else if (lang == "ts" || //
-               lang == "typescript") {
+
+    if (lang == "ts" || //
+        lang == "typescript")
         return new HighlightJs(is_keyword_typescript, is_keyword_typescript_type);
-    } else if (lang == "java") {
-        return new HighlightC(is_keyword_java);
-    } else if (lang == "py" || //
-               lang == "python") {
+
+    if (lang == "java")
+        return new HighlightJava(is_keyword_java);
+
+    if (lang == "py" || //
+        lang == "python")
         return new HighlightPython;
-    } else if (lang == "rs" || //
-               lang == "rust") {
+
+    if (lang == "rs" || //
+        lang == "rust")
         return new HighlightRust;
-    } else if (lang == "f" || //
-               lang == "fortran") {
+
+    if (lang == "f" || //
+        lang == "fortran")
         return new HighlightFortran;
-    } else if (lang == "cob" || //
-               lang == "cbl" || //
-               lang == "cobol") {
+
+    if (lang == "cob" || //
+        lang == "cbl" || //
+        lang == "cobol")
         return new HighlightCobol;
-    } else if (lang == "pas" || //
-               lang == "pascal") {
+
+    if (lang == "pas" || //
+        lang == "pascal")
         return new HighlightPascal;
-    } else if (lang == "go") {
+
+    if (lang == "go")
         return new HighlightGo;
-    } else if (lang == "sql") {
+
+    if (lang == "sql")
         return new HighlightSql;
-    } else if (lang == "css") {
+
+    if (lang == "css")
         return new HighlightCss;
-    } else if (lang == "html" || //
-               lang == "xml") {
+
+    if (lang == "html" || //
+        lang == "xml")
         return new HighlightHtml;
-    } else if (lang == "php") {
+
+    if (lang == "php")
         return new HighlightHtml; // sic
-    } else if (lang == "php!") {
+
+    if (lang == "php!")
         return new HighlightPhp;
-    } else if (lang == "csharp" || //
-               lang == "cs" || //
-               lang == "c#") {
+
+    if (lang == "csharp" || //
+        lang == "cs" || //
+        lang == "c#")
         return new HighlightCsharp;
-    } else if (lang == "kotlin") {
-        return new HighlightC(is_keyword_kotlin);
-    } else if (lang == "lua") {
+
+    if (lang == "kotlin")
+        return new HighlightJava(is_keyword_kotlin);
+
+    if (lang == "lua")
         return new HighlightLua;
-    } else if (lang == "lisp" || //
-               lang == "el" || //
-               lang == "elisp" || //
-               lang == "cl" || //
-               lang == "clisp" || //
-               lang == "scheme" || //
-               lang == "clojure") {
+
+    if (lang == "lisp" || //
+        lang == "el" || //
+        lang == "elisp" || //
+        lang == "cl" || //
+        lang == "clisp" || //
+        lang == "scheme" || //
+        lang == "clojure")
         return new HighlightLisp;
-    } else if (lang == "ada") {
+
+    if (lang == "ada")
         return new HighlightAda;
-    } else if (lang == "haskell" || //
-               lang == "hs") {
+
+    if (lang == "haskell" || //
+        lang == "hs")
         return new HighlightHaskell;
-    } else if (lang == "perl" || //
-               lang == "pl") {
+
+    if (lang == "perl" || //
+        lang == "pl")
         return new HighlightPerl;
-    } else if (lang == "shell" || //
-               lang == "bash" || //
-               lang == "sh" || //
-               lang == "ksh") {
+
+    if (lang == "shell" || //
+        lang == "bash" || //
+        lang == "sh" || //
+        lang == "ksh")
         return new HighlightShell;
-    } else if (lang == "swift") {
+
+    if (lang == "swift")
         return new HighlightC(is_keyword_swift, is_keyword_swift_type);
-    } else if (lang == "d") {
+
+    if (lang == "d")
         return new HighlightC(is_keyword_d);
-    } else if (lang == "zig") {
+
+    if (lang == "zig")
         return new HighlightZig;
-    } else if (lang == "tcl") {
+
+    if (lang == "tcl")
         return new HighlightTcl;
-    } else if (lang == "ruby" || //
-               lang == "rb") {
+
+    if (lang == "m4" || //
+        lang == "ac")
+        return new HighlightM4;
+
+    if (lang == "ruby" || //
+        lang == "rb")
         return new HighlightRuby;
-    } else if (lang == "fs" || //
-               lang == "4th" || //
-               lang == "frt" || //
-               lang == "fth" || //
-               lang == "forth") {
+
+    if (lang == "fs" || //
+        lang == "4th" || //
+        lang == "frt" || //
+        lang == "fth" || //
+        lang == "forth")
         return new HighlightForth;
-    } else {
-        return new HighlightPlain;
-    }
+
+    return new HighlightPlain;
 }

@@ -28,7 +28,6 @@ else
 enum
 expect
 external
-false
 field
 file
 final
@@ -49,7 +48,6 @@ is
 it
 lateinit
 noinline
-null
 object
 open
 operator
@@ -72,7 +70,6 @@ suspend
 tailrec
 this
 throw
-true
 try
 typealias
 typeof

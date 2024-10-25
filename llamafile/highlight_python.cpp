@@ -190,7 +190,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
         // handle """string"""
         case DQUOTE2:
             if (c == '"') {
-                *r += c;
+                *r += '"';
                 t_ = DQUOTE3;
             } else {
                 *r += HI_RESET;

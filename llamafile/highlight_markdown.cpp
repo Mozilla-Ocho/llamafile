@@ -16,6 +16,8 @@
 // limitations under the License.
 
 #include "highlight.h"
+#include "string.h"
+#include <cosmo.h>
 
 enum {
     NORMAL,
@@ -44,9 +46,8 @@ HighlightMarkdown::~HighlightMarkdown() {
 }
 
 void HighlightMarkdown::feed(std::string *r, std::string_view input) {
-    char c;
-    for (size_t i = 0; i < input.size(); ++i) {
-        c = input[i];
+    for (size_t i = 0; i < input.size();) {
+        wchar_t c = read_wchar(input, &i);
         switch (t_) {
 
         Normal:
@@ -60,9 +61,9 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             } else if (c == '\\') {
                 // handle \*\*not bold\*\* etc.
                 t_ = BACKSLASH;
-                *r += c;
+                *r += '\\';
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             if (c == '\n') {
                 bol_ = true;
@@ -75,7 +76,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             break;
 
         case BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = NORMAL;
             break;
 
@@ -84,18 +85,17 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 // handle **strong** text
                 t_ = STRONG;
                 *r += HI_BOLD;
-                *r += '*';
-                *r += c;
+                *r += "**";
             } else if (bol_ && isblank(c)) {
                 *r += '*';
-                *r += c;
+                append_wchar(r, c);
                 t_ = NORMAL;
             } else {
                 // handle *emphasized* text
                 // inverted because \e[3m has a poorly supported western bias
                 *r += '*';
                 *r += HI_ITALIC;
-                *r += c;
+                append_wchar(r, c);
                 t_ = EMPHASIS;
                 if (c == '\\')
                     t_ = EMPHASIS_BACKSLASH;
@@ -107,23 +107,23 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             if (c == '*') {
                 t_ = NORMAL;
                 *r += HI_RESET;
-                *r += c;
+                *r += '*';
             } else if (c == '\\') {
                 t_ = EMPHASIS_BACKSLASH;
-                *r += c;
+                *r += '\\';
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case EMPHASIS_BACKSLASH:
             // so we can say *unbroken \* italic* and have it work
-            *r += c;
+            append_wchar(r, c);
             t_ = EMPHASIS;
             break;
 
         case STRONG:
-            *r += c;
+            append_wchar(r, c);
             if (c == '*') {
                 t_ = STRONG_STAR;
             } else if (c == '\\') {
@@ -133,12 +133,12 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
 
         case STRONG_BACKSLASH:
             // so we can say **unbroken \*\* bold** and have it work
-            *r += c;
+            append_wchar(r, c);
             t_ = STRONG;
             break;
 
         case STRONG_STAR:
-            *r += c;
+            append_wchar(r, c);
             if (c == '*' || // handle **bold** ending
                 (c == '\n' && !tail_)) { // handle *** line break
                 t_ = NORMAL;
@@ -156,7 +156,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             } else {
                 *r += HI_INCODE;
                 *r += '`';
-                *r += c;
+                append_wchar(r, c);
                 t_ = INCODE;
             }
             break;
@@ -164,7 +164,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case INCODE:
             // this is for `inline code` like that
             // no backslash escapes are supported here
-            *r += c;
+            append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -174,14 +174,14 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case INCODE2:
             // this is for ``inline ` code`` like that
             // it lets you put backtick inside the code
-            *r += c;
+            append_wchar(r, c);
             if (c == '`') {
                 t_ = INCODE2_TICK;
             }
             break;
 
         case INCODE2_TICK:
-            *r += c;
+            append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -197,14 +197,14 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             } else {
                 *r += HI_INCODE;
                 *r += "``";
-                *r += c;
+                append_wchar(r, c);
                 t_ = INCODE2;
             }
             break;
 
         case LANG:
             if (!isascii(c) || !isspace(c)) {
-                *r += c;
+                append_wchar(r, c);
                 lang_ += tolower(c);
             } else {
                 highlighter_ = Highlight::create(lang_);
@@ -219,7 +219,9 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             if (c == '`') {
                 t_ = CODE_TICK;
             } else {
-                char cs[2] = {c};
+                char cs[8];
+                uint64_t w = tpenc(c);
+                WRITE64LE(cs, w);
                 highlighter_->feed(r, cs);
             }
             break;
@@ -228,7 +230,10 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             if (c == '`') {
                 t_ = CODE_TICK_TICK;
             } else {
-                char cs[3] = {'`', c};
+                char cs[9];
+                uint64_t w = tpenc(c);
+                cs[0] = '`';
+                WRITE64LE(cs + 1, w);
                 highlighter_->feed(r, cs);
                 t_ = CODE;
             }
@@ -242,7 +247,11 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 highlighter_ = nullptr;
                 *r += "```";
             } else {
-                char cs[4] = {'`', '`', c};
+                char cs[10];
+                uint64_t w = tpenc(c);
+                cs[0] = '`';
+                cs[1] = '`';
+                WRITE64LE(cs + 2, w);
                 highlighter_->feed(r, cs);
                 t_ = CODE;
             }

@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #include "highlight.h"
-
+#include "string.h"
 #include <ctype.h>
 
 enum {
@@ -26,7 +26,9 @@ enum {
     DQUOTE_BACKSLASH,
     VAR,
     VAR2,
+    VAR_CURLY,
     COMMENT,
+    BACKSLASH,
 };
 
 HighlightTcl::HighlightTcl() {
@@ -36,35 +38,38 @@ HighlightTcl::~HighlightTcl() {
 }
 
 void HighlightTcl::feed(std::string *r, std::string_view input) {
-    int c;
-    for (size_t i = 0; i < input.size(); ++i) {
-        c = input[i] & 255;
+    for (size_t i = 0; i < input.size();) {
+        wchar_t c = read_wchar(input, &i);
         switch (t_) {
 
         Normal:
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                word_ += c;
+                append_wchar(&word_, c);
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                append_wchar(r, c);
             } else if (c == '$') {
-                *r += c;
+                append_wchar(r, c);
                 t_ = VAR;
             } else if (c == '#') {
                 *r += HI_COMMENT;
-                *r += c;
+                append_wchar(r, c);
                 t_ = COMMENT;
+            } else if (c == '\\') {
+                t_ = BACKSLASH;
+                *r += HI_ESCAPE;
+                append_wchar(r, c);
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case WORD:
-            if (!isascii(c) || isalnum(c) || c == '_') {
-                word_ += c;
+            if (!(isspace(c) || c == ';')) {
+                append_wchar(&word_, c);
             } else {
                 if (is_keyword_tcl(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -87,11 +92,17 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case BACKSLASH:
+            append_wchar(r, c);
+            *r += HI_RESET;
+            t_ = NORMAL;
+            break;
+
         case VAR:
             if (c == '{') {
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_VAR;
-                t_ = VAR2;
+                t_ = VAR_CURLY;
                 break;
             } else {
                 *r += HI_VAR;
@@ -101,7 +112,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
 
         case VAR2:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                *r += c;
+                append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -109,18 +120,28 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case VAR_CURLY:
+            if (c == '}') {
+                *r += HI_RESET;
+                *r += '}';
+                t_ = NORMAL;
+            } else {
+                append_wchar(r, c);
+            }
+            break;
+
         case COMMENT:
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
+                append_wchar(r, c);
                 t_ = NORMAL;
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case DQUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -130,7 +151,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = DQUOTE;
             break;
 
@@ -161,9 +182,11 @@ void HighlightTcl::flush(std::string *r) {
         word_.clear();
         break;
     case VAR2:
+    case VAR_CURLY:
     case DQUOTE:
     case DQUOTE_BACKSLASH:
     case COMMENT:
+    case BACKSLASH:
         *r += HI_RESET;
         break;
     default:

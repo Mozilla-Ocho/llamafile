@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #include "highlight.h"
-
+#include "string.h"
 #include <ctype.h>
 
 enum {
@@ -46,44 +46,43 @@ HighlightShell::~HighlightShell() {
 }
 
 void HighlightShell::feed(std::string *r, std::string_view input) {
-    int c;
-    for (size_t i = 0; i < input.size(); ++i) {
-        c = input[i] & 255;
+    for (size_t i = 0; i < input.size();) {
+        wchar_t c = read_wchar(input, &i);
         switch (t_) {
 
         Normal:
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                word_ += c;
+                append_wchar(&word_, c);
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '\'';
             } else if (c == '\\') {
                 t_ = BACKSLASH;
                 *r += HI_ESCAPE;
-                *r += c;
+                *r += '\\';
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '"';
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
-                *r += c;
+                *r += '`';
             } else if (c == '$') {
-                *r += c;
                 t_ = VAR;
+                *r += '$';
             } else if (c == '<') {
-                *r += c;
                 t_ = LT;
+                *r += '<';
             } else if (c == '#') {
                 *r += HI_COMMENT;
-                *r += c;
+                *r += '#';
                 t_ = COMMENT;
             } else if (c == '\n') {
-                *r += c;
+                *r += '\n';
                 if (pending_heredoc_) {
                     *r += HI_STRING;
                     pending_heredoc_ = false;
@@ -91,19 +90,19 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
                     i_ = 0;
                 }
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             *r += HI_RESET;
             t_ = NORMAL;
             break;
 
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                word_ += c;
+                append_wchar(&word_, c);
             } else {
                 if (is_keyword_shell(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -133,12 +132,12 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
                 c == '\\' || //
                 c == '^') {
                 *r += HI_VAR;
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_RESET;
                 t_ = NORMAL;
                 break;
             } else if (c == '{') {
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_VAR;
                 t_ = VAR2;
                 break;
@@ -150,7 +149,7 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
 
         case VAR2:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                *r += c;
+                append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -161,15 +160,15 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
         case COMMENT:
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
+                append_wchar(r, c);
                 t_ = NORMAL;
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case QUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -177,7 +176,7 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -187,12 +186,12 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = DQUOTE;
             break;
 
         case TICK:
-            *r += c;
+            append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -202,13 +201,13 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             break;
 
         case TICK_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = TICK;
             break;
 
         case LT:
             if (c == '<') {
-                *r += c;
+                append_wchar(r, c);
                 t_ = LT_LT;
                 heredoc_.clear();
                 pending_heredoc_ = false;
@@ -222,17 +221,17 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
         case LT_LT:
             if (c == '-') {
                 indented_heredoc_ = true;
-                *r += c;
+                append_wchar(r, c);
             } else if (c == '\\') {
-                *r += c;
+                append_wchar(r, c);
             } else if (c == '\'') {
                 t_ = LT_LT_QNAME;
                 *r += HI_STRING;
-                *r += c;
+                append_wchar(r, c);
             } else if (isalpha(c) || c == '_') {
                 t_ = LT_LT_NAME;
-                heredoc_ += c;
-                *r += c;
+                append_wchar(&heredoc_, c);
+                append_wchar(r, c);
             } else if (!isblank(c)) {
                 t_ = NORMAL;
                 goto Normal;
@@ -242,10 +241,10 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
         case LT_LT_NAME:
             if (isalnum(c) || c == '_') {
                 t_ = LT_LT_NAME;
-                heredoc_ += c;
-                *r += c;
+                append_wchar(&heredoc_, c);
+                append_wchar(r, c);
             } else if (c == '\n') {
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_STRING;
                 t_ = HEREDOC_BOL;
             } else {
@@ -256,19 +255,19 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             break;
 
         case LT_LT_QNAME:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = HEREDOC_BOL;
                 pending_heredoc_ = true;
                 t_ = NORMAL;
             } else {
-                heredoc_ += c;
+                append_wchar(&heredoc_, c);
             }
             break;
 
         case HEREDOC_BOL:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\n') {
                 if (i_ == heredoc_.size()) {
                     t_ = NORMAL;
@@ -286,7 +285,7 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             break;
 
         case HEREDOC:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\n')
                 t_ = HEREDOC_BOL;
             break;

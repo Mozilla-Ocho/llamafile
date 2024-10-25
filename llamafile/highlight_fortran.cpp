@@ -87,7 +87,7 @@ void HighlightFortran::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else if (c == '.' && word_[0] == '.') {
                 word_ += c;

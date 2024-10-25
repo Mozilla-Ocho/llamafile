@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #include "highlight.h"
-
+#include "string.h"
 #include <ctype.h>
 
 enum {
@@ -39,16 +39,15 @@ HighlightZig::~HighlightZig() {
 }
 
 void HighlightZig::feed(std::string *r, std::string_view input) {
-    int c;
-    for (size_t i = 0; i < input.size(); ++i) {
-        c = input[i] & 255;
+    for (size_t i = 0; i < input.size();) {
+        wchar_t c = read_wchar(input, &i);
         switch (t_) {
 
         Normal:
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_' || c == '@') {
                 t_ = WORD;
-                word_ += c;
+                append_wchar(&word_, c);
             } else if (c == '/') {
                 t_ = SLASH;
             } else if (c == '\\') {
@@ -56,19 +55,19 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '\'';
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '"';
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                word_ += c;
+                append_wchar(&word_, c);
             } else {
                 if (is_keyword_zig(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -110,10 +109,10 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
         case BACKSLASH_BACKSLASH:
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
+                append_wchar(r, c);
                 t_ = NORMAL;
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
@@ -132,15 +131,15 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
         case SLASH_SLASH:
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
+                append_wchar(r, c);
                 t_ = NORMAL;
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case QUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -150,12 +149,12 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = QUOTE;
             break;
 
         case DQUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -165,7 +164,7 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = DQUOTE;
             break;
 

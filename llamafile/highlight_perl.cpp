@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #include "highlight.h"
-
+#include "string.h"
 #include <ctype.h>
 
 enum {
@@ -148,52 +148,52 @@ HighlightPerl::~HighlightPerl() {
 
 void HighlightPerl::feed(std::string *r, std::string_view input) {
     int c = 0;
-    for (size_t i = 0; i < input.size(); ++i) {
+    for (size_t i = 0; i < input.size();) {
         last_ = c_;
-        c_ = c = input[i] & 255;
+        c_ = c = read_wchar(input, &i);
         switch (t_) {
 
         Normal:
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                word_ += c;
+                append_wchar(&word_, c);
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                *r += c;
+                append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '=' && (!last_ || last_ == '\n')) {
                 t_ = EQUAL;
             } else if (c == '\\') {
                 t_ = BACKSLASH;
                 *r += HI_ESCAPE;
-                *r += c;
+                append_wchar(r, c);
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
-                *r += c;
+                append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '$') {
-                *r += c;
+                append_wchar(r, c);
                 t_ = VAR;
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '@' || c == '%') {
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_VAR;
                 t_ = VAR2;
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '#') {
                 *r += HI_COMMENT;
-                *r += c;
+                append_wchar(r, c);
                 t_ = COMMENT;
             } else if (c == '<') {
-                *r += c;
+                append_wchar(r, c);
                 t_ = LT;
                 expect_ = EXPECT_VALUE;
             } else if (c == '/' && expect_ == EXPECT_VALUE && last_ != '/') {
@@ -201,10 +201,10 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 closer_ = '/';
                 expect_ = EXPECT_OPERATOR;
                 *r += HI_STRING;
-                *r += c;
+                append_wchar(r, c);
                 t_ = REGEX;
             } else if (c == '\n') {
-                *r += c;
+                append_wchar(r, c);
                 if (pending_heredoc_) {
                     *r += HI_STRING;
                     pending_heredoc_ = false;
@@ -213,22 +213,22 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 }
             } else if (c == ')' || c == '}' || c == ']') {
                 expect_ = EXPECT_OPERATOR;
-                *r += c;
+                append_wchar(r, c);
             } else if (ispunct(c)) {
                 expect_ = EXPECT_VALUE;
-                *r += c;
+                append_wchar(r, c);
             } else if (isdigit(c)) {
                 expect_ = EXPECT_OPERATOR;
-                *r += c;
+                append_wchar(r, c);
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         Word:
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                word_ += c;
+                append_wchar(&word_, c);
             } else {
                 if (is_keyword_perl(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -246,7 +246,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                         opener_ = c;
                         closer_ = mirror(c);
                         *r += HI_STRING;
-                        *r += c;
+                        append_wchar(r, c);
                         if (is_double_regex(word_)) {
                             t_ = S_REGEX;
                         } else {
@@ -263,7 +263,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             *r += HI_RESET;
             t_ = NORMAL;
             break;
@@ -271,13 +271,13 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
         case VAR:
             if (isdigit(c) || is_magic_var(c)) {
                 *r += HI_VAR;
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_RESET;
                 t_ = NORMAL;
                 break;
             } else if (c == '{') {
                 t_ = VAR2;
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_VAR;
                 break;
             } else {
@@ -288,7 +288,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
 
         case VAR2:
             if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
-                *r += c;
+                append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -299,15 +299,15 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
         case COMMENT:
             if (c == '\n') {
                 *r += HI_RESET;
-                *r += c;
+                append_wchar(r, c);
                 t_ = NORMAL;
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         case REGEX:
-            *r += c;
+            append_wchar(r, c);
             if (c == closer_) {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -317,12 +317,12 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case REGEX_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = REGEX;
             break;
 
         case S_REGEX:
-            *r += c;
+            append_wchar(r, c);
             if (c == opener_) {
                 t_ = S_REGEX_S;
             } else if (c == '\\') {
@@ -331,12 +331,12 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case S_REGEX_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = S_REGEX;
             break;
 
         case S_REGEX_S:
-            *r += c;
+            append_wchar(r, c);
             if (c == closer_) {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -346,12 +346,12 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case S_REGEX_S_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = S_REGEX_S;
             break;
 
         case QUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -361,12 +361,12 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = QUOTE;
             break;
 
         case DQUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -376,12 +376,12 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = DQUOTE;
             break;
 
         case TICK:
-            *r += c;
+            append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -391,7 +391,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case TICK_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = TICK;
             break;
 
@@ -399,7 +399,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             if (isalpha(c)) {
                 *r += HI_COMMENT;
                 *r += '=';
-                *r += c;
+                append_wchar(r, c);
                 heredoc_ = "=cut";
                 t_ = HEREDOC;
                 i_ = 0;
@@ -412,7 +412,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
 
         case LT:
             if (c == '<') {
-                *r += c;
+                append_wchar(r, c);
                 t_ = LT_LT;
                 heredoc_.clear();
                 pending_heredoc_ = false;
@@ -426,16 +426,16 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
         case LT_LT:
             if (c == '-') {
                 indented_heredoc_ = true;
-                *r += c;
+                append_wchar(r, c);
             } else if (c == '"' || c == '\'') {
                 closer_ = c;
                 t_ = LT_LT_QNAME;
                 *r += HI_STRING;
-                *r += c;
+                append_wchar(r, c);
             } else if (isalpha(c) || c == '_') {
                 t_ = LT_LT_NAME;
-                heredoc_ += c;
-                *r += c;
+                append_wchar(&heredoc_, c);
+                append_wchar(r, c);
             } else if (!isblank(c)) {
                 t_ = NORMAL;
                 goto Normal;
@@ -445,10 +445,10 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
         case LT_LT_NAME:
             if (isalnum(c) || c == '_') {
                 t_ = LT_LT_NAME;
-                heredoc_ += c;
-                *r += c;
+                append_wchar(&heredoc_, c);
+                append_wchar(r, c);
             } else if (c == '\n') {
-                *r += c;
+                append_wchar(r, c);
                 *r += HI_STRING;
                 t_ = HEREDOC_BOL;
             } else {
@@ -459,19 +459,19 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case LT_LT_QNAME:
-            *r += c;
+            append_wchar(r, c);
             if (c == closer_) {
                 *r += HI_RESET;
                 t_ = HEREDOC_BOL;
                 pending_heredoc_ = true;
                 t_ = NORMAL;
             } else {
-                heredoc_ += c;
+                append_wchar(&heredoc_, c);
             }
             break;
 
         case HEREDOC_BOL:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\n') {
                 if (i_ == heredoc_.size()) {
                     t_ = NORMAL;
@@ -489,7 +489,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             break;
 
         case HEREDOC:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\n') {
                 t_ = HEREDOC_BOL;
                 i_ = 0;

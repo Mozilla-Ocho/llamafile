@@ -58,6 +58,7 @@ is_keyword_f is_keyword_js;
 is_keyword_f is_keyword_js_builtin;
 is_keyword_f is_keyword_js_constant;
 is_keyword_f is_keyword_java;
+is_keyword_f is_keyword_java_constant;
 is_keyword_f is_keyword_python;
 is_keyword_f is_keyword_rust;
 is_keyword_f is_keyword_rust_type;
@@ -104,6 +105,7 @@ is_keyword_f is_keyword_typescript_type;
 is_keyword_f is_keyword_typescript_constant;
 is_keyword_f is_keyword_forth;
 is_keyword_f is_keyword_forth_def;
+is_keyword_f is_keyword_m4;
 }
 
 class Highlight {
@@ -160,6 +162,19 @@ class HighlightC : public Highlight {
     is_keyword_f *is_keyword_;
     is_keyword_f *is_builtin_;
     is_keyword_f *is_constant_;
+};
+
+class HighlightJava : public Highlight {
+  public:
+    explicit HighlightJava(is_keyword_f *is_keyword);
+    ~HighlightJava() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
+    is_keyword_f *is_keyword_;
 };
 
 class HighlightGo : public Highlight {
@@ -477,5 +492,17 @@ class HighlightForth : public Highlight {
     int t_ = 0;
     char closer_ = 0;
     bool is_label_ = false;
+    std::string word_;
+};
+
+class HighlightM4 : public Highlight {
+  public:
+    HighlightM4();
+    ~HighlightM4() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
     std::string word_;
 };
