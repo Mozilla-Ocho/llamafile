@@ -31,6 +31,7 @@ defcustom
 defface
 defgeneric
 defgroup
+define
 define-advice
 define-compiler-macro
 define-condition
@@ -48,6 +49,7 @@ define-symbol-macro
 define-widget
 defmacro
 defmethod
+defn
 defpackage
 defparameter
 defsetf
