@@ -33,12 +33,12 @@
 
 #include <string.h>
 
-#define TOTAL_KEYWORDS 7
+#define TOTAL_KEYWORDS 8
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 10
 #define MIN_HASH_VALUE 3
-#define MAX_HASH_VALUE 10
-/* maximum key range = 8, duplicates = 0 */
+#define MAX_HASH_VALUE 19
+/* maximum key range = 17, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -52,32 +52,32 @@ hash (register const char *str, register size_t len)
 {
   static const unsigned char asso_values[] =
     {
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11,  0, 11, 11, 11, 11,  0, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11,  0,  0, 11, 11, 11, 11, 11, 11,
-       2, 11, 11, 11, 11, 11,  0,  0, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-      11, 11, 11, 11, 11, 11
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20,  0, 20, 20, 20, 20,  0, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 10, 20, 20,
+      20, 20,  0,  0, 20, 20, 20, 20, 20, 20,
+      10, 20, 20, 20, 20, 20,  0,  0, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+      20, 20, 20, 20, 20, 20
     };
   return len + asso_values[(unsigned char)str[0]];
 }
@@ -90,20 +90,22 @@ is_keyword_js_constant (register const char *str, register size_t len)
       char stringpool_str3[sizeof("NaN")];
       char stringpool_str4[sizeof("true")];
       char stringpool_str5[sizeof("false")];
-      char stringpool_str6[sizeof("null")];
       char stringpool_str8[sizeof("Infinity")];
       char stringpool_str9[sizeof("undefined")];
       char stringpool_str10[sizeof("globalThis")];
+      char stringpool_str14[sizeof("null")];
+      char stringpool_str19[sizeof("arguments")];
     };
   static const struct stringpool_t stringpool_contents =
     {
       "NaN",
       "true",
       "false",
-      "null",
       "Infinity",
       "undefined",
-      "globalThis"
+      "globalThis",
+      "null",
+      "arguments"
     };
   #define stringpool ((const char *) &stringpool_contents)
   static const int wordlist[] =
@@ -112,11 +114,14 @@ is_keyword_js_constant (register const char *str, register size_t len)
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str3,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str4,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str5,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,
-      -1,
+      -1, -1,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,
       (int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,
-      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,
+      -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,
+      -1, -1, -1, -1,
+      (int)(size_t)&((struct stringpool_t *)0)->stringpool_str19
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)

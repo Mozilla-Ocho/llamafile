@@ -9,6 +9,7 @@
 %%
 Infinity
 NaN
+arguments
 false
 globalThis
 null

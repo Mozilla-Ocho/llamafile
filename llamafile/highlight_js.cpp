@@ -34,6 +34,8 @@ enum {
     TICK_BACKSLASH,
     REGEX,
     REGEX_BACKSLASH,
+    REGEX_SQUARE,
+    REGEX_SQUARE_BACKSLASH,
 };
 
 enum {
@@ -141,6 +143,8 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
                 *r += c;
                 if (c == '\\') {
                     t_ = REGEX_BACKSLASH;
+                } else if (c == '[') {
+                    t_ = REGEX_SQUARE;
                 } else {
                     t_ = REGEX;
                 }
@@ -227,12 +231,29 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
                 t_ = NORMAL;
             } else if (c == '\\') {
                 t_ = REGEX_BACKSLASH;
+            } else if (c == '[') {
+                t_ = REGEX_SQUARE;
             }
             break;
 
         case REGEX_BACKSLASH:
             *r += c;
             t_ = REGEX;
+            break;
+
+        case REGEX_SQUARE:
+            // because /[/]/g is valid code
+            *r += c;
+            if (c == '\\') {
+                t_ = REGEX_SQUARE_BACKSLASH;
+            } else if (c == ']') {
+                t_ = REGEX;
+            }
+            break;
+
+        case REGEX_SQUARE_BACKSLASH:
+            *r += c;
+            t_ = REGEX_SQUARE;
             break;
 
         default:
@@ -279,6 +300,8 @@ void HighlightJs::flush(std::string *r) {
     case SLASH_STAR_STAR:
     case REGEX:
     case REGEX_BACKSLASH:
+    case REGEX_SQUARE:
+    case REGEX_SQUARE_BACKSLASH:
         *r += HI_RESET;
         break;
     default:
