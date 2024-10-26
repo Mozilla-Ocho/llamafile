@@ -48,9 +48,9 @@
 #define HI_QUALIFIER "\033[35m" // magenta
 #define HI_IMMEDIATE "\033[36m" // cyan
 #define HI_REGISTER "\033[1;35m" // bold magenta
-#define HI_DATE "\033[33m" // yellow
 #define HI_DIRECTIVE "\033[1;31m" // bold red
 #define HI_WARNING "\033[1;31m" // bold red
+#define HI_MATH "\033[1;35m" // bold magenta
 
 typedef const char *is_keyword_f(const char *, size_t);
 
@@ -591,5 +591,19 @@ class HighlightLd : public Highlight {
     int t_ = 0;
     bool bol_ = true;
     bool cpp_ = false;
+    std::string word_;
+};
+
+class HighlightTex : public Highlight {
+  public:
+    HighlightTex();
+    ~HighlightTex() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int c_ = 0;
+    int u_ = 0;
+    int t_ = 0;
     std::string word_;
 };

@@ -171,6 +171,10 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "rb")
         return new HighlightRuby;
 
+    if (lang == "tex" || //
+        lang == "latex")
+        return new HighlightTex;
+
     if (lang == "fs" || //
         lang == "4th" || //
         lang == "frt" || //

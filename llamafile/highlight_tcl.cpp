@@ -65,18 +65,18 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                append_wchar(r, c);
+                *r += '"';
             } else if (c == '$') {
-                append_wchar(r, c);
+                *r += '$';
                 t_ = VAR;
             } else if (c == '#') {
                 *r += HI_COMMENT;
-                append_wchar(r, c);
+                *r += '#';
                 t_ = COMMENT;
             } else if (c == '\\') {
                 t_ = BACKSLASH;
                 *r += HI_ESCAPE;
-                append_wchar(r, c);
+                *r += '\\';
             } else {
                 append_wchar(r, c);
             }
@@ -115,7 +115,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
 
         case VAR:
             if (c == '{') {
-                append_wchar(r, c);
+                *r += '{';
                 *r += HI_VAR;
                 t_ = VAR_CURLY;
                 break;

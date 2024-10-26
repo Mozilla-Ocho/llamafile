@@ -62,6 +62,7 @@ const char *const kLanguages[] = {
     "sql", //
     "swift", //
     "tcl", //
+    "tex", //
     "txt", //
     "typescript", //
     "zig", //
