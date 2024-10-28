@@ -138,7 +138,7 @@ void llamafile_get_flags(int argc, char **argv) {
             continue;
         }
 
-        if (!strcmp(flag, "-u") || !strcmp(flag, "--url-prefix")) {
+        if (!strcmp(flag, "--url-prefix")) {
             if (i == argc)
                 missing("--url-prefix");
             FLAG_url_prefix = argv[i++];
