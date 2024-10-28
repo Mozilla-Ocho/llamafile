@@ -22,24 +22,25 @@
 enum {
     NORMAL,
     WORD,
+    COMMENT,
     QUOTE,
     QUOTE_BACKSLASH,
     DQUOTE,
     DQUOTE_BACKSLASH,
     HYPHEN,
-    HYPHEN_HYPHEN,
-    SLASH,
-    SLASH_STAR,
-    SLASH_STAR_STAR,
+    HYPHEN_GT,
+    LT,
+    LT_LT,
+    COLON,
 };
 
-HighlightSql::HighlightSql() {
+HighlightR::HighlightR() {
 }
 
-HighlightSql::~HighlightSql() {
+HighlightR::~HighlightR() {
 }
 
-void HighlightSql::feed(std::string *r, std::string_view input) {
+void HighlightR::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
@@ -47,13 +48,13 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
 
         Normal:
         case NORMAL:
-            if (!isascii(c) || isalpha(c) || c == '_') {
+            if (!isascii(c) || isalpha(c)) {
                 t_ = WORD;
-                goto Word;
-            } else if (c == '/') {
-                t_ = SLASH;
-            } else if (c == '-') {
-                t_ = HYPHEN;
+                word_ += c;
+            } else if (c == '#') {
+                *r += HI_COMMENT;
+                *r += '#';
+                t_ = COMMENT;
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
@@ -62,6 +63,16 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTE;
                 *r += HI_STRING;
                 *r += c;
+            } else if (c == '-') {
+                t_ = HYPHEN;
+            } else if (c == '<') {
+                t_ = LT;
+            } else if (c == ':') {
+                t_ = COLON;
+            } else if (c == '$' || c == '@') {
+                *r += HI_OPERATOR;
+                *r += c;
+                *r += HI_RESET;
             } else {
                 *r += c;
             }
@@ -69,15 +80,19 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalnum(c) || c == '_' || c == '-') {
+            if (!isascii(c) || isalnum(c) || c == '_' || c == '.') {
                 word_ += c;
             } else {
-                if (is_keyword_sql(word_.data(), word_.size())) {
+                if (is_keyword_r(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                } else if (is_keyword_sql_type(word_.data(), word_.size())) {
-                    *r += HI_TYPE;
+                } else if (is_keyword_r_builtin(word_.data(), word_.size())) {
+                    *r += HI_BUILTIN;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (is_keyword_r_constant(word_.data(), word_.size())) {
+                    *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -89,31 +104,11 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        case SLASH:
-            if (c == '*') {
-                *r += HI_COMMENT;
-                *r += "/*";
-                t_ = SLASH_STAR;
-            } else {
-                *r += '/';
-                t_ = NORMAL;
-                goto Normal;
-            }
-            break;
-
-        case SLASH_STAR:
+        case COMMENT:
             *r += c;
-            if (c == '*')
-                t_ = SLASH_STAR_STAR;
-            break;
-
-        case SLASH_STAR_STAR:
-            *r += c;
-            if (c == '/') {
+            if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
-            } else if (c != '*') {
-                t_ = SLASH_STAR;
             }
             break;
 
@@ -147,11 +142,37 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
             t_ = DQUOTE;
             break;
 
+        case COLON:
+            if (c == ':') {
+                *r += HI_OPERATOR;
+                *r += "::";
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else {
+                *r += ':';
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
+        case LT:
+            if (c == '<') {
+                t_ = LT_LT;
+            } else if (c == '-') {
+                *r += HI_OPERATOR;
+                *r += "<-";
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else {
+                *r += '<';
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
         case HYPHEN:
-            if (c == '-') {
-                *r += HI_COMMENT;
-                *r += "--";
-                t_ = HYPHEN_HYPHEN;
+            if (c == '>') {
+                t_ = HYPHEN_GT;
             } else {
                 *r += '-';
                 t_ = NORMAL;
@@ -159,11 +180,31 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        case HYPHEN_HYPHEN:
-            *r += c;
-            if (c == '\n') {
+        case LT_LT:
+            if (c == '-') {
+                *r += HI_OPERATOR;
+                *r += "<<-";
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else {
+                *r += "<<";
+                t_ = NORMAL;
+                goto Normal;
+            }
+            break;
+
+        case HYPHEN_GT:
+            if (c == '>') {
+                *r += HI_OPERATOR;
+                *r += "->>";
+                *r += HI_RESET;
+                t_ = NORMAL;
+            } else {
+                *r += HI_OPERATOR;
+                *r += "->";
+                *r += HI_RESET;
+                t_ = NORMAL;
+                goto Normal;
             }
             break;
 
@@ -173,15 +214,19 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightSql::flush(std::string *r) {
+void HighlightR::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_sql(word_.data(), word_.size())) {
+        if (is_keyword_r(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
-        } else if (is_keyword_sql_type(word_.data(), word_.size())) {
-            *r += HI_TYPE;
+        } else if (is_keyword_r_builtin(word_.data(), word_.size())) {
+            *r += HI_BUILTIN;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_r_constant(word_.data(), word_.size())) {
+            *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
         } else {
@@ -189,19 +234,26 @@ void HighlightSql::flush(std::string *r) {
         }
         word_.clear();
         break;
-    case SLASH:
-        *r += '/';
-        break;
     case HYPHEN:
         *r += '-';
+        break;
+    case HYPHEN_GT:
+        *r += "->";
+        break;
+    case LT:
+        *r += '<';
+        break;
+    case LT_LT:
+        *r += "<<";
+        break;
+    case COLON:
+        *r += ':';
         break;
     case QUOTE:
     case QUOTE_BACKSLASH:
     case DQUOTE:
     case DQUOTE_BACKSLASH:
-    case SLASH_STAR:
-    case SLASH_STAR_STAR:
-    case HYPHEN_HYPHEN:
+    case COMMENT:
         *r += HI_RESET;
         break;
     default:

@@ -1,0 +1,16 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_matlab_constant
+%%
+Inf
+NaN
+eps
+false
+flintmax
+pi
+true

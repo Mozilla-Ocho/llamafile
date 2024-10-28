@@ -18,7 +18,7 @@ __LINE__
 __METHOD__
 __NAMESPACE__
 __TRAIT__
-__𝔥𝔞𝔩𝔱_𝔠𝔬𝔪𝔭𝔦𝔩𝔢𝔯
+__halt_compiler
 abstract
 and
 array

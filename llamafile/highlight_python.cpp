@@ -29,6 +29,7 @@ enum {
     SQUOTESTR_BACKSLASH, // '...
     SQUOTE2, // ''
     SQUOTE3, // '''...
+    SQUOTE3_BACKSLASH,
     SQUOTE31, // '''...'
     SQUOTE32, // '''...''
 
@@ -37,6 +38,7 @@ enum {
     DQUOTESTR_BACKSLASH, // "...
     DQUOTE2, // ""
     DQUOTE3, // """...
+    DQUOTE3_BACKSLASH,
     DQUOTE31, // """..."
     DQUOTE32, // """...""
 };
@@ -77,7 +79,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else {
                 if (is_keyword_python(word_.data(), word_.size())) {
@@ -137,27 +139,42 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 goto Normal;
             }
             break;
+
         case SQUOTE3:
             *r += c;
-            if (c == '\'')
+            if (c == '\'') {
                 t_ = SQUOTE31;
+            } else if (c == '\\') {
+                t_ = SQUOTE3_BACKSLASH;
+            }
             break;
+
         case SQUOTE31:
             *r += c;
             if (c == '\'') {
                 t_ = SQUOTE32;
+            } else if (c == '\\') {
+                t_ = SQUOTE3_BACKSLASH;
             } else {
                 t_ = SQUOTE3;
             }
             break;
+
         case SQUOTE32:
             *r += c;
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = SQUOTE3_BACKSLASH;
             } else {
                 t_ = SQUOTE3;
             }
+            break;
+
+        case SQUOTE3_BACKSLASH:
+            *r += c;
+            t_ = SQUOTE3;
             break;
 
         // handle "string"
@@ -171,6 +188,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTESTR;
             }
             break;
+
         case DQUOTESTR:
             *r += c;
             if (c == '"') {
@@ -180,6 +198,7 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTESTR_BACKSLASH;
             }
             break;
+
         case DQUOTESTR_BACKSLASH:
             *r += c;
             t_ = DQUOTESTR;
@@ -196,27 +215,42 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                 goto Normal;
             }
             break;
+
         case DQUOTE3:
             *r += c;
-            if (c == '"')
+            if (c == '"') {
                 t_ = DQUOTE31;
+            } else if (c == '\\') {
+                t_ = DQUOTE3_BACKSLASH;
+            }
             break;
+
         case DQUOTE31:
             *r += c;
             if (c == '"') {
                 t_ = DQUOTE32;
+            } else if (c == '\\') {
+                t_ = DQUOTE3_BACKSLASH;
             } else {
                 t_ = DQUOTE3;
             }
             break;
+
         case DQUOTE32:
             *r += c;
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = DQUOTE3_BACKSLASH;
             } else {
                 t_ = DQUOTE3;
             }
+            break;
+
+        case DQUOTE3_BACKSLASH:
+            *r += c;
+            t_ = DQUOTE3;
             break;
 
         default:
@@ -243,6 +277,7 @@ void HighlightPython::flush(std::string *r) {
     case SQUOTESTR_BACKSLASH:
     case SQUOTE2:
     case SQUOTE3:
+    case SQUOTE3_BACKSLASH:
     case SQUOTE31:
     case SQUOTE32:
     case DQUOTE:
@@ -250,6 +285,7 @@ void HighlightPython::flush(std::string *r) {
     case DQUOTESTR_BACKSLASH:
     case DQUOTE2:
     case DQUOTE3:
+    case DQUOTE3_BACKSLASH:
     case DQUOTE31:
     case DQUOTE32:
         *r += HI_RESET;

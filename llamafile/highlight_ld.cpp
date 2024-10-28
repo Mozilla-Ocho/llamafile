@@ -53,15 +53,15 @@ void HighlightLd::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTE;
                 *r += HI_STRING;
                 *r += c;
-            } else if (c == '#' && bol_) {
-                cpp_ = true;
+            } else if (c == '#' && is_bol_) {
+                is_cpp_ = true;
                 *r += HI_BUILTIN;
                 *r += c;
             } else if (c == '\n') {
                 *r += c;
-                if (cpp_) {
+                if (is_cpp_) {
                     *r += HI_RESET;
-                    cpp_ = false;
+                    is_cpp_ = false;
                 }
             } else {
                 *r += c;
@@ -73,7 +73,7 @@ void HighlightLd::feed(std::string *r, std::string_view input) {
             if (!isascii(c) || isalnum(c) || c == '_' || c == '.' || c == '/' || c == ':') {
                 word_ += c;
             } else {
-                if (cpp_) {
+                if (is_cpp_) {
                     if (is_keyword_cpp(word_.data(), word_.size())) {
                         *r += HI_BUILTIN;
                         *r += word_;
@@ -133,7 +133,7 @@ void HighlightLd::feed(std::string *r, std::string_view input) {
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
-                cpp_ = false;
+                is_cpp_ = false;
             }
             break;
 
@@ -171,12 +171,12 @@ void HighlightLd::feed(std::string *r, std::string_view input) {
         default:
             __builtin_unreachable();
         }
-        if (bol_) {
+        if (is_bol_) {
             if (!isspace(c))
-                bol_ = false;
+                is_bol_ = false;
         } else {
             if (c == '\n')
-                bol_ = true;
+                is_bol_ = true;
         }
     }
 }
@@ -184,7 +184,7 @@ void HighlightLd::feed(std::string *r, std::string_view input) {
 void HighlightLd::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (cpp_) {
+        if (is_cpp_) {
             if (is_keyword_cpp(word_.data(), word_.size())) {
                 *r += HI_BUILTIN;
                 *r += word_;
@@ -218,7 +218,7 @@ void HighlightLd::flush(std::string *r) {
         break;
     case SLASH:
         *r += '/';
-        if (cpp_)
+        if (is_cpp_)
             *r += HI_RESET;
         break;
     case DQUOTE:
@@ -229,10 +229,11 @@ void HighlightLd::flush(std::string *r) {
         *r += HI_RESET;
         break;
     default:
-        if (cpp_)
+        if (is_cpp_)
             *r += HI_RESET;
         break;
     }
-    cpp_ = false;
+    is_cpp_ = false;
+    is_bol_ = true;
     t_ = NORMAL;
 }

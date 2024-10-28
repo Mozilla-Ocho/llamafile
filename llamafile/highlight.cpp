@@ -69,7 +69,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightJs(is_keyword_typescript, is_keyword_typescript_type);
 
     if (lang == "java")
-        return new HighlightJava(is_keyword_java);
+        return new HighlightJava;
 
     if (lang == "py" || //
         lang == "python")
@@ -89,7 +89,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightCobol;
 
     if (lang == "pas" || //
-        lang == "pascal")
+        lang == "pascal" || //
+        lang == "delphi")
         return new HighlightPascal;
 
     if (lang == "go")
@@ -120,7 +121,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "kt" || //
         lang == "kts" || //
         lang == "kotlin")
-        return new HighlightJava(is_keyword_kotlin);
+        return new HighlightKotlin;
 
     if (lang == "lua")
         return new HighlightLua;
@@ -156,6 +157,9 @@ Highlight *Highlight::create(const std::string_view &lang) {
 
     if (lang == "d")
         return new HighlightC(is_keyword_d);
+
+    if (lang == "r")
+        return new HighlightR;
 
     if (lang == "zig")
         return new HighlightZig;
@@ -198,6 +202,9 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "qbasic" || //
         lang == "freebasic")
         return new HighlightBasic;
+
+    if (lang == "matlab")
+        return new HighlightMatlab;
 
     return nullptr;
 }

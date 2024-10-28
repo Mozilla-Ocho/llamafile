@@ -16,60 +16,40 @@
 // limitations under the License.
 
 #include "highlight.h"
-#include "string.h"
-#include <cosmo.h>
+
 #include <ctype.h>
 
 enum {
     NORMAL,
     WORD,
+    COMMENT,
     QUOTE,
     QUOTE_BACKSLASH,
     DQUOTE,
     DQUOTE_BACKSLASH,
-    SLASH,
-    SLASH_SLASH,
-    BACKSLASH,
-    BACKSLASH_BACKSLASH,
 };
 
-HighlightZig::HighlightZig() {
+HighlightMatlab::HighlightMatlab() {
 }
 
-HighlightZig::~HighlightZig() {
+HighlightMatlab::~HighlightMatlab() {
 }
 
-void HighlightZig::feed(std::string *r, std::string_view input) {
+void HighlightMatlab::feed(std::string *r, std::string_view input) {
+    int c;
     for (size_t i = 0; i < input.size(); ++i) {
-        wchar_t c;
-        int b = input[i] & 255;
-        if (!u_) {
-            if (b < 0300) {
-                c = b;
-            } else {
-                c_ = ThomPikeByte(b);
-                u_ = ThomPikeLen(b) - 1;
-                continue;
-            }
-        } else if (ThomPikeCont(b)) {
-            c = c_ = ThomPikeMerge(c_, b);
-            if (--u_)
-                continue;
-        } else {
-            u_ = 0;
-            c = b;
-        }
+        c = input[i] & 255;
         switch (t_) {
 
         Normal:
         case NORMAL:
-            if (!isascii(c) || isalpha(c) || c == '_' || c == '@') {
+            if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                append_wchar(&word_, c);
-            } else if (c == '/') {
-                t_ = SLASH;
-            } else if (c == '\\') {
-                t_ = BACKSLASH;
+                word_ += c;
+            } else if (c == '%') {
+                t_ = COMMENT;
+                *r += HI_COMMENT;
+                *r += '%';
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
@@ -79,27 +59,23 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
                 *r += HI_STRING;
                 *r += '"';
             } else {
-                append_wchar(r, c);
+                *r += c;
             }
             break;
 
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                append_wchar(&word_, c);
+                word_ += c;
             } else {
-                if (is_keyword_zig(word_.data(), word_.size())) {
+                if (is_keyword_matlab(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                } else if (is_keyword_zig_type(word_.data(), word_.size())) {
-                    *r += HI_TYPE;
-                    *r += word_;
-                    *r += HI_RESET;
-                } else if (is_keyword_zig_builtin(word_.data(), word_.size())) {
+                } else if (is_keyword_matlab_builtin(word_.data(), word_.size())) {
                     *r += HI_BUILTIN;
                     *r += word_;
                     *r += HI_RESET;
-                } else if (is_keyword_zig_constant(word_.data(), word_.size())) {
+                } else if (is_keyword_matlab_constant(word_.data(), word_.size())) {
                     *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
@@ -112,41 +88,16 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        case BACKSLASH:
-            if (c == '\\') {
-                *r += HI_STRING;
-                *r += "\\\\";
-                t_ = BACKSLASH_BACKSLASH;
-            } else {
-                *r += '\\';
-                t_ = NORMAL;
-                goto Normal;
-            }
-            break;
-
-        case SLASH_SLASH:
-        case BACKSLASH_BACKSLASH:
-            append_wchar(r, c);
+        case COMMENT:
+            *r += c;
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
             }
             break;
 
-        case SLASH:
-            if (c == '/') {
-                *r += HI_COMMENT;
-                *r += "//";
-                t_ = SLASH_SLASH;
-            } else {
-                *r += '/';
-                t_ = NORMAL;
-                goto Normal;
-            }
-            break;
-
         case QUOTE:
-            append_wchar(r, c);
+            *r += c;
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -156,12 +107,12 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE_BACKSLASH:
-            append_wchar(r, c);
+            *r += c;
             t_ = QUOTE;
             break;
 
         case DQUOTE:
-            append_wchar(r, c);
+            *r += c;
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -171,7 +122,7 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            append_wchar(r, c);
+            *r += c;
             t_ = DQUOTE;
             break;
 
@@ -181,22 +132,18 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightZig::flush(std::string *r) {
+void HighlightMatlab::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_zig(word_.data(), word_.size())) {
+        if (is_keyword_matlab(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
-        } else if (is_keyword_zig_type(word_.data(), word_.size())) {
-            *r += HI_TYPE;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_keyword_zig_builtin(word_.data(), word_.size())) {
+        } else if (is_keyword_matlab_builtin(word_.data(), word_.size())) {
             *r += HI_BUILTIN;
             *r += word_;
             *r += HI_RESET;
-        } else if (is_keyword_zig_constant(word_.data(), word_.size())) {
+        } else if (is_keyword_matlab_constant(word_.data(), word_.size())) {
             *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
@@ -205,18 +152,11 @@ void HighlightZig::flush(std::string *r) {
         }
         word_.clear();
         break;
-    case SLASH:
-        *r += '/';
-        break;
-    case BACKSLASH:
-        *r += '\\';
-        break;
     case QUOTE:
     case QUOTE_BACKSLASH:
     case DQUOTE:
     case DQUOTE_BACKSLASH:
-    case SLASH_SLASH:
-    case BACKSLASH_BACKSLASH:
+    case COMMENT:
         *r += HI_RESET;
         break;
     default:

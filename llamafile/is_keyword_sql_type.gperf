@@ -1,0 +1,50 @@
+%{
+#include <string.h>
+#include <libc/str/tab.h>
+#define GPERF_DOWNCASE
+%}
+%pic
+%ignore-case
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_sql_type
+%%
+BIGINT
+BIGSERIAL
+BIT
+BLOB
+BOOLEAN
+BYTE
+BYTEINT
+BYTES
+CHAR
+CHARACTER
+DATE
+DATETIME
+DECIMAL
+DOUBLE
+FLOAT
+FLOAT4
+FLOAT8
+INTEGER
+INTERVAL
+MEDIUMBLOB
+MEDIUMINT
+MEDIUMTEXT
+NATIVE
+NUMBER
+NUMERIC
+PRECISION
+REAL
+SERIAL
+SMALLINT
+SMALLSERIAL
+TEXT
+TIME
+TIMESTAMP
+TINYBLOB
+TINYINT
+TINYTEXT
+VARCHAR
+VARYING

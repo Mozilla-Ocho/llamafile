@@ -2585,6 +2585,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             FLAG_precise = true;
         }
+        else if (arg == "--ascii")
+        {
+            FLAG_ascii = true;
+        }
         else if (arg == "--trap")
         {
             FLAG_trap = true;

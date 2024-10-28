@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
 extern bool FLAGS_READY;
+extern bool FLAG_ascii;
 extern bool FLAG_fast;
 extern bool FLAG_iq;
 extern bool FLAG_log_disable;

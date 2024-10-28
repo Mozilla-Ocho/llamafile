@@ -89,7 +89,7 @@ void HighlightCobol::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_' || c == '-') {
+            if (!isascii(c) || isalnum(c) || c == '_' || c == '-') {
                 word_ += c;
             } else if (c == '.' && word_[0] == '.') {
                 word_ += c;

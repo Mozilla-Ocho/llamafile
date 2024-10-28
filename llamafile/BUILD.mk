@@ -9,13 +9,16 @@ LLAMAFILE_INCS = $(filter %.inc,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_C = $(filter %.c,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_CU = $(filter %.cu,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_CPP = $(filter %.cpp,$(LLAMAFILE_FILES))
-LLAMAFILE_SRCS = $(LLAMAFILE_SRCS_C) $(LLAMAFILE_SRCS_CPP) $(LLAMAFILE_SRCS_CU)
+LLAMAFILE_SRCS_GPERF = $(filter %.gperf,$(LLAMAFILE_FILES))
+LLAMAFILE_SRCS_GPERF_C = $(LLAMAFILE_SRCS_GPERF:%.gperf=o/$(MODE)/%.c)
+LLAMAFILE_SRCS = $(LLAMAFILE_SRCS_C) $(LLAMAFILE_SRCS_CPP) $(LLAMAFILE_SRCS_CU) $(LLAMAFILE_SRCS_GPERF)
 LLAMAFILE_DOCS = $(filter %.1,$(LLAMAFILE_FILES))
 
 LLAMAFILE_OBJS :=					\
 	$(LLAMAFILE_SRCS_C:%.c=o/$(MODE)/%.o)		\
 	$(LLAMAFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.o)	\
-	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)
+	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)		\
+	$(LLAMAFILE_SRCS_GPERF_C:%.c=%.o)		\
 
 $(LLAMAFILE_OBJS): private CCFLAGS += -g
 
@@ -174,8 +177,10 @@ o/$(MODE)/llamafile/highlight_c_test:			\
 		o/$(MODE)/llamafile/highlight_c_test.o	\
 		o/$(MODE)/llamafile/highlight_c.o	\
 		o/$(MODE)/llamafile/is_keyword_c.o	\
+		o/$(MODE)/llamafile/is_keyword_c_constant.o	\
 		o/$(MODE)/llamafile/is_keyword_c_type.o	\
 		o/$(MODE)/llamafile/is_keyword_c_pod.o	\
+		o/$(MODE)/llamafile/is_keyword_cpp.o	\
 
 o/$(MODE)/llamafile/highlight_python_test:			\
 		o/$(MODE)/llamafile/highlight_python_test.o	\

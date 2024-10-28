@@ -93,7 +93,7 @@ void HighlightHaskell::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 symbol_ += c;
             } else {
                 if (is_keyword_haskell(symbol_.data(), symbol_.size())) {

@@ -64,10 +64,13 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
                 u_ = ThomPikeLen(b) - 1;
                 continue;
             }
-        } else {
+        } else if (ThomPikeCont(b)) {
             c = c_ = ThomPikeMerge(c_, b);
             if (--u_)
                 continue;
+        } else {
+            u_ = 0;
+            c = b;
         }
         switch (t_) {
 

@@ -31,22 +31,28 @@ enum {
     SLASH_STAR,
     SLASH_STAR_STAR,
     DQUOTE, // "
+    DQUOTE_DOLLAR, // "
+    DQUOTE_VAR, // "
     DQUOTESTR, // "...
     DQUOTESTR_BACKSLASH, // "...
+    DQUOTESTR_DOLLAR, // "...
+    DQUOTESTR_VAR, // "...
     DQUOTE2, // ""
     DQUOTE3, // """...
     DQUOTE3_BACKSLASH,
+    DQUOTE3_DOLLAR, // """...
+    DQUOTE3_VAR, // """...
     DQUOTE31, // """..."
     DQUOTE32, // """...""
 };
 
-HighlightJava::HighlightJava() {
+HighlightKotlin::HighlightKotlin() {
 }
 
-HighlightJava::~HighlightJava() {
+HighlightKotlin::~HighlightKotlin() {
 }
 
-void HighlightJava::feed(std::string *r, std::string_view input) {
+void HighlightKotlin::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
@@ -69,6 +75,13 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
                 *r += '"';
             } else if (c == '@') {
                 t_ = ANNOTATION;
+            } else if (c == '{' && nesti_ && nesti_ < sizeof(nest_)) {
+                nest_[nesti_++] = NORMAL;
+                *r += '{';
+            } else if (c == '}' && nesti_) {
+                if ((t_ = nest_[--nesti_]) != NORMAL)
+                    *r += HI_STRING;
+                *r += '}';
             } else {
                 *r += c;
             }
@@ -78,12 +91,16 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
             if (!isascii(c) || isalnum(c) || c == '_') {
                 word_ += c;
             } else {
-                if (is_keyword_java(word_.data(), word_.size())) {
+                if (is_keyword_kotlin(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
                 } else if (is_keyword_java_constant(word_.data(), word_.size())) {
                     *r += HI_CONSTANT;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (!word_.empty() && isupper(word_[0])) {
+                    *r += HI_TYPE;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -157,11 +174,14 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTE2;
             } else if (c == '\\') {
                 t_ = DQUOTESTR_BACKSLASH;
+            } else if (c == '$') {
+                t_ = DQUOTESTR_DOLLAR;
             } else {
                 t_ = DQUOTESTR;
             }
             break;
 
+        Dquotestr:
         case DQUOTESTR:
             *r += c;
             if (c == '"') {
@@ -169,6 +189,8 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
                 t_ = NORMAL;
             } else if (c == '\\') {
                 t_ = DQUOTESTR_BACKSLASH;
+            } else if (c == '$') {
+                t_ = DQUOTESTR_DOLLAR;
             }
             break;
 
@@ -177,7 +199,33 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
             t_ = DQUOTESTR;
             break;
 
-        // handle """string""" from java 15+
+        case DQUOTESTR_DOLLAR:
+            if (c == '{' && nesti_ < sizeof(nest_)) {
+                *r += c;
+                *r += HI_RESET;
+                nest_[nesti_++] = DQUOTESTR;
+                t_ = NORMAL;
+            } else if (!isascii(c) || isalpha(c) || c == '_') {
+                *r += HI_BOLD;
+                *r += c;
+                t_ = DQUOTESTR_VAR;
+            } else {
+                *r += c;
+                t_ = DQUOTESTR;
+            }
+            break;
+
+        case DQUOTESTR_VAR:
+            if (!isascii(c) || isalpha(c) || c == '_') {
+                *r += c;
+            } else {
+                *r += HI_UNBOLD;
+                t_ = DQUOTESTR;
+                goto Dquotestr;
+            }
+            break;
+
+        // handle """string"""
         case DQUOTE2:
             if (c == '"') {
                 *r += '"';
@@ -189,10 +237,13 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        Dquote3:
         case DQUOTE3:
             *r += c;
             if (c == '"') {
                 t_ = DQUOTE31;
+            } else if (c == '$') {
+                t_ = DQUOTE3_DOLLAR;
             } else if (c == '\\') {
                 t_ = DQUOTE3_BACKSLASH;
             }
@@ -202,6 +253,8 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
             *r += c;
             if (c == '"') {
                 t_ = DQUOTE32;
+            } else if (c == '$') {
+                t_ = DQUOTE3_DOLLAR;
             } else if (c == '\\') {
                 t_ = DQUOTE3_BACKSLASH;
             } else {
@@ -214,6 +267,8 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '$') {
+                t_ = DQUOTE3_DOLLAR;
             } else if (c == '\\') {
                 t_ = DQUOTE3_BACKSLASH;
             } else {
@@ -224,6 +279,32 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
         case DQUOTE3_BACKSLASH:
             *r += c;
             t_ = DQUOTE3;
+            break;
+
+        case DQUOTE3_DOLLAR:
+            if (c == '{' && nesti_ < sizeof(nest_)) {
+                *r += c;
+                *r += HI_RESET;
+                nest_[nesti_++] = DQUOTE3;
+                t_ = NORMAL;
+            } else if (!isascii(c) || isalpha(c) || c == '_') {
+                *r += HI_BOLD;
+                *r += c;
+                t_ = DQUOTE3_VAR;
+            } else {
+                *r += c;
+                t_ = DQUOTE3;
+            }
+            break;
+
+        case DQUOTE3_VAR:
+            if (!isascii(c) || isalpha(c) || c == '_') {
+                *r += c;
+            } else {
+                *r += HI_UNBOLD;
+                t_ = DQUOTE3;
+                goto Dquote3;
+            }
             break;
 
         case ANNOTATION:
@@ -255,15 +336,19 @@ void HighlightJava::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightJava::flush(std::string *r) {
+void HighlightKotlin::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_java(word_.data(), word_.size())) {
+        if (is_keyword_kotlin(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
             *r += word_;
             *r += HI_RESET;
         } else if (is_keyword_java_constant(word_.data(), word_.size())) {
             *r += HI_CONSTANT;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (!word_.empty() && isupper(word_[0])) {
+            *r += HI_TYPE;
             *r += word_;
             *r += HI_RESET;
         } else {
@@ -285,12 +370,16 @@ void HighlightJava::flush(std::string *r) {
     case DQUOTE:
     case DQUOTESTR:
     case DQUOTESTR_BACKSLASH:
+    case DQUOTESTR_DOLLAR:
+    case DQUOTESTR_VAR:
     case DQUOTE2:
     case DQUOTE3:
     case DQUOTE3_BACKSLASH:
     case DQUOTE31:
     case DQUOTE32:
     case ANNOTATION2:
+    case DQUOTE3_DOLLAR:
+    case DQUOTE3_VAR:
         *r += HI_RESET;
         break;
     default:
