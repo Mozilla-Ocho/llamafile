@@ -46,6 +46,7 @@ bool FLAG_unsecure = false;
 const char *FLAG_file = nullptr;
 const char *FLAG_ip_header = nullptr;
 const char *FLAG_listen = "0.0.0.0:8080";
+const char *FLAG_url_prefix = nullptr;
 const char *FLAG_model = nullptr;
 const char *FLAG_prompt = nullptr;
 double FLAG_token_rate = 1;
@@ -134,6 +135,13 @@ void llamafile_get_flags(int argc, char **argv) {
             if (i == argc)
                 missing("--listen");
             FLAG_listen = argv[i++];
+            continue;
+        }
+
+        if (!strcmp(flag, "-u") || !strcmp(flag, "--url-prefix")) {
+            if (i == argc)
+                missing("--url-prefix");
+            FLAG_url_prefix = argv[i++];
             continue;
         }
 

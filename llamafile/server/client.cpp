@@ -583,13 +583,32 @@ Client::dispatch()
 bool
 Client::dispatcher()
 {
-    if (path() == "/tokenize")
+    ctl::string_view p = path();
+
+    if (!g_url_prefix.empty()) {
+        if (FLAG_verbose >= 2) {
+             SLOG("request path %.*s", (int)p.size(), p.data());
+        }
+
+        size_t prefix_len = g_url_prefix.size();
+        if (p.size() < prefix_len ||
+            memcmp(p.data(), g_url_prefix.c_str(), prefix_len) != 0) {
+            SLOG("path prefix mismatch");
+            return send_error(404);
+        }
+
+        // Adjust path view to exclude prefix
+        p = ctl::string_view(p.data() + prefix_len,
+                           p.size() - prefix_len);
+    }
+
+    if (p == "/tokenize")
         return tokenize();
-    if (path() == "/embedding")
+    if (p == "/embedding")
         return embedding();
-    if (path() == "/v1/embeddings")
+    if (p == "/v1/embeddings")
         return embedding();
-    if (path() == "/completion")
+    if (p == "/completion")
         return completion();
     return send_error(404);
 }

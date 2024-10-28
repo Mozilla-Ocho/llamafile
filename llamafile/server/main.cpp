@@ -29,9 +29,11 @@
 #include "signals.h"
 #include "time.h"
 #include "tokenbucket.h"
+#include "utils.h"
 
 Server* g_server;
 llama_model* g_model;
+ctl::string g_url_prefix;
 
 int
 main(int argc, char* argv[])
@@ -57,6 +59,9 @@ main(int argc, char* argv[])
     // get config
     LoadZipArgs(&argc, &argv);
     llamafile_get_flags(argc, argv);
+
+    // normalize URL prefix
+    g_url_prefix = normalize_url_prefix(FLAG_url_prefix);
 
     // initialize subsystems
     time_init();
