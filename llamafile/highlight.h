@@ -188,6 +188,7 @@ class HighlightC : public Highlight {
     bool is_pod_ = 0;
     bool is_bol_ = true;
     bool is_cpp_ = false;
+    bool is_define_ = false;
     bool is_include_ = false;
     std::string word_;
     std::string heredoc_;
@@ -229,6 +230,8 @@ class HighlightJs : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
     int expect_;
     std::string word_;

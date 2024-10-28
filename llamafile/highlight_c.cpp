@@ -38,6 +38,7 @@ enum {
     TRIGRAPH,
     CPP_LT,
     BACKSLASH,
+    UNIVERSAL,
 };
 
 HighlightC::HighlightC(is_keyword_f *is_keyword, //
@@ -68,7 +69,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             } else if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
                 word_ += c;
-            } else if (c == '#' && is_bol_) {
+            } else if (c == '#' && is_bol_ && !is_cpp_ && !is_define_) {
                 is_cpp_ = true;
                 *r += HI_BUILTIN;
                 *r += '#';
@@ -76,9 +77,8 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                 *r += HI_STRING;
                 *r += '<';
                 t_ = CPP_LT;
-            } else if (c == '\\' && is_cpp_) {
+            } else if (c == '\\') {
                 t_ = BACKSLASH;
-                *r += '\\';
             } else if (c == '/') {
                 t_ = SLASH;
             } else if (c == '?') {
@@ -98,6 +98,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                     is_include_ = false;
                     is_cpp_ = false;
                 }
+                is_define_ = false;
             } else {
                 *r += c;
             }
@@ -115,6 +116,10 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                         *r += HI_RESET;
                         if (word_ == "include" || word_ == "include_next")
                             is_include_ = true;
+                        if (word_ == "define") {
+                            is_cpp_ = false;
+                            is_define_ = true;
+                        }
                     } else if (is_keyword_c_constant(word_.data(), word_.size())) {
                         *r += HI_CONSTANT;
                         *r += word_;
@@ -156,8 +161,35 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             break;
 
         case BACKSLASH:
-            *r += c;
-            t_ = NORMAL;
+            if (c == 'u') {
+                *r += HI_ESCAPE;
+                *r += "\\u";
+                t_ = UNIVERSAL;
+                i_ = 4;
+            } else if (c == 'U') {
+                *r += HI_ESCAPE;
+                *r += "\\U";
+                t_ = UNIVERSAL;
+                i_ = 8;
+            } else {
+                *r += '\\';
+                *r += c;
+                t_ = NORMAL;
+            }
+            break;
+
+        case UNIVERSAL:
+            if (isascii(c) && isxdigit(c)) {
+                *r += c;
+                if (!--i_) {
+                    *r += HI_RESET;
+                    t_ = NORMAL;
+                }
+            } else {
+                *r += HI_RESET;
+                t_ = NORMAL;
+                goto Normal;
+            }
             break;
 
         case QUESTION:
@@ -386,6 +418,11 @@ void HighlightC::flush(std::string *r) {
         if (is_cpp_)
             *r += HI_RESET;
         break;
+    case BACKSLASH:
+        *r += '\\';
+        if (is_cpp_)
+            *r += HI_RESET;
+        break;
     case QUOTE:
     case QUOTE_BACKSLASH:
     case DQUOTE:
@@ -404,8 +441,9 @@ void HighlightC::flush(std::string *r) {
         break;
     }
     is_include_ = false;
-    is_pod_ = false;
+    is_define_ = false;
     is_cpp_ = false;
+    is_pod_ = false;
     is_bol_ = true;
     t_ = NORMAL;
 }

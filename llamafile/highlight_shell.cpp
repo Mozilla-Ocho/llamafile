@@ -66,6 +66,8 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
             u_ = 0;
             c = b;
         }
+        if (c == 0xFEFF)
+            continue; // utf-8 bom
         switch (t_) {
 
         Normal:
