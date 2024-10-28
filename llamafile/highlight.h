@@ -471,8 +471,11 @@ class HighlightShell : public Highlight {
     int u_ = 0;
     int t_ = 0;
     int i_ = 0;
+    int curl_ = 0;
+    int last_ = 0;
     bool pending_heredoc_ = false;
     bool indented_heredoc_ = false;
+    bool no_interpolation_ = false;
     std::string word_;
     std::string heredoc_;
 };

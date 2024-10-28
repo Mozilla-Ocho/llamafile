@@ -48,40 +48,7 @@ static std::string extname(const std::string_view path) {
     return std::string(name.substr(dot_pos + 1));
 }
 
-int main(int argc, char *argv[]) {
-
-    // process flags
-    int opt;
-    int infd = 0;
-    int outfd = 1;
-    const char *lang = nullptr;
-    const char *inpath = nullptr;
-    while ((opt = getopt(argc, argv, "hl:o:")) != -1) {
-        switch (opt) {
-        case 'h':
-            printf("usage: %s [-l LANG] [-o OUTFILE] [INFILE]\n", argv[0]);
-            exit(0);
-        case 'l':
-            lang = optarg;
-            break;
-        case 'o':
-            if ((outfd = creat(optarg, 0644)) == -1) {
-                perror(optarg);
-                exit(1);
-            }
-            break;
-        default:
-            exit(1);
-        }
-    }
-    if (optind < argc) {
-        inpath = argv[optind];
-        if ((infd = open(inpath, O_RDONLY)) == -1) {
-            perror(inpath);
-            exit(1);
-        }
-    }
-
+static void highlight(int infd, int outfd, const char *lang, const char *inpath) {
     // create syntax highlighter
     Highlight *h;
     const char *ext;
@@ -122,4 +89,45 @@ int main(int argc, char *argv[]) {
     res.clear();
     H.flush(&res);
     write(outfd, res.data(), res.size());
+}
+
+int main(int argc, char *argv[]) {
+
+    // process flags
+    int opt;
+    int outfd = 1;
+    const char *lang = nullptr;
+    while ((opt = getopt(argc, argv, "hl:o:")) != -1) {
+        switch (opt) {
+        case 'h':
+            printf("usage: %s [-l LANG] [-o OUTFILE] [INFILE]\n", argv[0]);
+            exit(0);
+        case 'l':
+            lang = optarg;
+            break;
+        case 'o':
+            if ((outfd = creat(optarg, 0644)) == -1) {
+                perror(optarg);
+                exit(1);
+            }
+            break;
+        default:
+            exit(1);
+        }
+    }
+
+    // process files
+    if (optind == argc) {
+        highlight(0, outfd, lang, 0);
+    } else {
+        for (int i = optind; i < argc; ++i) {
+            int infd;
+            const char *inpath = argv[i];
+            if ((infd = open(inpath, O_RDONLY)) == -1) {
+                perror(inpath);
+                exit(1);
+            }
+            highlight(infd, outfd, lang, inpath);
+        }
+    }
 }

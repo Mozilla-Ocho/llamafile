@@ -259,9 +259,9 @@ void HighlightTypescript::feed(std::string *r, std::string_view input) {
 
         case TICK_DOLLAR:
             if (c == '{' && nesti_ < sizeof(nest_)) {
-                // this is how the typescript playground highlights
-                *r += HI_RESET;
+                *r += HI_BOLD;
                 *r += '$';
+                *r += HI_UNBOLD;
                 *r += HI_STRING;
                 *r += '{';
                 *r += HI_RESET;
