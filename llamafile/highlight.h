@@ -21,6 +21,7 @@
 
 #define HI_RESET "\033[0m"
 #define HI_BOLD "\033[1m"
+#define HI_UNBOLD "\033[22m"
 #define HI_ITALIC HI_INVERT
 #define HI_INVERT "\033[7m"
 #define HI_KEYWORD "\033[1;34m" // bold blue
@@ -86,6 +87,7 @@ is_keyword_f is_keyword_php_constant;
 is_keyword_f is_keyword_csharp;
 is_keyword_f is_keyword_csharp_constant;
 is_keyword_f is_keyword_kotlin;
+is_keyword_f is_keyword_kotlin_type;
 is_keyword_f is_keyword_lua;
 is_keyword_f is_keyword_lua_builtin;
 is_keyword_f is_keyword_lua_constant;
@@ -173,8 +175,11 @@ class HighlightC : public Highlight {
 
   private:
     int t_ = 0;
-    int i_;
+    int i_ = 0;
     bool is_pod_ = 0;
+    bool is_bol_ = true;
+    bool is_cpp_ = false;
+    bool is_include_ = false;
     std::string word_;
     std::string heredoc_;
     is_keyword_f *is_type_;
@@ -185,7 +190,7 @@ class HighlightC : public Highlight {
 
 class HighlightJava : public Highlight {
   public:
-    explicit HighlightJava(is_keyword_f *is_keyword);
+    HighlightJava();
     ~HighlightJava() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
@@ -193,7 +198,6 @@ class HighlightJava : public Highlight {
   private:
     int t_ = 0;
     std::string word_;
-    is_keyword_f *is_keyword_;
 };
 
 class HighlightGo : public Highlight {
@@ -576,7 +580,7 @@ class HighlightBasic : public Highlight {
 
   private:
     int t_ = 0;
-    bool bol_ = true;
+    bool is_bol_ = true;
     std::string word_;
 };
 
@@ -589,8 +593,8 @@ class HighlightLd : public Highlight {
 
   private:
     int t_ = 0;
-    bool bol_ = true;
-    bool cpp_ = false;
+    bool is_bol_ = true;
+    bool is_cpp_ = false;
     std::string word_;
 };
 
@@ -606,4 +610,18 @@ class HighlightTex : public Highlight {
     int u_ = 0;
     int t_ = 0;
     std::string word_;
+};
+
+class HighlightKotlin : public Highlight {
+  public:
+    HighlightKotlin();
+    ~HighlightKotlin() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int nesti_ = 0;
+    std::string word_;
+    unsigned char nest_[16];
 };

@@ -19,8 +19,6 @@
 
 #include <ctype.h>
 
-// TODO: Support --[[ syntax
-
 enum {
     NORMAL,
     WORD,
@@ -29,6 +27,8 @@ enum {
     DQUOTE,
     DQUOTE_BACKSLASH,
     HYPHEN,
+    HYPHEN_HYPHEN,
+    HYPHEN_HYPHEN_LSB,
     COMMENT,
     TICK,
     LSB,
@@ -100,7 +100,7 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
             if (c == '-') {
                 *r += HI_COMMENT;
                 *r += "--";
-                t_ = COMMENT;
+                t_ = HYPHEN_HYPHEN;
             } else {
                 *r += '-';
                 t_ = NORMAL;
@@ -108,6 +108,31 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case HYPHEN_HYPHEN:
+            if (c == '[') {
+                *r += '[';
+                t_ = HYPHEN_HYPHEN_LSB;
+                level1_ = 0;
+            } else {
+                t_ = COMMENT;
+                goto Comment;
+            }
+            break;
+
+        case HYPHEN_HYPHEN_LSB:
+            if (c == '=') {
+                *r += '=';
+                ++level1_;
+            } else if (c == '[') {
+                *r += '[';
+                t_ = LITERAL;
+            } else {
+                t_ = COMMENT;
+                goto Comment;
+            }
+            break;
+
+        Comment:
         case COMMENT:
             *r += c;
             if (c == '\n') {
@@ -184,6 +209,8 @@ void HighlightLua::feed(std::string *r, std::string_view input) {
                 } else {
                     level2_ = 0;
                 }
+            } else {
+                t_ = LITERAL;
             }
             break;
 
@@ -228,6 +255,8 @@ void HighlightLua::flush(std::string *r) {
     case COMMENT:
     case LITERAL:
     case LITERAL_RSB:
+    case HYPHEN_HYPHEN:
+    case HYPHEN_HYPHEN_LSB:
         *r += HI_RESET;
         break;
     default:

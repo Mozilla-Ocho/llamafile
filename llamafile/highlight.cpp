@@ -69,7 +69,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightJs(is_keyword_typescript, is_keyword_typescript_type);
 
     if (lang == "java")
-        return new HighlightJava(is_keyword_java);
+        return new HighlightJava;
 
     if (lang == "py" || //
         lang == "python")
@@ -120,7 +120,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "kt" || //
         lang == "kts" || //
         lang == "kotlin")
-        return new HighlightJava(is_keyword_kotlin);
+        return new HighlightKotlin;
 
     if (lang == "lua")
         return new HighlightLua;

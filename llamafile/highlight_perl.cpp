@@ -160,10 +160,13 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
                 u_ = ThomPikeLen(b) - 1;
                 continue;
             }
-        } else {
+        } else if (ThomPikeCont(b)) {
             c_ = c = ThomPikeMerge(c_, b);
             if (--u_)
                 continue;
+        } else {
+            u_ = 0;
+            c_ = c = b;
         }
         switch (t_) {
 
@@ -301,7 +304,7 @@ void HighlightPerl::feed(std::string *r, std::string_view input) {
             // fallthrough
 
         case VAR2:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 append_wchar(r, c);
             } else {
                 *r += HI_RESET;

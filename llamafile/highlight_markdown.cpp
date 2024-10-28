@@ -57,10 +57,13 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 u_ = ThomPikeLen(b) - 1;
                 continue;
             }
-        } else {
+        } else if (ThomPikeCont(b)) {
             c = c_ = ThomPikeMerge(c_, b);
             if (--u_)
                 continue;
+        } else {
+            u_ = 0;
+            c = b;
         }
         switch (t_) {
 
@@ -322,5 +325,9 @@ void HighlightMarkdown::flush(std::string *r) {
     default:
         break;
     }
+    c_ = 0;
+    u_ = 0;
     t_ = NORMAL;
+    bol_ = true;
+    tail_ = false;
 }

@@ -97,7 +97,7 @@ void HighlightPhp::feed(std::string *r, std::string_view input) {
             break;
 
         case VAR:
-            if (!isascii(c) || isalpha(c) || isdigit(c) || c == '_') {
+            if (!isascii(c) || isalnum(c) || c == '_') {
                 *r += c;
             } else {
                 *r += HI_RESET;

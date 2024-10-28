@@ -7,24 +7,6 @@
 %readonly-tables
 %define lookup-function-name is_keyword_c_builtin
 %%
-"#define"
-"#elif"
-"#elifdef"
-"#elifndef"
-"#else"
-"#embed"
-"#endif"
-"#error"
-"#if"
-"#ifdef"
-"#ifndef"
-"#import"
-"#include"
-"#include_next"
-"#line"
-"#pragma"
-"#undef"
-"#warning"
 COSMOPOLITAN_CXX_END_
 COSMOPOLITAN_CXX_START_
 COSMOPOLITAN_CXX_USING_
@@ -2744,9 +2726,6 @@ __builtin_wrpie
 __conceal
 __dll_import
 __expropriate
-__has_attribute
-__has_builtin
-__has_cpp_attribute
 __has_feature
 __has_include
 __has_nothrow_assign
@@ -2786,5 +2765,4 @@ __veil
 __vex
 __weak_reference
 __yoink
-defined
 static_assert

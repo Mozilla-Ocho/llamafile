@@ -35,6 +35,8 @@ enum {
     RAW,
     QUESTION,
     TRIGRAPH,
+    CPP_LT,
+    BACKSLASH,
 };
 
 HighlightC::HighlightC(is_keyword_f *is_keyword, //
@@ -60,9 +62,20 @@ void HighlightC::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (c == 'R') {
                 t_ = R;
-            } else if (!isascii(c) || isalpha(c) || c == '_' || c == '#') {
+            } else if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
                 word_ += c;
+            } else if (c == '#' && is_bol_) {
+                is_cpp_ = true;
+                *r += HI_BUILTIN;
+                *r += '#';
+            } else if (c == '<' && is_include_) {
+                *r += HI_STRING;
+                *r += '<';
+                t_ = CPP_LT;
+            } else if (c == '\\' && is_cpp_) {
+                t_ = BACKSLASH;
+                *r += '\\';
             } else if (c == '/') {
                 t_ = SLASH;
             } else if (c == '?') {
@@ -70,11 +83,18 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '\'';
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '"';
+            } else if (c == '\n') {
+                *r += '\n';
+                if (is_cpp_) {
+                    *r += HI_RESET;
+                    is_include_ = false;
+                    is_cpp_ = false;
+                }
             } else {
                 *r += c;
             }
@@ -82,38 +102,59 @@ void HighlightC::feed(std::string *r, std::string_view input) {
 
         Word:
         case WORD:
-            if (!isascii(c) || isalnum(c) || c == '_' || c == '$' || c == '#') {
+            if (!isascii(c) || isalnum(c) || c == '_' || c == '$') {
                 word_ += c;
             } else {
-                if (is_keyword_(word_.data(), word_.size())) {
-                    *r += HI_KEYWORD;
-                    *r += word_;
-                    *r += HI_RESET;
-                    if (is_keyword_c_pod(word_.data(), word_.size()))
-                        is_pod_ = true;
-                } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
-                    *r += HI_TYPE;
-                    *r += word_;
-                    *r += HI_RESET;
-                    is_pod_ = false;
-                } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-                    *r += HI_BUILTIN;
-                    *r += word_;
-                    *r += HI_RESET;
-                    is_pod_ = false;
-                } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
-                    *r += HI_CONSTANT;
-                    *r += word_;
-                    *r += HI_RESET;
-                    is_pod_ = false;
+                if (is_cpp_) {
+                    if (is_keyword_cpp(word_.data(), word_.size())) {
+                        *r += HI_BUILTIN;
+                        *r += word_;
+                        *r += HI_RESET;
+                        if (word_ == "include" || word_ == "include_next")
+                            is_include_ = true;
+                    } else if (is_keyword_c_constant(word_.data(), word_.size())) {
+                        *r += HI_CONSTANT;
+                        *r += word_;
+                        *r += HI_RESET;
+                    } else {
+                        *r += word_;
+                    }
                 } else {
-                    *r += word_;
-                    is_pod_ = false;
+                    if (is_keyword_(word_.data(), word_.size())) {
+                        *r += HI_KEYWORD;
+                        *r += word_;
+                        *r += HI_RESET;
+                        if (is_keyword_c_pod(word_.data(), word_.size()))
+                            is_pod_ = true;
+                    } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
+                        *r += HI_TYPE;
+                        *r += word_;
+                        *r += HI_RESET;
+                        is_pod_ = false;
+                    } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
+                        *r += HI_BUILTIN;
+                        *r += word_;
+                        *r += HI_RESET;
+                        is_pod_ = false;
+                    } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
+                        *r += HI_CONSTANT;
+                        *r += word_;
+                        *r += HI_RESET;
+                        is_pod_ = false;
+                    } else {
+                        *r += word_;
+                        is_pod_ = false;
+                    }
                 }
                 word_.clear();
                 t_ = NORMAL;
                 goto Normal;
             }
+            break;
+
+        case BACKSLASH:
+            *r += c;
+            t_ = NORMAL;
             break;
 
         case QUESTION:
@@ -203,6 +244,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             t_ = QUOTE;
             break;
 
+        case CPP_LT:
+            *r += c;
+            if (c == '>') {
+                *r += HI_RESET;
+                t_ = NORMAL;
+            }
+            break;
+
         case DQUOTE:
             *r += c;
             if (c == '"') {
@@ -258,44 +307,74 @@ void HighlightC::feed(std::string *r, std::string_view input) {
         default:
             __builtin_unreachable();
         }
+        if (is_bol_) {
+            if (!isspace(c))
+                is_bol_ = false;
+        } else {
+            if (c == '\n')
+                is_bol_ = true;
+        }
     }
 }
 
 void HighlightC::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_(word_.data(), word_.size())) {
-            *r += HI_KEYWORD;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
-            *r += HI_TYPE;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
-            *r += HI_BUILTIN;
-            *r += word_;
-            *r += HI_RESET;
-        } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
-            *r += HI_CONSTANT;
-            *r += word_;
-            *r += HI_RESET;
+        if (is_cpp_) {
+            if (is_keyword_cpp(word_.data(), word_.size())) {
+                *r += HI_BUILTIN;
+                *r += word_;
+                *r += HI_RESET;
+            } else if (is_keyword_c_constant(word_.data(), word_.size())) {
+                *r += HI_CONSTANT;
+                *r += word_;
+                *r += HI_RESET;
+            } else {
+                *r += word_;
+                *r += HI_RESET;
+            }
         } else {
-            *r += word_;
+            if (is_keyword_(word_.data(), word_.size())) {
+                *r += HI_KEYWORD;
+                *r += word_;
+                *r += HI_RESET;
+            } else if (is_pod_ || (is_type_ && is_type_(word_.data(), word_.size()))) {
+                *r += HI_TYPE;
+                *r += word_;
+                *r += HI_RESET;
+            } else if (is_builtin_ && is_builtin_(word_.data(), word_.size())) {
+                *r += HI_BUILTIN;
+                *r += word_;
+                *r += HI_RESET;
+            } else if (is_constant_ && is_constant_(word_.data(), word_.size())) {
+                *r += HI_CONSTANT;
+                *r += word_;
+                *r += HI_RESET;
+            } else {
+                *r += word_;
+            }
         }
         word_.clear();
         break;
     case SLASH:
         *r += '/';
+        if (is_cpp_)
+            *r += HI_RESET;
         break;
     case QUESTION:
         *r += '?';
+        if (is_cpp_)
+            *r += HI_RESET;
         break;
     case TRIGRAPH:
         *r += "??";
+        if (is_cpp_)
+            *r += HI_RESET;
         break;
     case R:
         *r += 'R';
+        if (is_cpp_)
+            *r += HI_RESET;
         break;
     case QUOTE:
     case QUOTE_BACKSLASH:
@@ -309,8 +388,13 @@ void HighlightC::flush(std::string *r) {
         *r += HI_RESET;
         break;
     default:
+        if (is_cpp_)
+            *r += HI_RESET;
         break;
     }
+    is_include_ = false;
     is_pod_ = false;
+    is_cpp_ = false;
+    is_bol_ = true;
     t_ = NORMAL;
 }

@@ -218,6 +218,10 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         FLAG_iq = true;
         return true;
     }
+    if (arg == "--ascii") {
+        FLAG_ascii = true;
+        return true;
+    }
     if (arg == "--precise") {
         FLAG_precise = true;
         return true;

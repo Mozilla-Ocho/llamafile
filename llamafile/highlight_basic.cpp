@@ -63,11 +63,11 @@ void HighlightBasic::feed(std::string *r, std::string_view input) {
                 t_ = DQUOTE;
                 *r += HI_STRING;
                 *r += '"';
-            } else if (c == '#' && bol_) {
+            } else if (c == '#' && is_bol_) {
                 t_ = DIRECTIVE;
                 *r += HI_DIRECTIVE;
                 *r += '#';
-            } else if (isdigit(c) && bol_) {
+            } else if (isdigit(c) && is_bol_) {
                 *r += HI_LINENO;
                 *r += c;
                 t_ = LINENO;
@@ -145,12 +145,12 @@ void HighlightBasic::feed(std::string *r, std::string_view input) {
         default:
             __builtin_unreachable();
         }
-        if (bol_) {
+        if (is_bol_) {
             if (!isspace(c))
-                bol_ = false;
+                is_bol_ = false;
         } else {
             if (c == '\n')
-                bol_ = true;
+                is_bol_ = true;
         }
     }
 }
@@ -194,5 +194,6 @@ void HighlightBasic::flush(std::string *r) {
     default:
         break;
     }
+    is_bol_ = true;
     t_ = NORMAL;
 }

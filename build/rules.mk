@@ -5,9 +5,6 @@ LINK.o = $(CXX) $(CCFLAGS) $(LDFLAGS)
 COMPILE.c = $(CC) $(CCFLAGS) $(CFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -c
 COMPILE.cc = $(CXX) $(CCFLAGS) $(CXXFLAGS) $(CPPFLAGS_) $(CPPFLAGS) $(TARGET_ARCH) -c
 
-%.c: %.gperf
-	-gperf --output-file=$@ $<
-
 o/$(MODE)/%.o: %.c $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.c) -o $@ $<
@@ -23,6 +20,9 @@ o/$(MODE)/%.o: %.cc $(COSMOCC)
 o/$(MODE)/%.o: %.cpp $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.cc) -o $@ $<
+
+o/$(MODE)/%.c: %.gperf
+	build/gperf --output-file=$@ $<
 
 o/$(MODE)/%.a:
 	@mkdir -p $(dir $@)/.aarch64

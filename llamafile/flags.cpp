@@ -32,6 +32,7 @@
 #include "llama.cpp/llama.h"
 
 bool FLAGS_READY = false;
+bool FLAG_ascii = false;
 bool FLAG_fast = false;
 bool FLAG_iq = false;
 bool FLAG_log_disable = false;
