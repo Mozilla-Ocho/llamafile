@@ -62,11 +62,11 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "js" || //
         lang == "json" || //
         lang == "javascript")
-        return new HighlightJs(is_keyword_js, nullptr);
+        return new HighlightJs;
 
     if (lang == "ts" || //
         lang == "typescript")
-        return new HighlightJs(is_keyword_typescript, is_keyword_typescript_type);
+        return new HighlightTypescript;
 
     if (lang == "java")
         return new HighlightJava;
@@ -153,7 +153,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightShell;
 
     if (lang == "swift")
-        return new HighlightC(is_keyword_swift, is_keyword_swift_type);
+        return new HighlightSwift;
 
     if (lang == "d")
         return new HighlightC(is_keyword_d);

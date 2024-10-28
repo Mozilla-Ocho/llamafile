@@ -16,7 +16,8 @@
 // limitations under the License.
 
 #include "highlight.h"
-
+#include "string.h"
+#include <cosmo.h>
 #include <ctype.h>
 
 enum {
@@ -32,6 +33,7 @@ enum {
     SLASH_STAR_STAR,
     TICK,
     TICK_BACKSLASH,
+    TICK_DOLLAR,
     REGEX,
     REGEX_BACKSLASH,
     REGEX_SQUARE,
@@ -43,61 +45,90 @@ enum {
     EXPECT_OPERATOR,
 };
 
-HighlightJs::HighlightJs() {
+HighlightTypescript::HighlightTypescript() {
 }
 
-HighlightJs::~HighlightJs() {
+HighlightTypescript::~HighlightTypescript() {
 }
 
-void HighlightJs::feed(std::string *r, std::string_view input) {
-    int c;
+void HighlightTypescript::feed(std::string *r, std::string_view input) {
     for (size_t i = 0; i < input.size(); ++i) {
-        c = input[i] & 255;
+        wchar_t c;
+        int b = input[i] & 255;
+        if (!u_) {
+            if (b < 0300) {
+                c = b;
+            } else {
+                c_ = ThomPikeByte(b);
+                u_ = ThomPikeLen(b) - 1;
+                continue;
+            }
+        } else if (ThomPikeCont(b)) {
+            c = c_ = ThomPikeMerge(c_, b);
+            if (--u_)
+                continue;
+        } else {
+            u_ = 0;
+            c = b;
+        }
         switch (t_) {
 
         Normal:
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                word_ += c;
+                append_wchar(&word_, c);
             } else if (c == '/') {
                 t_ = SLASH;
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '\'';
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                *r += '"';
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
-                *r += c;
+                *r += '`';
                 expect_ = EXPECT_OPERATOR;
+            } else if (c == '{' && nesti_ && nesti_ < sizeof(nest_)) {
+                expect_ = EXPECT_VALUE;
+                *r += '{';
+                nest_[nesti_++] = NORMAL;
+            } else if (c == '}' && nesti_) {
+                if ((t_ = nest_[--nesti_]) != NORMAL)
+                    *r += HI_STRING;
+                *r += '}';
             } else if (c == ')' || c == '}' || c == ']') {
                 expect_ = EXPECT_OPERATOR;
-                *r += c;
+                append_wchar(r, c);
             } else if (ispunct(c)) {
                 expect_ = EXPECT_VALUE;
-                *r += c;
+                append_wchar(r, c);
             } else if (isdigit(c)) {
                 expect_ = EXPECT_OPERATOR;
-                *r += c;
+                append_wchar(r, c);
             } else {
-                *r += c;
+                append_wchar(r, c);
             }
             break;
 
         Word:
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                word_ += c;
+                append_wchar(&word_, c);
             } else {
-                if (is_keyword_js(word_.data(), word_.size())) {
+                if (is_keyword_typescript(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
+                    *r += word_;
+                    *r += HI_RESET;
+                    expect_ = EXPECT_VALUE;
+                } else if (is_keyword_typescript_type(word_.data(), word_.size())) {
+                    *r += HI_TYPE;
                     *r += word_;
                     *r += HI_RESET;
                     expect_ = EXPECT_VALUE;
@@ -134,7 +165,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
                 expect_ = EXPECT_OPERATOR;
                 *r += HI_STRING;
                 *r += '/';
-                *r += c;
+                append_wchar(r, c);
                 if (c == '\\') {
                     t_ = REGEX_BACKSLASH;
                 } else if (c == '[') {
@@ -150,7 +181,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_SLASH:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -158,13 +189,13 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_STAR:
-            *r += c;
+            append_wchar(r, c);
             if (c == '*')
                 t_ = SLASH_STAR_STAR;
             break;
 
         case SLASH_STAR_STAR:
-            *r += c;
+            append_wchar(r, c);
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -174,7 +205,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -184,12 +215,12 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = QUOTE;
             break;
 
         case DQUOTE:
-            *r += c;
+            append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -199,27 +230,54 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = DQUOTE;
             break;
 
+        Tick:
         case TICK:
-            *r += c;
             if (c == '`') {
+                *r += '`';
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '$') {
+                t_ = TICK_DOLLAR;
             } else if (c == '\\') {
+                *r += '\\';
                 t_ = TICK_BACKSLASH;
+            } else {
+                append_wchar(r, c);
             }
             break;
 
         case TICK_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = TICK;
             break;
 
+        case TICK_DOLLAR:
+            if (c == '{' && nesti_ < sizeof(nest_)) {
+                // this is how the typescript playground highlights
+                *r += HI_RESET;
+                *r += '$';
+                *r += HI_STRING;
+                *r += '{';
+                *r += HI_RESET;
+                expect_ = EXPECT_VALUE;
+                nest_[nesti_++] = TICK;
+                t_ = NORMAL;
+            } else {
+                *r += HI_WARNING;
+                *r += '$';
+                *r += HI_UNBOLD;
+                *r += HI_STRING;
+                t_ = TICK;
+                goto Tick;
+            }
+            break;
+
         case REGEX:
-            *r += c;
+            append_wchar(r, c);
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -231,13 +289,13 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case REGEX_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = REGEX;
             break;
 
         case REGEX_SQUARE:
             // because /[/]/g is valid code
-            *r += c;
+            append_wchar(r, c);
             if (c == '\\') {
                 t_ = REGEX_SQUARE_BACKSLASH;
             } else if (c == ']') {
@@ -246,7 +304,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case REGEX_SQUARE_BACKSLASH:
-            *r += c;
+            append_wchar(r, c);
             t_ = REGEX_SQUARE;
             break;
 
@@ -256,11 +314,15 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
     }
 }
 
-void HighlightJs::flush(std::string *r) {
+void HighlightTypescript::flush(std::string *r) {
     switch (t_) {
     case WORD:
-        if (is_keyword_js(word_.data(), word_.size())) {
+        if (is_keyword_typescript(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_typescript_type(word_.data(), word_.size())) {
+            *r += HI_TYPE;
             *r += word_;
             *r += HI_RESET;
         } else if (is_keyword_js_builtin(word_.data(), word_.size())) {
@@ -278,6 +340,10 @@ void HighlightJs::flush(std::string *r) {
         break;
     case SLASH:
         *r += '/';
+        break;
+    case TICK_DOLLAR:
+        *r += '$';
+        *r += HI_RESET;
         break;
     case TICK:
     case TICK_BACKSLASH:
@@ -297,5 +363,7 @@ void HighlightJs::flush(std::string *r) {
     default:
         break;
     }
+    c_ = 0;
+    u_ = 0;
     t_ = NORMAL;
 }

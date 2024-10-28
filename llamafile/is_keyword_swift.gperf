@@ -116,7 +116,6 @@ exclusivity
 exported
 extension
 fallthrough
-false
 file
 fileprivate
 final
@@ -155,7 +154,6 @@ module
 mutableAddressWithNativeOwner
 mutableAddressWithOwner
 mutating
-nil
 noDerivative
 noasync
 noescape
@@ -207,7 +205,6 @@ then
 throw
 throws
 transpose
-true
 try
 typealias
 unavailable

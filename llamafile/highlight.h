@@ -100,6 +100,8 @@ is_keyword_f is_keyword_shell;
 is_keyword_f is_keyword_shell_builtin;
 is_keyword_f is_keyword_swift;
 is_keyword_f is_keyword_swift_type;
+is_keyword_f is_keyword_swift_builtin;
+is_keyword_f is_keyword_swift_constant;
 is_keyword_f is_keyword_d;
 is_keyword_f is_keyword_zig;
 is_keyword_f is_keyword_zig_type;
@@ -221,7 +223,7 @@ class HighlightGo : public Highlight {
 
 class HighlightJs : public Highlight {
   public:
-    HighlightJs(is_keyword_f *is_keyword, is_keyword_f *is_type);
+    HighlightJs();
     ~HighlightJs() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
@@ -230,8 +232,23 @@ class HighlightJs : public Highlight {
     int t_ = 0;
     int expect_;
     std::string word_;
-    is_keyword_f *is_type_;
-    is_keyword_f *is_keyword_;
+};
+
+class HighlightTypescript : public Highlight {
+  public:
+    HighlightTypescript();
+    ~HighlightTypescript() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int c_ = 0;
+    int u_ = 0;
+    int t_ = 0;
+    int expect_;
+    int nesti_ = 0;
+    std::string word_;
+    unsigned char nest_[16];
 };
 
 class HighlightPython : public Highlight {
@@ -655,4 +672,23 @@ class HighlightR : public Highlight {
   private:
     int t_ = 0;
     std::string word_;
+};
+
+class HighlightSwift : public Highlight {
+  public:
+    HighlightSwift();
+    ~HighlightSwift() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int c_ = 0;
+    int u_ = 0;
+    int t_ = 0;
+    int hash1_ = 0;
+    int hash2_ = 0;
+    int nesti_ = 0;
+    std::string word_;
+    unsigned char nest_[16];
+    unsigned char hash_[16];
 };

@@ -227,5 +227,7 @@ void HighlightMake::flush(std::string *r) {
     default:
         break;
     }
+    c_ = 0;
+    u_ = 0;
     t_ = NORMAL;
 }

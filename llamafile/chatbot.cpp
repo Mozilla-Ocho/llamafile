@@ -200,14 +200,11 @@ static void on_help(const std::vector<std::string> &args) {
     if (args.size() == 1) {
         fprintf(stderr, "\
 " BOLD "available commands" RESET "\n\
-  /clear                   restart conversation\n\
   /context                 print context window usage\n\
   /dump [FILE]             print or save context window to file\n\
   /exit                    end program\n\
   /help [COMMAND]          show help\n\
   /manual [on|off]         toggle manual role mode\n\
-  /pop                     restore context window size\n\
-  /push                    push context window size to stack\n\
   /stats                   print performance metrics\n\
 ");
     } else if (args[1] == "context") {
@@ -309,23 +306,23 @@ static void on_context(const std::vector<std::string> &args) {
         printf("use the `-c %d` flag at startup for maximum context\n", max_context);
 }
 
-static void on_clear(const std::vector<std::string> &args) {
+static void print_stack(void) {
+    for (size_t i = g_stack.size(); i--;)
+        printf("%8d\n", g_stack[i]);
+}
+
+static void on_clear(const std::vector<std::string> &args) { // [experimental]
     g_past = g_clear;
     g_stack.clear();
     g_history.resize(g_past);
 }
 
-static void print_stack(void) {
-    for (size_t i = g_stack.size(); i--;)
-        printf("%12d\n", g_stack[i]);
-}
-
-static void on_push(const std::vector<std::string> &args) {
+static void on_push(const std::vector<std::string> &args) { // [experimental]
     g_stack.push_back(g_past);
     print_stack();
 }
 
-static void on_pop(const std::vector<std::string> &args) {
+static void on_pop(const std::vector<std::string> &args) { // [experimental]
     if (g_stack.empty()) {
         fprintf(stderr, BRIGHT_RED "error: context length stack is empty" RESET "\n");
         return;
@@ -373,14 +370,11 @@ static char *on_hint(const char *line, const char **ansi1, const char **ansi2) {
 
 static void on_completion(const char *line, int pos, bestlineCompletions *comp) {
     static const char *const kCompletions[] = {
-        "/clear", // usage: /clear
         "/context", // usage: /context
         "/dump", // usage: /dump [FILE]
         "/exit", // usage: /exit
         "/help", // usage: /help [COMMAND]
         "/manual", // usage: /manual [on|off]
-        "/pop", // usage: /pop
-        "/push", // usage: /push
         "/stats", // usage: /stats
     };
     for (int i = 0; i < sizeof(kCompletions) / sizeof(*kCompletions); ++i)

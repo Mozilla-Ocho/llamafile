@@ -167,7 +167,6 @@ void HighlightKotlin::feed(std::string *r, std::string_view input) {
             t_ = QUOTE;
             break;
 
-        // handle "string"
         case DQUOTE:
             *r += c;
             if (c == '"') {
@@ -210,8 +209,8 @@ void HighlightKotlin::feed(std::string *r, std::string_view input) {
                 *r += c;
                 t_ = DQUOTESTR_VAR;
             } else {
-                *r += c;
                 t_ = DQUOTESTR;
+                goto Dquotestr;
             }
             break;
 
@@ -225,7 +224,6 @@ void HighlightKotlin::feed(std::string *r, std::string_view input) {
             }
             break;
 
-        // handle """string"""
         case DQUOTE2:
             if (c == '"') {
                 *r += '"';
