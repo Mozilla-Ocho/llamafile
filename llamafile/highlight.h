@@ -131,6 +131,9 @@ is_keyword_f is_keyword_ld_warning;
 is_keyword_f is_keyword_matlab;
 is_keyword_f is_keyword_matlab_builtin;
 is_keyword_f is_keyword_matlab_constant;
+is_keyword_f is_keyword_r;
+is_keyword_f is_keyword_r_builtin;
+is_keyword_f is_keyword_r_constant;
 }
 
 class Highlight {
@@ -634,6 +637,18 @@ class HighlightMatlab : public Highlight {
   public:
     HighlightMatlab();
     ~HighlightMatlab() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
+};
+
+class HighlightR : public Highlight {
+  public:
+    HighlightR();
+    ~HighlightR() override;
     void feed(std::string *result, std::string_view input) override;
     void flush(std::string *result) override;
 

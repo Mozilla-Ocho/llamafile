@@ -1,0 +1,23 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_r
+%%
+NA
+NA_character_
+NA_complex_
+NA_integer_
+NA_real_
+break
+else
+for
+function
+if
+in
+next
+repeat
+while

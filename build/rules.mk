@@ -9,6 +9,10 @@ o/$(MODE)/%.o: %.c $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.c) -o $@ $<
 
+o/$(MODE)/%.o: o/$(MODE)/%.c $(COSMOCC)
+	@mkdir -p $(@D)
+	$(COMPILE.c) -o $@ $<
+
 o/$(MODE)/%.o: %.cc $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.cc) -o $@ $<

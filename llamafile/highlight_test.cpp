@@ -57,6 +57,7 @@ const char *const kLanguages[] = {
     "perl", //
     "php!", //
     "python", //
+    "r", //
     "ruby", //
     "rust", //
     "shell", //

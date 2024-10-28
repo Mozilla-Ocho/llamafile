@@ -158,6 +158,9 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "d")
         return new HighlightC(is_keyword_d);
 
+    if (lang == "r")
+        return new HighlightR;
+
     if (lang == "zig")
         return new HighlightZig;
 
