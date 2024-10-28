@@ -127,6 +127,9 @@ is_keyword_f is_keyword_basic_constant;
 is_keyword_f is_keyword_ld;
 is_keyword_f is_keyword_ld_builtin;
 is_keyword_f is_keyword_ld_warning;
+is_keyword_f is_keyword_matlab;
+is_keyword_f is_keyword_matlab_builtin;
+is_keyword_f is_keyword_matlab_constant;
 }
 
 class Highlight {
@@ -624,4 +627,16 @@ class HighlightKotlin : public Highlight {
     int nesti_ = 0;
     std::string word_;
     unsigned char nest_[16];
+};
+
+class HighlightMatlab : public Highlight {
+  public:
+    HighlightMatlab();
+    ~HighlightMatlab() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
 };

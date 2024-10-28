@@ -22,6 +22,7 @@ o/$(MODE)/%.o: %.cpp $(COSMOCC)
 	$(COMPILE.cc) -o $@ $<
 
 o/$(MODE)/%.c: %.gperf
+	@mkdir -p $(@D)
 	build/gperf --output-file=$@ $<
 
 o/$(MODE)/%.a:

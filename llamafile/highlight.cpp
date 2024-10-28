@@ -89,7 +89,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightCobol;
 
     if (lang == "pas" || //
-        lang == "pascal")
+        lang == "pascal" || //
+        lang == "delphi")
         return new HighlightPascal;
 
     if (lang == "go")
@@ -198,6 +199,9 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "qbasic" || //
         lang == "freebasic")
         return new HighlightBasic;
+
+    if (lang == "matlab")
+        return new HighlightMatlab;
 
     return nullptr;
 }

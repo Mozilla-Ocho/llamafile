@@ -29,6 +29,7 @@ enum {
     SLASH,
     SLASH_SLASH,
     SLASH_STAR,
+    SLASH_SLASH_BACKSLASH,
     SLASH_STAR_STAR,
     R,
     R_DQUOTE,
@@ -56,6 +57,8 @@ void HighlightC::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
         c = input[i] & 255;
+        if (c == '\r')
+            continue;
         switch (t_) {
 
         Normal:
@@ -210,7 +213,14 @@ void HighlightC::feed(std::string *r, std::string_view input) {
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = SLASH_SLASH_BACKSLASH;
             }
+            break;
+
+        case SLASH_SLASH_BACKSLASH:
+            *r += c;
+            t_ = SLASH_SLASH;
             break;
 
         case SLASH_STAR:
@@ -381,6 +391,7 @@ void HighlightC::flush(std::string *r) {
     case DQUOTE:
     case DQUOTE_BACKSLASH:
     case SLASH_SLASH:
+    case SLASH_SLASH_BACKSLASH:
     case SLASH_STAR:
     case SLASH_STAR_STAR:
     case R_DQUOTE:

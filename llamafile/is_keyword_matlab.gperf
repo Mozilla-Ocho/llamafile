@@ -1,0 +1,31 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_matlab
+%%
+break
+case
+catch
+classdef
+continue
+else
+elseif
+end
+for
+function
+global
+if
+methods
+otherwise
+parfor
+pause
+persistent
+properties
+return
+switch
+try
+while
