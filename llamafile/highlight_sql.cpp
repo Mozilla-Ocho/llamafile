@@ -76,6 +76,10 @@ void HighlightSql::feed(std::string *r, std::string_view input) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
+                } else if (is_keyword_sql_type(word_.data(), word_.size())) {
+                    *r += HI_TYPE;
+                    *r += word_;
+                    *r += HI_RESET;
                 } else {
                     *r += word_;
                 }
@@ -174,6 +178,10 @@ void HighlightSql::flush(std::string *r) {
     case WORD:
         if (is_keyword_sql(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_sql_type(word_.data(), word_.size())) {
+            *r += HI_TYPE;
             *r += word_;
             *r += HI_RESET;
         } else {
