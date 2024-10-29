@@ -61,7 +61,8 @@ main(int argc, char* argv[])
     llamafile_get_flags(argc, argv);
 
     // normalize URL prefix
-    g_url_prefix = normalize_url_prefix(FLAG_url_prefix);
+    if (FLAG_url_prefix)
+        g_url_prefix = normalize_url_prefix(FLAG_url_prefix);
 
     // initialize subsystems
     time_init();

@@ -15,18 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <ctl/optional.h>
-#include <ctl/string.h>
-#include <ctl/string_view.h>
-
-extern const signed char kHexToInt[256];
-
-bool
-atob(ctl::string_view, bool);
+#include "utils.h"
 
 ctl::string_view
-or_empty(ctl::optional<ctl::string_view> x);
-
-ctl::string
-normalize_url_prefix(ctl::string url_prefix);
+or_empty(ctl::optional<ctl::string_view> x)
+{
+    if (x.has_value())
+        return x.value();
+    return {};
+}

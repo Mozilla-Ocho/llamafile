@@ -587,7 +587,7 @@ Client::dispatcher()
 
     if (!g_url_prefix.empty()) {
         if (FLAG_verbose >= 2) {
-             SLOG("request path %.*s", (int)p.size(), p.data());
+            SLOG("request path %.*s", (int)p.size(), p.data());
         }
 
         size_t prefix_len = g_url_prefix.size();
@@ -598,8 +598,7 @@ Client::dispatcher()
         }
 
         // Adjust path view to exclude prefix
-        p = ctl::string_view(p.data() + prefix_len,
-                           p.size() - prefix_len);
+        p = ctl::string_view(p.data() + prefix_len, p.size() - prefix_len);
     }
 
     if (p == "/tokenize")
@@ -610,6 +609,8 @@ Client::dispatcher()
         return embedding();
     if (p == "/completion")
         return completion();
+
+    SLOG("path not found: %.*s", (int)p.size(), p.data());
     return send_error(404);
 }
 
