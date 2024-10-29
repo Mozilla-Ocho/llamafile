@@ -15,14 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <ctl/string.h>
+#include "slots.h"
 
-ctl::string
-dirname(const ctl::string_view) noexcept;
+Slots::Slots()
+{
+}
 
-ctl::string
-basename(const ctl::string_view) noexcept;
-
-ctl::string
-resolve(const ctl::string_view, const ctl::string_view) noexcept;
+Slots::~Slots()
+{
+}

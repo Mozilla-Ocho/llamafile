@@ -18,8 +18,8 @@
 #include "fastjson.h"
 
 #include <cosmo.h>
-#include <ctl/string.h>
 #include <net/http/escape.h>
+#include <string>
 
 #include "double-conversion/double-to-string.h"
 #include "double-conversion/utils.h"
@@ -95,7 +95,7 @@ encode_json(char* p, double x) noexcept
 }
 
 char*
-encode_json(char* p, const ctl::string_view s) noexcept
+encode_json(char* p, const std::string_view s) noexcept
 {
     *p++ = '"';
     p = encode_js_string_literal(p, s);
@@ -105,7 +105,7 @@ encode_json(char* p, const ctl::string_view s) noexcept
 }
 
 char*
-encode_js_string_literal(char* p, const ctl::string_view s) noexcept
+encode_js_string_literal(char* p, const std::string_view s) noexcept
 {
     uint64_t w;
     size_t i, j, m;

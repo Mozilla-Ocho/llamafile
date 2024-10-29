@@ -41,7 +41,7 @@
     "Referrer-Policy: origin\r\n" \
     "Cache-Control: private; max-age=0\r\n"
 
-using namespace ctl;
+using namespace std;
 
 static void
 on_http_cancel(Client* client)
@@ -195,7 +195,7 @@ Client::transport()
     effective_ip_trusted = client_ip_trusted;
     if (FLAG_ip_header) {
         if (is_loopback_ip(client_ip) || client_ip_trusted) {
-            ctl::string_view ip_header = get_header(FLAG_ip_header);
+            std::string_view ip_header = get_header(FLAG_ip_header);
             if (!ip_header.empty()) {
                 long ip;
                 if ((ip = parse_ip(ip_header)) == -1) {
@@ -274,7 +274,8 @@ Client::send_error(int code, const char* reason)
         reason = GetHttpReason(code);
     SLOG("error %d %s", code, reason);
     char* p = append_http_response_message(obuf.p, code, reason);
-    return send_response(obuf.p, p, string(reason) + "\r\n");
+    (void)!send_response(obuf.p, p, string(reason) + "\r\n");
+    return false;
 }
 
 // appends start of http response message to `p`
@@ -519,14 +520,14 @@ Client::has_at_most_this_element(int h, const string_view s)
     return true;
 }
 
-ctl::string_view
-Client::get_header(const ctl::string_view& key)
+std::string_view
+Client::get_header(const std::string_view& key)
 {
     int h;
     size_t i, keylen;
     if ((h = GetHttpHeader(key.data(), key.size())) != -1) {
         if (msg.headers[h].a)
-            return ctl::string_view(ibuf.p + msg.headers[h].a,
+            return std::string_view(ibuf.p + msg.headers[h].a,
                                     msg.headers[h].b - msg.headers[h].a);
     } else {
         for (i = 0; i < msg.xheaders.n; ++i)
@@ -534,11 +535,11 @@ Client::get_header(const ctl::string_view& key)
                                 key.size(),
                                 ibuf.p + msg.xheaders.p[i].k.a,
                                 msg.xheaders.p[i].k.b - msg.xheaders.p[i].k.a))
-                return ctl::string_view(ibuf.p + msg.xheaders.p[i].v.a,
+                return std::string_view(ibuf.p + msg.xheaders.p[i].v.a,
                                         msg.xheaders.p[i].v.b -
                                           msg.xheaders.p[i].v.a);
     }
-    return ctl::string_view();
+    return std::string_view();
 }
 
 bool
@@ -583,7 +584,7 @@ Client::dispatch()
 bool
 Client::dispatcher()
 {
-    ctl::string_view p = path();
+    std::string_view p = path();
 
     if (!g_url_prefix.empty()) {
         if (FLAG_verbose >= 2) {
@@ -598,7 +599,7 @@ Client::dispatcher()
         }
 
         // Adjust path view to exclude prefix
-        p = ctl::string_view(p.data() + prefix_len, p.size() - prefix_len);
+        p = std::string_view(p.data() + prefix_len, p.size() - prefix_len);
     }
 
     if (p == "/tokenize")
@@ -607,8 +608,8 @@ Client::dispatcher()
         return embedding();
     if (p == "/v1/embeddings")
         return embedding();
-    if (p == "/completion")
-        return completion();
+    if (p == "/v1/chat/completions")
+        return v1_chat_completions();
 
     SLOG("path not found: %.*s", (int)p.size(), p.data());
     return send_error(404);

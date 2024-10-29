@@ -16,17 +16,17 @@
 // limitations under the License.
 
 #pragma once
-#include <ctl/optional.h>
-#include <ctl/string.h>
-#include <ctl/string_view.h>
+#include <optional>
+#include <string>
+#include <string_view>
 
 extern const signed char kHexToInt[256];
 
 bool
-atob(ctl::string_view, bool);
+atob(std::string_view, bool);
 
-ctl::string_view
-or_empty(ctl::optional<ctl::string_view> x);
+std::string_view
+or_empty(std::optional<std::string_view> x);
 
-ctl::string
-normalize_url_prefix(ctl::string url_prefix);
+std::string
+normalize_url_prefix(std::string url_prefix);

@@ -16,38 +16,28 @@
 // limitations under the License.
 
 #pragma once
-#include <atomic>
+#include "llama.cpp/llama.h"
 #include <cosmo.h>
-#include <pthread.h>
-#include <string>
+#include <stdatomic.h>
+#include <time.h>
+#include <vector>
 
-struct Server
+#define SLOT(e) DLL_CONTAINER(Slot, elem, e)
+
+struct Slot
 {
-    Server(int);
-    ~Server();
+    Dll elem_;
+    atomic_int refs_ = 0;
+    llama_context* ctx_ = nullptr;
+    timespec last_used_ = timespec_zero;
+    std::vector<llama_token> history_;
 
-    int accept(unsigned*);
-    errno_t spawn();
-    void terminate();
-    void shutdown();
-    int close();
-    void run();
-    void lock();
-    void unlock();
-    void signal();
-    void wait();
-
-    int fd;
-    Dll* idle_workers = nullptr;
-    Dll* active_workers = nullptr;
-    pthread_cond_t cond_ = PTHREAD_COND_INITIALIZER;
-    pthread_mutex_t lock_ = PTHREAD_MUTEX_INITIALIZER;
-    std::atomic_int worker_count = ATOMIC_VAR_INIT(0);
-    std::atomic_bool terminated = ATOMIC_VAR_INIT(false);
+    Slot();
+    ~Slot();
+    int n_ctx();
+    bool start();
+    bool eval_token(llama_token);
+    bool eval_tokens(std::vector<llama_token>);
+    bool can_use_slot(const std::vector<llama_token>&);
+    bool prefill(const std::vector<llama_token>&);
 };
-
-extern Server* g_server;
-extern std::string g_url_prefix;
-
-int
-create_listening_socket(const char*);

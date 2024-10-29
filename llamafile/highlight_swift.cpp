@@ -92,7 +92,7 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else if (c == '/') {
                 t_ = SLASH;
             } else if (c == '"') {
@@ -116,14 +116,14 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
                     *r += HI_STRING;
                 *r += ')';
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         Word:
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else {
                 if (is_keyword_swift(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -169,7 +169,7 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_SLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -179,18 +179,18 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_SLASH_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = SLASH_SLASH;
             break;
 
         case SLASH_STAR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '*')
                 t_ = SLASH_STAR_STAR;
             break;
 
         case SLASH_STAR_STAR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -224,7 +224,7 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
 
         Dquote:
         case DQUOTE:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '"') {
                 t_ = DQUOTE2;
                 hash2_ = 0;
@@ -238,7 +238,7 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
 
         Dquotestr:
         case DQUOTESTR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '"') {
                 t_ = DQUOTESTR_END;
                 hash2_ = 0;
@@ -298,7 +298,7 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
 
         Dquote3:
         case DQUOTE3:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '"') {
                 t_ = DQUOTE31;
             } else if (c == '\\') {
@@ -361,7 +361,7 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
 
         Regex:
         case REGEX:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '/') {
                 t_ = REGEX_END;
                 hash2_ = 0;
@@ -386,7 +386,7 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
             break;
 
         case REGEX_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = REGEX;
             break;
 

@@ -66,7 +66,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
@@ -83,13 +83,13 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
                 *r += HI_ESCAPE;
                 *r += '\\';
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         case WORD:
             if (!(isspace(c) || c == ';')) {
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else {
                 if (is_keyword_tcl(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -113,7 +113,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             break;
 
         case BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             *r += HI_RESET;
             t_ = NORMAL;
             break;
@@ -132,7 +132,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
 
         case VAR2:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -146,12 +146,12 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
                 *r += '}';
                 t_ = NORMAL;
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         case COMMENT:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -159,7 +159,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -169,7 +169,7 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = DQUOTE;
             break;
 

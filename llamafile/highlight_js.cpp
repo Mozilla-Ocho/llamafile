@@ -93,42 +93,42 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = WORD;
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else if (c == '/') {
                 t_ = SLASH;
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == ')' || c == '}' || c == ']') {
                 expect_ = EXPECT_OPERATOR;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else if (ispunct(c)) {
                 expect_ = EXPECT_VALUE;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else if (isdigit(c)) {
                 expect_ = EXPECT_OPERATOR;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         Word:
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else {
                 if (is_keyword_js(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -168,7 +168,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
                 expect_ = EXPECT_OPERATOR;
                 *r += HI_STRING;
                 *r += '/';
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 if (c == '\\') {
                     t_ = REGEX_BACKSLASH;
                 } else if (c == '[') {
@@ -184,7 +184,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_SLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (is_line_terminator(c)) {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -192,13 +192,13 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_STAR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '*')
                 t_ = SLASH_STAR_STAR;
             break;
 
         case SLASH_STAR_STAR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -208,7 +208,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -218,12 +218,12 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = QUOTE;
             break;
 
         case DQUOTE:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -233,12 +233,12 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = DQUOTE;
             break;
 
         case TICK:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -248,12 +248,12 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case TICK_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = TICK;
             break;
 
         case REGEX:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -265,13 +265,13 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case REGEX_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = REGEX;
             break;
 
         case REGEX_SQUARE:
             // because /[/]/g is valid code
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\\') {
                 t_ = REGEX_SQUARE_BACKSLASH;
             } else if (c == ']') {
@@ -280,7 +280,7 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             break;
 
         case REGEX_SQUARE_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = REGEX_SQUARE;
             break;
 

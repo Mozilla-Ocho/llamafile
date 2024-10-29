@@ -466,3 +466,9 @@ void yaml_dump_string_multiline(FILE * stream, const char * prop_name, const cha
 void yaml_dump_non_result_info(
     FILE * stream, const gpt_params & params, const llama_context * lctx,
     const std::string & timestamp, const std::vector<int> & prompt_tokens, const char * model_desc);
+
+//
+// JSON utils
+//
+
+std::string json_schema_string_to_grammar(const std::string_view& schema); // [jart]

@@ -18,7 +18,7 @@
 #include "utils.h"
 
 bool
-atob(ctl::string_view val, bool dflt)
+atob(std::string_view val, bool dflt)
 {
     if (val == "0")
         return false;

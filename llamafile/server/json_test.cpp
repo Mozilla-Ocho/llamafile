@@ -23,6 +23,8 @@
 
 #include "llamafile/macros.h"
 
+using namespace std::string_literals;
+
 static const char kHuge[] = R"([
     "JSON Test Pattern pass1",
     {"object with 1 member":["array with 1 element"]},
@@ -116,11 +118,11 @@ deep_test()
     A1[3] = 3.14;
     A1[4] = 40;
     Json A2;
-    A2[0] = ctl::move(A1);
+    A2[0] = std::move(A1);
     Json A3;
-    A3[0] = ctl::move(A2);
+    A3[0] = std::move(A2);
     Json obj;
-    obj["content"] = ctl::move(A3);
+    obj["content"] = std::move(A3);
     if (obj.toString() != "{\"content\":[[[0,10,20,3.14,40]]]}")
         exit(2);
 }
@@ -128,7 +130,7 @@ deep_test()
 void
 parse_test()
 {
-    ctl::pair<Json::Status, Json> res =
+    std::pair<Json::Status, Json> res =
       Json::parse("{ \"content\":[[[0,10,20,3.14,40]]]}");
     if (res.first != Json::success)
         exit(3);
@@ -150,8 +152,8 @@ parse_test()
 
 static const struct
 {
-    ctl::string before;
-    ctl::string after;
+    std::string before;
+    std::string after;
 } kRoundTrip[] = {
 
     // valid utf16 sequences
@@ -183,7 +185,7 @@ static const struct
 static const struct
 {
     Json::Status error;
-    ctl::string json;
+    std::string json;
 } kJsonTestSuite[] = {
     { Json::absent_value, "" },
     { Json::json_payload_should_be_object_or_array, "null" },
@@ -348,7 +350,7 @@ void
 round_trip_test()
 {
     for (size_t i = 0; i < ARRAYLEN(kRoundTrip); ++i) {
-        ctl::pair<Json::Status, Json> res = Json::parse(kRoundTrip[i].before);
+        std::pair<Json::Status, Json> res = Json::parse(kRoundTrip[i].before);
         if (res.first != Json::success) {
             printf("error: Json::parse returned Json::%s but wanted Json::%s: "
                    "%`'s\n",
@@ -372,7 +374,7 @@ void
 json_test_suite()
 {
     for (size_t i = 0; i < ARRAYLEN(kJsonTestSuite); ++i) {
-        ctl::pair<Json::Status, Json> res = Json::parse(kJsonTestSuite[i].json);
+        std::pair<Json::Status, Json> res = Json::parse(kJsonTestSuite[i].json);
         if (res.first != kJsonTestSuite[i].error) {
             printf("error: Json::parse returned Json::%s but wanted Json::%s: "
                    "%`'s\n",

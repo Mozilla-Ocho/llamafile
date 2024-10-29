@@ -17,10 +17,10 @@
 
 #include "client.h"
 
-#include <ctl/pair.h>
-#include <ctl/vector.h>
 #include <string.h>
 #include <sys/resource.h>
+#include <utility>
+#include <vector>
 
 #include "llama.cpp/llama.h"
 
@@ -36,8 +36,8 @@ struct TokenizeParams
 {
     bool add_special;
     bool parse_special;
-    ctl::string_view prompt;
-    ctl::string content;
+    std::string_view prompt;
+    std::string content;
 };
 
 void
@@ -51,7 +51,7 @@ Client::get_tokenize_params(TokenizeParams* params)
 {
     params->add_special = atob(or_empty(param("add_special")), true);
     params->parse_special = atob(or_empty(param("parse_special")), false);
-    ctl::optional<ctl::string_view> prompt = param("prompt");
+    std::optional<std::string_view> prompt = param("prompt");
     if (prompt.has_value()) {
         params->prompt = prompt.value();
     } else if (HasHeader(kHttpContentType)) {
@@ -62,14 +62,14 @@ Client::get_tokenize_params(TokenizeParams* params)
         } else if (IsMimeType(HeaderData(kHttpContentType),
                               HeaderLength(kHttpContentType),
                               "application/json")) {
-            ctl::pair<Json::Status, Json> json = Json::parse(payload);
+            std::pair<Json::Status, Json> json = Json::parse(payload);
             if (json.first != Json::success)
                 return send_error(400, Json::StatusToString(json.first));
             if (!json.second.isObject())
                 return send_error(400, "JSON body must be an object");
             if (!json.second["prompt"].isString())
                 return send_error(400, "JSON missing \"prompt\" key");
-            params->content = ctl::move(json.second["prompt"].getString());
+            params->content = std::move(json.second["prompt"].getString());
             params->prompt = params->content;
             if (json.second["add_special"].isBool())
                 params->add_special = json.second["add_special"].getBool();
@@ -109,7 +109,7 @@ Client::tokenize()
     timespec started = timespec_real();
 
     // turn text into tokens
-    auto toks = new ctl::vector<llama_token>(params->prompt.size() + 16);
+    auto toks = new std::vector<llama_token>(params->prompt.size() + 16);
     defer_cleanup(cleanup_token_vector, toks);
     int count = llama_tokenize(g_model,
                                params->prompt.data(),
@@ -145,11 +145,11 @@ Client::tokenize()
             SLOG("failed to turn token into string");
             return send_error(405);
         }
-        p = encode_json(p, ctl::string_view(s, n));
+        p = encode_json(p, std::string_view(s, n));
     }
     p = stpcpy(p, "\n  ]\n");
     p = stpcpy(p, "}\n");
-    ctl::string_view content(obuf.p, p - obuf.p);
+    std::string_view content(obuf.p, p - obuf.p);
 
     // collect statistics
     rusage ruend = {};

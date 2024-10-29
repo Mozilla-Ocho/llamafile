@@ -17,20 +17,20 @@
 
 #include "cleanup.h"
 
-#include <ctl/vector.h>
+#include <vector>
 
 #include "llama.cpp/llama.h"
 
 void
 cleanup_float_vector(void* arg)
 {
-    delete (ctl::vector<float>*)arg;
+    delete (std::vector<float>*)arg;
 }
 
 void
 cleanup_token_vector(void* arg)
 {
-    delete (ctl::vector<llama_token>*)arg;
+    delete (std::vector<llama_token>*)arg;
 }
 
 void

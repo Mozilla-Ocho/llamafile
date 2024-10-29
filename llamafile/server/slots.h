@@ -16,38 +16,14 @@
 // limitations under the License.
 
 #pragma once
-#include <atomic>
 #include <cosmo.h>
 #include <pthread.h>
-#include <string>
 
-struct Server
+struct Slots
 {
-    Server(int);
-    ~Server();
-
-    int accept(unsigned*);
-    errno_t spawn();
-    void terminate();
-    void shutdown();
-    int close();
-    void run();
-    void lock();
-    void unlock();
-    void signal();
-    void wait();
-
-    int fd;
-    Dll* idle_workers = nullptr;
-    Dll* active_workers = nullptr;
-    pthread_cond_t cond_ = PTHREAD_COND_INITIALIZER;
+    Dll* slots_ = nullptr;
     pthread_mutex_t lock_ = PTHREAD_MUTEX_INITIALIZER;
-    std::atomic_int worker_count = ATOMIC_VAR_INIT(0);
-    std::atomic_bool terminated = ATOMIC_VAR_INIT(false);
+
+    Slots();
+    ~Slots();
 };
-
-extern Server* g_server;
-extern std::string g_url_prefix;
-
-int
-create_listening_socket(const char*);

@@ -130,7 +130,7 @@ Json::clear()
 {
     switch (type_) {
         case String:
-            string_value.~string();
+            string_value.~basic_string();
             break;
         case Array:
             array_value.~vector();
@@ -155,9 +155,6 @@ Json::Json(const Json& other) : type_(other.type_)
         case Long:
             long_value = other.long_value;
             break;
-        case Ulong:
-            ulong_value = other.ulong_value;
-            break;
         case Float:
             float_value = other.float_value;
             break;
@@ -165,13 +162,13 @@ Json::Json(const Json& other) : type_(other.type_)
             double_value = other.double_value;
             break;
         case String:
-            new (&string_value) ctl::string(other.string_value);
+            new (&string_value) std::string(other.string_value);
             break;
         case Array:
-            new (&array_value) ctl::vector<Json>(other.array_value);
+            new (&array_value) std::vector<Json>(other.array_value);
             break;
         case Object:
-            new (&object_value) ctl::map<ctl::string, Json>(other.object_value);
+            new (&object_value) std::map<std::string, Json>(other.object_value);
             break;
         default:
             __builtin_trap();
@@ -193,9 +190,6 @@ Json::operator=(const Json& other)
             case Long:
                 long_value = other.long_value;
                 break;
-            case Ulong:
-                ulong_value = other.ulong_value;
-                break;
             case Float:
                 float_value = other.float_value;
                 break;
@@ -203,14 +197,14 @@ Json::operator=(const Json& other)
                 double_value = other.double_value;
                 break;
             case String:
-                new (&string_value) ctl::string(other.string_value);
+                new (&string_value) std::string(other.string_value);
                 break;
             case Array:
-                new (&array_value) ctl::vector<Json>(other.array_value);
+                new (&array_value) std::vector<Json>(other.array_value);
                 break;
             case Object:
                 new (&object_value)
-                  ctl::map<ctl::string, Json>(other.object_value);
+                  std::map<std::string, Json>(other.object_value);
                 break;
             default:
                 __builtin_trap();
@@ -230,9 +224,6 @@ Json::Json(Json&& other) noexcept : type_(other.type_)
         case Long:
             long_value = other.long_value;
             break;
-        case Ulong:
-            ulong_value = other.ulong_value;
-            break;
         case Float:
             float_value = other.float_value;
             break;
@@ -240,14 +231,14 @@ Json::Json(Json&& other) noexcept : type_(other.type_)
             double_value = other.double_value;
             break;
         case String:
-            new (&string_value) ctl::string(ctl::move(other.string_value));
+            new (&string_value) std::string(std::move(other.string_value));
             break;
         case Array:
-            new (&array_value) ctl::vector<Json>(ctl::move(other.array_value));
+            new (&array_value) std::vector<Json>(std::move(other.array_value));
             break;
         case Object:
             new (&object_value)
-              ctl::map<ctl::string, Json>(ctl::move(other.object_value));
+              std::map<std::string, Json>(std::move(other.object_value));
             break;
         default:
             __builtin_trap();
@@ -270,9 +261,6 @@ Json::operator=(Json&& other) noexcept
             case Long:
                 long_value = other.long_value;
                 break;
-            case Ulong:
-                ulong_value = other.ulong_value;
-                break;
             case Float:
                 float_value = other.float_value;
                 break;
@@ -280,15 +268,15 @@ Json::operator=(Json&& other) noexcept
                 double_value = other.double_value;
                 break;
             case String:
-                new (&string_value) ctl::string(ctl::move(other.string_value));
+                new (&string_value) std::string(std::move(other.string_value));
                 break;
             case Array:
                 new (&array_value)
-                  ctl::vector<Json>(ctl::move(other.array_value));
+                  std::vector<Json>(std::move(other.array_value));
                 break;
             case Object:
                 new (&object_value)
-                  ctl::map<ctl::string, Json>(ctl::move(other.object_value));
+                  std::map<std::string, Json>(std::move(other.object_value));
                 break;
             default:
                 __builtin_trap();
@@ -308,8 +296,6 @@ Json::getNumber() const
             return bool_value;
         case Long:
             return long_value;
-        case Ulong:
-            return ulong_value;
         case Float:
             return float_value;
         case Double:
@@ -325,14 +311,6 @@ Json::getLong() const
     if (!isLong())
         __builtin_trap();
     return long_value;
-}
-
-unsigned long
-Json::getUlong() const
-{
-    if (!isUlong())
-        __builtin_trap();
-    return ulong_value;
 }
 
 bool
@@ -359,7 +337,7 @@ Json::getDouble() const
     return double_value;
 }
 
-ctl::string&
+std::string&
 Json::getString()
 {
     if (!isString())
@@ -367,7 +345,7 @@ Json::getString()
     return string_value;
 }
 
-ctl::vector<Json>&
+std::vector<Json>&
 Json::getArray()
 {
     if (!isArray())
@@ -375,7 +353,7 @@ Json::getArray()
     return array_value;
 }
 
-ctl::map<ctl::string, Json>&
+std::map<std::string, Json>&
 Json::getObject()
 {
     if (!isObject())
@@ -415,14 +393,6 @@ Json::setLong(long value)
 }
 
 void
-Json::setUlong(unsigned long value)
-{
-    clear();
-    type_ = Ulong;
-    ulong_value = value;
-}
-
-void
 Json::setDouble(double value)
 {
     clear();
@@ -435,31 +405,31 @@ Json::setString(const char* value)
 {
     clear();
     type_ = String;
-    new (&string_value) ctl::string(value);
+    new (&string_value) std::string(value);
 }
 
 void
-Json::setString(ctl::string&& value)
+Json::setString(std::string&& value)
 {
     clear();
     type_ = String;
-    new (&string_value) ctl::string(ctl::move(value));
+    new (&string_value) std::string(std::move(value));
 }
 
 void
-Json::setString(const ctl::string& value)
+Json::setString(const std::string& value)
 {
     clear();
     type_ = String;
-    new (&string_value) ctl::string(value);
+    new (&string_value) std::string(value);
 }
 
 void
-Json::setString(const ctl::string_view& value)
+Json::setString(const std::string_view& value)
 {
     clear();
     type_ = String;
-    new (&string_value) ctl::string_view(value);
+    new (&string_value) std::string_view(value);
 }
 
 void
@@ -467,7 +437,7 @@ Json::setArray()
 {
     clear();
     type_ = Array;
-    new (&array_value) ctl::vector<Json>();
+    new (&array_value) std::vector<Json>();
 }
 
 void
@@ -475,7 +445,7 @@ Json::setObject()
 {
     clear();
     type_ = Object;
-    new (&object_value) ctl::map<ctl::string, Json>();
+    new (&object_value) std::map<std::string, Json>();
 }
 
 Json&
@@ -492,7 +462,7 @@ Json::operator[](size_t index) noexcept
 }
 
 Json&
-Json::operator[](const ctl::string& key) noexcept
+Json::operator[](const std::string& key) noexcept
 {
     if (type_ != Object) {
         clear();
@@ -501,16 +471,16 @@ Json::operator[](const ctl::string& key) noexcept
     return object_value[key];
 }
 
-ctl::string
+std::string
 Json::toString(bool pretty) const noexcept
 {
-    ctl::string b;
+    std::string b;
     marshal(b, pretty, 0);
     return b;
 }
 
 void
-Json::marshal(ctl::string& b, bool pretty, int indent) const noexcept
+Json::marshal(std::string& b, bool pretty, int indent) const noexcept
 {
     switch (type_) {
         case Null:
@@ -525,11 +495,6 @@ Json::marshal(ctl::string& b, bool pretty, int indent) const noexcept
         case Long: {
             char buf[21];
             b.append(buf, FormatInt64(buf, long_value) - buf);
-            break;
-        }
-        case Ulong: {
-            char buf[21];
-            b.append(buf, FormatUint64(buf, ulong_value) - buf);
             break;
         }
         case Float: {
@@ -602,7 +567,7 @@ Json::marshal(ctl::string& b, bool pretty, int indent) const noexcept
 }
 
 void
-Json::stringify(ctl::string& b, const ctl::string_view& s) noexcept
+Json::stringify(std::string& b, const std::string_view& s) noexcept
 {
     b += '"';
     serialize(b, s);
@@ -610,7 +575,7 @@ Json::stringify(ctl::string& b, const ctl::string_view& s) noexcept
 }
 
 void
-Json::serialize(ctl::string& sb, const ctl::string_view& s) noexcept
+Json::serialize(std::string& sb, const std::string_view& s) noexcept
 {
     uint64_t w;
     size_t i, j, m;
@@ -828,7 +793,7 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         return success;
                     if (status != success)
                         return status;
-                    json.getArray().emplace_back(ctl::move(value));
+                    json.getArray().emplace_back(std::move(value));
                     context = ARRAY | COMMA;
                 }
             }
@@ -860,13 +825,13 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         return object_missing_value;
                     if (status != success)
                         return status;
-                    json[key.getString()] = ctl::move(value);
+                    json[key.getString()] = std::move(value);
                     context = KEY | COMMA | OBJECT;
                 }
             }
 
             case '"': { // string
-                ctl::string b;
+                std::string b;
                 if (context & (COLON | COMMA))
                     goto OnColonComma;
                 for (;;) {
@@ -879,7 +844,7 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                             break;
 
                         case DQUOTE:
-                            json.setString(ctl::move(b));
+                            json.setString(std::move(b));
                             return success;
 
                         case BACKSLASH:
@@ -1113,11 +1078,11 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
     return unexpected_eof;
 }
 
-ctl::pair<Json::Status, Json>
-Json::parse(const ctl::string_view& s)
+std::pair<Json::Status, Json>
+Json::parse(const std::string_view& s)
 {
     Json::Status s2;
-    ctl::pair<Json::Status, Json> res;
+    std::pair<Json::Status, Json> res;
     const char* p = s.data();
     const char* e = s.data() + s.size();
     res.first = parse(res.second, p, e, 0, DEPTH);

@@ -19,11 +19,11 @@
 
 #include <cosmo.h>
 
-ctl::string
-normalize_url_prefix(ctl::string url_prefix)
+std::string
+normalize_url_prefix(std::string url_prefix)
 {
     // Rule 1: Replace multiple slashes with single slash
-    while (url_prefix.find("//") != ctl::string::npos) {
+    while (url_prefix.find("//") != std::string::npos) {
         url_prefix.replace(url_prefix.find("//"), 2, "/");
     }
 

@@ -76,7 +76,7 @@ void HighlightTex::feed(std::string *r, std::string_view input) {
                 *r += HI_COMMENT;
                 *r += '%';
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
@@ -93,12 +93,12 @@ void HighlightTex::feed(std::string *r, std::string_view input) {
             } else if (isalpha(c) || c == '@') {
                 *r += HI_KEYWORD;
                 *r += '\\';
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = COMMAND;
             } else {
                 *r += HI_ESCAPE;
                 *r += '\\';
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 *r += HI_RESET;
                 t_ = NORMAL;
             }
@@ -106,7 +106,7 @@ void HighlightTex::feed(std::string *r, std::string_view input) {
 
         case COMMAND:
             if (isalpha(c) || c == '@') {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -125,7 +125,7 @@ void HighlightTex::feed(std::string *r, std::string_view input) {
             } else {
                 *r += HI_MATH;
                 *r += "$";
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = MATH;
             }
             break;
@@ -139,17 +139,17 @@ void HighlightTex::feed(std::string *r, std::string_view input) {
                 *r += '\\';
                 t_ = MATH_BACKSLASH;
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         case MATH_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = MATH;
             break;
 
         case COMMENT:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -169,13 +169,13 @@ void HighlightTex::feed(std::string *r, std::string_view input) {
             break;
 
         case STRING:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\'')
                 t_ = STRING_QUOTE;
             break;
 
         case STRING_QUOTE:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;

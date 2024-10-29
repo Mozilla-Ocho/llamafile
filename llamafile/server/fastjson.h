@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #pragma once
-#include <ctl/string_view.h>
+#include <string_view>
 
 char*
 encode_bool(char*, bool) noexcept;
@@ -40,7 +40,7 @@ char*
 encode_json(char*, unsigned long) noexcept;
 
 char*
-encode_json(char*, const ctl::string_view) noexcept;
+encode_json(char*, const std::string_view) noexcept;
 
 char*
-encode_js_string_literal(char*, const ctl::string_view) noexcept;
+encode_js_string_literal(char*, const std::string_view) noexcept;

@@ -80,7 +80,7 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_' || c == '-' || c == '.') {
                 t_ = WORD;
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
                 break;
             } else if (c == '#') {
                 t_ = COMMENT;
@@ -94,19 +94,19 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
                 *r += HI_ESCAPE;
                 *r += '\\';
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         case BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             *r += HI_RESET;
             t_ = NORMAL;
             break;
 
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_' || c == '-' || c == '.') {
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else {
                 if (is_keyword_make(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -124,7 +124,7 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
         case DOLLAR:
             if (isdigit(c) || is_automatic_variable(c)) {
                 *r += HI_VAR;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 *r += HI_RESET;
                 t_ = NORMAL;
             } else if (c == '$') {
@@ -160,7 +160,7 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
                 c == '?' || //
                 c == '@' || //
                 c == '_') {
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else if (c == '$' && word_.empty()) {
                 t_ = DOLLAR;
                 *r += '$';
@@ -170,7 +170,7 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
                 *r += word_;
                 *r += HI_RESET;
                 word_.clear();
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = NORMAL;
             } else {
                 if (is_keyword_make_builtin(word_.data(), word_.size())) {
@@ -187,7 +187,7 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
             break;
 
         case COMMENT:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;

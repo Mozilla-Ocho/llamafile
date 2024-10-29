@@ -67,7 +67,7 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
         case NORMAL:
             if (!isascii(c) || isalpha(c) || c == '_' || c == '@') {
                 t_ = WORD;
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else if (c == '/') {
                 t_ = SLASH;
             } else if (c == '\\') {
@@ -81,13 +81,13 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
                 *r += HI_STRING;
                 *r += '"';
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '_') {
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else {
                 if (is_keyword_zig(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
@@ -128,7 +128,7 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
 
         case SLASH_SLASH:
         case BACKSLASH_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -148,7 +148,7 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -158,12 +158,12 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = QUOTE;
             break;
 
         case DQUOTE:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '"') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -173,7 +173,7 @@ void HighlightZig::feed(std::string *r, std::string_view input) {
             break;
 
         case DQUOTE_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = DQUOTE;
             break;
 

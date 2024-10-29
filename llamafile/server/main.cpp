@@ -33,11 +33,12 @@
 
 Server* g_server;
 llama_model* g_model;
-ctl::string g_url_prefix;
+std::string g_url_prefix;
 
 int
 main(int argc, char* argv[])
 {
+    signal(SIGPIPE, SIG_IGN);
     mallopt(M_GRANULARITY, 2 * 1024 * 1024);
     mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
     mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);

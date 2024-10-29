@@ -47,13 +47,13 @@ bool FLAG_unsecure = false;
 const char *FLAG_file = nullptr;
 const char *FLAG_ip_header = nullptr;
 const char *FLAG_listen = "0.0.0.0:8080";
-const char *FLAG_url_prefix = nullptr;
 const char *FLAG_model = nullptr;
 const char *FLAG_prompt = nullptr;
+const char *FLAG_url_prefix = nullptr;
 double FLAG_token_rate = 1;
 float FLAG_temp = 0.8;
 int FLAG_batch = 2048;
-int FLAG_ctx = 512;
+int FLAG_ctx_size = 8192;
 int FLAG_flash_attn = false;
 int FLAG_gpu = 0;
 int FLAG_http_ibuf_size = 1024 * 1024;
@@ -234,6 +234,13 @@ void llamafile_get_flags(int argc, char **argv) {
 
         //////////////////////////////////////////////////////////////////////
         // model flags
+
+        if (!strcmp(flag, "-c") || !strcmp(flag, "--ctx-size")) {
+            if (i == argc)
+                missing("--ctx-size");
+            FLAG_ctx_size = atoi(argv[i++]);
+            continue;
+        }
 
         if (!strcmp(flag, "-m") || !strcmp(flag, "--model")) {
             if (i == argc)

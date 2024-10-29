@@ -29,7 +29,7 @@ extern const char *FLAG_prompt;
 extern double FLAG_token_rate;
 extern float FLAG_temp;
 extern int FLAG_batch;
-extern int FLAG_ctx;
+extern int FLAG_ctx_size;
 extern int FLAG_flash_attn;
 extern int FLAG_gpu;
 extern int FLAG_gpu;

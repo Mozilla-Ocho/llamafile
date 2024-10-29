@@ -119,14 +119,14 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
                 c == '_' || //
                 (c == '#' && col_ == 0)) {
                 t_ = WORD;
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
                 break;
             } else if (c == '#' && col_ && isspace(last_)) {
                 t_ = HASH;
             } else if ((c == ';' || c == '!') && (!col_ || isspace(last_))) {
                 t_ = COMMENT;
                 *r += HI_COMMENT;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else if (c == '/' && col_ == 0) {
                 // bell system five allowed single slash comments
                 // anywhere on the line, but we limit that a bit.
@@ -163,7 +163,7 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
                     is_first_thing_on_line_ = false;
                 if (c == ':')
                     is_first_thing_on_line_ = true;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
@@ -180,9 +180,9 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
         Immediate:
         case IMMEDIATE:
             if (is_immediate(c)) {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else if (c == '\'') {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = IMMEDIATE_QUOTE;
             } else {
                 *r += HI_RESET;
@@ -193,26 +193,26 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
 
         case IMMEDIATE_QUOTE:
             if (c == '\\') {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = IMMEDIATE_QUOTE_BACKSLASH;
             } else if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
                 goto Normal;
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = IMMEDIATE_QUOTE_FINISH;
             }
             break;
 
         case IMMEDIATE_QUOTE_BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = IMMEDIATE_QUOTE_FINISH;
             break;
 
         case IMMEDIATE_QUOTE_FINISH:
             if (c == '\'') {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = IMMEDIATE;
             } else {
                 // yes '" means '"' in bell system five
@@ -222,7 +222,7 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
             break;
 
         case BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             *r += HI_RESET;
             t_ = NORMAL;
             break;
@@ -241,7 +241,7 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
 
         case WORD:
             if (!isascii(c) || isalnum(c) || c == '$' || c == '_' || c == '-' || c == '.') {
-                append_wchar(&word_, c);
+                lf::append_wchar(&word_, c);
             } else {
                 if (is_first_thing_on_line_) {
                     if (word_.size() > 1 && word_[0] == '#' &&
@@ -303,7 +303,7 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
 
         case REG:
             if (isalnum(c)) {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -368,13 +368,13 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
             break;
 
         case SLASH_STAR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '*')
                 t_ = SLASH_STAR_STAR;
             break;
 
         case SLASH_STAR_STAR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '/') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -386,7 +386,7 @@ void HighlightAsm::feed(std::string *r, std::string_view input) {
         Comment:
         case COMMENT:
         case SLASH_SLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;

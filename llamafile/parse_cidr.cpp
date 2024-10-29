@@ -20,7 +20,7 @@
 #include <ctype.h>
 #include <string.h>
 
-bool parse_cidr(const ctl::string_view &str, cidr *out_cidr) noexcept {
+bool parse_cidr(const std::string_view &str, cidr *out_cidr) noexcept {
     long ip;
     int bits;
     size_t i, n;
@@ -28,7 +28,7 @@ bool parse_cidr(const ctl::string_view &str, cidr *out_cidr) noexcept {
     s = str.data();
     n = str.size();
     if ((p = (const char *)memchr(s, '/', n))) {
-        if ((ip = parse_ip(ctl::string_view(s, (i = p - s)))) == -1)
+        if ((ip = parse_ip(std::string_view(s, (i = p - s)))) == -1)
             return false;
         bits = 0;
         for (++i; i < n; ++i) {

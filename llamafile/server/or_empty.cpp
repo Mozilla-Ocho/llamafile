@@ -17,8 +17,8 @@
 
 #include "utils.h"
 
-ctl::string_view
-or_empty(ctl::optional<ctl::string_view> x)
+std::string_view
+or_empty(std::optional<std::string_view> x)
 {
     if (x.has_value())
         return x.value();

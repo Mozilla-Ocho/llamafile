@@ -21,7 +21,7 @@
 #include <stdckdint.h>
 #include <string.h>
 
-long parse_ip(const ctl::string_view &str) noexcept {
+long parse_ip(const std::string_view &str) noexcept {
     int c, j;
     size_t i, n;
     unsigned b, x;

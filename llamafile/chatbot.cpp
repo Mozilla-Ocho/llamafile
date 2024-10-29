@@ -33,6 +33,7 @@
 #include "llamafile/compute.h"
 #include "llamafile/highlight.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/string.h"
 
 #define RESET "\e[0m"
 #define BOLD "\e[1m"
@@ -150,21 +151,6 @@ static std::string basename(const std::string_view path) {
     } else {
         return ".";
     }
-}
-
-__attribute__((format(printf, 1, 2))) static std::string format(const char *fmt, ...) {
-    va_list ap, ap2;
-    va_start(ap, fmt);
-    va_copy(ap2, ap);
-    int size = 512;
-    std::string res(size, '\0');
-    int need = vsnprintf(res.data(), size, fmt, ap);
-    res.resize(need + 1, '\0');
-    if (need + 1 > size)
-        vsnprintf(res.data(), need + 1, fmt, ap2);
-    va_end(ap2);
-    va_end(ap);
-    return res;
 }
 
 static std::string join(const std::vector<std::string> &vec, const std::string_view &delim) {
@@ -462,7 +448,7 @@ static void eval_tokens(std::vector<llama_token> tokens, int n_batch) {
     }
     for (int i = 0; i < N; i += n_batch) {
         if (N > n_batch)
-            print_ephemeral(format("loading prompt %d%%...", (int)((double)i / N * 100)));
+            print_ephemeral(lf::format("loading prompt %d%%...", (int)((double)i / N * 100)));
         int n_eval = (int)tokens.size() - i;
         if (n_eval > n_batch)
             n_eval = n_batch;
@@ -480,12 +466,12 @@ static void eval_id(int id) {
 }
 
 static void eval_string(const std::string &str, int n_batch, bool add_special, bool parse_special) {
-    eval_tokens(llama_tokenize(g_ctx, str, add_special, parse_special), n_batch);
+    eval_tokens(llama_tokenize(g_model, str, add_special, parse_special), n_batch);
 }
 
 static void on_server_listening(const char *host, int port) {
     pthread_mutex_lock(&g_lock);
-    g_listen_url = format("http://%s:%d/", host, port);
+    g_listen_url = lf::format("http://%s:%d/", host, port);
     pthread_cond_signal(&g_cond);
     pthread_mutex_unlock(&g_lock);
 }

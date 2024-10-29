@@ -81,7 +81,7 @@ void HighlightBasic::feed(std::string *r, std::string_view input) {
                 word_ += c;
             } else {
                 if (is_keyword_basic(word_.data(), word_.size())) {
-                    if (tolower(word_) == "rem") {
+                    if (lf::tolower(word_) == "rem") {
                         *r += HI_COMMENT;
                         *r += word_;
                         t_ = COMMENT;
@@ -159,7 +159,7 @@ void HighlightBasic::flush(std::string *r) {
     switch (t_) {
     case WORD:
         if (is_keyword_basic(word_.data(), word_.size())) {
-            if (tolower(word_) == "rem") {
+            if (lf::tolower(word_) == "rem") {
                 *r += HI_KEYWORD;
                 *r += word_;
                 *r += HI_RESET;

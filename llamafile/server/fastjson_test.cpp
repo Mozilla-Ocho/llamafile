@@ -17,10 +17,10 @@
 
 #include "fastjson.h"
 
-#include <ctl/string.h>
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
+#include <string>
 
 using namespace ctl;
 

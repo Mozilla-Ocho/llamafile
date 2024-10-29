@@ -27,7 +27,7 @@ namespace ansiBLAS {
 
 static constexpr int KN = 8;
 
-union alignas(64) Vector {
+union Vector {
     double v[KN];
 };
 

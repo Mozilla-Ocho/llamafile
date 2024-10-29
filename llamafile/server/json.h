@@ -16,9 +16,9 @@
 // limitations under the License.
 
 #pragma once
-#include <ctl/map.h>
-#include <ctl/string.h>
-#include <ctl/vector.h>
+#include <map>
+#include <string>
+#include <vector>
 
 class Json
 {
@@ -28,7 +28,6 @@ class Json
         Null,
         Bool,
         Long,
-        Ulong,
         Float,
         Double,
         String,
@@ -82,15 +81,14 @@ class Json
         long long_value;
         float float_value;
         double double_value;
-        ctl::string string_value;
-        unsigned long ulong_value;
-        ctl::vector<Json> array_value;
-        ctl::map<ctl::string, Json> object_value;
+        std::string string_value;
+        std::vector<Json> array_value;
+        std::map<std::string, Json> object_value;
     };
 
   public:
     static const char* StatusToString(Status);
-    static ctl::pair<Status, Json> parse(const ctl::string_view&);
+    static std::pair<Status, Json> parse(const std::string_view&);
 
     Json(const Json&);
     Json(Json&&) noexcept;
@@ -124,27 +122,34 @@ class Json
     {
     }
 
-    Json(unsigned value) : type_(Ulong), ulong_value(value)
+    Json(unsigned value) : type_(Long), long_value(value)
     {
     }
 
-    Json(unsigned long value) : type_(Ulong), ulong_value(value)
+    Json(unsigned long value)
     {
+        if (value <= LONG_MAX) {
+            type_ = Long;
+            long_value = value;
+        } else {
+            type_ = Double;
+            double_value = value;
+        }
     }
 
     Json(const char* value) : type_(String), string_value(value)
     {
     }
 
-    Json(ctl::string&& value) : type_(String), string_value(ctl::move(value))
+    Json(std::string&& value) : type_(String), string_value(std::move(value))
     {
     }
 
-    Json(const ctl::string& value) : type_(String), string_value(value)
+    Json(const std::string& value) : type_(String), string_value(value)
     {
     }
 
-    Json(const ctl::string_view& value) : type_(String), string_value(value)
+    Json(const std::string_view& value) : type_(String), string_value(value)
     {
     }
 
@@ -165,22 +170,12 @@ class Json
 
     bool isNumber() const
     {
-        return isFloat() || isDouble() || isInteger();
-    }
-
-    bool isInteger() const
-    {
-        return isLong() || isUlong();
+        return isFloat() || isDouble() || isLong();
     }
 
     bool isLong() const
     {
         return type_ == Long;
-    }
-
-    bool isUlong() const
-    {
-        return type_ == Ulong;
     }
 
     bool isFloat() const
@@ -213,10 +208,9 @@ class Json
     float getFloat() const;
     double getDouble() const;
     double getNumber() const;
-    unsigned long getUlong() const;
-    ctl::string& getString();
-    ctl::vector<Json>& getArray();
-    ctl::map<ctl::string, Json>& getObject();
+    std::string& getString();
+    std::vector<Json>& getArray();
+    std::map<std::string, Json>& getObject();
 
     void setNull();
     void setBool(bool);
@@ -224,30 +218,29 @@ class Json
     void setFloat(float);
     void setDouble(double);
     void setString(const char*);
-    void setUlong(unsigned long);
-    void setString(ctl::string&&);
-    void setString(const ctl::string&);
-    void setString(const ctl::string_view&);
+    void setString(std::string&&);
+    void setString(const std::string&);
+    void setString(const std::string_view&);
     void setArray();
     void setObject();
 
-    ctl::string toString(bool pretty = false) const noexcept;
+    std::string toString(bool pretty = false) const noexcept;
 
     Json& operator=(const Json&);
     Json& operator=(Json&&) noexcept;
 
     Json& operator[](size_t) noexcept;
-    Json& operator[](const ctl::string&) noexcept;
+    Json& operator[](const std::string&) noexcept;
 
-    operator ctl::string() const noexcept
+    operator std::string() const noexcept
     {
         return toString();
     }
 
   private:
     void clear();
-    void marshal(ctl::string&, bool, int) const noexcept;
-    static void stringify(ctl::string&, const ctl::string_view&) noexcept;
-    static void serialize(ctl::string&, const ctl::string_view&) noexcept;
+    void marshal(std::string&, bool, int) const noexcept;
+    static void stringify(std::string&, const std::string_view&) noexcept;
+    static void serialize(std::string&, const std::string_view&) noexcept;
     static Status parse(Json&, const char*&, const char*, int, int);
 };

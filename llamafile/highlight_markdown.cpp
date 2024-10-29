@@ -82,7 +82,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 t_ = BACKSLASH;
                 *r += '\\';
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             if (c == '\n') {
                 bol_ = true;
@@ -95,7 +95,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             break;
 
         case BACKSLASH:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = NORMAL;
             break;
 
@@ -107,14 +107,14 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 *r += "**";
             } else if (bol_ && isblank(c)) {
                 *r += '*';
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = NORMAL;
             } else {
                 // handle *emphasized* text
                 // inverted because \e[3m has a poorly supported western bias
                 *r += '*';
                 *r += HI_ITALIC;
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = EMPHASIS;
                 if (c == '\\')
                     t_ = EMPHASIS_BACKSLASH;
@@ -131,18 +131,18 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 t_ = EMPHASIS_BACKSLASH;
                 *r += '\\';
             } else {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
             }
             break;
 
         case EMPHASIS_BACKSLASH:
             // so we can say *unbroken \* italic* and have it work
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = EMPHASIS;
             break;
 
         case STRONG:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '*') {
                 t_ = STRONG_STAR;
             } else if (c == '\\') {
@@ -152,12 +152,12 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
 
         case STRONG_BACKSLASH:
             // so we can say **unbroken \*\* bold** and have it work
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             t_ = STRONG;
             break;
 
         case STRONG_STAR:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '*' || // handle **bold** ending
                 (c == '\n' && !tail_)) { // handle *** line break
                 t_ = NORMAL;
@@ -175,7 +175,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             } else {
                 *r += HI_INCODE;
                 *r += '`';
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = INCODE;
             }
             break;
@@ -183,7 +183,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case INCODE:
             // this is for `inline code` like that
             // no backslash escapes are supported here
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -193,14 +193,14 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case INCODE2:
             // this is for ``inline ` code`` like that
             // it lets you put backtick inside the code
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '`') {
                 t_ = INCODE2_TICK;
             }
             break;
 
         case INCODE2_TICK:
-            append_wchar(r, c);
+            lf::append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -216,14 +216,14 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
             } else {
                 *r += HI_INCODE;
                 *r += "``";
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 t_ = INCODE2;
             }
             break;
 
         case LANG:
             if (!isascii(c) || !isspace(c)) {
-                append_wchar(r, c);
+                lf::append_wchar(r, c);
                 lang_ += tolower(c);
             } else {
                 if (!(highlighter_ = Highlight::create(lang_)))

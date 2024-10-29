@@ -16,8 +16,8 @@
 // limitations under the License.
 
 #pragma once
-#include <ctl/string.h>
-#include <ctl/vector.h>
+#include <string>
+#include <vector>
 
 struct cidr {
     unsigned ip;
@@ -29,9 +29,9 @@ struct cidr {
     }
 };
 
-extern ctl::vector<cidr> FLAG_trust;
+extern std::vector<cidr> FLAG_trust;
 
 bool is_trusted_ip(unsigned) noexcept;
 bool is_loopback_ip(unsigned) noexcept;
-long parse_ip(const ctl::string_view &) noexcept;
-bool parse_cidr(const ctl::string_view &, cidr *) noexcept;
+long parse_ip(const std::string_view &) noexcept;
+bool parse_cidr(const std::string_view &, cidr *) noexcept;

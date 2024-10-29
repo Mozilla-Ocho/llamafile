@@ -383,7 +383,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     }
     if (arg == "-c" || arg == "--ctx-size") {
         CHECK_ARG
-        params.n_ctx = std::stoi(argv[i]);
+        FLAG_ctx_size = params.n_ctx = std::stoi(argv[i]);
         return true;
     }
     if (arg == "--grp-attn-n" || arg == "-gan") {
@@ -1060,7 +1060,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     }
     if (arg == "-j" || arg == "--json-schema") {
         CHECK_ARG
-        sparams.grammar = json_schema_to_grammar(json::parse(argv[i]));
+        sparams.grammar = json_schema_string_to_grammar(argv[i]);
         return true;
     }
     if (arg == "--override-kv") {
@@ -3255,4 +3255,8 @@ void yaml_dump_non_result_info(FILE * stream, const gpt_params & params, const l
     fprintf(stream, "typical_p: %f # default: 1.0\n", sparams.typical_p);
     fprintf(stream, "verbose_prompt: %s # default: false\n", params.verbose_prompt ? "true" : "false");
     fprintf(stream, "display_prompt: %s # default: true\n", params.display_prompt ? "true" : "false");
+}
+
+std::string json_schema_string_to_grammar(const std::string_view& schema) {
+    return json_schema_to_grammar(json::parse(schema));
 }
