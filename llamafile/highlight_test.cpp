@@ -60,6 +60,7 @@ const char *const kLanguages[] = {
     "r", //
     "ruby", //
     "rust", //
+    "scala", //
     "shell", //
     "sql", //
     "swift", //

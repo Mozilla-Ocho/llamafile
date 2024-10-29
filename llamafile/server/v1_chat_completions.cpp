@@ -216,7 +216,7 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
     // max_tokens: integer|null
     //
     // An upper bound for the number of tokens that can be generated for
-    // a completion. This can be used to control costs.
+    // a completion. This can be used to control compute costs.
     Json& max_tokens = json.second["max_tokens"];
     if (!max_tokens.isNull()) {
         if (!max_tokens.isLong())
@@ -307,7 +307,7 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
     // user: string|null
     //
     // A unique identifier representing your end-user, which can help
-    // llamafile to monitor and detect abuse. Learn more.
+    // llamafiler to monitor and detect abuse.
     Json& user = json.second["user"];
     if (!user.isNull()) {
         if (!user.isString())

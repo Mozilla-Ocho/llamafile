@@ -123,6 +123,11 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "kotlin")
         return new HighlightKotlin;
 
+    if (lang == "sc" || //
+        lang == "sbt" || //
+        lang == "scala")
+        return new HighlightScala;
+
     if (lang == "lua")
         return new HighlightLua;
 

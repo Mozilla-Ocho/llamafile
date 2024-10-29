@@ -125,6 +125,11 @@ StringToDouble(const char* s, size_t n, int* out_processed)
     return res;
 }
 
+Json::~Json()
+{
+    clear();
+}
+
 void
 Json::clear()
 {

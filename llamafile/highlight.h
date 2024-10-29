@@ -136,6 +136,7 @@ is_keyword_f is_keyword_matlab_constant;
 is_keyword_f is_keyword_r;
 is_keyword_f is_keyword_r_builtin;
 is_keyword_f is_keyword_r_constant;
+is_keyword_f is_keyword_scala;
 }
 
 class Highlight {
@@ -697,4 +698,18 @@ class HighlightSwift : public Highlight {
     std::string word_;
     unsigned char nest_[16];
     unsigned char hash_[16];
+};
+
+class HighlightScala : public Highlight {
+  public:
+    HighlightScala();
+    ~HighlightScala() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int nesti_ = 0;
+    std::string word_;
+    unsigned char nest_[16];
 };

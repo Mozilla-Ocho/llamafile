@@ -92,11 +92,7 @@ class Json
 
     Json(const Json&);
     Json(Json&&) noexcept;
-
-    ~Json()
-    {
-        clear();
-    }
+    ~Json();
 
     Json(const nullptr_t = nullptr) : type_(Null)
     {
