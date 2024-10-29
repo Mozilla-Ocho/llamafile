@@ -26,16 +26,14 @@
 #include <sys/socket.h>
 
 #include "log.h"
+#include "server.h"
 
 void
 print_listening_url(unsigned ip, int port)
 {
-    SLOG("listen http://%hhu.%hhu.%hhu.%hhu:%hu",
-         ip >> 24,
-         ip >> 16,
-         ip >> 8,
-         ip,
-         port);
+    SLOG("listen http://%hhu.%hhu.%hhu.%hhu:%hu%s",
+         ip >> 24, ip >> 16, ip >> 8, ip, port,
+         g_url_prefix.c_str());
 }
 
 int

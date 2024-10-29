@@ -19,6 +19,7 @@
 #include <atomic>
 #include <cosmo.h>
 #include <pthread.h>
+#include <ctl/string.h>
 
 struct Server
 {
@@ -46,6 +47,7 @@ struct Server
 };
 
 extern Server* g_server;
+extern ctl::string g_url_prefix;
 
 int
 create_listening_socket(const char*);

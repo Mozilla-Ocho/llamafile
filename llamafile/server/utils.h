@@ -17,6 +17,7 @@
 
 #pragma once
 #include <ctl/optional.h>
+#include <ctl/string.h>
 #include <ctl/string_view.h>
 
 extern const signed char kHexToInt[256];
@@ -30,4 +31,22 @@ or_empty(ctl::optional<ctl::string_view> x)
     if (x.has_value())
         return x.value();
     return {};
+}
+
+static inline ctl::string normalize_url_prefix(ctl::string url_prefix) {
+    // Rule 1: Replace multiple slashes with single slash
+    while (url_prefix.find("//") != ctl::string::npos) {
+        url_prefix.replace(url_prefix.find("//"), 2, "/");
+    }
+
+    // Rule 2: Remove trailing slash
+    if (!url_prefix.empty() && url_prefix.back() == '/') {
+        url_prefix.pop_back();
+    }
+
+    // Rule 3: Convert single slash to empty string
+    if (url_prefix == "/") {
+        url_prefix.clear();
+    }
+    return url_prefix;
 }
