@@ -11,6 +11,7 @@
 #include "json-schema-to-grammar.h"
 #include "llama.h"
 #include "llamafile/debug.h"
+#include "llamafile/macros.h"
 #include "string.h"
 
 #include <cosmo.h>
@@ -272,7 +273,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         CHECK_ARG
         params.n_threads = std::stoi(argv[i]);
         if (params.n_threads <= 0) {
-            params.n_threads = std::thread::hardware_concurrency();
+            params.n_threads = MIN(cpu_get_num_math(), 20); // [jart]
         }
         FLAG_threads = params.n_threads; // [jart]
         return true;
@@ -281,7 +282,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         CHECK_ARG
         params.n_threads_batch = std::stoi(argv[i]);
         if (params.n_threads_batch <= 0) {
-            params.n_threads_batch = std::thread::hardware_concurrency();
+            params.n_threads_batch = cpu_get_num_math(); // [jart]
         }
         return true;
     }
@@ -289,7 +290,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         CHECK_ARG
         params.n_threads_draft = std::stoi(argv[i]);
         if (params.n_threads_draft <= 0) {
-            params.n_threads_draft = std::thread::hardware_concurrency();
+            params.n_threads_draft = cpu_get_num_math(); // [jart]
         }
         return true;
     }
@@ -297,7 +298,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         CHECK_ARG
         params.n_threads_batch_draft = std::stoi(argv[i]);
         if (params.n_threads_batch_draft <= 0) {
-            params.n_threads_batch_draft = std::thread::hardware_concurrency();
+            params.n_threads_batch_draft = cpu_get_num_math(); // [jart]
         }
         return true;
     }
@@ -1701,7 +1702,7 @@ std::string gpt_params_get_system_info(const gpt_params & params) {
     if (params.n_threads_batch != -1) {
         os << " (n_threads_batch = " << params.n_threads_batch << ")";
     }
-    os << " / " << std::thread::hardware_concurrency() << " | " << llama_print_system_info();
+    os << " / " << cpu_get_num_math() << " | " << llama_print_system_info(); // [jart]
 
     return os.str();
 }
@@ -3247,7 +3248,7 @@ void yaml_dump_non_result_info(FILE * stream, const gpt_params & params, const l
     yaml_dump_vector_float(stream, "tensor_split", tensor_split_vector);
 
     fprintf(stream, "tfs: %f # default: 1.0\n", sparams.tfs_z);
-    fprintf(stream, "threads: %d # default: %u\n", params.n_threads, std::thread::hardware_concurrency());
+    fprintf(stream, "threads: %d # default: %u\n", params.n_threads, cpu_get_num_math()); // [jart]
     fprintf(stream, "top_k: %d # default: 40\n", sparams.top_k);
     fprintf(stream, "top_p: %f # default: 0.95\n", sparams.top_p);
     fprintf(stream, "min_p: %f # default: 0.0\n", sparams.min_p);

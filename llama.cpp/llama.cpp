@@ -14775,7 +14775,7 @@ static int llama_decode_internal(
             lctx.n_outputs = n_outputs_new;
         }
 
-        int n_threads = n_tokens == 1 ? cparams.n_threads : cparams.n_threads_batch;
+        int n_threads = n_tokens <= 2 ? cparams.n_threads : cparams.n_threads_batch; // [jart]
         GGML_ASSERT(n_threads > 0);
 
         // helpers for smoother batch API transition
@@ -15026,7 +15026,7 @@ static int llama_encode_internal(
     lctx.inp_embd_enc = NULL;
     lctx.n_outputs = n_tokens;
 
-    int n_threads = n_tokens == 1 ? cparams.n_threads : cparams.n_threads_batch;
+    int n_threads = n_tokens <= 2 ? cparams.n_threads : cparams.n_threads_batch; // [jart]
     GGML_ASSERT(n_threads > 0);
 
     // helpers for smoother batch API transition
@@ -15083,14 +15083,6 @@ static int llama_encode_internal(
     ggml_backend_sched_alloc_graph(lctx.sched, gf);
 
     llama_set_inputs(lctx, batch);
-
-    // [jart] On CPUs with many cores (e.g. EPYC, Threadripper)
-    //        using more than twenty threads for token prediction
-    //        never helps. This number appears to be optimal for all
-    //        models ranging from TinyLLaMA 1.1B to mighty Mixtral 8x22B.
-    if (n_tokens <= 2) {
-        n_threads = std::min(20, n_threads);
-    }
 
     llama_graph_compute(lctx, gf, n_threads);
 

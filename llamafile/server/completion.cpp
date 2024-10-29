@@ -24,6 +24,7 @@
 
 #include "llama.cpp/llama.h"
 #include "llama.cpp/sampling.h"
+#include "llamafile/macros.h"
 
 #include "cleanup.h"
 #include "fastjson.h"
@@ -212,7 +213,7 @@ Client::completion()
     cparams.n_ubatch = count;
     cparams.n_seq_max = 1;
     cparams.n_threads = FLAG_threads;
-    cparams.n_threads_batch = FLAG_threads;
+    cparams.n_threads_batch = MIN(FLAG_threads, 20);
     cparams.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
     cparams.pooling_type = LLAMA_POOLING_TYPE_NONE;
     cparams.rope_freq_base = 0;

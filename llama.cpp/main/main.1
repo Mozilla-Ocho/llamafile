@@ -112,6 +112,10 @@ Default: -1
 .It Fl t Ar N , Fl Fl threads Ar N
 Number of threads to use during generation.
 .Pp
+Default: $(nproc)/2 max 20
+.It Fl tb Ar N , Fl Fl threads-batch Ar N
+Number of threads to use during prompt processing.
+.Pp
 Default: $(nproc)/2
 .It Fl Fl in-prefix-bos
 Prefix BOS to user inputs, preceding the
