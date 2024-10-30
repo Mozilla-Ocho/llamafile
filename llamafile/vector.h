@@ -16,19 +16,19 @@
 // limitations under the License.
 
 #pragma once
-#include <string>
+#include <algorithm>
 #include <vector>
 
-namespace lf {
+template <typename T>
+bool vector_starts_with(const std::vector<T> &sequence, const std::vector<T> &prefix) {
+    if (prefix.size() > sequence.size())
+        return false;
+    return std::equal(prefix.begin(), prefix.end(), sequence.begin());
+}
 
-std::string basename(const std::string_view);
-std::string collapse(const std::string_view);
-std::string dirname(const std::string_view);
-std::string extname(const std::string_view);
-std::string format(const char *, ...) __attribute__((format(printf, 1, 2)));
-std::string join(const std::vector<std::string> &, const std::string_view &);
-std::string resolve(const std::string_view, const std::string_view);
-std::string tolower(const std::string_view);
-void append_wchar(std::string *, wchar_t);
-
-} // namespace lf
+template <typename T>
+bool vector_ends_with(const std::vector<T> &sequence, const std::vector<T> &suffix) {
+    if (suffix.size() > sequence.size())
+        return false;
+    return std::equal(sequence.rbegin(), sequence.rend(), suffix.rbegin());
+}

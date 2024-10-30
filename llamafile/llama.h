@@ -16,19 +16,24 @@
 // limitations under the License.
 
 #pragma once
-#include <string>
-#include <vector>
+#include "llama.cpp/llama.h"
 
-namespace lf {
+// Many llama.cpp APIs take boolean parameters at the end. Please favor
+// passing these constants as arguments instead, for better readability
 
-std::string basename(const std::string_view);
-std::string collapse(const std::string_view);
-std::string dirname(const std::string_view);
-std::string extname(const std::string_view);
-std::string format(const char *, ...) __attribute__((format(printf, 1, 2)));
-std::string join(const std::vector<std::string> &, const std::string_view &);
-std::string resolve(const std::string_view, const std::string_view);
-std::string tolower(const std::string_view);
-void append_wchar(std::string *, wchar_t);
+#define ADD_SPECIAL true
+#define DONT_ADD_SPECIAL false
 
-} // namespace lf
+#define PARSE_SPECIAL true
+#define DONT_PARSE_SPECIAL false
+
+#define ADD_ASSISTANT true
+#define DONT_ADD_ASSISTANT false
+
+#define APPLY_GRAMMAR true
+#define DONT_APPLY_GRAMMAR false
+
+#define RENDER_SPECIAL_TOKENS true
+#define DONT_RENDER_SPECIAL_TOKENS false
+
+int llamafile_token_eot(llama_model *);

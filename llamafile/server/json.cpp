@@ -477,10 +477,18 @@ Json::operator[](const std::string& key) noexcept
 }
 
 std::string
-Json::toString(bool pretty) const noexcept
+Json::toString() const noexcept
 {
     std::string b;
-    marshal(b, pretty, 0);
+    marshal(b, false, 0);
+    return b;
+}
+
+std::string
+Json::toStringPretty() const noexcept
+{
+    std::string b;
+    marshal(b, true, 0);
     return b;
 }
 

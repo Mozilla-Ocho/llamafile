@@ -220,7 +220,8 @@ class Json
     void setArray();
     void setObject();
 
-    std::string toString(bool pretty = false) const noexcept;
+    std::string toString() const noexcept;
+    std::string toStringPretty() const noexcept;
 
     Json& operator=(const Json&);
     Json& operator=(Json&&) noexcept;

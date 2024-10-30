@@ -17,12 +17,13 @@
 
 #include "string.h"
 
+#include <cctype>
 #include <cosmo.h>
-#include <ctype.h>
+#include <cstdio>
 
 namespace lf {
 
-std::string tolower(const std::string_view &s) {
+std::string tolower(const std::string_view s) {
     std::string b;
     for (char c : s)
         b += std::tolower(c);
@@ -53,6 +54,16 @@ std::string format(const char *fmt, ...) {
     va_end(ap2);
     va_end(ap);
     return res;
+}
+
+std::string join(const std::vector<std::string> &vec, const std::string_view &delim) {
+    std::string result;
+    for (size_t i = 0; i < vec.size(); i++) {
+        result += vec[i];
+        if (i < vec.size() - 1)
+            result += delim;
+    }
+    return result;
 }
 
 std::string basename(const std::string_view path) {
@@ -110,6 +121,33 @@ std::string resolve(const std::string_view lhs, const std::string_view rhs) {
     res += '/';
     res += rhs;
     return res;
+}
+
+// replaces multiple isspace() with one space and trims result
+std::string collapse(const std::string_view input) {
+    size_t start = 0;
+    while (start < input.length() && std::isspace(input[start]))
+        ++start;
+    if (start == input.length())
+        return "";
+    size_t end = input.length() - 1;
+    while (end > start && std::isspace(input[end]))
+        --end;
+    std::string result;
+    result.reserve(end - start + 1);
+    bool lastWasSpace = false;
+    for (size_t i = start; i <= end; ++i) {
+        if (std::isspace(input[i])) {
+            if (!lastWasSpace) {
+                result += ' ';
+                lastWasSpace = true;
+            }
+        } else {
+            result += input[i];
+            lastWasSpace = false;
+        }
+    }
+    return result;
 }
 
 } // namespace lf

@@ -16,21 +16,15 @@
 // limitations under the License.
 
 #include "slot.h"
+#include "llama.cpp/common.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/macros.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/model.h"
-#include <algorithm>
+#include "llamafile/vector.h"
+#include "llamafile/version.h"
 #include <cassert>
-
-static bool
-vector_starts_with(const std::vector<llama_token>& sequence,
-                   const std::vector<llama_token>& prefix)
-{
-    if (prefix.size() > sequence.size())
-        return false;
-    return std::equal(prefix.begin(), prefix.end(), sequence.begin());
-}
+#include <cosmo.h>
 
 static int
 ctx_size(void)
@@ -39,6 +33,20 @@ ctx_size(void)
     if (FLAG_ctx_size <= 0 || FLAG_ctx_size > n_ctx_train)
         return n_ctx_train;
     return FLAG_ctx_size;
+}
+
+static std::string
+generate_system_fingerprint(const llama_context_params* cparams)
+{
+    uint64_t h = 0;
+    h ^= __fnv(LLAMAFILE_VERSION_STRING, sizeof(LLAMAFILE_VERSION_STRING));
+    h ^= __fnv(cparams, sizeof(*cparams));
+    std::string b = "fp_";
+    for (int j = 0; j < 64 / 5; ++j) {
+        b += "abcdefghijklmnopqrstuvwxyz012345"[h & 31];
+        h >>= 5;
+    }
+    return b;
 }
 
 Slot::Slot()
@@ -60,7 +68,7 @@ Slot::start()
     cparams.embeddings = false;
     cparams.embeddings_only = false;
     cparams.logits_all = false;
-    cparams.seed = _rand64();
+    cparams.seed = 12345;
     cparams.n_ctx = ctx_size();
     cparams.n_batch = FLAG_batch;
     cparams.n_ubatch = FLAG_ubatch;
@@ -79,8 +87,10 @@ Slot::start()
     cparams.type_k = GGML_TYPE_F16;
     cparams.type_v = GGML_TYPE_F16;
     cparams.flash_attn = FLAG_flash_attn;
-    ctx_ = llama_new_context_with_model(g_model, cparams);
-    return ctx_ != nullptr;
+    system_fingerprint_ = generate_system_fingerprint(&cparams);
+    if (!(ctx_ = llama_new_context_with_model(g_model, cparams)))
+        return false;
+    return true;
 }
 
 int

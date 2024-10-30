@@ -62,6 +62,7 @@ int FLAG_keepalive = 5;
 int FLAG_main_gpu = 0;
 int FLAG_n_gpu_layers = -1;
 int FLAG_seed = LLAMA_DEFAULT_SEED;
+int FLAG_slots = 1;
 int FLAG_split_mode = LLAMA_SPLIT_MODE_LAYER;
 int FLAG_threads;
 int FLAG_token_burst = 100;

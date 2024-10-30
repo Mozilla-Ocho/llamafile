@@ -136,13 +136,13 @@ parse_test()
         exit(3);
     if (res.second.toString() != "{\"content\":[[[0,10,20,3.14,40]]]}")
         exit(4);
-    if (res.second.toString(true) !=
+    if (res.second.toStringPretty() !=
         R"({"content": [[[0, 10, 20, 3.14, 40]]]})")
         exit(5);
     res = Json::parse("{ \"a\": 1, \"b\": [2,   3]}");
-    if (res.second.toString(false) != R"({"a":1,"b":[2,3]})")
+    if (res.second.toString() != R"({"a":1,"b":[2,3]})")
         exit(6);
-    if (res.second.toString(true) !=
+    if (res.second.toStringPretty() !=
         R"({
   "a": 1,
   "b": [2, 3]

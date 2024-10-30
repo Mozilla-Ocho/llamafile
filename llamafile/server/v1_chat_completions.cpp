@@ -24,8 +24,10 @@
 
 #include "llama.cpp/llama.h"
 #include "llama.cpp/sampling.h"
+#include "llamafile/llama.h"
 #include "llamafile/macros.h"
 #include "llamafile/string.h"
+#include "llamafile/vector.h"
 
 #include "cleanup.h"
 #include "fastjson.h"
@@ -52,30 +54,42 @@ struct V1ChatCompletionParams
 
     void add_stop(const std::string& text)
     {
-        stop.emplace_back(llama_tokenize(g_model, text, false, false));
+        stop.emplace_back(
+          llama_tokenize(g_model, text, DONT_ADD_SPECIAL, DONT_PARSE_SPECIAL));
     }
+
+    bool should_stop(const std::vector<llama_token>& history)
+    {
+        for (const auto& suffix : stop)
+            if (vector_ends_with(history, suffix))
+                return true;
+        return false;
+    }
+};
+
+struct V1ChatCompletionState
+{
+    std::string prompt;
+    std::vector<llama_token> tokens;
+    std::string piece;
 };
 
 struct V1ChatCompletionResponse
 {
-    std::string prompt;
-    std::vector<llama_token> tokens;
     std::string content;
     Json json;
 };
-
-static bool
-is_legal_role(const std::string_view& role)
-{
-    return role == "system" || //
-           role == "user" || //
-           role == "assistant";
-}
 
 static void
 cleanup_params(void* arg)
 {
     delete (V1ChatCompletionParams*)arg;
+}
+
+static void
+cleanup_state(void* arg)
+{
+    delete (V1ChatCompletionState*)arg;
 }
 
 static void
@@ -94,6 +108,14 @@ static void
 cleanup_slot(void* arg)
 {
     delete (Slot*)arg;
+}
+
+static bool
+is_legal_role(const std::string_view& role)
+{
+    return role == "system" || //
+           role == "user" || //
+           role == "assistant";
 }
 
 static std::string
@@ -155,26 +177,24 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
         return send_error(400, "JSON body must be an object");
 
     // fields openai documents that we don't support yet
-    if (!json.second["n"].isNull())
-        return send_error(400, "OpenAI n field not supported");
     if (!json.second["tools"].isNull())
-        return send_error(400, "OpenAI tools field not supported");
+        return send_error(400, "OpenAI tools field not supported yet");
     if (!json.second["audio"].isNull())
-        return send_error(400, "OpenAI audio field not supported");
+        return send_error(400, "OpenAI audio field not supported yet");
     if (!json.second["logprobs"].isNull())
-        return send_error(400, "OpenAI logprobs field not supported");
+        return send_error(400, "OpenAI logprobs field not supported yet");
     if (!json.second["functions"].isNull())
-        return send_error(400, "OpenAI functions field not supported");
+        return send_error(400, "OpenAI functions field not supported yet");
     if (!json.second["modalities"].isNull())
-        return send_error(400, "OpenAI modalities field not supported");
+        return send_error(400, "OpenAI modalities field not supported yet");
     if (!json.second["tool_choice"].isNull())
-        return send_error(400, "OpenAI tool_choice field not supported");
+        return send_error(400, "OpenAI tool_choice field not supported yet");
     if (!json.second["top_logprobs"].isNull())
-        return send_error(400, "OpenAI top_logprobs field not supported");
+        return send_error(400, "OpenAI top_logprobs field not supported yet");
     if (!json.second["function_call"].isNull())
-        return send_error(400, "OpenAI function_call field not supported");
+        return send_error(400, "OpenAI function_call field not supported yet");
     if (!json.second["parallel_tool_calls"].isNull())
-        return send_error(400, "parallel_tool_calls field not supported");
+        return send_error(400, "parallel_tool_calls field not supported yet");
 
     // model: string
     Json& model = json.second["model"];
@@ -186,6 +206,8 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
     if (!json.second["messages"].isArray())
         return send_error(400, "JSON missing messages array");
     std::vector<Json>& messages = json.second["messages"].getArray();
+    if (messages.empty())
+        return send_error(400, "JSON messages array is empty");
     for (Json& message : messages) {
         if (!message.isObject())
             return send_error(400, "messages array must hold objects");
@@ -198,6 +220,20 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
         params->messages.emplace_back(
           std::move(message["role"].getString()),
           std::move(message["content"].getString()));
+    }
+
+    // n: integer|null
+    //
+    // How many chat completion choices to generate for each input
+    // message. Note that you will be charged based on the number of
+    // generated tokens across all of the choices. Keep n as 1 to
+    // minimize costs.
+    Json& n = json.second["n"];
+    if (!n.isNull()) {
+        if (!n.isLong())
+            return send_error(400, "n field must be integer");
+        if (n.getLong() != 1)
+            return send_error(400, "n field must be 1 if specified");
     }
 
     // stream: bool|null
@@ -404,14 +440,24 @@ Client::v1_chat_completions()
     if (!get_v1_chat_completions_params(params))
         return false;
 
-    // create response object
+    // create state and response objects
+    V1ChatCompletionState* state = new V1ChatCompletionState;
+    defer_cleanup(cleanup_state, state);
     V1ChatCompletionResponse* response = new V1ChatCompletionResponse;
     defer_cleanup(cleanup_response, response);
 
     // turn text into tokens
-    response->prompt =
-      llama_chat_apply_template(g_model, "", params->messages, true);
-    response->tokens = llama_tokenize(g_model, response->prompt, true, false);
+    state->prompt =
+      llama_chat_apply_template(g_model, "", params->messages, ADD_ASSISTANT);
+    state->tokens =
+      llama_tokenize(g_model, state->prompt, DONT_ADD_SPECIAL, PARSE_SPECIAL);
+
+    // add bos token if it's needed
+    if (llama_should_add_bos_token(g_model)) {
+        llama_token bos = llama_token_bos(g_model);
+        if (state->tokens.empty() || state->tokens[0] != bos)
+            state->tokens.insert(state->tokens.begin(), bos);
+    }
 
     // find appropriate slot
     Slot* slot;
@@ -424,7 +470,7 @@ Client::v1_chat_completions()
     defer_cleanup(cleanup_slot, slot);
 
     // sanity check
-    if (response->tokens.size() + 1 > slot->n_ctx())
+    if (state->tokens.size() + 1 > slot->n_ctx())
         return send_error(400, "prompt too big for model context size");
 
     // init sampling
@@ -434,7 +480,7 @@ Client::v1_chat_completions()
     defer_cleanup(cleanup_sampler, sampler);
 
     // prefill time
-    if (!slot->prefill(response->tokens)) {
+    if (!slot->prefill(state->tokens)) {
         SLOG("slot prefill failed");
         return send_error(500, "llama_decode prefill failed");
     }
@@ -443,6 +489,7 @@ Client::v1_chat_completions()
     response->json["id"].setString(generate_id());
     response->json["object"].setString("chat.completion");
     response->json["model"].setString(params->model);
+    response->json["system_fingerprint"].setString(slot->system_fingerprint_);
     response->json["choices"].setArray();
     Json& choice = response->json["choices"][0];
     choice.setObject();
@@ -469,30 +516,43 @@ Client::v1_chat_completions()
     // prediction time
     int completion_tokens = 0;
     const char* finish_reason = "length";
-    while (params->max_tokens < 0 || completion_tokens < params->max_tokens) {
+    for (;;) {
+        if (params->max_tokens >= 0 &&
+            completion_tokens >= params->max_tokens) {
+            slot->eval_token(llamafile_token_eot(g_model));
+            break;
+        }
         llama_token id = llama_sampling_sample(sampler, slot->ctx_, NULL);
-        llama_sampling_accept(sampler, slot->ctx_, id, true);
+        llama_sampling_accept(sampler, slot->ctx_, id, APPLY_GRAMMAR);
+        ++completion_tokens;
+        if (!slot->eval_token(id)) {
+            SLOG("ran out of context window");
+            break;
+        }
         if (llama_token_is_eog(g_model, id)) {
             finish_reason = "stop";
             break;
         }
-        ++completion_tokens;
-        std::string piece = llama_token_to_piece(slot->ctx_, id, false);
-        if (params->stream) {
-            char* p = append_http_response_message(obuf.p, 200);
-            choice["delta"].setObject();
-            choice["delta"]["content"].setString(piece);
-            response->json["created"].setLong(timespec_real().tv_sec);
-            response->content = make_event(response->json);
-            choice.getObject().erase("delta");
-            if (!send_response_chunk(response->content))
-                return false;
-        } else {
-            response->content += piece;
-        }
-        if (!slot->eval_token(id)) {
-            SLOG("ran out of context window");
+        if (params->should_stop(slot->history_)) {
+            slot->eval_token(llamafile_token_eot(g_model));
+            finish_reason = "stop";
             break;
+        }
+        state->piece =
+          llama_token_to_piece(slot->ctx_, id, DONT_RENDER_SPECIAL_TOKENS);
+        if (!state->piece.empty()) {
+            if (params->stream) {
+                char* p = append_http_response_message(obuf.p, 200);
+                choice["delta"].setObject();
+                choice["delta"]["content"].setString(state->piece);
+                response->json["created"].setLong(timespec_real().tv_sec);
+                response->content = make_event(response->json);
+                choice.getObject().erase("delta");
+                if (!send_response_chunk(response->content))
+                    return false;
+            } else {
+                response->content += state->piece;
+            }
         }
     }
     choice["finish_reason"].setString(finish_reason);
@@ -510,17 +570,17 @@ Client::v1_chat_completions()
     } else {
         Json& usage = response->json["usage"];
         usage.setObject();
-        usage["prompt_tokens"].setLong(response->tokens.size());
+        usage["prompt_tokens"].setLong(state->tokens.size());
         usage["completion_tokens"].setLong(completion_tokens);
-        usage["total_tokens"].setLong(completion_tokens +
-                                      response->tokens.size());
+        usage["total_tokens"].setLong(completion_tokens + state->tokens.size());
         choice["message"].setObject();
         choice["message"]["role"].setString("assistant");
         choice["message"]["content"].setString(std::move(response->content));
         response->json["created"].setLong(timespec_real().tv_sec);
         char* p = append_http_response_message(obuf.p, 200);
         p = stpcpy(p, "Content-Type: application/json\r\n");
-        response->content = response->json.toString();
+        response->content = response->json.toStringPretty();
+        response->content += '\n';
         return send_response(obuf.p, p, response->content);
     }
 }

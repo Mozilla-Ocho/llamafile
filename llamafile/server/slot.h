@@ -31,6 +31,7 @@ struct Slot
     llama_context* ctx_ = nullptr;
     timespec last_used_ = timespec_zero;
     std::vector<llama_token> history_;
+    std::string system_fingerprint_;
 
     Slot();
     ~Slot();
