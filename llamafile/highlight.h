@@ -137,6 +137,7 @@ is_keyword_f is_keyword_r;
 is_keyword_f is_keyword_r_builtin;
 is_keyword_f is_keyword_r_constant;
 is_keyword_f is_keyword_scala;
+is_keyword_f is_keyword_julia;
 }
 
 class Highlight {
@@ -712,4 +713,16 @@ class HighlightScala : public Highlight {
     int nesti_ = 0;
     std::string word_;
     unsigned char nest_[16];
+};
+
+class HighlightJulia : public Highlight {
+  public:
+    HighlightJulia();
+    ~HighlightJulia() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string word_;
 };

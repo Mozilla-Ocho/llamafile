@@ -211,5 +211,9 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "matlab")
         return new HighlightMatlab;
 
+    if (lang == "jl" || //
+        lang == "julia")
+        return new HighlightJulia;
+
     return nullptr;
 }

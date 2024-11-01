@@ -45,6 +45,7 @@ const char *const kLanguages[] = {
     "java", //
     "javascript", //
     "json", //
+    "julia", //
     "kotlin", //
     "ld", //
     "lisp", //
