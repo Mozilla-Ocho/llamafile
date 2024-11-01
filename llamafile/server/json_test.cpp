@@ -17,13 +17,14 @@
 
 #include "json.h"
 
-#include <cosmo.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <time.h>
 
-#include "llamafile/macros.h"
+#define ARRAYLEN(A) \
+    ((sizeof(A) / sizeof(*(A))) / ((unsigned)!(sizeof(A) % sizeof(*(A)))))
 
-using namespace std::string_literals;
+#define STRING(sl) std::string(sl, sizeof(sl) - 1)
 
 static const char kHuge[] = R"([
     "JSON Test Pattern pass1",
@@ -86,18 +87,41 @@ static const char kHuge[] = R"([
 
 #define BENCH(ITERATIONS, WORK_PER_RUN, CODE) \
     do { \
-        struct timespec start = timespec_real(); \
+        struct timespec start = now(); \
         for (int __i = 0; __i < ITERATIONS; ++__i) { \
             asm volatile("" ::: "memory"); \
             CODE; \
         } \
         long long work = (WORK_PER_RUN) * (ITERATIONS); \
-        double nanos = \
-          (timespec_tonanos(timespec_sub(timespec_real(), start)) + work - \
-           1) / \
-          (double)work; \
+        double nanos = (tonanos(tub(now(), start)) + work - 1) / (double)work; \
         printf("%10g ns %2dx %s\n", nanos, (ITERATIONS), #CODE); \
     } while (0)
+
+struct timespec
+now(void)
+{
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    return ts;
+}
+
+struct timespec
+tub(struct timespec a, struct timespec b)
+{
+    a.tv_sec -= b.tv_sec;
+    if (a.tv_nsec < b.tv_nsec) {
+        a.tv_nsec += 1000000000;
+        a.tv_sec--;
+    }
+    a.tv_nsec -= b.tv_nsec;
+    return a;
+}
+
+int64_t
+tonanos(struct timespec x)
+{
+    return x.tv_sec * 1000000000ull + x.tv_nsec;
+}
 
 void
 object_test()
@@ -188,7 +212,6 @@ static const struct
     std::string json;
 } kJsonTestSuite[] = {
     { Json::absent_value, "" },
-    { Json::json_payload_should_be_object_or_array, "null" },
     { Json::trailing_content, "[] []" },
     { Json::illegal_character, "[nan]" },
     { Json::bad_negative, "[-nan]" },
@@ -205,8 +228,6 @@ static const struct
     { Json::depth_exceeded,
       "[[[[[[[[[[[[[[[[[[[[\"Too deep\"]]]]]]]]]]]]]]]]]]]]" },
     { Json::missing_colon, "{\"Missing colon\" null}" },
-    { Json::json_payload_should_be_object_or_array,
-      "\"A JSON payload should be an object or array, not a string.\"" },
     { Json::unexpected_colon, "{\"Double colon\":: null}" },
     { Json::unexpected_comma, "{\"Comma instead of colon\", null}" },
     { Json::unexpected_colon, "[\"Colon instead of comma\": false]" },
@@ -298,8 +319,7 @@ static const struct
     { Json::illegal_character, " [a\xe5] " },
     { Json::unexpected_comma, " {\"x\", null} " },
     { Json::illegal_character, " [\"x\", truth] " },
-    { Json::json_payload_should_be_object_or_array, " 123\x00 "s },
-    { Json::illegal_character, "\x00"s },
+    { Json::illegal_character, STRING("\x00") },
     { Json::trailing_content, "\n[\"x\"]]" },
     { Json::unexpected_octal, " [012] " },
     { Json::unexpected_octal, " [-012] " },
@@ -324,8 +344,8 @@ static const struct
     { Json::bad_double, " [0.e1] " },
     { Json::bad_double, " [-2.] " },
     { Json::illegal_character, " \xef\xbb\xbf{} " },
-    { Json::illegal_character, " [\x00\"\x00\xe9\x00\"\x00]\x00 "s },
-    { Json::illegal_character, " \x00[\x00\"\x00\xe9\x00\"\x00] "s },
+    { Json::illegal_character, STRING(" [\x00\"\x00\xe9\x00\"\x00]\x00 ") },
+    { Json::illegal_character, STRING(" \x00[\x00\"\x00\xe9\x00\"\x00] ") },
     { Json::malformed_utf8, " [\"\xe0\xff\"] " },
     { Json::illegal_utf8_character, " [\"\xfc\x80\x80\x80\x80\x80\"] " },
     { Json::illegal_utf8_character, " [\"\xfc\x83\xbf\xbf\xbf\xbf\"] " },
@@ -352,16 +372,16 @@ round_trip_test()
     for (size_t i = 0; i < ARRAYLEN(kRoundTrip); ++i) {
         std::pair<Json::Status, Json> res = Json::parse(kRoundTrip[i].before);
         if (res.first != Json::success) {
-            printf("error: Json::parse returned Json::%s but wanted Json::%s: "
-                   "%`'s\n",
-                   Json::StatusToString(res.first),
-                   Json::StatusToString(Json::success),
-                   kRoundTrip[i].before.c_str());
+            printf(
+              "error: Json::parse returned Json::%s but wanted Json::%s: %s\n",
+              Json::StatusToString(res.first),
+              Json::StatusToString(Json::success),
+              kRoundTrip[i].before.c_str());
             exit(10);
         }
         if (res.second.toString() != kRoundTrip[i].after) {
-            printf("error: Json::parse(%`'s).toString() was %`'s but should "
-                   "have been %`'s\n",
+            printf("error: Json::parse(%s).toString() was %s but should have "
+                   "been %s\n",
                    kRoundTrip[i].before.c_str(),
                    res.second.toString().c_str(),
                    kRoundTrip[i].after.c_str());
@@ -376,11 +396,11 @@ json_test_suite()
     for (size_t i = 0; i < ARRAYLEN(kJsonTestSuite); ++i) {
         std::pair<Json::Status, Json> res = Json::parse(kJsonTestSuite[i].json);
         if (res.first != kJsonTestSuite[i].error) {
-            printf("error: Json::parse returned Json::%s but wanted Json::%s: "
-                   "%`'s\n",
-                   Json::StatusToString(res.first),
-                   Json::StatusToString(kJsonTestSuite[i].error),
-                   kJsonTestSuite[i].json.c_str());
+            printf(
+              "error: Json::parse returned Json::%s but wanted Json::%s: %s\n",
+              Json::StatusToString(res.first),
+              Json::StatusToString(kJsonTestSuite[i].error),
+              kJsonTestSuite[i].json.c_str());
             exit(12);
         }
     }
@@ -399,6 +419,4 @@ main()
     BENCH(2000, 1, parse_test());
     BENCH(2000, 1, round_trip_test());
     BENCH(2000, 1, json_test_suite());
-
-    CheckForMemoryLeaks();
 }

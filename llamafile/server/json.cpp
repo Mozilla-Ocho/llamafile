@@ -16,11 +16,12 @@
 // limitations under the License.
 
 #include "json.h"
-#include "utils.h"
-
-#include <cosmo.h>
-#include <ctype.h>
 #include <stdckdint.h>
+
+#include <cctype>
+#include <climits>
+#include <cstdint>
+#include <cstdlib>
 
 #include "double-conversion/double-to-string.h"
 #include "double-conversion/string-to-double.h"
@@ -45,6 +46,34 @@
 #define UTF8_4_F0 10
 #define BADUTF8 11
 #define EVILUTF8 12
+
+#define UTF16_MASK 0xfc00
+#define UTF16_MOAR 0xd800 // 0xD800..0xDBFF
+#define UTF16_CONT 0xdc00 // 0xDC00..0xDFFF
+
+#define READ32LE(S) \
+    ((uint_least32_t)(255 & (S)[3]) << 030 | \
+     (uint_least32_t)(255 & (S)[2]) << 020 | \
+     (uint_least32_t)(255 & (S)[1]) << 010 | \
+     (uint_least32_t)(255 & (S)[0]) << 000)
+
+#define ThomPikeCont(x) (0200 == (0300 & (x)))
+#define ThomPikeByte(x) ((x) & (((1 << ThomPikeMsb(x)) - 1) | 3))
+#define ThomPikeLen(x) (7 - ThomPikeMsb(x))
+#define ThomPikeMsb(x) ((255 & (x)) < 252 ? Bsr(255 & ~(x)) : 1)
+#define ThomPikeMerge(x, y) ((x) << 6 | (077 & (y)))
+
+#define IsSurrogate(wc) ((0xf800 & (wc)) == 0xd800)
+#define IsHighSurrogate(wc) (((wc) & UTF16_MASK) == UTF16_MOAR)
+#define IsLowSurrogate(wc) (((wc) & UTF16_MASK) == UTF16_CONT)
+#define MergeUtf16(hi, lo) ((((hi) - 0xD800) << 10) + ((lo) - 0xDC00) + 0x10000)
+#define EncodeUtf16(wc) \
+    ((0x0000 <= (wc) && (wc) <= 0xFFFF) || (0xE000 <= (wc) && (wc) <= 0xFFFF) \
+       ? (wc) \
+     : 0x10000 <= (wc) && (wc) <= 0x10FFFF \
+       ? (((((wc) - 0x10000) >> 10) + 0xD800) | \
+          (unsigned)((((wc) - 0x10000) & 1023) + 0xDC00) << 16) \
+       : 0xFFFD)
 
 static const char kJsonStr[256] = {
     1,  1,  1,  1,  1,  1,  1,  1, // 0000 ascii (0)
@@ -92,6 +121,25 @@ static const char kEscapeLiteral[128] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, // 0x70
 };
 
+alignas(signed char) static const signed char kHexToInt[256] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x00
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x10
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x20
+    0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  -1, -1, -1, -1, -1, -1, // 0x30
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x40
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x50
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x60
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x70
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x80
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x90
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xa0
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xb0
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xc0
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xd0
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xe0
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xf0
+};
+
 static const double_conversion::DoubleToStringConverter kDoubleToJson(
   double_conversion::DoubleToStringConverter::UNIQUE_ZERO |
     double_conversion::DoubleToStringConverter::EMIT_POSITIVE_EXPONENT_SIGN,
@@ -113,6 +161,36 @@ static const double_conversion::StringToDoubleConverter kJsonToDouble(
   "Infinity",
   "NaN");
 
+#if defined(__GNUC__) || defined(__clang__)
+#define Bsr(x) (__builtin_clz(x) ^ (sizeof(int) * CHAR_BIT - 1))
+#else
+static int
+Bsr(int x)
+{
+    int r = 0;
+    if (x & 0xFFFF0000u) {
+        x >>= 16;
+        r |= 16;
+    }
+    if (x & 0xFF00) {
+        x >>= 8;
+        r |= 8;
+    }
+    if (x & 0xF0) {
+        x >>= 4;
+        r |= 4;
+    }
+    if (x & 0xC) {
+        x >>= 2;
+        r |= 2;
+    }
+    if (x & 0x2) {
+        r |= 1;
+    }
+    return r;
+}
+#endif
+
 static double
 StringToDouble(const char* s, size_t n, int* out_processed)
 {
@@ -123,6 +201,46 @@ StringToDouble(const char* s, size_t n, int* out_processed)
     if (out_processed)
         *out_processed = processed;
     return res;
+}
+
+static char*
+UlongToString(char* p, unsigned long long x)
+{
+    char t;
+    size_t i, a, b;
+    i = 0;
+    do {
+        p[i++] = x % 10 + '0';
+        x = x / 10;
+    } while (x > 0);
+    p[i] = '\0';
+    if (i) {
+        for (a = 0, b = i - 1; a < b; ++a, --b) {
+            t = p[a];
+            p[a] = p[b];
+            p[b] = t;
+        }
+    }
+    return p + i;
+}
+
+static char*
+LongToString(char* p, long long x)
+{
+    if (x < 0)
+        *p++ = '-', x = -(unsigned long long)x;
+    return UlongToString(p, x);
+}
+
+Json::Json(unsigned long long value)
+{
+    if (value <= LLONG_MAX) {
+        type_ = Long;
+        long_value = value;
+    } else {
+        type_ = Double;
+        double_value = value;
+    }
 }
 
 Json::~Json()
@@ -176,7 +294,7 @@ Json::Json(const Json& other) : type_(other.type_)
             new (&object_value) std::map<std::string, Json>(other.object_value);
             break;
         default:
-            __builtin_trap();
+            abort();
     }
 }
 
@@ -212,7 +330,7 @@ Json::operator=(const Json& other)
                   std::map<std::string, Json>(other.object_value);
                 break;
             default:
-                __builtin_trap();
+                abort();
         }
     }
     return *this;
@@ -246,7 +364,7 @@ Json::Json(Json&& other) noexcept : type_(other.type_)
               std::map<std::string, Json>(std::move(other.object_value));
             break;
         default:
-            __builtin_trap();
+            abort();
     }
     other.type_ = Null;
 }
@@ -284,7 +402,7 @@ Json::operator=(Json&& other) noexcept
                   std::map<std::string, Json>(std::move(other.object_value));
                 break;
             default:
-                __builtin_trap();
+                abort();
         }
         other.type_ = Null;
     }
@@ -306,15 +424,15 @@ Json::getNumber() const
         case Double:
             return double_value;
         default:
-            __builtin_trap();
+            abort();
     }
 }
 
-long
+long long
 Json::getLong() const
 {
     if (!isLong())
-        __builtin_trap();
+        abort();
     return long_value;
 }
 
@@ -322,7 +440,7 @@ bool
 Json::getBool() const
 {
     if (!isBool())
-        __builtin_trap();
+        abort();
     return bool_value;
 }
 
@@ -330,7 +448,7 @@ float
 Json::getFloat() const
 {
     if (!isFloat())
-        __builtin_trap();
+        abort();
     return float_value;
 }
 
@@ -338,7 +456,7 @@ double
 Json::getDouble() const
 {
     if (!isDouble())
-        __builtin_trap();
+        abort();
     return double_value;
 }
 
@@ -346,7 +464,7 @@ std::string&
 Json::getString()
 {
     if (!isString())
-        __builtin_trap();
+        abort();
     return string_value;
 }
 
@@ -354,7 +472,7 @@ std::vector<Json>&
 Json::getArray()
 {
     if (!isArray())
-        __builtin_trap();
+        abort();
     return array_value;
 }
 
@@ -362,7 +480,7 @@ std::map<std::string, Json>&
 Json::getObject()
 {
     if (!isObject())
-        __builtin_trap();
+        abort();
     return object_value;
 }
 
@@ -390,19 +508,19 @@ Json::setFloat(float value)
 }
 
 void
-Json::setLong(long value)
-{
-    clear();
-    type_ = Long;
-    long_value = value;
-}
-
-void
 Json::setDouble(double value)
 {
     clear();
     type_ = Double;
     double_value = value;
+}
+
+void
+Json::setLong(long long value)
+{
+    clear();
+    type_ = Long;
+    long_value = value;
 }
 
 void
@@ -422,19 +540,11 @@ Json::setString(std::string&& value)
 }
 
 void
-Json::setString(const std::string& value)
+Json::setString(const JSON_STRING_VIEW_& value)
 {
     clear();
     type_ = String;
     new (&string_value) std::string(value);
-}
-
-void
-Json::setString(const std::string_view& value)
-{
-    clear();
-    type_ = String;
-    new (&string_value) std::string_view(value);
 }
 
 void
@@ -454,7 +564,7 @@ Json::setObject()
 }
 
 Json&
-Json::operator[](size_t index) noexcept
+Json::operator[](size_t index)
 {
     if (type_ != Array) {
         clear();
@@ -467,7 +577,7 @@ Json::operator[](size_t index) noexcept
 }
 
 Json&
-Json::operator[](const std::string& key) noexcept
+Json::operator[](const std::string& key)
 {
     if (type_ != Object) {
         clear();
@@ -477,7 +587,7 @@ Json::operator[](const std::string& key) noexcept
 }
 
 std::string
-Json::toString() const noexcept
+Json::toString() const
 {
     std::string b;
     marshal(b, false, 0);
@@ -485,7 +595,7 @@ Json::toString() const noexcept
 }
 
 std::string
-Json::toStringPretty() const noexcept
+Json::toStringPretty() const
 {
     std::string b;
     marshal(b, true, 0);
@@ -493,7 +603,7 @@ Json::toStringPretty() const noexcept
 }
 
 void
-Json::marshal(std::string& b, bool pretty, int indent) const noexcept
+Json::marshal(std::string& b, bool pretty, int indent) const
 {
     switch (type_) {
         case Null:
@@ -506,8 +616,8 @@ Json::marshal(std::string& b, bool pretty, int indent) const noexcept
             b += bool_value ? "true" : "false";
             break;
         case Long: {
-            char buf[21];
-            b.append(buf, FormatInt64(buf, long_value) - buf);
+            char buf[64];
+            b.append(buf, LongToString(buf, long_value) - buf);
             break;
         }
         case Float: {
@@ -575,12 +685,12 @@ Json::marshal(std::string& b, bool pretty, int indent) const noexcept
             break;
         }
         default:
-            __builtin_trap();
+            abort();
     }
 }
 
 void
-Json::stringify(std::string& b, const std::string_view& s) noexcept
+Json::stringify(std::string& b, const JSON_STRING_VIEW_& s)
 {
     b += '"';
     serialize(b, s);
@@ -588,11 +698,11 @@ Json::stringify(std::string& b, const std::string_view& s) noexcept
 }
 
 void
-Json::serialize(std::string& sb, const std::string_view& s) noexcept
+Json::serialize(std::string& sb, const JSON_STRING_VIEW_& s)
 {
-    uint64_t w;
     size_t i, j, m;
     wint_t x, a, b;
+    unsigned long long w;
     for (i = 0; i < s.size();) {
         x = s[i++] & 255;
         if (x >= 0300) {
@@ -651,7 +761,7 @@ Json::serialize(std::string& sb, const std::string_view& s) noexcept
                 } while ((w >>= 16));
                 break;
             default:
-                __builtin_trap();
+                abort();
         }
     }
 }
@@ -659,8 +769,8 @@ Json::serialize(std::string& sb, const std::string_view& s) noexcept
 Json::Status
 Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
 {
-    long x;
     char w[4];
+    long long x;
     const char* a;
     int A, B, C, D, c, d, i, u;
     if (!depth)
@@ -763,7 +873,15 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                 json.setLong(0);
                 return success;
 
-            case '1' ... '9': // integer
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9': // integer
                 if (context & (COLON | COMMA | KEY))
                     goto OnColonCommaKey;
                 for (x = (c - '0') * d; p < e; ++p) {
@@ -1038,20 +1156,22 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
 
                         case UTF8_4_F0:
                             if (p + 3 <= e && (p[0] & 0377) < 0220 &&
-                                (((uint32_t)(p[+2] & 0377) << 030 |
-                                  (uint32_t)(p[+1] & 0377) << 020 |
-                                  (uint32_t)(p[+0] & 0377) << 010 |
-                                  (uint32_t)(p[-1] & 0377) << 000) &
+                                (((uint_least32_t)(p[+2] & 0377) << 030 |
+                                  (uint_least32_t)(p[+1] & 0377) << 020 |
+                                  (uint_least32_t)(p[+0] & 0377) << 010 |
+                                  (uint_least32_t)(p[-1] & 0377) << 000) &
                                  0xC0C0C000) == 0x80808000) {
                                 return overlong_utf8_0xffff;
                             }
                             // fallthrough
                         case UTF8_4:
                             if (p + 3 <= e && //
-                                ((A = ((uint32_t)(p[+2] & 0377) << 030 | //
-                                       (uint32_t)(p[+1] & 0377) << 020 | //
-                                       (uint32_t)(p[+0] & 0377) << 010 | //
-                                       (uint32_t)(p[-1] & 0377) << 000)) & //
+                                ((A =
+                                    ((uint_least32_t)(p[+2] & 0377) << 030 | //
+                                     (uint_least32_t)(p[+1] & 0377) << 020 | //
+                                     (uint_least32_t)(p[+0] & 0377) << 010 | //
+                                     (uint_least32_t)(p[-1] & 0377)
+                                       << 000)) & //
                                  0xC0C0C000) == 0x80808000) { //
                                 A = (A & 7) << 18 | //
                                     (A & (077 << 010)) << (12 - 010) | //
@@ -1079,10 +1199,9 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         case C1:
                             return c1_control_code_in_string;
                         default:
-                            __builtin_unreachable();
+                            abort();
                     }
                 }
-                __builtin_unreachable();
             }
         }
     }
@@ -1092,7 +1211,7 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
 }
 
 std::pair<Json::Status, Json>
-Json::parse(const std::string_view& s)
+Json::parse(const JSON_STRING_VIEW_& s)
 {
     Json::Status s2;
     std::pair<Json::Status, Json> res;
@@ -1100,13 +1219,9 @@ Json::parse(const std::string_view& s)
     const char* e = s.data() + s.size();
     res.first = parse(res.second, p, e, 0, DEPTH);
     if (res.first == Json::success) {
-        if (!res.second.isObject() && !res.second.isArray()) {
-            res.first = json_payload_should_be_object_or_array;
-        } else {
-            s2 = parse(res.second, p, e, 0, DEPTH);
-            if (s2 != absent_value)
-                res.first = trailing_content;
-        }
+        s2 = parse(res.second, p, e, 0, DEPTH);
+        if (s2 != absent_value)
+            res.first = trailing_content;
     }
     return res;
 }
@@ -1181,9 +1296,7 @@ Json::StatusToString(Json::Status status)
             return "c1_control_code_in_string";
         case non_del_c0_control_code_in_string:
             return "non_del_c0_control_code_in_string";
-        case json_payload_should_be_object_or_array:
-            return "json_payload_should_be_object_or_array";
         default:
-            __builtin_trap();
+            abort();
     }
 }
