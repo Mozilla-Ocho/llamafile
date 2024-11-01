@@ -249,4 +249,5 @@ o/$(MODE)/llamafile/pick_a_warp_kernel.o: private CFLAGS += -fopenmp
 
 .PHONY: o/$(MODE)/llamafile/check
 o/$(MODE)/llamafile/check:				\
+		$(LLAMAFILE_SRCS_GPERF_C)		\
 		o/$(MODE)/llamafile/tinyblas_test.runs

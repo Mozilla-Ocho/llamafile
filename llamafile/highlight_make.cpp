@@ -24,6 +24,7 @@ enum {
     NORMAL,
     WORD,
     COMMENT,
+    COMMENT_BACKSLASH,
     DOLLAR,
     DOLLAR2,
     VARIABLE,
@@ -191,7 +192,14 @@ void HighlightMake::feed(std::string *r, std::string_view input) {
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = COMMENT_BACKSLASH;
             }
+            break;
+
+        case COMMENT_BACKSLASH:
+            lf::append_wchar(r, c);
+            t_ = COMMENT;
             break;
 
         default:
@@ -223,6 +231,7 @@ void HighlightMake::flush(std::string *r) {
         word_.clear();
         break;
     case COMMENT:
+    case COMMENT_BACKSLASH:
     case BACKSLASH:
         *r += HI_RESET;
         break;

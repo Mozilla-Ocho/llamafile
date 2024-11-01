@@ -29,6 +29,7 @@ enum {
     VAR2,
     VAR_CURLY,
     COMMENT,
+    COMMENT_BACKSLASH,
     BACKSLASH,
 };
 
@@ -155,7 +156,14 @@ void HighlightTcl::feed(std::string *r, std::string_view input) {
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '\\') {
+                t_ = COMMENT_BACKSLASH;
             }
+            break;
+
+        case COMMENT_BACKSLASH:
+            lf::append_wchar(r, c);
+            t_ = COMMENT;
             break;
 
         case DQUOTE:
@@ -204,6 +212,7 @@ void HighlightTcl::flush(std::string *r) {
     case DQUOTE:
     case DQUOTE_BACKSLASH:
     case COMMENT:
+    case COMMENT_BACKSLASH:
     case BACKSLASH:
         *r += HI_RESET;
         break;
