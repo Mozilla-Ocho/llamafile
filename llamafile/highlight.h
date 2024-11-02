@@ -422,7 +422,9 @@ class HighlightAda : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
     int t_ = 0;
+    int last_ = 0;
     std::string symbol_;
 };
 

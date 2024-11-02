@@ -37,7 +37,8 @@ HighlightAda::~HighlightAda() {
 void HighlightAda::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
-        c = input[i] & 255;
+        last_ = c_;
+        c_ = c = input[i] & 255;
 
         switch (t_) {
 
@@ -48,7 +49,7 @@ void HighlightAda::feed(std::string *r, std::string_view input) {
                 goto Symbol;
             } else if (c == '-') {
                 t_ = HYPHEN;
-            } else if (c == '\'') {
+            } else if (c == '\'' && last_ != ')') {
                 t_ = QUOTE;
                 *r += HI_STRING;
                 *r += c;

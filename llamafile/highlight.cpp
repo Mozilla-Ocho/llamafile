@@ -140,7 +140,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "clojure")
         return new HighlightLisp;
 
-    if (lang == "ada")
+    if (lang == "ada" || //
+        lang == "adb")
         return new HighlightAda;
 
     if (lang == "haskell" || //
