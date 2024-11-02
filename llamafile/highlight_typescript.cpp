@@ -111,7 +111,7 @@ void HighlightTypescript::feed(std::string *r, std::string_view input) {
             } else if (ispunct(c)) {
                 expect_ = EXPECT_VALUE;
                 lf::append_wchar(r, c);
-            } else if (isdigit(c)) {
+            } else if (isdigit(c) || c == '.') {
                 expect_ = EXPECT_OPERATOR;
                 lf::append_wchar(r, c);
             } else {
