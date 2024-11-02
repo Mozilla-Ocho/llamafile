@@ -16,20 +16,19 @@
 // limitations under the License.
 
 #include "slot.h"
-#include "llama.cpp/common.h"
+#include "llamafile/llama.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/macros.h"
-#include "llamafile/server/log.h"
-#include "llamafile/server/model.h"
 #include "llamafile/vector.h"
 #include "llamafile/version.h"
+#include "log.h"
 #include <cassert>
 #include <cosmo.h>
 
 static int
-ctx_size(void)
+ctx_size(llama_model* model)
 {
-    int n_ctx_train = llama_n_ctx_train(g_model);
+    int n_ctx_train = llama_n_ctx_train(model);
     if (FLAG_ctx_size <= 0 || FLAG_ctx_size > n_ctx_train)
         return n_ctx_train;
     return FLAG_ctx_size;
@@ -49,9 +48,8 @@ generate_system_fingerprint(const llama_context_params* cparams)
     return b;
 }
 
-Slot::Slot()
+Slot::Slot(llama_model* model) : model_(model)
 {
-    dll_init(&elem_);
 }
 
 Slot::~Slot()
@@ -69,7 +67,7 @@ Slot::start()
     cparams.embeddings_only = false;
     cparams.logits_all = false;
     cparams.seed = 12345;
-    cparams.n_ctx = ctx_size();
+    cparams.n_ctx = ctx_size(model_);
     cparams.n_batch = FLAG_batch;
     cparams.n_ubatch = FLAG_ubatch;
     cparams.n_seq_max = 1;
@@ -88,7 +86,7 @@ Slot::start()
     cparams.type_v = GGML_TYPE_F16;
     cparams.flash_attn = FLAG_flash_attn;
     system_fingerprint_ = generate_system_fingerprint(&cparams);
-    if (!(ctx_ = llama_new_context_with_model(g_model, cparams)))
+    if (!(ctx_ = llama_new_context_with_model(model_, cparams)))
         return false;
     return true;
 }
@@ -100,15 +98,15 @@ Slot::n_ctx()
 }
 
 bool
-Slot::eval_token(llama_token id)
+Slot::eval_token(int id)
 {
-    std::vector<llama_token> tokens;
+    std::vector<int> tokens;
     tokens.push_back(id);
     return eval_tokens(tokens);
 }
 
 bool
-Slot::eval_tokens(std::vector<llama_token> tokens)
+Slot::eval_tokens(std::vector<int> tokens)
 {
     unassert(ctx_);
     if (history_.size() + tokens.size() > n_ctx())
@@ -129,17 +127,27 @@ Slot::eval_tokens(std::vector<llama_token> tokens)
 }
 
 bool
-Slot::can_use_slot(const std::vector<llama_token>& prompt)
+Slot::prefill(const std::vector<int>& tokens)
 {
-    return ctx_ && vector_starts_with(prompt, history_);
-}
-
-bool
-Slot::prefill(const std::vector<llama_token>& tokens)
-{
-    unassert(can_use_slot(tokens));
-    if (history_.empty())
-        return eval_tokens(tokens);
-    return eval_tokens(
-      std::vector<llama_token>(tokens.begin() + history_.size(), tokens.end()));
+    unassert(ctx_);
+    size_t erase_count = 0;
+    size_t reuse_count = lf::vector_common_prefix_length(tokens, history_);
+    if (history_.size() > reuse_count) {
+        erase_count = history_.size() - reuse_count;
+        if (llama_kv_cache_seq_rm(ctx_, 0, reuse_count, -1)) {
+            history_.resize(reuse_count);
+        } else {
+            SLOG("failed to remove tokens from KV cache");
+            llama_kv_cache_clear(ctx_);
+            reuse_count = 0;
+            erase_count = history_.size();
+            history_.clear();
+        }
+    }
+    std::vector<int> new_tokens(tokens.begin() + history_.size(), tokens.end());
+    SLOG("prefilling %zu tokens (after removing %zu and reusing %zu)",
+         new_tokens.size(),
+         erase_count,
+         reuse_count);
+    return eval_tokens(new_tokens);
 }

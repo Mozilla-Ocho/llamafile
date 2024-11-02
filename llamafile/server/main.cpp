@@ -24,15 +24,14 @@
 #include "llamafile/version.h"
 
 #include "log.h"
-#include "model.h"
 #include "server.h"
 #include "signals.h"
+#include "slots.h"
 #include "time.h"
 #include "tokenbucket.h"
 #include "utils.h"
 
 Server* g_server;
-llama_model* g_model;
 std::string g_url_prefix;
 
 int
@@ -42,7 +41,6 @@ main(int argc, char* argv[])
     mallopt(M_GRANULARITY, 2 * 1024 * 1024);
     mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
     mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);
-    FLAG_gpu = LLAMAFILE_GPU_DISABLE;
     llamafile_check_cpu();
     ShowCrashReports();
 
@@ -88,7 +86,18 @@ main(int argc, char* argv[])
         .use_mlock = false,
         .check_tensors = false,
     };
-    g_model = llama_load_model_from_file(FLAG_model, mparams);
+    llama_model* model = llama_load_model_from_file(FLAG_model, mparams);
+    if (!model) {
+        fprintf(stderr, "%s: failed to load model\n", FLAG_model);
+        exit(1);
+    }
+
+    // create slots
+    Slots* slots = new Slots(model);
+    if (!slots->start(FLAG_slots)) {
+        SLOG("no slots could be created");
+        exit(1);
+    }
 
     // create server
     if (FLAG_workers <= 0)
@@ -96,7 +105,7 @@ main(int argc, char* argv[])
     if (FLAG_workers <= 0)
         FLAG_workers = 16;
     set_thread_name("server");
-    g_server = new Server(create_listening_socket(FLAG_listen));
+    g_server = new Server(create_listening_socket(FLAG_listen), slots, model);
     for (int i = 0; i < FLAG_workers; ++i)
         npassert(!g_server->spawn());
 
@@ -122,7 +131,8 @@ main(int argc, char* argv[])
     g_server->shutdown();
     g_server->close();
     delete g_server;
-    llama_free_model(g_model);
+    delete slots;
+    llama_free_model(model);
     tokenbucket_destroy();
     time_destroy();
     SLOG("exit");

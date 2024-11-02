@@ -33,6 +33,24 @@ Specifies the local [HOST:]PORT on which the HTTP server should listen.
 By default this is 0.0.0.0:8080 which means llamafiler will bind to port
 8080 on every locally available IPv4 network interface. This option may
 currently only be specified once.
+.It Fl c Ar TOKENS , Fl Fl ctx-size Ar TOKENS
+Specifies context size. This specifies how long a completion can get
+before it runs out of space. It defaults to 8k which means 8192 tokens.
+Many models support a larger context size, like 128k, but that'll need
+much more RAM or VRAM per slot. If this value is larger than the trained
+context size of the model, it'll be tuned down to the maximum. If this
+value is 0 or negative, the maximum number of tokens will be used.
+.It Fl s Ar COUNT , Fl Fl slots Ar COUNT
+Specifies how many slots to maintain. This defaults to 1. Slots are used
+by chat completions requests. When such a request comes in, the client
+needs to take control of a slot. When the completion is finished, the
+slot is relinquished back to the server. HTTP clients will wait for a
+slot to be relinquished if none are available. Tuning this parameter to
+nicely fit available RAM or VRAM can help you manage your server
+resources, and control how much completion parallelism can happen.
+Please note that
+.Fl Fl ctx-size
+has a strong influence on how many slots can be created.
 .It Fl Fl url-prefix Ar URLPREFIX
 Specifies a URL prefix (subdirectory) under which the HTTP server will
 make the API accessible, e.g. /lamafiler. Useful when running llamafiler

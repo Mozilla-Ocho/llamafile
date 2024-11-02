@@ -32,6 +32,7 @@
 #include "llamafile/version.h"
 
 #include "log.h"
+#include "server.h"
 #include "time.h"
 #include "tokenbucket.h"
 #include "worker.h"
@@ -54,8 +55,11 @@ on_http_cancel(Client* client)
 
 static ThreadLocal<Client> g_http_cancel(on_http_cancel);
 
-Client::Client()
-  : cleanups(nullptr), ibuf(FLAG_http_ibuf_size), obuf(FLAG_http_obuf_size)
+Client::Client(llama_model* model)
+  : model_(model)
+  , cleanups(nullptr)
+  , ibuf(FLAG_http_ibuf_size)
+  , obuf(FLAG_http_obuf_size)
 {
     InitHttpMessage(&msg, 0);
     url.params.p = nullptr;
@@ -213,11 +217,11 @@ Client::transport()
     }
 
     if (get_header("X-Priority") == "batch") {
-        worker->deprioritize();
+        worker_->deprioritize();
     } else if (!effective_ip_trusted) {
         if (tokenbucket_acquire(client_ip) > FLAG_token_burst) {
             SLOG("deprioritizing");
-            worker->deprioritize();
+            worker_->deprioritize();
         }
     }
 

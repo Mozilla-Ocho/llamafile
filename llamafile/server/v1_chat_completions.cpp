@@ -33,9 +33,11 @@
 #include "fastjson.h"
 #include "json.h"
 #include "log.h"
-#include "model.h"
+#include "server.h"
 #include "slot.h"
+#include "slots.h"
 #include "utils.h"
+#include "worker.h"
 
 struct V1ChatCompletionParams
 {
@@ -49,19 +51,19 @@ struct V1ChatCompletionParams
     std::string user;
     std::string model;
     std::vector<llama_chat_msg> messages;
-    std::vector<std::vector<llama_token>> stop;
+    std::vector<std::vector<int>> stop;
     std::string grammar;
 
-    void add_stop(const std::string& text)
+    void add_stop(llama_model* model, const std::string& text)
     {
         stop.emplace_back(
-          llama_tokenize(g_model, text, DONT_ADD_SPECIAL, DONT_PARSE_SPECIAL));
+          llama_tokenize(model, text, DONT_ADD_SPECIAL, DONT_PARSE_SPECIAL));
     }
 
-    bool should_stop(const std::vector<llama_token>& history)
+    bool should_stop(const std::vector<int>& history)
     {
         for (const auto& suffix : stop)
-            if (vector_ends_with(history, suffix))
+            if (lf::vector_ends_with(history, suffix))
                 return true;
         return false;
     }
@@ -70,7 +72,7 @@ struct V1ChatCompletionParams
 struct V1ChatCompletionState
 {
     std::string prompt;
-    std::vector<llama_token> tokens;
+    std::vector<int> tokens;
     std::string piece;
 };
 
@@ -107,7 +109,11 @@ cleanup_sampler(void* arg)
 static void
 cleanup_slot(void* arg)
 {
-    delete (Slot*)arg;
+    Client* client = (Client*)arg;
+    if (client->slot_) {
+        client->worker_->server_->slots_->give(client->slot_);
+        client->slot_ = nullptr;
+    }
 }
 
 static bool
@@ -357,7 +363,7 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
     Json& stop = json.second["stop"];
     if (!stop.isNull()) {
         if (stop.isString()) {
-            params->add_stop(stop.getString());
+            params->add_stop(model_, stop.getString());
         } else if (stop.isArray()) {
             std::vector<Json>& stops = stop.getArray();
             if (stops.size() > 4)
@@ -367,7 +373,7 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
                     return send_error(400, "stop array item must be string");
                 if (stop2.getString().size() > 50)
                     return send_error(400, "stop array string too long");
-                params->add_stop(stop2.getString());
+                params->add_stop(model_, stop2.getString());
             }
         } else {
             return send_error(400, "stop field must be string or string array");
@@ -448,29 +454,23 @@ Client::v1_chat_completions()
 
     // turn text into tokens
     state->prompt =
-      llama_chat_apply_template(g_model, "", params->messages, ADD_ASSISTANT);
+      llama_chat_apply_template(model_, "", params->messages, ADD_ASSISTANT);
     state->tokens =
-      llama_tokenize(g_model, state->prompt, DONT_ADD_SPECIAL, PARSE_SPECIAL);
+      llama_tokenize(model_, state->prompt, DONT_ADD_SPECIAL, PARSE_SPECIAL);
 
     // add bos token if it's needed
-    if (llama_should_add_bos_token(g_model)) {
-        llama_token bos = llama_token_bos(g_model);
+    if (llama_should_add_bos_token(model_)) {
+        llama_token bos = llama_token_bos(model_);
         if (state->tokens.empty() || state->tokens[0] != bos)
             state->tokens.insert(state->tokens.begin(), bos);
     }
 
     // find appropriate slot
-    Slot* slot;
-    slot = new Slot;
-    if (!slot->start()) {
-        delete slot;
-        SLOG("failed to create slot");
-        return send_error(500);
-    }
-    defer_cleanup(cleanup_slot, slot);
+    slot_ = worker_->server_->slots_->take(state->tokens);
+    defer_cleanup(cleanup_slot, this);
 
     // sanity check
-    if (state->tokens.size() + 1 > slot->n_ctx())
+    if (state->tokens.size() + 1 > slot_->n_ctx())
         return send_error(400, "prompt too big for model context size");
 
     // init sampling
@@ -480,7 +480,7 @@ Client::v1_chat_completions()
     defer_cleanup(cleanup_sampler, sampler);
 
     // prefill time
-    if (!slot->prefill(state->tokens)) {
+    if (!slot_->prefill(state->tokens)) {
         SLOG("slot prefill failed");
         return send_error(500, "llama_decode prefill failed");
     }
@@ -489,7 +489,7 @@ Client::v1_chat_completions()
     response->json["id"].setString(generate_id());
     response->json["object"].setString("chat.completion");
     response->json["model"].setString(params->model);
-    response->json["system_fingerprint"].setString(slot->system_fingerprint_);
+    response->json["system_fingerprint"].setString(slot_->system_fingerprint_);
     response->json["choices"].setArray();
     Json& choice = response->json["choices"][0];
     choice.setObject();
@@ -519,27 +519,27 @@ Client::v1_chat_completions()
     for (;;) {
         if (params->max_tokens >= 0 &&
             completion_tokens >= params->max_tokens) {
-            slot->eval_token(llamafile_token_eot(g_model));
+            slot_->eval_token(llamafile_token_eot(model_));
             break;
         }
-        llama_token id = llama_sampling_sample(sampler, slot->ctx_, NULL);
-        llama_sampling_accept(sampler, slot->ctx_, id, APPLY_GRAMMAR);
+        llama_token id = llama_sampling_sample(sampler, slot_->ctx_, NULL);
+        llama_sampling_accept(sampler, slot_->ctx_, id, APPLY_GRAMMAR);
         ++completion_tokens;
-        if (!slot->eval_token(id)) {
+        if (!slot_->eval_token(id)) {
             SLOG("ran out of context window");
             break;
         }
-        if (llama_token_is_eog(g_model, id)) {
+        if (llama_token_is_eog(model_, id)) {
             finish_reason = "stop";
             break;
         }
-        if (params->should_stop(slot->history_)) {
-            slot->eval_token(llamafile_token_eot(g_model));
+        if (params->should_stop(slot_->history_)) {
+            slot_->eval_token(llamafile_token_eot(model_));
             finish_reason = "stop";
             break;
         }
         state->piece =
-          llama_token_to_piece(slot->ctx_, id, DONT_RENDER_SPECIAL_TOKENS);
+          llama_token_to_piece(slot_->ctx_, id, DONT_RENDER_SPECIAL_TOKENS);
         if (!state->piece.empty()) {
             if (params->stream) {
                 char* p = append_http_response_message(obuf.p, 200);
@@ -558,6 +558,7 @@ Client::v1_chat_completions()
     choice["finish_reason"].setString(finish_reason);
 
     // finalize response
+    cleanup_slot(this);
     if (params->stream) {
         choice["delta"].setObject();
         choice["delta"]["content"].setString("");

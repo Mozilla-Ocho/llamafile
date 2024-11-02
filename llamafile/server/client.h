@@ -36,7 +36,9 @@
 #define HeaderEqualCase(H, S) \
     SlicesEqualCase(S, strlen(S), HeaderData(H), HeaderLength(H))
 
+struct Slot;
 struct Worker;
+struct llama_model;
 struct TokenizeParams;
 struct EmbeddingParams;
 struct V1ChatCompletionParams;
@@ -58,7 +60,9 @@ struct Client
     bool close_connection = false;
     bool should_send_error_if_canceled;
     size_t unread = 0;
-    Worker* worker;
+    Worker* worker_; // borrowed
+    Slot* slot_ = nullptr; // owned or null
+    llama_model* model_; // borrowed
     timespec message_started;
     HttpMessage msg;
     Url url = {};
@@ -69,7 +73,7 @@ struct Client
     Buffer ibuf;
     Buffer obuf;
 
-    Client();
+    explicit Client(llama_model*);
 
     void run();
     int close();

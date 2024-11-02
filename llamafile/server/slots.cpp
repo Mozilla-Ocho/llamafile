@@ -16,11 +16,107 @@
 // limitations under the License.
 
 #include "slots.h"
+#include "llamafile/server/log.h"
+#include "llamafile/vector.h"
+#include "log.h"
+#include "slot.h"
+#include "slot_entry.h"
+#include <assert.h>
 
-Slots::Slots()
+Slots::Slots(llama_model* model) : model_(model)
 {
+    pthread_mutex_init(&lock_, 0);
+    pthread_cond_init(&cond_, 0);
 }
 
 Slots::~Slots()
 {
+    for (const auto& e : slots_)
+        if (e.slot())
+            delete e.slot();
+    pthread_cond_destroy(&cond_);
+    pthread_mutex_destroy(&lock_);
+}
+
+int
+Slots::start(int count)
+{
+    int made = 0;
+    pthread_mutex_lock(&lock_);
+    for (int i = 0; i < count; ++i) {
+        Slot* slot = new Slot(model_);
+        if (slot->start()) {
+            ++made;
+            slots_.emplace(slot);
+        } else {
+            delete slot;
+        }
+    }
+    if (made)
+        pthread_cond_broadcast(&cond_);
+    pthread_mutex_unlock(&lock_);
+    if (made < count)
+        SLOG("could only make %d out of %d slots", made);
+    return made;
+}
+
+Slot*
+Slots::take(const std::vector<int>& prefix)
+{
+    pthread_mutex_lock(&lock_);
+    for (;;) {
+
+        // find slot with longest matching prefix
+        SlotEntry search_key{ &prefix };
+        auto i = slots_.upper_bound(search_key);
+
+        // handle special case
+        if (i == slots_.end() && i != slots_.begin()) {
+            --i;
+            Slot* slot = i->slot();
+            unassert(slot);
+            slots_.erase(i);
+            pthread_mutex_unlock(&lock_);
+            return slot;
+        }
+
+        // avoid slots with non-matching suffix
+        // they probably belong to another client
+        if (i != slots_.begin()) {
+            --i;
+            Slot* slot = i->slot();
+            unassert(slot);
+            int cpl = lf::vector_common_prefix_length(slot->history_, prefix);
+            if (cpl == slot->history_.size()) {
+                slots_.erase(i);
+                pthread_mutex_unlock(&lock_);
+                return slot;
+            }
+            ++i;
+        }
+
+        // otherwise return result of search
+        if (i != slots_.end()) {
+            Slot* slot = i->slot();
+            unassert(slot);
+            slots_.erase(i);
+            pthread_mutex_unlock(&lock_);
+            return slot;
+        }
+
+        // all slots are being used
+        SLOG("waiting for slot to be relinquished...");
+        pthread_cond_wait(&cond_, &lock_);
+    }
+}
+
+void
+Slots::give(Slot* slot)
+{
+    SLOG("relinquishing slot");
+    unassert(slot);
+    pthread_mutex_lock(&lock_);
+    slots_.emplace(slot);
+    pthread_cond_signal(&cond_);
+    pthread_mutex_unlock(&lock_);
 }

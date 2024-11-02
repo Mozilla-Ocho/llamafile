@@ -16,6 +16,7 @@
 // limitations under the License.
 
 #include "server.h"
+#include "slots.h"
 
 #include <assert.h>
 #include <netinet/in.h>
@@ -32,7 +33,8 @@
 #include "server.h"
 #include "worker.h"
 
-Server::Server(int fd) : fd(fd)
+Server::Server(int fd, Slots* slots, llama_model* model)
+  : fd(fd), slots_(slots), model_(model)
 {
 }
 
@@ -102,12 +104,12 @@ Server::spawn()
     errno_t err;
     Worker* worker;
     pthread_attr_t attr;
-    worker = new Worker(this);
+    worker = new Worker(this, model_);
     pthread_attr_init(&attr);
     pthread_attr_setguardsize(&attr, sysconf(_SC_PAGESIZE));
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setsigaltstacksize_np(&attr, sysconf(_SC_MINSIGSTKSZ) + 16384);
-    if ((err = pthread_create(&worker->th, &attr, worker_thread, worker)))
+    if ((err = pthread_create(&worker->th_, &attr, worker_thread, worker)))
         delete worker;
     pthread_attr_destroy(&attr);
     return err;

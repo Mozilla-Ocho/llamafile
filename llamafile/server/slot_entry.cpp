@@ -15,34 +15,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cleanup.h"
+#include "slot_entry.h"
+#include "slot.h"
+#include <assert.h>
 
-#include <vector>
-
-#include "llama.cpp/llama.h"
-
-void
-cleanup_float_vector(void* arg)
+SlotEntry::SlotEntry(Slot* slot) : slot_(slot), key_(nullptr)
 {
-    delete (std::vector<float>*)arg;
+    unassert(slot);
 }
 
-void
-cleanup_token_vector(void* arg)
+SlotEntry::SlotEntry(const std::vector<int>* key) : slot_(nullptr), key_(key)
 {
-    delete (std::vector<int>*)arg;
+    unassert(key);
 }
 
-void
-cleanup_llama_batch(void* arg)
+SlotEntry::~SlotEntry()
 {
-    llama_batch* batch = (llama_batch*)arg;
-    llama_batch_free(*batch);
-    delete batch;
 }
 
-void
-cleanup_llama_context(void* arg)
+Slot*
+SlotEntry::slot() const
 {
-    llama_free((llama_context*)arg);
+    return slot_;
+}
+
+const std::vector<int>*
+SlotEntry::key() const
+{
+    return key_ ? key_ : &slot_->history_;
+}
+
+bool
+operator<(const SlotEntry& lhs, const SlotEntry& rhs)
+{
+    return *lhs.key() < *rhs.key();
 }

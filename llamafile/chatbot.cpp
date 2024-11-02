@@ -205,7 +205,7 @@ static void on_context(const std::vector<std::string> &args) {
 }
 
 static void on_clear(const std::vector<std::string> &args) {
-    llama_kv_cache_seq_rm(g_ctx, 0, g_system_prompt_tokens, tokens_used() - g_system_prompt_tokens);
+    llama_kv_cache_seq_rm(g_ctx, 0, g_system_prompt_tokens, -1);
     g_history.resize(g_system_prompt_tokens);
     g_stack.clear();
     fix_stacks();
@@ -228,7 +228,7 @@ static void on_pop(const std::vector<std::string> &args) {
     }
     printf(BOLD "%12d" RESET " restored " FAINT "(%s)" RESET "\n", g_stack.back(),
            describe_position(g_stack.back()).c_str());
-    llama_kv_cache_seq_rm(g_ctx, 0, g_stack.back(), tokens_used() - g_stack.back());
+    llama_kv_cache_seq_rm(g_ctx, 0, g_stack.back(), -1);
     g_history.resize(g_stack.back());
     g_stack.pop_back();
     fix_stacks();
@@ -244,7 +244,7 @@ static void on_undo(const std::vector<std::string> &args) {
     }
     printf(FAINT "restoring conversation to: %s" RESET "\n",
            describe_position(g_undo.back()).c_str());
-    llama_kv_cache_seq_rm(g_ctx, 0, g_undo.back(), tokens_used() - g_undo.back());
+    llama_kv_cache_seq_rm(g_ctx, 0, g_undo.back(), -1);
     g_history.resize(g_undo.back());
     g_undo.pop_back();
     fix_stacks();

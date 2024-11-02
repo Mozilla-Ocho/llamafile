@@ -16,6 +16,23 @@
 // limitations under the License.
 
 #pragma once
-#include "llama.cpp/llama.h"
+#include <vector>
 
-extern llama_model* g_model;
+struct Slot;
+
+class SlotEntry
+{
+  public:
+    explicit SlotEntry(Slot*);
+    explicit SlotEntry(const std::vector<int>*);
+    ~SlotEntry();
+    Slot* slot() const;
+    const std::vector<int>* key() const;
+
+  private:
+    Slot* slot_;
+    const std::vector<int>* key_;
+};
+
+bool
+operator<(const SlotEntry&, const SlotEntry&);

@@ -16,29 +16,26 @@
 // limitations under the License.
 
 #pragma once
-#include "llama.cpp/llama.h"
-#include <cosmo.h>
-#include <stdatomic.h>
 #include <time.h>
+#include <utility>
 #include <vector>
 
-#define SLOT(e) DLL_CONTAINER(Slot, elem, e)
+struct llama_model;
+struct llama_context;
 
 struct Slot
 {
-    Dll elem_;
-    atomic_int refs_ = 0;
+    llama_model* model_;
     llama_context* ctx_ = nullptr;
     timespec last_used_ = timespec_zero;
-    std::vector<llama_token> history_;
+    std::vector<int> history_;
     std::string system_fingerprint_;
 
-    Slot();
+    Slot(llama_model*);
     ~Slot();
     int n_ctx();
     bool start();
-    bool eval_token(llama_token);
-    bool eval_tokens(std::vector<llama_token>);
-    bool can_use_slot(const std::vector<llama_token>&);
-    bool prefill(const std::vector<llama_token>&);
+    bool eval_token(int);
+    bool eval_tokens(std::vector<int>);
+    bool prefill(const std::vector<int>&);
 };

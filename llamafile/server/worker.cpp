@@ -27,86 +27,88 @@
 
 #include "client.h"
 #include "log.h"
+#include "server.h"
 #include "signals.h"
 #include "tokenbucket.h"
 
-Worker::Worker(Server* server) : server(server)
+Worker::Worker(Server* server, llama_model* model)
+  : server_(server), client_(model)
 {
-    dll_init(&elem);
+    dll_init(&elem_);
 }
 
 void
 Worker::kill()
 {
-    pthread_cancel(th);
+    pthread_cancel(th_);
 }
 
 void
 Worker::begin()
 {
-    npassert(!working);
-    client.worker = this;
-    client.client_ip_trusted = is_trusted_ip(client.client_ip);
+    npassert(!working_);
+    client_.worker_ = this;
+    client_.client_ip_trusted = is_trusted_ip(client_.client_ip);
     int tokens = 0;
-    if (!client.client_ip_trusted)
-        tokens = tokenbucket_acquire(client.client_ip);
-    server->lock();
-    dll_remove(&server->idle_workers, &elem);
-    if (dll_is_empty(server->idle_workers)) {
+    if (!client_.client_ip_trusted)
+        tokens = tokenbucket_acquire(client_.client_ip);
+    server_->lock();
+    dll_remove(&server_->idle_workers, &elem_);
+    if (dll_is_empty(server_->idle_workers)) {
         Dll* slowbro;
-        if ((slowbro = dll_last(server->active_workers))) {
+        if ((slowbro = dll_last(server_->active_workers))) {
             SLOG("all threads active! dropping oldest client");
             WORKER(slowbro)->kill();
         }
     }
-    working = true;
+    working_ = true;
     if (tokens > FLAG_token_burst) {
-        dll_make_last(&server->active_workers, &elem);
+        dll_make_last(&server_->active_workers, &elem_);
     } else {
-        dll_make_first(&server->active_workers, &elem);
+        dll_make_first(&server_->active_workers, &elem_);
     }
-    server->unlock();
+    server_->unlock();
 }
 
 void
 Worker::end()
 {
-    npassert(working);
-    server->lock();
-    dll_remove(&server->active_workers, &elem);
-    working = false;
-    dll_make_first(&server->idle_workers, &elem);
-    server->unlock();
+    npassert(working_);
+    server_->lock();
+    dll_remove(&server_->active_workers, &elem_);
+    working_ = false;
+    dll_make_first(&server_->idle_workers, &elem_);
+    server_->unlock();
 }
 
 void
 Worker::deprioritize()
 {
-    npassert(working);
-    server->lock();
-    dll_remove(&server->active_workers, &elem);
-    dll_make_last(&server->active_workers, &elem);
-    server->unlock();
+    npassert(working_);
+    server_->lock();
+    dll_remove(&server_->active_workers, &elem_);
+    dll_make_last(&server_->active_workers, &elem_);
+    server_->unlock();
 }
 
 void
 Worker::retire()
 {
-    server->lock();
-    if (working)
-        dll_remove(&server->active_workers, &elem);
+    server_->lock();
+    if (working_)
+        dll_remove(&server_->active_workers, &elem_);
     else
-        dll_remove(&server->idle_workers, &elem);
-    server->worker_count.fetch_sub(1, std::memory_order_acq_rel);
-    server->signal();
-    server->unlock();
+        dll_remove(&server_->idle_workers, &elem_);
+    server_->worker_count.fetch_sub(1, std::memory_order_acq_rel);
+    server_->signal();
+    server_->unlock();
     delete this;
 }
 
 void
 Worker::handle()
 {
-    if ((client.fd = server->accept(&client.client_ip)) == -1) {
+    if ((client_.fd = server_->accept(&client_.client_ip)) == -1) {
         SLOG("accept returned %m");
         return;
     }
@@ -114,35 +116,35 @@ Worker::handle()
     begin();
 
     try {
-        client.run();
+        client_.run();
     } catch (const std::exception& e) {
         SLOG("caught %s", e.what());
     } catch (...) {
         SLOG("caught unknown exception");
     }
 
-    client.close();
+    client_.close();
     end();
 }
 
 void
 Worker::run()
 {
-    server->lock();
-    dll_make_first(&server->idle_workers, &elem);
-    server->worker_count.fetch_add(1, std::memory_order_acq_rel);
-    server->unlock();
+    server_->lock();
+    dll_make_first(&server_->idle_workers, &elem_);
+    server_->worker_count.fetch_add(1, std::memory_order_acq_rel);
+    server_->unlock();
 
     static ThreadLocal<Worker> cleanup([](Worker* worker) {
-        if (worker->working) {
-            worker->client.close();
+        if (worker->working_) {
+            worker->client_.close();
             worker->end();
         }
         worker->retire();
     });
     cleanup.set(this);
 
-    while (!server->terminated.load(std::memory_order_acquire)) {
+    while (!server_->terminated.load(std::memory_order_acquire)) {
         sigset_t mask;
         sigemptyset(&mask);
         sigaddset(&mask, SIGHUP);

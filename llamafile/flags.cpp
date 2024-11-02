@@ -237,9 +237,19 @@ void llamafile_get_flags(int argc, char **argv) {
         // model flags
 
         if (!strcmp(flag, "-c") || !strcmp(flag, "--ctx-size")) {
+            char *ep;
             if (i == argc)
                 missing("--ctx-size");
-            FLAG_ctx_size = atoi(argv[i++]);
+            FLAG_ctx_size = strtol(argv[i++], &ep, 10);
+            if (*ep == 'k')
+                FLAG_ctx_size *= 1024;
+            continue;
+        }
+
+        if (!strcmp(flag, "-s") || !strcmp(flag, "--slots")) {
+            if (i == argc)
+                missing("--slots");
+            FLAG_slots = atoi(argv[i++]);
             continue;
         }
 

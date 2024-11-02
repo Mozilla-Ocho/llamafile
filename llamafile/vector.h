@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <vector>
 
+namespace lf {
+
 template <typename T>
 bool vector_starts_with(const std::vector<T> &sequence, const std::vector<T> &prefix) {
     if (prefix.size() > sequence.size())
@@ -32,3 +34,16 @@ bool vector_ends_with(const std::vector<T> &sequence, const std::vector<T> &suff
         return false;
     return std::equal(sequence.rbegin(), sequence.rend(), suffix.rbegin());
 }
+
+template <typename T>
+size_t vector_common_prefix_length(const std::vector<T> &a, const std::vector<T> &b) {
+    size_t i = 0;
+    size_t n = std::min(a.size(), b.size());
+    const T *ai = a.data();
+    const T *bi = b.data();
+    while (i < n && ai[i] == bi[i])
+        ++i;
+    return i;
+}
+
+} // namespace lf

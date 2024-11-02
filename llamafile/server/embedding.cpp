@@ -28,7 +28,6 @@
 #include "fastjson.h"
 #include "json.h"
 #include "log.h"
-#include "model.h"
 #include "utils.h"
 
 struct EmbeddingParams
@@ -161,7 +160,7 @@ Client::embedding()
     // turn text into tokens
     auto toks = new std::vector<llama_token>(params->prompt.size() + 16);
     defer_cleanup(cleanup_token_vector, toks);
-    int count = llama_tokenize(g_model,
+    int count = llama_tokenize(model_,
                                params->prompt.data(),
                                params->prompt.size(),
                                &(*toks)[0],
@@ -178,7 +177,7 @@ Client::embedding()
         return send_error(400, "completely empty prompt disallowed");
 
     // truncate if exceeds model context size
-    const int n_ctx_train = llama_n_ctx_train(g_model);
+    const int n_ctx_train = llama_n_ctx_train(model_);
     if (count > n_ctx_train)
         count = n_ctx_train;
 
@@ -200,7 +199,7 @@ Client::embedding()
     cparams.type_k = GGML_TYPE_F16;
     cparams.type_v = GGML_TYPE_F16;
     cparams.flash_attn = FLAG_flash_attn;
-    llama_context* ctx = llama_new_context_with_model(g_model, cparams);
+    llama_context* ctx = llama_new_context_with_model(model_, cparams);
     if (!ctx) {
         SLOG("llama_new_context_with_model failed");
         return send_error(500);
@@ -208,7 +207,7 @@ Client::embedding()
     defer_cleanup(cleanup_llama_context, ctx);
 
     // initialize batch
-    const int n_embd = llama_n_embd(g_model);
+    const int n_embd = llama_n_embd(model_);
     llama_batch* batch = new llama_batch;
     *batch = llama_batch_init(count, 0, 1);
     defer_cleanup(cleanup_llama_batch, batch);

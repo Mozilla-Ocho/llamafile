@@ -16,14 +16,24 @@
 // limitations under the License.
 
 #pragma once
-#include <cosmo.h>
 #include <pthread.h>
+#include <set>
+#include <vector>
+
+struct Slot;
+class SlotEntry;
+struct llama_model;
 
 struct Slots
 {
-    Dll* slots_ = nullptr;
-    pthread_mutex_t lock_ = PTHREAD_MUTEX_INITIALIZER;
+    llama_model* model_;
+    std::multiset<SlotEntry> slots_;
+    pthread_mutex_t lock_;
+    pthread_cond_t cond_;
 
-    Slots();
+    Slots(llama_model*);
     ~Slots();
+    int start(int);
+    Slot* take(const std::vector<int>&);
+    void give(Slot*);
 };
