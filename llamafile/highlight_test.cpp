@@ -54,6 +54,7 @@ const char *const kLanguages[] = {
     "make", //
     "markdown", //
     "matlab", //
+    "ocaml", //
     "pascal", //
     "perl", //
     "php!", //

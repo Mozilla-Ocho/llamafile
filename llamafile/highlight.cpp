@@ -216,5 +216,10 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "julia")
         return new HighlightJulia;
 
+    if (lang == "ml" || //
+        lang == "mli" || //
+        lang == "ocaml")
+        return new HighlightOcaml;
+
     return nullptr;
 }

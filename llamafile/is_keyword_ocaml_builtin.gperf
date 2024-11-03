@@ -1,0 +1,31 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_ocaml_builtin
+%%
+Assert_failure
+Division_by_zero
+End_of_file
+Failure
+Invalid_argument
+Match_failure
+Not_found
+Out_of_memory
+Stack_overflow
+Sys_blocked_io
+Sys_error
+Undefined_recursive_module
+at_exit
+exit
+failwith
+failwithf
+ignore
+invalid_arg
+parser
+raise
+raise_notrace
+ref

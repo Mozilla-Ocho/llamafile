@@ -138,6 +138,9 @@ is_keyword_f is_keyword_r_builtin;
 is_keyword_f is_keyword_r_constant;
 is_keyword_f is_keyword_scala;
 is_keyword_f is_keyword_julia;
+is_keyword_f is_keyword_ocaml;
+is_keyword_f is_keyword_ocaml_builtin;
+is_keyword_f is_keyword_ocaml_constant;
 }
 
 class Highlight {
@@ -727,4 +730,18 @@ class HighlightJulia : public Highlight {
   private:
     int t_ = 0;
     std::string word_;
+};
+
+class HighlightOcaml : public Highlight {
+  public:
+    HighlightOcaml();
+    ~HighlightOcaml() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    int nest_ = 0;
+    std::string word_;
+    std::string word2_;
 };
