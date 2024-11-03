@@ -99,13 +99,6 @@ The `/v1/chat/completions` endpoint lets you build a chatbot.
   repeated requests with the same seed and parameters should return the
   same result.
 
-- `seed`: `integer|null`
-  
-  If specified, llamafiler will make its best effort to sample
-  deterministically, even when temperature is non-zero. This means that
-  repeated requests with the same seed and parameters should return the
-  same result.
-
 - `presence_penalty`: `number|null`
   
   Number between -2.0 and 2.0. Positive values penalize new tokens based
