@@ -104,11 +104,11 @@ Client::get_embedding_params(EmbeddingParams* params)
         if (IsMimeType(HeaderData(kHttpContentType),
                        HeaderLength(kHttpContentType),
                        "text/plain")) {
-            params->prompt = payload;
+            params->prompt = payload_;
         } else if (IsMimeType(HeaderData(kHttpContentType),
                               HeaderLength(kHttpContentType),
                               "application/json")) {
-            std::pair<Json::Status, Json> json = Json::parse(payload);
+            std::pair<Json::Status, Json> json = Json::parse(payload_);
             if (json.first != Json::success)
                 return send_error(400, Json::StatusToString(json.first));
             if (!json.second.isObject())
@@ -132,7 +132,7 @@ Client::get_embedding_params(EmbeddingParams* params)
             return send_error(501, "Content Type Not Implemented");
         }
     } else {
-        params->prompt = payload;
+        params->prompt = payload_;
     }
     return true;
 }
@@ -140,7 +140,7 @@ Client::get_embedding_params(EmbeddingParams* params)
 bool
 Client::embedding()
 {
-    if (msg.method != kHttpGet && msg.method != kHttpPost)
+    if (msg_.method != kHttpGet && msg_.method != kHttpPost)
         return send_error(405);
 
     if (!read_payload())
@@ -237,7 +237,7 @@ Client::embedding()
     bool in_openai_mode = path() == "/v1/embeddings";
 
     // serialize tokens to json
-    char* p = obuf.p;
+    char* p = obuf_.p;
     p = stpcpy(p, "{\n");
 
     // Here's what an OpenAI /v1/embedding response looks like:
@@ -307,7 +307,7 @@ Client::embedding()
     if (in_openai_mode)
         p = stpcpy(p, "  }]\n");
     p = stpcpy(p, "}\n");
-    std::string_view content(obuf.p, p - obuf.p);
+    std::string_view content(obuf_.p, p - obuf_.p);
 
     // collect statistics
     rusage ruend = {};

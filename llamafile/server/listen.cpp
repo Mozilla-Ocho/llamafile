@@ -25,15 +25,20 @@
 #include <string.h>
 #include <sys/socket.h>
 
-#include "log.h"
-#include "server.h"
+#include "llamafile/llamafile.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/server.h"
 
 void
 print_listening_url(unsigned ip, int port)
 {
     SLOG("listen http://%hhu.%hhu.%hhu.%hhu:%hu%s",
-         ip >> 24, ip >> 16, ip >> 8, ip, port,
-         g_url_prefix.c_str());
+         ip >> 24,
+         ip >> 16,
+         ip >> 8,
+         ip,
+         port,
+         FLAG_url_prefix);
 }
 
 int

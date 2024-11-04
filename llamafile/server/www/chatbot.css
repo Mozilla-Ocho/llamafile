@@ -1,0 +1,143 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background: #f5f5f5;
+}
+
+.chat-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 4rem);
+}
+
+.chat-header {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  border-radius: 12px 12px 0 0;
+}
+
+.chat-header h1 {
+  font-size: 1.25rem;
+  color: #212529;
+  vertical-align: center;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.message {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.message.user {
+  background: #e9ecef;
+  margin-left: auto;
+}
+
+.message.assistant {
+  background: #f8f9fa;
+  margin-right: auto;
+}
+
+.message.system {
+  background: #f8e3fa;
+  margin-right: auto;
+}
+
+.chat-input-container {
+  padding: 1rem;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.chat-input:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.send-button {
+  padding: 0.75rem 1.5rem;
+  background: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.send-button:hover {
+  background: #0b5ed7;
+}
+
+.send-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.message pre {
+  background: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.typing-indicator {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  color: #6c757d;
+}
+
+.typing-indicator span {
+  width: 4px;
+  height: 4px;
+  background: #6c757d;
+  border-radius: 50%;
+  display: inline-block;
+  animation: typing 1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}

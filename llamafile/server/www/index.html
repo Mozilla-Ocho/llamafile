@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>llamafile</title>
+<link rel="stylesheet" href="chatbot.css">
+
+<div class="chat-container">
+  <div class="chat-header">
+    <h1>
+      <img src="chatbot.png" alt="[logo]">
+      llamafile
+    </h1>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="message system">
+      Loading...
+    </div>
+  </div>
+  <div class="typing-indicator" id="typing-indicator">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="chat-input-container">
+    <input type="text" class="chat-input" id="chat-input" placeholder="Type your message..." autocomplete="off">
+    <button class="send-button" id="send-button">Send</button>
+  </div>
+</div>
+<script src="chatbot.js"></script>

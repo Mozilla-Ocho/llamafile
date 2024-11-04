@@ -164,7 +164,7 @@ bool
 Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
 {
     // must be json post request
-    if (msg.method != kHttpPost)
+    if (msg_.method != kHttpPost)
         return send_error(405);
     if (!HasHeader(kHttpContentType) ||
         !IsMimeType(HeaderData(kHttpContentType),
@@ -176,7 +176,7 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
         return false;
 
     // object<model, messages, ...>
-    std::pair<Json::Status, Json> json = Json::parse(payload);
+    std::pair<Json::Status, Json> json = Json::parse(payload_);
     if (json.first != Json::success)
         return send_error(400, Json::StatusToString(json.first));
     if (!json.second.isObject())
@@ -499,9 +499,9 @@ Client::v1_chat_completions()
 
     // initialize response
     if (params->stream) {
-        char* p = append_http_response_message(obuf.p, 200);
+        char* p = append_http_response_message(obuf_.p, 200);
         p = stpcpy(p, "Content-Type: text/event-stream\r\n");
-        if (!send_response_start(obuf.p, p))
+        if (!send_response_start(obuf_.p, p))
             return false;
         choice["delta"].setObject();
         choice["delta"]["role"].setString("assistant");
@@ -542,7 +542,7 @@ Client::v1_chat_completions()
           llama_token_to_piece(slot_->ctx_, id, DONT_RENDER_SPECIAL_TOKENS);
         if (!state->piece.empty()) {
             if (params->stream) {
-                char* p = append_http_response_message(obuf.p, 200);
+                char* p = append_http_response_message(obuf_.p, 200);
                 choice["delta"].setObject();
                 choice["delta"]["content"].setString(state->piece);
                 response->json["created"].setLong(timespec_real().tv_sec);
@@ -578,10 +578,10 @@ Client::v1_chat_completions()
         choice["message"]["role"].setString("assistant");
         choice["message"]["content"].setString(std::move(response->content));
         response->json["created"].setLong(timespec_real().tv_sec);
-        char* p = append_http_response_message(obuf.p, 200);
+        char* p = append_http_response_message(obuf_.p, 200);
         p = stpcpy(p, "Content-Type: application/json\r\n");
         response->content = response->json.toStringPretty();
         response->content += '\n';
-        return send_response(obuf.p, p, response->content);
+        return send_response(obuf_.p, p, response->content);
     }
 }

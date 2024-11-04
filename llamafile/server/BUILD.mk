@@ -8,6 +8,7 @@ LLAMAFILE_SERVER_HDRS = $(filter %.h,$(LLAMAFILE_SERVER_FILES))
 LLAMAFILE_SERVER_INCS = $(filter %.inc,$(LLAMAFILE_SERVER_FILES))
 LLAMAFILE_SERVER_SRCS = $(filter %.cpp,$(LLAMAFILE_SERVER_FILES))
 LLAMAFILE_SERVER_OBJS = $(LLAMAFILE_SERVER_SRCS:%.cpp=o/$(MODE)/%.o)
+LLAMAFILE_SERVER_ASSETS = $(wildcard llamafile/server/www/*)
 
 $(LLAMAFILE_SERVER_OBJS): private CCFLAGS += -g
 
@@ -22,6 +23,11 @@ o/$(MODE)/llamafile/server/main:				\
 		o/$(MODE)/llama.cpp/llava/llava.a		\
 		o/$(MODE)/double-conversion/double-conversion.a	\
 		o/$(MODE)/stb/stb.a				\
+		$(LLAMAFILE_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)
+
+# turn /zip/llamafile/server/www/...
+# into /zip/www/...
+$(LLAMAFILE_SERVER_ASSETS:%=o/$(MODE)/%.zip.o): private ZIPOBJ_FLAGS += -C2
 
 $(LLAMAFILE_SERVER_OBJS): llamafile/server/BUILD.mk
 

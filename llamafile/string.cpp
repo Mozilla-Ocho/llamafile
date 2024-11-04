@@ -80,12 +80,12 @@ std::string basename(const std::string_view path) {
     }
 }
 
-std::string extname(const std::string_view path) {
-    std::string name = basename(path);
-    size_t dot_pos = name.find_last_of('.');
-    if (dot_pos == std::string::npos || dot_pos == name.length() - 1)
-        return name;
-    return std::string(name.substr(dot_pos + 1));
+std::string_view extname(const std::string_view &path) {
+    size_t i = path.size();
+    while (i--)
+        if (path[i] == '.' || path[i] == '/')
+            return path.substr(i + 1);
+    return path;
 }
 
 std::string dirname(const std::string_view path) {

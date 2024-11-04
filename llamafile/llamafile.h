@@ -26,6 +26,7 @@ extern const char *FLAG_listen;
 extern const char *FLAG_model;
 extern const char *FLAG_prompt;
 extern const char *FLAG_url_prefix;
+extern const char *FLAG_www_root;
 extern double FLAG_token_rate;
 extern float FLAG_temp;
 extern int FLAG_batch;

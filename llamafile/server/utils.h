@@ -27,6 +27,3 @@ atob(std::string_view, bool);
 
 std::string_view
 or_empty(std::optional<std::string_view> x);
-
-std::string
-normalize_url_prefix(std::string url_prefix);

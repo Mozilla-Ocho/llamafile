@@ -48,10 +48,10 @@ Worker::begin()
 {
     npassert(!working_);
     client_.worker_ = this;
-    client_.client_ip_trusted = is_trusted_ip(client_.client_ip);
+    client_.client_ip_trusted_ = is_trusted_ip(client_.client_ip_);
     int tokens = 0;
-    if (!client_.client_ip_trusted)
-        tokens = tokenbucket_acquire(client_.client_ip);
+    if (!client_.client_ip_trusted_)
+        tokens = tokenbucket_acquire(client_.client_ip_);
     server_->lock();
     dll_remove(&server_->idle_workers, &elem_);
     if (dll_is_empty(server_->idle_workers)) {
@@ -108,7 +108,7 @@ Worker::retire()
 void
 Worker::handle()
 {
-    if ((client_.fd = server_->accept(&client_.client_ip)) == -1) {
+    if ((client_.fd_ = server_->accept(&client_.client_ip_)) == -1) {
         SLOG("accept returned %m");
         return;
     }

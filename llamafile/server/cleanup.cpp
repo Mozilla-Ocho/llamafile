@@ -17,9 +17,16 @@
 
 #include "cleanup.h"
 
+#include <unistd.h>
 #include <vector>
 
 #include "llama.cpp/llama.h"
+
+void
+cleanup_fildes(void* arg)
+{
+    close((intptr_t)arg);
+}
 
 void
 cleanup_float_vector(void* arg)

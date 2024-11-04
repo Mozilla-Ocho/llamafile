@@ -20,6 +20,7 @@
 #include "llamafile.h"
 #include "trust.h"
 
+#include <cosmo.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -49,7 +50,8 @@ const char *FLAG_ip_header = nullptr;
 const char *FLAG_listen = "0.0.0.0:8080";
 const char *FLAG_model = nullptr;
 const char *FLAG_prompt = nullptr;
-const char *FLAG_url_prefix = nullptr;
+const char *FLAG_url_prefix = "";
+const char *FLAG_www_root = "/zip/www";
 double FLAG_token_rate = 1;
 float FLAG_temp = 0.8;
 int FLAG_batch = 2048;
@@ -140,13 +142,6 @@ void llamafile_get_flags(int argc, char **argv) {
             continue;
         }
 
-        if (!strcmp(flag, "--url-prefix")) {
-            if (i == argc)
-                missing("--url-prefix");
-            FLAG_url_prefix = argv[i++];
-            continue;
-        }
-
         if (!strcmp(flag, "-k") || !strcmp(flag, "--keepalive")) {
             if (i == argc)
                 missing("--keepalive");
@@ -218,6 +213,28 @@ void llamafile_get_flags(int argc, char **argv) {
 
         //////////////////////////////////////////////////////////////////////
         // http server flags
+
+        if (!strcmp(flag, "--www-root")) {
+            if (i == argc)
+                missing("--www-root");
+            FLAG_www_root = argv[i++];
+            continue;
+        }
+
+        if (!strcmp(flag, "--url-prefix")) {
+            if (i == argc)
+                missing("--url-prefix");
+            FLAG_url_prefix = argv[i++];
+            if (!IsAcceptablePath(FLAG_url_prefix, -1)) {
+                tinyprint(2, "error: --url-prefix must not have // or /. or /./ or /../\n", NULL);
+                exit(1);
+            }
+            if (endswith(FLAG_url_prefix, "/")) {
+                tinyprint(2, "error: --url-prefix must not be slash or end with slash\n", NULL);
+                exit(1);
+            }
+            continue;
+        }
 
         if (!strcmp(flag, "--http-ibuf-size")) {
             if (i == argc)

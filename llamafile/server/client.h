@@ -28,9 +28,9 @@
 #include <sys/resource.h>
 #include <time.h>
 
-#define HasHeader(H) (!!msg.headers[H].a)
-#define HeaderData(H) (ibuf.p + msg.headers[H].a)
-#define HeaderLength(H) (msg.headers[H].b - msg.headers[H].a)
+#define HasHeader(H) (!!msg_.headers[H].a)
+#define HeaderData(H) (ibuf_.p + msg_.headers[H].a)
+#define HeaderLength(H) (msg_.headers[H].b - msg_.headers[H].a)
 #define HeaderEqual(H, S) \
     SlicesEqual(S, strlen(S), HeaderData(H), HeaderLength(H))
 #define HeaderEqualCase(H, S) \
@@ -52,26 +52,27 @@ struct Cleanup
 
 struct Client
 {
-    int fd = -1;
-    unsigned client_ip = 0;
-    unsigned effective_ip = 0;
-    bool client_ip_trusted = false;
-    bool effective_ip_trusted = false;
-    bool close_connection = false;
-    bool should_send_error_if_canceled;
-    size_t unread = 0;
+    int fd_ = -1;
+    unsigned client_ip_ = 0;
+    unsigned effective_ip_ = 0;
+    bool client_ip_trusted_ = false;
+    bool effective_ip_trusted_ = false;
+    bool close_connection_ = false;
+    bool should_send_error_if_canceled_;
+    size_t unread_ = 0;
     Worker* worker_; // borrowed
     Slot* slot_ = nullptr; // owned or null
     llama_model* model_; // borrowed
-    timespec message_started;
-    HttpMessage msg;
-    Url url = {};
-    char* url_memory = nullptr;
-    char* params_memory = nullptr;
-    std::string_view payload;
-    Cleanup* cleanups;
-    Buffer ibuf;
-    Buffer obuf;
+    timespec message_started_;
+    HttpMessage msg_;
+    Url url_ = {};
+    char* url_memory_ = nullptr;
+    char* params_memory_ = nullptr;
+    std::string_view payload_;
+    std::string resolved_;
+    Cleanup* cleanups_;
+    Buffer ibuf_;
+    Buffer obuf_;
 
     explicit Client(llama_model*);
 

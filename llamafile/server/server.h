@@ -52,7 +52,6 @@ struct Server
 };
 
 extern Server* g_server;
-extern std::string g_url_prefix;
 
 int
 create_listening_socket(const char*);

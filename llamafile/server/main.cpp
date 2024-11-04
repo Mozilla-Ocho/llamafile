@@ -32,7 +32,6 @@
 #include "utils.h"
 
 Server* g_server;
-std::string g_url_prefix;
 
 int
 main(int argc, char* argv[])
@@ -58,10 +57,6 @@ main(int argc, char* argv[])
     // get config
     LoadZipArgs(&argc, &argv);
     llamafile_get_flags(argc, argv);
-
-    // normalize URL prefix
-    if (FLAG_url_prefix)
-        g_url_prefix = normalize_url_prefix(FLAG_url_prefix);
 
     // initialize subsystems
     time_init();

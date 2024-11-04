@@ -18,6 +18,9 @@
 #pragma once
 
 void
+cleanup_fildes(void*);
+
+void
 cleanup_float_vector(void*);
 
 void

@@ -21,16 +21,19 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "llama.cpp/llama.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/string.h"
 #include "llamafile/threadlocal.h"
 #include "llamafile/trust.h"
 #include "llamafile/version.h"
 
+#include "cleanup.h"
 #include "log.h"
 #include "server.h"
 #include "time.h"
@@ -42,27 +45,34 @@
     "Referrer-Policy: origin\r\n" \
     "Cache-Control: private; max-age=0\r\n"
 
-using namespace std;
-
 static void
 on_http_cancel(Client* client)
 {
-    if (client->should_send_error_if_canceled) {
-        fcntl(client->fd, F_SETFL, fcntl(client->fd, F_GETFL) | O_NONBLOCK);
+    if (client->should_send_error_if_canceled_) {
+        fcntl(client->fd_, F_SETFL, fcntl(client->fd_, F_GETFL) | O_NONBLOCK);
         client->send_error(503);
     }
 }
 
 static ThreadLocal<Client> g_http_cancel(on_http_cancel);
 
+static const char*
+pick_content_type(const std::string_view& path)
+{
+    const char* ct = FindContentType(path.data(), path.size());
+    if (!ct)
+        ct = "application/octet-stream";
+    return ct;
+}
+
 Client::Client(llama_model* model)
   : model_(model)
-  , cleanups(nullptr)
-  , ibuf(FLAG_http_ibuf_size)
-  , obuf(FLAG_http_obuf_size)
+  , cleanups_(nullptr)
+  , ibuf_(FLAG_http_ibuf_size)
+  , obuf_(FLAG_http_obuf_size)
 {
-    InitHttpMessage(&msg, 0);
-    url.params.p = nullptr;
+    InitHttpMessage(&msg_, 0);
+    url_.params.p = nullptr;
 }
 
 int
@@ -70,12 +80,12 @@ Client::close()
 {
     int rc = 0;
     clear();
-    DestroyHttpMessage(&msg);
-    if (fd != -1) {
+    DestroyHttpMessage(&msg_);
+    if (fd_ != -1) {
         if (FLAG_verbose >= 2)
             SLOG("close");
-        rc = ::close(fd);
-        fd = -1;
+        rc = ::close(fd_);
+        fd_ = -1;
     }
     return rc;
 }
@@ -84,8 +94,8 @@ void
 Client::cleanup()
 {
     Cleanup* clean;
-    while ((clean = cleanups)) {
-        cleanups = clean->next;
+    while ((clean = cleanups_)) {
+        cleanups_ = clean->next;
         clean->func(clean->arg);
         delete clean;
     }
@@ -95,31 +105,31 @@ void
 Client::clear()
 {
     cleanup();
-    free(url_memory);
-    url_memory = nullptr;
-    free(params_memory);
-    params_memory = nullptr;
-    free(url.params.p);
-    url.params.p = nullptr;
-    close_connection = false;
-    payload = "";
-    unread = 0;
+    free(url_memory_);
+    url_memory_ = nullptr;
+    free(params_memory_);
+    params_memory_ = nullptr;
+    free(url_.params.p);
+    url_.params.p = nullptr;
+    close_connection_ = false;
+    payload_ = "";
+    unread_ = 0;
 }
 
 void
 Client::defer_cleanup(void (*func)(void*), void* arg)
 {
     Cleanup* clean = new Cleanup;
-    clean->next = cleanups;
+    clean->next = cleanups_;
     clean->func = func;
     clean->arg = arg;
-    cleanups = clean;
+    cleanups_ = clean;
 }
 
 void
 Client::run()
 {
-    ibuf.n = 0;
+    ibuf_.n = 0;
     for (;;) {
 
         // read headers
@@ -132,17 +142,17 @@ Client::run()
             break;
 
         // synchronize message stream
-        if (close_connection)
+        if (close_connection_)
             break;
         if (!read_payload())
             break;
 
         // move pipelined bytes back to beginning
-        if (ibuf.n == ibuf.i) {
-            ibuf.n = 0;
+        if (ibuf_.n == ibuf_.i) {
+            ibuf_.n = 0;
         } else {
-            memmove(ibuf.p, ibuf.p + ibuf.i, ibuf.n - ibuf.i);
-            ibuf.n -= ibuf.i;
+            memmove(ibuf_.p, ibuf_.p + ibuf_.i, ibuf_.n - ibuf_.i);
+            ibuf_.n -= ibuf_.i;
         }
     }
 }
@@ -151,75 +161,75 @@ bool
 Client::read_request()
 {
     int inmsglen;
-    ResetHttpMessage(&msg, kHttpRequest);
+    ResetHttpMessage(&msg_, kHttpRequest);
     for (;;) {
-        inmsglen = ParseHttpMessage(&msg, ibuf.p, ibuf.n, ibuf.c);
+        inmsglen = ParseHttpMessage(&msg_, ibuf_.p, ibuf_.n, ibuf_.c);
         if (inmsglen > 0) {
-            message_started = timespec_real();
-            ibuf.i = inmsglen;
+            message_started_ = timespec_real();
+            ibuf_.i = inmsglen;
             return true;
         }
         if (inmsglen == -1) {
             SLOG("bad message %m");
             return false;
         }
-        if (ibuf.n)
-            SLOG("fragmented message with %zu bytes", ibuf.n);
+        if (ibuf_.n)
+            SLOG("fragmented message with %zu bytes", ibuf_.n);
         ssize_t got;
-        got = read(fd, ibuf.p + ibuf.n, ibuf.c - ibuf.n);
-        if (!got && ibuf.n)
-            SLOG("unexpected eof after %zu bytes", ibuf.n);
-        if (got == -1 && (ibuf.n || (errno != EAGAIN && errno != ECONNRESET)))
+        got = read(fd_, ibuf_.p + ibuf_.n, ibuf_.c - ibuf_.n);
+        if (!got && ibuf_.n)
+            SLOG("unexpected eof after %zu bytes", ibuf_.n);
+        if (got == -1 && (ibuf_.n || (errno != EAGAIN && errno != ECONNRESET)))
             SLOG("read failed %m");
         if (got <= 0)
             return false;
-        ibuf.n += got;
+        ibuf_.n += got;
     }
 }
 
 bool
 Client::transport()
 {
-    if (msg.version > 11) {
-        close_connection = true;
+    if (msg_.version > 11) {
+        close_connection_ = true;
         return send_error(505);
     }
 
-    if (msg.method == kHttpConnect) {
-        close_connection = true;
+    if (msg_.method == kHttpConnect) {
+        close_connection_ = true;
         return send_error(501);
     }
 
     if (!has_at_most_this_element(kHttpExpect, "100-continue")) {
-        close_connection = true;
+        close_connection_ = true;
         return send_error(417);
     }
 
-    effective_ip = client_ip;
-    effective_ip_trusted = client_ip_trusted;
+    effective_ip_ = client_ip_;
+    effective_ip_trusted_ = client_ip_trusted_;
     if (FLAG_ip_header) {
-        if (is_loopback_ip(client_ip) || client_ip_trusted) {
+        if (is_loopback_ip(client_ip_) || client_ip_trusted_) {
             std::string_view ip_header = get_header(FLAG_ip_header);
             if (!ip_header.empty()) {
                 long ip;
                 if ((ip = parse_ip(ip_header)) == -1) {
-                    effective_ip = ip;
-                    effective_ip_trusted = is_trusted_ip(ip);
+                    effective_ip_ = ip;
+                    effective_ip_trusted_ = is_trusted_ip(ip);
                 } else {
                     SLOG("client's --ip-header wasn't a single ipv4 address");
-                    effective_ip_trusted = false;
+                    effective_ip_trusted_ = false;
                 }
             }
         } else {
             SLOG("received direct connect from untrusted ip");
-            effective_ip_trusted = false;
+            effective_ip_trusted_ = false;
         }
     }
 
     if (get_header("X-Priority") == "batch") {
         worker_->deprioritize();
-    } else if (!effective_ip_trusted) {
-        if (tokenbucket_acquire(client_ip) > FLAG_token_burst) {
+    } else if (!effective_ip_trusted_) {
+        if (tokenbucket_acquire(client_ip_) > FLAG_token_burst) {
             SLOG("deprioritizing");
             worker_->deprioritize();
         }
@@ -227,7 +237,7 @@ Client::transport()
 
     if (HasHeader(kHttpTransferEncoding))
         if (!HeaderEqualCase(kHttpTransferEncoding, "identity")) {
-            close_connection = true;
+            close_connection_ = true;
             return send_error(501, "Transfer-Encoding Not Implemented");
         }
 
@@ -236,30 +246,32 @@ Client::transport()
         cl = ParseContentLength(HeaderData(kHttpContentLength),
                                 HeaderLength(kHttpContentLength));
         if (cl == -1) {
-            close_connection = true;
+            close_connection_ = true;
             return send_error(400, "Bad Content-Length");
         }
-        if (cl > ibuf.c - ibuf.i) {
-            close_connection = true;
+        if (cl > ibuf_.c - ibuf_.i) {
+            close_connection_ = true;
             return send_error(413);
         }
-        unread = cl;
-    } else if (msg.method == kHttpPost || msg.method == kHttpPut) {
-        close_connection = true;
+        unread_ = cl;
+    } else if (msg_.method == kHttpPost || msg_.method == kHttpPut) {
+        close_connection_ = true;
         return send_error(411);
     }
 
     if (FLAG_verbose >= 1)
-        SLOG("get %#.*s", msg.uri.b - msg.uri.a, ibuf.p + msg.uri.a);
+        SLOG("get %#.*s", msg_.uri.b - msg_.uri.a, ibuf_.p + msg_.uri.a);
 
-    if (msg.version >= 11)
+    if (msg_.version >= 11)
         if (HeaderEqualCase(kHttpExpect, "100-continue"))
             if (!send("HTTP/1.1 100 Continue\r\n\r\n"))
                 return false;
 
-    url_memory = ParseUrl(
-      ibuf.p + msg.uri.a, msg.uri.b - msg.uri.a, &url, kUrlPlus | kUrlLatin1);
-    if (!url_memory)
+    url_memory_ = ParseUrl(ibuf_.p + msg_.uri.a,
+                           msg_.uri.b - msg_.uri.a,
+                           &url_,
+                           kUrlPlus | kUrlLatin1);
+    if (!url_memory_)
         __builtin_trap();
 
     return dispatch();
@@ -277,8 +289,8 @@ Client::send_error(int code, const char* reason)
     if (!reason)
         reason = GetHttpReason(code);
     SLOG("error %d %s", code, reason);
-    char* p = append_http_response_message(obuf.p, code, reason);
-    (void)!send_response(obuf.p, p, string(reason) + "\r\n");
+    char* p = append_http_response_message(obuf_.p, code, reason);
+    (void)!send_response(obuf_.p, p, std::string(reason) + "\r\n");
     return false;
 }
 
@@ -303,7 +315,7 @@ Client::append_http_response_message(char* p, int code, const char* reason)
     *p++ = '/';
     *p++ = '1';
     *p++ = '.';
-    *p++ = '0' + (msg.version & 1);
+    *p++ = '0' + (msg_.version & 1);
     *p++ = ' ';
     *p++ = '0' + code / 100;
     *p++ = '0' + code / 10 % 10;
@@ -321,17 +333,17 @@ Client::append_http_response_message(char* p, int code, const char* reason)
     // append date header
     tm tm;
     p = stpcpy(p, "Date: ");
-    gmtime_lockless(message_started.tv_sec, &tm);
+    gmtime_lockless(message_started_.tv_sec, &tm);
     p = FormatHttpDateTime(p, &tm);
     *p++ = '\r';
     *p++ = '\n';
 
     // inform client of close() intent
-    if (msg.version < 11)
-        close_connection = true;
+    if (msg_.version < 11)
+        close_connection_ = true;
     if (HeaderEqualCase(kHttpConnection, "close"))
-        close_connection = true;
-    if (close_connection)
+        close_connection_ = true;
+    if (close_connection_)
         p = stpcpy(p, "Connection: close\r\n");
 
     return p;
@@ -345,11 +357,11 @@ Client::append_http_response_message(char* p, int code, const char* reason)
 // @param p points to end of http response message headers; we assume
 //     that we can keep appending to `p` which must be page guarded
 bool
-Client::send_response(char* p0, char* p, string_view content)
+Client::send_response(char* p0, char* p, std::string_view content)
 {
     cleanup();
     pthread_testcancel();
-    should_send_error_if_canceled = false;
+    should_send_error_if_canceled_ = false;
 
     // append content length
     p = stpcpy(p, "Content-Length: ");
@@ -361,7 +373,7 @@ Client::send_response(char* p0, char* p, string_view content)
     *p++ = '\r';
     *p++ = '\n';
 
-    return send2(string_view(p0, p - p0), content);
+    return send2(std::string_view(p0, p - p0), content);
 }
 
 // sends http response message, but not its body.
@@ -375,7 +387,7 @@ Client::send_response(char* p0, char* p, string_view content)
 //     bool
 //     Client::fun()
 //     {
-//         char* message = obuf.p;
+//         char* message = obuf_.p;
 //         char* p = append_http_response_message(message, 200);
 //         if (!send_response_start(message, p))
 //             return false;
@@ -396,25 +408,26 @@ bool
 Client::send_response_start(char* p0, char* p)
 {
     // use chunked transfer encoding if http/1.1
-    if (msg.version >= 11)
+    if (msg_.version >= 11)
         p = stpcpy(p, "Transfer-Encoding: chunked\r\n");
 
     // finish message
     *p++ = '\r';
     *p++ = '\n';
 
-    return send(string_view(p0, p - p0));
+    should_send_error_if_canceled_ = false;
+    return send(std::string_view(p0, p - p0));
 }
 
 // finishes sending chunked http response body.
 //
 // once you are finished sending chunks, call send_response_finish().
 bool
-Client::send_response_chunk(const string_view content)
+Client::send_response_chunk(const std::string_view content)
 {
     // don't encode chunk boundaries for simple http client
     // it will need to rely on read() doing the right thing
-    if (msg.version < 11)
+    if (msg_.version < 11)
         return send(content);
 
     // sent in three pieces
@@ -443,9 +456,10 @@ Client::send_response_chunk(const string_view content)
 
     // perform send system call
     ssize_t sent;
-    if ((sent = writev(fd, iov, 3)) != bytes) {
+    if ((sent = writev(fd_, iov, 3)) != bytes) {
         if (sent == -1 && errno != EAGAIN && errno != ECONNRESET)
             SLOG("writev failed %m");
+        close_connection_ = true;
         return false;
     }
     return true;
@@ -461,7 +475,7 @@ Client::send_response_finish()
 
     // don't encode chunk boundaries for simple http client
     // it will need to rely on read() doing the right thing
-    if (msg.version < 11)
+    if (msg_.version < 11)
         return true;
 
     // send terminating chunk
@@ -473,12 +487,13 @@ Client::send_response_finish()
 // consider using the higher level methods like send_error(),
 // send_response(), send_response_start(), etc.
 bool
-Client::send(const string_view s)
+Client::send(const std::string_view s)
 {
     ssize_t sent;
-    if ((sent = write(fd, s.data(), s.size())) != s.size()) {
+    if ((sent = write(fd_, s.data(), s.size())) != s.size()) {
         if (sent == -1 && errno != EAGAIN && errno != ECONNRESET)
             SLOG("write failed %m");
+        close_connection_ = true;
         return false;
     }
     return true;
@@ -489,7 +504,7 @@ Client::send(const string_view s)
 // consider using the higher level methods like send_error(),
 // send_response(), send_response_start(), etc.
 bool
-Client::send2(const string_view s1, const string_view s2)
+Client::send2(const std::string_view s1, const std::string_view s2)
 {
     iovec iov[2];
     ssize_t sent;
@@ -497,27 +512,28 @@ Client::send2(const string_view s1, const string_view s2)
     iov[0].iov_len = s1.size();
     iov[1].iov_base = (void*)s2.data();
     iov[1].iov_len = s2.size();
-    if ((sent = writev(fd, iov, 2)) != s1.size() + s2.size()) {
+    if ((sent = writev(fd_, iov, 2)) != s1.size() + s2.size()) {
         if (sent == -1 && errno != EAGAIN && errno != ECONNRESET)
             SLOG("writev failed %m");
+        close_connection_ = true;
         return false;
     }
     return true;
 }
 
 bool
-Client::has_at_most_this_element(int h, const string_view s)
+Client::has_at_most_this_element(int h, const std::string_view s)
 {
     if (!HasHeader(h))
         return true;
     if (!SlicesEqualCase(s.data(), s.size(), HeaderData(h), HeaderLength(h)))
         return false;
     struct HttpHeader* x;
-    for (unsigned i = 0; i < msg.xheaders.n; ++i) {
-        x = msg.xheaders.p + i;
-        if (GetHttpHeader(ibuf.p + x->k.a, x->k.b - x->k.a) == h &&
+    for (unsigned i = 0; i < msg_.xheaders.n; ++i) {
+        x = msg_.xheaders.p + i;
+        if (GetHttpHeader(ibuf_.p + x->k.a, x->k.b - x->k.a) == h &&
             !SlicesEqualCase(
-              ibuf.p + x->v.a, x->v.b - x->v.a, s.data(), s.size())) {
+              ibuf_.p + x->v.a, x->v.b - x->v.a, s.data(), s.size())) {
             return false;
         }
     }
@@ -530,18 +546,19 @@ Client::get_header(const std::string_view& key)
     int h;
     size_t i, keylen;
     if ((h = GetHttpHeader(key.data(), key.size())) != -1) {
-        if (msg.headers[h].a)
-            return std::string_view(ibuf.p + msg.headers[h].a,
-                                    msg.headers[h].b - msg.headers[h].a);
+        if (msg_.headers[h].a)
+            return std::string_view(ibuf_.p + msg_.headers[h].a,
+                                    msg_.headers[h].b - msg_.headers[h].a);
     } else {
-        for (i = 0; i < msg.xheaders.n; ++i)
+        for (i = 0; i < msg_.xheaders.n; ++i)
             if (SlicesEqualCase(key.data(),
                                 key.size(),
-                                ibuf.p + msg.xheaders.p[i].k.a,
-                                msg.xheaders.p[i].k.b - msg.xheaders.p[i].k.a))
-                return std::string_view(ibuf.p + msg.xheaders.p[i].v.a,
-                                        msg.xheaders.p[i].v.b -
-                                          msg.xheaders.p[i].v.a);
+                                ibuf_.p + msg_.xheaders.p[i].k.a,
+                                msg_.xheaders.p[i].k.b -
+                                  msg_.xheaders.p[i].k.a))
+                return std::string_view(ibuf_.p + msg_.xheaders.p[i].v.a,
+                                        msg_.xheaders.p[i].v.b -
+                                          msg_.xheaders.p[i].v.a);
     }
     return std::string_view();
 }
@@ -549,27 +566,27 @@ Client::get_header(const std::string_view& key)
 bool
 Client::read_payload()
 {
-    while (ibuf.n - ibuf.i < unread) {
+    while (ibuf_.n - ibuf_.i < unread_) {
         ssize_t got;
-        if ((got = read(fd, ibuf.p + ibuf.n, ibuf.c - ibuf.n)) <= 0) {
+        if ((got = read(fd_, ibuf_.p + ibuf_.n, ibuf_.c - ibuf_.n)) <= 0) {
             if (!got)
                 SLOG("unexpected eof");
             if (got == -1)
                 SLOG("read failed %m");
             return false;
         }
-        ibuf.n += got;
+        ibuf_.n += got;
     }
-    payload = string_view(ibuf.p + ibuf.i, unread);
-    ibuf.i += unread;
-    unread = 0;
-    if (msg.method == kHttpPost && //
+    payload_ = std::string_view(ibuf_.p + ibuf_.i, unread_);
+    ibuf_.i += unread_;
+    unread_ = 0;
+    if (msg_.method == kHttpPost && //
         HasHeader(kHttpContentType) &&
         IsMimeType(HeaderData(kHttpContentType),
                    HeaderLength(kHttpContentType),
                    "application/x-www-form-urlencoded")) {
-        params_memory =
-          ParseParams(payload.data(), payload.size(), &url.params);
+        params_memory_ =
+          ParseParams(payload_.data(), payload_.size(), &url_.params);
     }
     return true;
 }
@@ -578,7 +595,7 @@ bool
 Client::dispatch()
 {
     bool res;
-    should_send_error_if_canceled = true;
+    should_send_error_if_canceled_ = true;
     g_http_cancel.set(this);
     res = dispatcher();
     g_http_cancel.set(nullptr);
@@ -588,52 +605,121 @@ Client::dispatch()
 bool
 Client::dispatcher()
 {
-    std::string_view p = path();
-
-    if (!g_url_prefix.empty()) {
-        if (FLAG_verbose >= 2) {
-            SLOG("request path %.*s", (int)p.size(), p.data());
-        }
-
-        size_t prefix_len = g_url_prefix.size();
-        if (p.size() < prefix_len ||
-            memcmp(p.data(), g_url_prefix.c_str(), prefix_len) != 0) {
-            SLOG("path prefix mismatch");
-            return send_error(404);
-        }
-
-        // Adjust path view to exclude prefix
-        p = std::string_view(p.data() + prefix_len, p.size() - prefix_len);
+    // get request-uri path
+    std::string_view p1 = path();
+    if (FLAG_verbose >= 2)
+        SLOG("request path %.*s", (int)p1.size(), p1.data());
+    if (!p1.starts_with(FLAG_url_prefix)) {
+        SLOG("path prefix mismatch");
+        return send_error(404);
     }
+    p1 = p1.substr(strlen(FLAG_url_prefix));
+    if (!p1.starts_with("/") || !IsAcceptablePath(p1.data(), p1.size())) {
+        SLOG("unacceptable path");
+        return send_error(400);
+    }
+    p1 = p1.substr(1);
 
-    if (p == "/tokenize")
+    // look for dynamic endpoints
+    if (p1 == "tokenize")
         return tokenize();
-    if (p == "/embedding")
+    if (p1 == "embedding")
         return embedding();
-    if (p == "/v1/embeddings")
+    if (p1 == "v1/embeddings")
         return embedding();
-    if (p == "/v1/chat/completions")
+    if (p1 == "v1/chat/completions")
         return v1_chat_completions();
 
-    SLOG("path not found: %.*s", (int)p.size(), p.data());
-    return send_error(404);
+    // serve static endpoints
+    int infd;
+    size_t size;
+    resolved_ = lf::resolve(FLAG_www_root, p1);
+    for (;;) {
+        infd = open(resolved_.c_str(), O_RDONLY);
+        if (infd == -1) {
+            if (errno == ENOENT || errno == ENOTDIR) {
+                SLOG("path not found: %s", resolved_.c_str());
+                return send_error(404);
+            } else if (errno == EPERM || errno == EACCES) {
+                SLOG("path not authorized: %s", resolved_.c_str());
+                return send_error(401);
+            } else {
+                SLOG("%s: %s", strerror(errno), resolved_.c_str());
+                return send_error(500);
+            }
+        }
+        struct stat st;
+        if (fstat(infd, &st)) {
+            SLOG("%s: %s", strerror(errno), resolved_.c_str());
+            ::close(infd);
+            return send_error(500);
+        }
+        size = st.st_size;
+        if (S_ISREG(st.st_mode)) {
+            break;
+        } else if (S_ISDIR(st.st_mode)) {
+            ::close(infd);
+            resolved_ = lf::resolve(resolved_, "index.html");
+        } else {
+            ::close(infd);
+            SLOG("won't serve special file: %s", resolved_.c_str());
+            return send_error(500);
+        }
+    }
+    defer_cleanup(cleanup_fildes, (void*)(intptr_t)infd);
+    char* p = append_http_response_message(obuf_.p, 200, "OK");
+    p = stpcpy(p, "Content-Type: ");
+    p = stpcpy(p, pick_content_type(resolved_));
+    p = stpcpy(p, "\r\n");
+    p = stpcpy(p, "Content-Length: ");
+    p = FormatInt64(p, size);
+    p = stpcpy(p, "\r\n");
+    p = stpcpy(p, "\r\n");
+    should_send_error_if_canceled_ = false;
+    if (!send(std::string_view(obuf_.p, p - obuf_.p)))
+        return false;
+    char buf[512];
+    size_t i, chunk;
+    for (i = 0; i < size; i += chunk) {
+        chunk = size - i;
+        if (chunk > sizeof(buf))
+            chunk = sizeof(buf);
+        ssize_t got = pread(infd, buf, chunk, i);
+        if (got == -1) {
+            SLOG("static asset pread failed: %s", strerror(errno));
+            close_connection_ = true;
+            return false;
+        }
+        if (got != chunk) {
+            SLOG("couldn't read full amount reading static asset");
+            close_connection_ = true;
+            return false;
+        }
+        if (!send(std::string_view(buf, chunk))) {
+            close_connection_ = true;
+            return false;
+        }
+    }
+    SLOG("served %s", resolved_.c_str());
+    cleanup();
+    return true;
 }
 
-string_view
+std::string_view
 Client::path()
 {
-    if (!url.path.n)
+    if (!url_.path.n)
         return "/";
-    return { url.path.p, url.path.n };
+    return { url_.path.p, url_.path.n };
 }
 
-optional<string_view>
-Client::param(string_view key)
+std::optional<std::string_view>
+Client::param(std::string_view key)
 {
-    for (size_t i = 0; i < url.params.n; ++i)
-        if (key.size() == url.params.p[i].key.n)
-            if (!memcmp(key.data(), url.params.p[i].key.p, key.size()))
-                return optional(
-                  string_view(url.params.p[i].val.p, url.params.p[i].val.n));
+    for (size_t i = 0; i < url_.params.n; ++i)
+        if (key.size() == url_.params.p[i].key.n)
+            if (!memcmp(key.data(), url_.params.p[i].key.p, key.size()))
+                return std::optional(std::string_view(url_.params.p[i].val.p,
+                                                      url_.params.p[i].val.n));
     return {};
 }
