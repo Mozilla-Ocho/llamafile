@@ -239,7 +239,9 @@ class HighlightJs : public Highlight {
     int u_ = 0;
     int t_ = 0;
     int expect_;
+    int nesti_ = 0;
     std::string word_;
+    unsigned char nest_[16];
 };
 
 class HighlightTypescript : public Highlight {

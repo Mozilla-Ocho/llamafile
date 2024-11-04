@@ -384,4 +384,5 @@ void HighlightScala::flush(std::string *r) {
         break;
     }
     t_ = NORMAL;
+    nesti_ = 0;
 }

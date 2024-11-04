@@ -30,20 +30,20 @@ enum {
     SLASH_SLASH,
     SLASH_STAR,
     SLASH_STAR_STAR,
-    DQUOTE, // "
-    DQUOTE_DOLLAR, // "
-    DQUOTE_VAR, // "
-    DQUOTESTR, // "...
-    DQUOTESTR_BACKSLASH, // "...
-    DQUOTESTR_DOLLAR, // "...
-    DQUOTESTR_VAR, // "...
-    DQUOTE2, // ""
-    DQUOTE3, // """...
+    DQUOTE,
+    DQUOTE_DOLLAR,
+    DQUOTE_VAR,
+    DQUOTESTR,
+    DQUOTESTR_BACKSLASH,
+    DQUOTESTR_DOLLAR,
+    DQUOTESTR_VAR,
+    DQUOTE2,
+    DQUOTE3,
     DQUOTE3_BACKSLASH,
-    DQUOTE3_DOLLAR, // """...
-    DQUOTE3_VAR, // """...
-    DQUOTE31, // """..."
-    DQUOTE32, // """...""
+    DQUOTE3_DOLLAR,
+    DQUOTE3_VAR,
+    DQUOTE31,
+    DQUOTE32,
 };
 
 HighlightKotlin::HighlightKotlin() {
@@ -384,4 +384,5 @@ void HighlightKotlin::flush(std::string *r) {
         break;
     }
     t_ = NORMAL;
+    nesti_ = 0;
 }

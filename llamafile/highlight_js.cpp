@@ -33,6 +33,7 @@ enum {
     SLASH_STAR_STAR,
     TICK,
     TICK_BACKSLASH,
+    TICK_DOLLAR,
     REGEX,
     REGEX_BACKSLASH,
     REGEX_SQUARE,
@@ -99,18 +100,26 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                lf::append_wchar(r, c);
+                *r += '\'';
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                lf::append_wchar(r, c);
+                *r += '"';
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
-                lf::append_wchar(r, c);
+                *r += '`';
                 expect_ = EXPECT_OPERATOR;
+            } else if (c == '{' && nesti_ && nesti_ < sizeof(nest_)) {
+                expect_ = EXPECT_VALUE;
+                *r += '{';
+                nest_[nesti_++] = NORMAL;
+            } else if (c == '}' && nesti_) {
+                if ((t_ = nest_[--nesti_]) != NORMAL)
+                    *r += HI_STRING;
+                *r += '}';
             } else if (c == ')' || c == '}' || c == ']') {
                 expect_ = EXPECT_OPERATOR;
                 lf::append_wchar(r, c);
@@ -240,19 +249,46 @@ void HighlightJs::feed(std::string *r, std::string_view input) {
             t_ = DQUOTE;
             break;
 
+        Tick:
         case TICK:
-            lf::append_wchar(r, c);
             if (c == '`') {
+                *r += '`';
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '$') {
+                t_ = TICK_DOLLAR;
             } else if (c == '\\') {
+                *r += '\\';
                 t_ = TICK_BACKSLASH;
+            } else {
+                lf::append_wchar(r, c);
             }
             break;
 
         case TICK_BACKSLASH:
             lf::append_wchar(r, c);
             t_ = TICK;
+            break;
+
+        case TICK_DOLLAR:
+            if (c == '{' && nesti_ < sizeof(nest_)) {
+                *r += HI_BOLD;
+                *r += '$';
+                *r += HI_UNBOLD;
+                *r += HI_STRING;
+                *r += '{';
+                *r += HI_RESET;
+                expect_ = EXPECT_VALUE;
+                nest_[nesti_++] = TICK;
+                t_ = NORMAL;
+            } else {
+                *r += HI_WARNING;
+                *r += '$';
+                *r += HI_UNBOLD;
+                *r += HI_STRING;
+                t_ = TICK;
+                goto Tick;
+            }
             break;
 
         case REGEX:
@@ -316,6 +352,10 @@ void HighlightJs::flush(std::string *r) {
     case SLASH:
         *r += '/';
         break;
+    case TICK_DOLLAR:
+        *r += '$';
+        *r += HI_RESET;
+        break;
     case TICK:
     case TICK_BACKSLASH:
     case QUOTE:
@@ -337,4 +377,5 @@ void HighlightJs::flush(std::string *r) {
     c_ = 0;
     u_ = 0;
     t_ = NORMAL;
+    nesti_ = 0;
 }

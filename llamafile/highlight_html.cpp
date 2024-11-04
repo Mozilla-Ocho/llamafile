@@ -206,7 +206,7 @@ void HighlightHtml::feed(std::string *r, std::string_view input) {
             if (name_ == "script") {
                 pending_.clear();
                 closer_ = "</script>";
-                highlighter_ = new HighlightC(is_keyword_js);
+                highlighter_ = new HighlightJs;
                 t_ = RELAY;
                 i_ = 0;
             } else if (name_ == "style") {

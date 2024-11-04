@@ -368,4 +368,5 @@ void HighlightTypescript::flush(std::string *r) {
     c_ = 0;
     u_ = 0;
     t_ = NORMAL;
+    nesti_ = 0;
 }
