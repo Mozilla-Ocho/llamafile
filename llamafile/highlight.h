@@ -766,3 +766,15 @@ class HighlightCmake : public Highlight {
     int spaces_ = 0;
     std::string word_;
 };
+
+class HighlightBnf : public Highlight {
+  public:
+    HighlightBnf();
+    ~HighlightBnf() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int t_ = 0;
+    std::string operator_;
+};

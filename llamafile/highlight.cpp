@@ -225,5 +225,10 @@ Highlight *Highlight::create(const std::string_view &lang) {
     if (lang == "cmake")
         return new HighlightCmake;
 
+    if (lang == "bnf" || //
+        lang == "abnf" || //
+        lang == "grammar")
+        return new HighlightBnf;
+
     return nullptr;
 }

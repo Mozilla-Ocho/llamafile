@@ -368,7 +368,9 @@ void HighlightShell::feed(std::string *r, std::string_view input) {
                 t_ = LT_LT_NAME;
                 lf::append_wchar(&heredoc_, c);
                 lf::append_wchar(r, c);
-            } else if (!isblank(c)) {
+            } else if (isascii(c) && isblank(c)) {
+                *r += c;
+            } else {
                 t_ = NORMAL;
                 goto Normal;
             }

@@ -25,12 +25,13 @@
 
 #define LENGTH 10
 #define ITERATIONS 200000
-#define CHARSET "aQq123{}[]!@#$%^*().\"'`\\/\n-_=&;:<>,"
+#define CHARSET " aQq123{}[]!@#$%^*().\"'`\\/\n-_=&;:<>,"
 
 const char *const kLanguages[] = {
     "ada", //
     "asm", //
     "basic", //
+    "bnf", //
     "c", //
     "c#", //
     "c++", //
