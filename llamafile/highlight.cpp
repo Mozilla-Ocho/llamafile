@@ -222,5 +222,8 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "ocaml")
         return new HighlightOcaml;
 
+    if (lang == "cmake")
+        return new HighlightCmake;
+
     return nullptr;
 }

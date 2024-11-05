@@ -31,7 +31,10 @@ static void highlight(int infd, int outfd, const char *lang, const char *inpath)
     Highlight *h;
     const char *ext;
     if (lang) {
-        h = Highlight::create(lang);
+        if (!(h = Highlight::create(lang))) {
+            fprintf(stderr, "%s: language not supported\n", lang);
+            exit(1);
+        }
     } else if (inpath) {
         if (!(h = Highlight::create(lf::tolower(lf::extname(inpath)))))
             h = new HighlightMarkdown;

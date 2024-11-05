@@ -34,6 +34,7 @@ const char *const kLanguages[] = {
     "c", //
     "c#", //
     "c++", //
+    "cmake", //
     "cobol", //
     "css", //
     "d", //

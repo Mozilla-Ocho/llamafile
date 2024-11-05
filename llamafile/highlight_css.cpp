@@ -221,5 +221,5 @@ void HighlightCss::flush(std::string *r) {
         break;
     }
     *r += HI_RESET;
-    t_ = 0;
+    t_ = NORMAL;
 }

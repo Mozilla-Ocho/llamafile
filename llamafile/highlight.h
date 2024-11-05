@@ -144,6 +144,7 @@ is_keyword_f is_keyword_julia;
 is_keyword_f is_keyword_ocaml;
 is_keyword_f is_keyword_ocaml_builtin;
 is_keyword_f is_keyword_ocaml_constant;
+is_keyword_f is_keyword_cmake;
 }
 
 class Highlight {
@@ -749,4 +750,19 @@ class HighlightOcaml : public Highlight {
     int nest_ = 0;
     std::string word_;
     std::string word2_;
+};
+
+class HighlightCmake : public Highlight {
+  public:
+    HighlightCmake();
+    ~HighlightCmake() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int c_ = 0;
+    int u_ = 0;
+    int t_ = 0;
+    int spaces_ = 0;
+    std::string word_;
 };

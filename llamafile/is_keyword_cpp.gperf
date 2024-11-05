@@ -10,6 +10,7 @@ __has_attribute
 __has_builtin
 __has_cpp_attribute
 __has_extension
+cmakedefine
 define
 defined
 elif

@@ -1,0 +1,26 @@
+%{
+#include <string.h>
+#include <libc/str/tab.h>
+#define GPERF_DOWNCASE
+%}
+%pic
+%ignore-case
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_cmake
+%%
+block
+else
+elseif
+endblock
+endforeach
+endfunction
+endif
+endmacro
+endwhile
+foreach
+function
+if
+macro
+while
