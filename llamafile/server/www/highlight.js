@@ -60,6 +60,9 @@ class HighlightDom extends Highlight {
         }
       } else {
         this.text += s[i];
+        if (isspace(s[i])) {
+          this.flushText();
+        }
       }
     }
   }
