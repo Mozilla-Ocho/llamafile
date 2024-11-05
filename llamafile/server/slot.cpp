@@ -16,6 +16,7 @@
 // limitations under the License.
 
 #include "slot.h"
+#include "llama.cpp/common.h"
 #include "llamafile/llama.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/macros.h"
@@ -132,6 +133,9 @@ Slot::prefill(const std::vector<int>& tokens)
     unassert(ctx_);
     size_t erase_count = 0;
     size_t reuse_count = lf::vector_common_prefix_length(tokens, history_);
+    // xxx: ensure we prefill at least one token (prevents badness)
+    if (reuse_count >= 1)
+        reuse_count -= 1;
     if (history_.size() > reuse_count) {
         erase_count = history_.size() - reuse_count;
         if (llama_kv_cache_seq_rm(ctx_, 0, reuse_count, -1)) {
@@ -144,7 +148,7 @@ Slot::prefill(const std::vector<int>& tokens)
             history_.clear();
         }
     }
-    std::vector<int> new_tokens(tokens.begin() + history_.size(), tokens.end());
+    std::vector<int> new_tokens(tokens.begin() + reuse_count, tokens.end());
     SLOG("prefilling %zu tokens (after removing %zu and reusing %zu)",
          new_tokens.size(),
          erase_count,

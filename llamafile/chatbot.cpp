@@ -405,6 +405,8 @@ static void eval_tokens(std::vector<llama_token> tokens, int n_batch) {
             die_out_of_context(n_eval);
         g_history.insert(g_history.end(), tokens.begin() + i, tokens.begin() + i + n_eval);
     }
+    if (N > n_batch)
+        clear_ephemeral();
 }
 
 static void eval_id(int id) {

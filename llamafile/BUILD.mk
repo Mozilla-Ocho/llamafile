@@ -182,10 +182,11 @@ o/$(MODE)/llamafile/highlight_c_test:			\
 		o/$(MODE)/llamafile/is_keyword_c_pod.o	\
 		o/$(MODE)/llamafile/is_keyword_cpp.o	\
 
-o/$(MODE)/llamafile/highlight_python_test:			\
-		o/$(MODE)/llamafile/highlight_python_test.o	\
-		o/$(MODE)/llamafile/highlight_python.o	\
-		o/$(MODE)/llamafile/is_keyword_python.o	\
+o/$(MODE)/llamafile/highlight_python_test:				\
+		o/$(MODE)/llamafile/highlight_python_test.o		\
+		o/$(MODE)/llamafile/highlight_python.o			\
+		o/$(MODE)/llamafile/is_keyword_python.o			\
+		o/$(MODE)/llamafile/is_keyword_python_constant.o	\
 
 o/$(MODE)/llamafile/high:				\
 		o/$(MODE)/llamafile/high.o		\

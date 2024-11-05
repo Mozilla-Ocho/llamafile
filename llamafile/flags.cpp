@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "flags.h"
 #include "debug.h"
 #include "llama.cpp/cores.h"
 #include "llamafile.h"
@@ -47,7 +48,7 @@ bool FLAG_trace = false;
 bool FLAG_unsecure = false;
 const char *FLAG_file = nullptr;
 const char *FLAG_ip_header = nullptr;
-const char *FLAG_listen = "0.0.0.0:8080";
+const char *FLAG_listen = "127.0.0.1:8080";
 const char *FLAG_model = nullptr;
 const char *FLAG_prompt = nullptr;
 const char *FLAG_url_prefix = "";
@@ -73,6 +74,8 @@ int FLAG_ubatch = 512;
 int FLAG_verbose = 0;
 int FLAG_warmup = true;
 int FLAG_workers;
+
+std::vector<std::string> FLAG_headers;
 
 static wontreturn void usage(int rc, int fd) {
     tinyprint(fd, "usage: ", program_invocation_name, " -m MODEL -l [HOST:]PORT\n", NULL);
@@ -233,6 +236,13 @@ void llamafile_get_flags(int argc, char **argv) {
                 tinyprint(2, "error: --url-prefix must not be slash or end with slash\n", NULL);
                 exit(1);
             }
+            continue;
+        }
+
+        if (!strcmp(flag, "-H") || !strcmp(flag, "--header")) {
+            if (i == argc)
+                missing("--header");
+            FLAG_headers.push_back(argv[i++]);
             continue;
         }
 

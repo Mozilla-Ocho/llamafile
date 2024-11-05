@@ -103,6 +103,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightCss;
 
     if (lang == "html" || //
+        lang == "htm" || //
         lang == "xhtml" || //
         lang == "xml")
         return new HighlightHtml;

@@ -20,6 +20,8 @@ const chatInput = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
+let streamingMessageContent = [];
+
 let chatHistory = [
   {
     role: "system",
@@ -32,7 +34,10 @@ let chatHistory = [
 function createMessageElement(content, role) {
   const messageDiv = document.createElement("div");
   messageDiv.classList.add("message", role);
-  messageDiv.textContent = content;
+  let hdom = new HighlightDom(messageDiv);
+  const high = new HighlightMarkdown(hdom);
+  high.feed(content);
+  high.flush();
   return messageDiv;
 }
 
@@ -42,6 +47,7 @@ function scrollToBottom() {
 
 function setTypingIndicatorVisibility(visible) {
   typingIndicator.style.display = visible ? "flex" : "none";
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 async function handleChatStream(response) {
@@ -50,6 +56,9 @@ async function handleChatStream(response) {
   let buffer = "";
   let currentMessageElement = createMessageElement("", "assistant");
   chatMessages.appendChild(currentMessageElement);
+  let hdom = new HighlightDom(currentMessageElement);
+  const high = new HighlightMarkdown(hdom);
+  streamingMessageContent = [];
 
   try {
     while (true) {
@@ -69,7 +78,8 @@ async function handleChatStream(response) {
           try {
             const parsed = JSON.parse(data);
             const content = parsed.choices[0]?.delta?.content || "";
-            currentMessageElement.textContent += content;
+            streamingMessageContent.push(content);
+            high.feed(content);
             scrollToBottom();
           } catch (e) {
             console.error("Error parsing JSON:", e);
@@ -83,6 +93,7 @@ async function handleChatStream(response) {
   } catch (error) {
     console.error("Error reading stream:", error);
   } finally {
+    high.flush();
     setTypingIndicatorVisibility(false);
     sendButton.disabled = false;
     chatInput.disabled = false;
@@ -131,7 +142,7 @@ async function sendMessage() {
     await handleChatStream(response);
 
     // update chat history with response
-    const lastMessage = chatMessages.lastElementChild.textContent;
+    const lastMessage = streamingMessageContent.join('');
     chatHistory.push({ role: "assistant", content: lastMessage });
 
   } catch (error) {

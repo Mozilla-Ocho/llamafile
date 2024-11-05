@@ -120,6 +120,7 @@ void HighlightC::feed(std::string *r, std::string_view input) {
                             is_cpp_ = false;
                             is_define_ = true;
                         }
+                        *r += HI_RESET;
                     } else if (is_keyword_c_constant(word_.data(), word_.size())) {
                         *r += HI_CONSTANT;
                         *r += word_;

@@ -71,6 +71,10 @@ void HighlightAda::feed(std::string *r, std::string_view input) {
                     *r += HI_KEYWORD;
                     *r += symbol_;
                     *r += HI_RESET;
+                } else if (is_keyword_ada_constant(symbol_.data(), symbol_.size())) {
+                    *r += HI_CONSTANT;
+                    *r += symbol_;
+                    *r += HI_RESET;
                 } else {
                     *r += symbol_;
                 }
@@ -127,6 +131,10 @@ void HighlightAda::flush(std::string *r) {
     case SYMBOL:
         if (is_keyword_ada(symbol_.data(), symbol_.size())) {
             *r += HI_KEYWORD;
+            *r += symbol_;
+            *r += HI_RESET;
+        } else if (is_keyword_ada_constant(symbol_.data(), symbol_.size())) {
+            *r += HI_CONSTANT;
             *r += symbol_;
             *r += HI_RESET;
         } else {

@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "llama.cpp/llama.h"
+#include "llamafile/flags.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/string.h"
 #include "llamafile/threadlocal.h"
@@ -345,6 +346,12 @@ Client::append_http_response_message(char* p, int code, const char* reason)
         close_connection_ = true;
     if (close_connection_)
         p = stpcpy(p, "Connection: close\r\n");
+
+    // send user supplied headers
+    for (const auto& h : FLAG_headers) {
+        p = (char*)mempcpy(p, h.data(), h.size());
+        p = stpcpy(p, "\r\n");
+    }
 
     return p;
 }

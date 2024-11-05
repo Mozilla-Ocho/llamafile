@@ -23,24 +23,22 @@ enum {
     NORMAL,
     WORD,
     COM,
-
-    SQUOTE, // '
-    SQUOTESTR, // '...
-    SQUOTESTR_BACKSLASH, // '...
-    SQUOTE2, // ''
-    SQUOTE3, // '''...
+    SQUOTE,
+    SQUOTESTR,
+    SQUOTESTR_BACKSLASH,
+    SQUOTE2,
+    SQUOTE3,
     SQUOTE3_BACKSLASH,
-    SQUOTE31, // '''...'
-    SQUOTE32, // '''...''
-
-    DQUOTE, // "
-    DQUOTESTR, // "...
-    DQUOTESTR_BACKSLASH, // "...
-    DQUOTE2, // ""
-    DQUOTE3, // """...
+    SQUOTE31,
+    SQUOTE32,
+    DQUOTE,
+    DQUOTESTR,
+    DQUOTESTR_BACKSLASH,
+    DQUOTE2,
+    DQUOTE3,
     DQUOTE3_BACKSLASH,
-    DQUOTE31, // """..."
-    DQUOTE32, // """...""
+    DQUOTE31,
+    DQUOTE32,
 };
 
 HighlightPython::HighlightPython() {
@@ -84,6 +82,10 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
             } else {
                 if (is_keyword_python(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
+                    *r += word_;
+                    *r += HI_RESET;
+                } else if (is_keyword_python_constant(word_.data(), word_.size())) {
+                    *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
                 } else {
@@ -264,6 +266,10 @@ void HighlightPython::flush(std::string *r) {
     case WORD:
         if (is_keyword_python(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_python_constant(word_.data(), word_.size())) {
+            *r += HI_CONSTANT;
             *r += word_;
             *r += HI_RESET;
         } else {
