@@ -1,0 +1,18 @@
+%{
+#include <string.h>
+%}
+%pic
+%compare-strncmp
+%language=ANSI-C
+%readonly-tables
+%define lookup-function-name is_keyword_d_constant
+%%
+__FILE_FULL_PATH__
+__FILE__
+__FUNCTION__
+__LINE__
+__MODULE__
+__PRETTY_FUNCTION__
+false
+null
+true

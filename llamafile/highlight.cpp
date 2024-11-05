@@ -163,7 +163,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
         return new HighlightSwift;
 
     if (lang == "d")
-        return new HighlightC(is_keyword_d);
+        return new HighlightC(is_keyword_d, nullptr, nullptr, is_keyword_d_constant);
 
     if (lang == "r")
         return new HighlightR;

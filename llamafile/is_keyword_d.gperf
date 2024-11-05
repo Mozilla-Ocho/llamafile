@@ -50,7 +50,6 @@ else
 enum
 export
 extern
-false
 final
 finally
 float
@@ -78,7 +77,6 @@ mixin
 module
 new
 nothrow
-null
 out
 override
 package
@@ -101,7 +99,6 @@ synchronized
 template
 this
 throw
-true
 try
 typeid
 typeof

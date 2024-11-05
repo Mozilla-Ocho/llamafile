@@ -105,6 +105,7 @@ is_keyword_f is_keyword_swift_type;
 is_keyword_f is_keyword_swift_builtin;
 is_keyword_f is_keyword_swift_constant;
 is_keyword_f is_keyword_d;
+is_keyword_f is_keyword_d_constant;
 is_keyword_f is_keyword_zig;
 is_keyword_f is_keyword_zig_type;
 is_keyword_f is_keyword_zig_builtin;
