@@ -72,22 +72,6 @@ const MAKE_BUILTINS = new Set([
   'words',
 ]);
 
-function is_automatic_variable(c) {
-  switch (c) {
-  case '@':
-  case '%':
-  case '<':
-  case '?':
-  case '^':
-  case '+':
-  case '|':
-  case '*':
-    return true;
-  default:
-    return false;
-  }
-}
-
 class HighlightMake extends Highlighter {
 
   static NORMAL = 0;
@@ -98,6 +82,22 @@ class HighlightMake extends Highlighter {
   static DOLLAR2 = 5;
   static VARIABLE = 6;
   static BACKSLASH = 7;
+
+  static is_automatic_variable(c) {
+    switch (c) {
+    case '@':
+    case '%':
+    case '<':
+    case '?':
+    case '^':
+    case '+':
+    case '|':
+    case '*':
+      return true;
+    default:
+      return false;
+    }
+  }
 
   constructor(delegate) {
     super(delegate);
@@ -154,7 +154,7 @@ class HighlightMake extends Highlighter {
         break;
 
       case HighlightMake.DOLLAR:
-        if (isdigit(c) || is_automatic_variable(c)) {
+        if (isdigit(c) || HighlightMake.is_automatic_variable(c)) {
           this.push("span", "var");
           this.append(c);
           this.pop();
@@ -191,7 +191,7 @@ class HighlightMake extends Highlighter {
             c == '@' || //
             c == '_') {
           this.word += c;
-        } else if (c == '$' && this.word.empty()) {
+        } else if (c == '$' && !this.word) {
           this.state = HighlightMake.DOLLAR;
           this.append('$');
         } else if (c == ')' || //

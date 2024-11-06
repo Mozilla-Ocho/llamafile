@@ -35,6 +35,13 @@ class HighlightMarkdown extends Highlighter {
   static NEWLINE = 18;
   static EAT_NEWLINE = 19;
   static INCODE2_TICK2 = 20;
+  static LSB = 21;
+  static LSB_BACKSLASH = 22;
+  static LSB_RSB = 23;
+  static LSB_RSB_LPAREN = 24;
+  static LSB_RSB_LPAREN_BACKSLASH = 25;
+  static LT = 26;
+  static LT_BACKSLASH = 27;
 
   constructor(delegate) {
     super(delegate);
@@ -43,6 +50,8 @@ class HighlightMarkdown extends Highlighter {
     this.lang = '';
     this.highlighter = null;
     this.newlines = 0;
+    this.text = '';
+    this.href = '';
   }
 
   feed(input) {
@@ -58,6 +67,10 @@ class HighlightMarkdown extends Highlighter {
         } else if (c == '*') {
           this.state = HighlightMarkdown.STAR;
           break;
+        } else if (c == '[') {
+          this.state = HighlightMarkdown.LSB;
+        } else if (c == '<') {
+          this.state = HighlightMarkdown.LT;
         } else if (c == '\\') {
           // handle \*\*not bold\*\* etc.
           this.state = HighlightMarkdown.BACKSLASH;
@@ -108,10 +121,12 @@ class HighlightMarkdown extends Highlighter {
           // handle *emphasized* text
           // inverted because \e[3m has a poorly supported western bias
           this.push('span', 'italic');
-          this.append(c);
-          this.state = HighlightMarkdown.EMPHASIS;
-          if (c == '\\')
+          if (c == '\\') {
             this.state = HighlightMarkdown.EMPHASIS_BACKSLASH;
+          } else {
+            this.state = HighlightMarkdown.EMPHASIS;
+            this.append(c);
+          }
         }
         this.bol = false;
         break;
@@ -287,6 +302,72 @@ class HighlightMarkdown extends Highlighter {
         }
         break;
 
+      case HighlightMarkdown.LT:
+        if (c == '>') {
+          let a = this.push('a', '');
+          a.innerText = this.href;
+          a.href = this.href;
+          this.pop();
+          this.href = '';
+          this.state = HighlightMarkdown.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightMarkdown.LT_BACKSLASH;
+        } else {
+          this.href += c;
+        }
+        break;
+
+      case HighlightMarkdown.LT_BACKSLASH:
+        this.href += c;
+        this.state = HighlightMarkdown.LT;
+        break;
+
+      case HighlightMarkdown.LSB:
+        if (c == ']') {
+          this.state = HighlightMarkdown.LSB_RSB;
+        } else if (c == '\\') {
+          this.state = HighlightMarkdown.LSB_BACKSLASH;
+        } else {
+          this.text += c;
+        }
+        break;
+
+      case HighlightMarkdown.LSB_BACKSLASH:
+        this.text += c;
+        this.state = HighlightMarkdown.LSB;
+        break;
+
+      case HighlightMarkdown.LSB_RSB:
+        if (c == '(') {
+          this.state = HighlightMarkdown.LSB_RSB_LPAREN;
+        } else {
+          this.append('[' + this.text + ']');
+          this.text = '';
+          this.epsilon(HighlightMarkdown.NORMAL);
+        }
+        break;
+
+      case HighlightMarkdown.LSB_RSB_LPAREN:
+        if (c == ')') {
+          let a = this.push('a', '');
+          a.innerText = this.text;
+          a.href = this.href;
+          this.pop();
+          this.href = '';
+          this.text = '';
+          this.state = HighlightMarkdown.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightMarkdown.LSB_RSB_LPAREN_BACKSLASH;
+        } else {
+          this.href += c;
+        }
+        break;
+
+      case HighlightMarkdown.LSB_RSB_LPAREN_BACKSLASH:
+        this.href += c;
+        this.state = HighlightMarkdown.LSB_RSB_LPAREN;
+        break;
+
       default:
         throw new Error('Invalid state');
       }
@@ -334,6 +415,26 @@ class HighlightMarkdown extends Highlighter {
       this.highlighter.flush();
       this.highlighter = null;
       this.pop();
+      break;
+    case HighlightMarkdown.LT:
+    case HighlightMarkdown.LT_BACKSLASH:
+      this.append('<' + this.href);
+      this.href = '';
+      break;
+    case HighlightMarkdown.LSB:
+    case HighlightMarkdown.LSB_BACKSLASH:
+      this.append('[' + this.text);
+      this.text = '';
+      break;
+    case HighlightMarkdown.LSB_RSB:
+      this.append('[' + this.text + ']');
+      this.text = '';
+      break;
+    case HighlightMarkdown.LSB_RSB_LPAREN:
+    case HighlightMarkdown.LSB_RSB_LPAREN_BACKSLASH:
+      this.append('[' + this.text + '](' + this.href);
+      this.text = '';
+      this.href = '';
       break;
     default:
       break;

@@ -263,7 +263,7 @@ class HighlightOcaml extends Highlighter {
           this.word += c;
         } else {
           this.append('{');
-          if (this.word.empty()) {
+          if (!this.word) {
             this.epsilon(HighlightOcaml.NORMAL);
           } else {
             this.epsilon(HighlightOcaml.WORD);
