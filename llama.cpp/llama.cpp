@@ -19007,27 +19007,15 @@ static int32_t llama_chat_apply_template_internal(
         }
     } else if (tmpl == "gemma" || tmpl == "gemma2" || tmpl_contains("<start_of_turn>")) {
         // google/gemma-7b-it
-        std::string system_prompt = "";
         for (auto message : chat) {
+            // [jart] use two user prompts rather than merging system message
             std::string role(message->role);
-            if (role == "system") {
-                // there is no system message for gemma, but we will merge it with user prompt, so nothing is broken
-                system_prompt = trim(message->content);
-                // [jart] alow system prompt
-                if (chat.size() == 1) {
-                    ss << "<start_of_turn>user\n";
-                    ss << system_prompt;
-                    ss << "<end_of_turn>\n";
-                }
-                continue;
+            if (role == "model" || role == "assistant") {
+                role = "model";
+            } else {
+                role = "user";
             }
-            // in gemma, "assistant" is "model"
-            role = role == "assistant" ? "model" : message->role;
             ss << "<start_of_turn>" << role << "\n";
-            if (!system_prompt.empty() && role != "model") {
-                ss << system_prompt << "\n\n";
-                system_prompt = "";
-            }
             ss << trim(message->content) << "<end_of_turn>\n";
         }
         if (add_ass) {
