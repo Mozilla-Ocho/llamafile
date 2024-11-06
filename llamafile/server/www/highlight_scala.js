@@ -107,10 +107,10 @@ class HighlightScala extends Highlighter {
           this.append('"');
         } else if (c == '@') {
           this.state = HighlightScala.ANNOTATION;
-        } else if (c == '{' && this.nest) {
+        } else if (c == '{' && this.nest.length) {
           this.nest.push(HighlightScala.NORMAL);
           this.append('{');
-        } else if (c == '}' && this.nest) {
+        } else if (c == '}' && this.nest.length) {
           if ((this.state = this.nest.pop()) != HighlightScala.NORMAL)
             this.push("span", "string");
           this.append('}');

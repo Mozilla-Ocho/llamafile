@@ -114,23 +114,23 @@ p {
 }
 
 .stop-button {
-    padding: 0.75rem 1.5rem;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s;
+  padding: 0.75rem 1.5rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
 }
 
 .stop-button:hover {
-    background: #bb2d3b;
+  background: #bb2d3b;
 }
 
 .stop-button:disabled {
-    background: #6c757d;
-    cursor: not-allowed;
+  background: #6c757d;
+  cursor: not-allowed;
 }
 
 .message pre {
@@ -139,6 +139,31 @@ p {
   padding: 0.5rem;
   border-radius: 4px;
   overflow-x: auto;
+  position: relative;
+}
+
+.copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  z-index: 1;
+}
+
+.copy-button:hover {
+  opacity: 1;
+}
+
+.copy-button svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .typing-indicator {

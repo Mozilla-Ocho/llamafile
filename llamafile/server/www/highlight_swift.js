@@ -1017,11 +1017,11 @@ class HighlightSwift extends Highlighter {
         } else if (c == '#') {
           this.state = HighlightSwift.HASH;
           this.hash1 = 1;
-        } else if (c == '(' && this.nest) {
+        } else if (c == '(' && this.nest.length) {
           this.append('(');
           this.nest.push(HighlightSwift.NORMAL);
           this.hash.push(0);
-        } else if (c == ')' && this.nest) {
+        } else if (c == ')' && this.nest.length) {
           this.state = this.nest.pop();
           this.hash1 = this.hash.pop();
           if (this.state != HighlightSwift.NORMAL)

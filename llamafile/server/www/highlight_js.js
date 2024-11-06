@@ -222,11 +222,11 @@ class HighlightJs extends Highlighter {
           this.push("span", "string");
           this.append('`');
           this.expect = HighlightJs.EXPECT_OPERATOR;
-        } else if (c == '{' && this.nest) {
+        } else if (c == '{' && this.nest.length) {
           this.expect = HighlightJs.EXPECT_VALUE;
           this.append('{');
           this.nest.push(HighlightJs.NORMAL);
-        } else if (c == '}' && this.nest) {
+        } else if (c == '}' && this.nest.length) {
           if ((this.state = this.nest.pop()) != HighlightJs.NORMAL)
             this.push("span", "string");
           this.append('}');
