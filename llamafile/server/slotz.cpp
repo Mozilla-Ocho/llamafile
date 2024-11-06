@@ -15,26 +15,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <pthread.h>
-#include <set>
-#include <vector>
+#include "client.h"
+#include "server.h"
+#include "slot.h"
+#include "slots.h"
+#include "utils.h"
+#include "worker.h"
 
-struct Slot;
-class SlotEntry;
-struct llama_model;
-
-struct Slots
+bool
+Client::slotz()
 {
-    llama_model* model_;
-    std::multiset<SlotEntry> slots_;
-    std::vector<Slot*> all_slots_;
-    pthread_mutex_t lock_;
-    pthread_cond_t cond_;
-
-    Slots(llama_model*);
-    ~Slots();
-    int start(int);
-    Slot* take(const std::vector<int>&);
-    void give(Slot*);
-};
+    std::string s = std::string(or_empty(param("add_special")));
+    int id = atoi(s.c_str());
+    if (id < 0)
+        return send_error(400);
+    if (id >= worker_->server_->slots_->all_slots_.size())
+        return send_error(404);
+    Slot* slot = worker_->server_->slots_->all_slots_[id];
+    std::string dump = slot->dump();
+    char* p = append_http_response_message(obuf_.p, 200);
+    p = stpcpy(p, "Content-Type: text/plain\r\n");
+    return send_response(obuf_.p, p, dump);
+}

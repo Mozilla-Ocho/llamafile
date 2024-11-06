@@ -48,6 +48,7 @@ Slots::start(int count)
         if (slot->start()) {
             ++made;
             slots_.emplace(slot);
+            all_slots_.push_back(slot);
         } else {
             delete slot;
         }

@@ -114,4 +114,6 @@ struct Client
 
     bool v1_chat_completions() __wur;
     bool get_v1_chat_completions_params(V1ChatCompletionParams*) __wur;
+
+    bool slotz() __wur;
 };

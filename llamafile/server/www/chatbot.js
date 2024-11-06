@@ -19,7 +19,9 @@ const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
+const stopButton = document.getElementById('stop-button');
 
+let abortController = null;
 let streamingMessageContent = [];
 
 let chatHistory = [
@@ -47,7 +49,16 @@ function scrollToBottom() {
 
 function setTypingIndicatorVisibility(visible) {
   typingIndicator.style.display = visible ? "flex" : "none";
+}
+
+function cleanupAfterMessage() {
+  setTypingIndicatorVisibility(false);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+  chatInput.disabled = false;
+  sendButton.style.display = 'inline-block';
+  stopButton.style.display = 'none';
+  abortController = null;
+  chatInput.focus();
 }
 
 async function handleChatStream(response) {
@@ -91,13 +102,19 @@ async function handleChatStream(response) {
       buffer = lines[lines.length - 1];
     }
   } catch (error) {
-    console.error("Error reading stream:", error);
+    if (error.name !== 'AbortError') {
+      console.error("Error reading stream:", error);
+    }
   } finally {
     high.flush();
-    setTypingIndicatorVisibility(false);
-    sendButton.disabled = false;
-    chatInput.disabled = false;
-    chatInput.focus();
+    cleanupAfterMessage();
+  }
+}
+
+function stopMessage() {
+  if (abortController) {
+    abortController.abort();
+    cleanupAfterMessage();
   }
 }
 
@@ -108,7 +125,10 @@ async function sendMessage() {
   // disable input while processing
   chatInput.value = "";
   chatInput.disabled = true;
-  sendButton.disabled = true;
+  sendButton.style.display = 'none';
+  stopButton.style.display = "inline-block";
+  stopButton.focus();
+  abortController = new AbortController();
 
   // add user message to chat
   const userMessageElement = createMessageElement(message, "user");
@@ -131,8 +151,10 @@ async function sendMessage() {
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: chatHistory,
+        temperature: 0.0,
         stream: true
-      })
+      }),
+      signal: abortController.signal
     });
 
     if (!response.ok)
@@ -146,14 +168,14 @@ async function sendMessage() {
     chatHistory.push({ role: "assistant", content: lastMessage });
 
   } catch (error) {
-    console.error("Error:", error);
-    const errorMessage = createMessageElement(
-      "Sorry, there was an error processing your request.",
-      "system");
-    chatMessages.appendChild(errorMessage);
-    setTypingIndicatorVisibility(false);
-    sendButton.disabled = false;
-    chatInput.disabled = false;
+    if (error.name !== 'AbortError') {
+      console.error("Error:", error);
+      const errorMessage = createMessageElement(
+        "Sorry, there was an error processing your request.",
+        "system");
+      chatMessages.appendChild(errorMessage);
+    }
+    cleanupAfterMessage();
   }
 }
 
@@ -166,6 +188,7 @@ for (let i = 0; i < chatHistory.length; i++) {
 
 // setup events
 sendButton.addEventListener("click", sendMessage);
+stopButton.addEventListener("click", stopMessage);
 chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();

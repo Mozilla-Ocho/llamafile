@@ -122,16 +122,234 @@ const LD_WARNINGS = new Set([
 
 class HighlightLd extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static DQUOTE = 2;
+  static DQUOTE_BACKSLASH = 3;
+  static SLASH = 4;
+  static SLASH_SLASH = 5;
+  static SLASH_STAR = 6;
+  static SLASH_STAR_STAR = 7;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
+    this.is_bol = true;
+    this.is_cpp = false;
+    this.is_cpp_builtin = false;
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightLd.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_' || c == '.' || c == ':') {
+          this.state = HighlightLd.WORD;
+          this.word += c;
+        } else if (c == '/') {
+          this.state = HighlightLd.SLASH;
+        } else if (c == '"') {
+          this.state = HighlightLd.DQUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '#' && this.is_bol) {
+          this.is_cpp = true;
+          this.push("span", "builtin");
+          this.append(c);
+        } else if (c == '\n') {
+          this.append(c);
+          if (this.is_cpp) {
+            if (this.is_cpp_builtin) {
+              this.pop();
+            }
+            this.is_cpp = false;
+          }
+          this.is_cpp_builtin = false;
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightLd.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_' || c == '.' || c == '/' || c == ':') {
+          this.word += c;
+        } else {
+          if (this.is_cpp) {
+            if (CPP_KEYWORDS.has(this.word)) {
+              this.push("span", "builtin");
+              this.append(this.word);
+              this.pop();
+              if (this.is_cpp_builtin) {
+                this.pop();
+                this.is_cpp_builtin = false;
+              }
+            } else if (C_CONSTANTS.has(this.word)) {
+              this.push("span", "constant");
+              this.append(this.word);
+              this.pop();
+            } else {
+              this.append(this.word);
+            }
+          } else {
+            if (LD_KEYWORDS.has(this.word)) {
+              this.push("span", "keyword");
+              this.append(this.word);
+              this.pop();
+            } else if (LD_BUILTINS.has(this.word)) {
+              this.push("span", "builtin");
+              this.append(this.word);
+              this.pop();
+            } else if (LD_WARNINGS.has(this.word)) {
+              this.push("span", "warning");
+              this.append(this.word);
+              this.pop();
+            } else {
+              this.append(this.word);
+            }
+          }
+          this.word = '';
+          this.epsilon(HighlightLd.NORMAL);
+        }
+        break;
+
+      case HighlightLd.SLASH:
+        if (c == '/') {
+          this.push("span", "comment");
+          this.append("//");
+          this.state = HighlightLd.SLASH_SLASH;
+        } else if (c == 'D') {
+          // for /DISCARD/ warning keyword
+          this.word += "/D";
+          this.state = HighlightLd.WORD;
+        } else if (c == '*') {
+          this.push("span", "comment");
+          this.append("/*");
+          this.state = HighlightLd.SLASH_STAR;
+        } else {
+          this.append('/');
+          this.epsilon(HighlightLd.NORMAL);
+        }
+        break;
+
+      case HighlightLd.SLASH_SLASH:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightLd.NORMAL;
+          this.is_cpp = false;
+        }
+        break;
+
+      case HighlightLd.SLASH_STAR:
+        this.append(c);
+        if (c == '*')
+          this.state = HighlightLd.SLASH_STAR_STAR;
+        break;
+
+      case HighlightLd.SLASH_STAR_STAR:
+        this.append(c);
+        if (c == '/') {
+          this.pop();
+          this.state = HighlightLd.NORMAL;
+        } else if (c != '*') {
+          this.state = HighlightLd.SLASH_STAR;
+        }
+        break;
+
+      case HighlightLd.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightLd.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightLd.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightLd.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightLd.DQUOTE;
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+      if (this.is_bol) {
+        if (!isspace(c))
+          this.is_bol = false;
+      } else {
+        if (c == '\n')
+          this.is_bol = true;
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightLd.WORD:
+      if (this.is_cpp) {
+        if (CPP_KEYWORDS.has(this.word)) {
+          this.push("span", "builtin");
+          this.append(this.word);
+          this.pop();
+        } else if (C_CONSTANTS.has(this.word)) {
+          this.push("span", "constant");
+          this.append(this.word);
+          this.pop();
+        } else {
+          this.append(this.word);
+          this.pop();
+        }
+      } else {
+        if (LD_KEYWORDS.has(this.word)) {
+          this.push("span", "keyword");
+          this.append(this.word);
+          this.pop();
+        } else if (LD_BUILTINS.has(this.word)) {
+          this.push("span", "builtin");
+          this.append(this.word);
+          this.pop();
+        } else if (LD_WARNINGS.has(this.word)) {
+          this.push("span", "warning");
+          this.append(this.word);
+          this.pop();
+        } else {
+          this.append(this.word);
+        }
+      }
+      this.word = '';
+      break;
+    case HighlightLd.SLASH:
+      this.append('/');
+      if (this.is_cpp)
+        this.pop();
+      break;
+    case HighlightLd.DQUOTE:
+    case HighlightLd.DQUOTE_BACKSLASH:
+    case HighlightLd.SLASH_SLASH:
+    case HighlightLd.SLASH_STAR:
+    case HighlightLd.SLASH_STAR_STAR:
+      this.pop();
+      break;
+    default:
+      if (this.is_cpp)
+        this.pop();
+      break;
+    }
+    if (this.is_cpp) {
+      if (this.is_cpp_builtin) {
+        this.pop();
+      }
+      this.is_cpp = false;
+    }
+    this.is_cpp_builtin = false;
+    this.is_bol = true;
+    this.state = HighlightLd.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

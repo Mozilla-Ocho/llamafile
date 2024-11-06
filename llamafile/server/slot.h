@@ -16,6 +16,7 @@
 // limitations under the License.
 
 #pragma once
+#include <string>
 #include <time.h>
 #include <utility>
 #include <vector>
@@ -38,4 +39,5 @@ struct Slot
     bool eval_token(int);
     bool eval_tokens(std::vector<int>);
     bool prefill(const std::vector<int>&);
+    std::string dump();
 };

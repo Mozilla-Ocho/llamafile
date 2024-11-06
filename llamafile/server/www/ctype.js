@@ -17,6 +17,11 @@ function isascii(c) {
   return 0 <= i && i <= 127;
 }
 
+function isdigit(c) {
+  let i = c.charCodeAt(0);
+  return (48 <= i && i <= 57);
+}
+
 function isalpha(c) {
   let i = c.charCodeAt(0);
   return (65 <= i && i <= 90) ||
@@ -31,14 +36,65 @@ function isalnum(c) {
 }
 
 function isspace(c) {
-  return c == ' ' ||
-         c == '\t' ||
-         c == '\n' ||
-         c == '\r' ||
-         c == '\v';
+  switch (c) {
+  case ' ':
+  case '\t':
+  case '\r':
+  case '\n':
+  case '\v':
+    return true;
+  default:
+    return false;
+  }
 }
 
 function isblank(c) {
-  return c == ' ' ||
-         c == '\t';
+  switch (c) {
+  case ' ':
+  case '\n':
+    return true;
+  default:
+    return false;
+  }
+}
+
+function ispunct(c) {
+  switch (c) {
+  case '!':
+  case '"':
+  case '#':
+  case '$':
+  case '%':
+  case '&':
+  case '\'':
+  case '(':
+  case ')':
+  case '*':
+  case '+':
+  case ',':
+  case '-':
+  case '.':
+  case '/':
+  case ':':
+  case ';':
+  case '<':
+  case '=':
+  case '>':
+  case '?':
+  case '@':
+  case '[':
+  case '\\':
+  case ']':
+  case '^':
+  case '_':
+  case '`':
+  case '{':
+  case '|':
+  case '}':
+  case '~':
+  case '}':
+    return true;
+  default:
+    return false;
+  }
 }

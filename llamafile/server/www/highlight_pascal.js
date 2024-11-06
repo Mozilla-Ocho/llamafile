@@ -718,16 +718,193 @@ const PASCAL_TYPES = new Set([
 
 class HighlightPascal extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static QUOTE = 2;
+  static DQUOTE = 3;
+  static SLASH = 4;
+  static SLASH_SLASH = 5;
+  static CURLY = 6;
+  static PAREN = 7;
+  static PAREN_STAR = 8;
+  static PAREN_STAR_STAR = 9;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+
+      switch (this.state) {
+
+      case HighlightPascal.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_') {
+          this.epsilon(HighlightPascal.WORD);
+        } else if (c == '/') {
+          this.state = HighlightPascal.SLASH;
+        } else if (c == '(') {
+          this.state = HighlightPascal.PAREN;
+        } else if (c == '\'') {
+          this.state = HighlightPascal.QUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '"') {
+          this.state = HighlightPascal.DQUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '{') {
+          this.state = HighlightPascal.CURLY;
+          this.push("span", "comment");
+          this.append(c);
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightPascal.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_') {
+          this.word += c;
+        } else {
+          if (PASCAL_KEYWORDS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (PASCAL_TYPES.has(this.word.toLowerCase())) {
+            this.push("span", "type");
+            this.append(this.word);
+            this.pop();
+          } else if (PASCAL_BUILTINS.has(this.word.toLowerCase())) {
+            this.push("span", "builtin");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightPascal.NORMAL);
+        }
+        break;
+
+      case HighlightPascal.SLASH:
+        if (c == '/') {
+          this.push("span", "comment");
+          this.append("//");
+          this.state = HighlightPascal.SLASH_SLASH;
+        } else {
+          this.append('/');
+          this.epsilon(HighlightPascal.NORMAL);
+        }
+        break;
+
+      case HighlightPascal.SLASH_SLASH:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightPascal.NORMAL;
+        }
+        break;
+
+      case HighlightPascal.QUOTE:
+        this.append(c);
+        if (c == '\'') {
+          this.pop();
+          this.state = HighlightPascal.NORMAL;
+        }
+        break;
+
+      case HighlightPascal.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightPascal.NORMAL;
+        }
+        break;
+
+      case HighlightPascal.CURLY:
+        this.append(c);
+        if (c == '}') {
+          this.pop();
+          this.state = HighlightPascal.NORMAL;
+        }
+        break;
+
+      case HighlightPascal.PAREN:
+        if (c == '*') {
+          this.push("span", "comment");
+          this.append("(*");
+          this.state = HighlightPascal.PAREN_STAR;
+        } else {
+          this.append('(');
+          this.epsilon(HighlightPascal.NORMAL);
+        }
+        break;
+
+      case HighlightPascal.PAREN_STAR:
+        this.append(c);
+        if (c == '*')
+          this.state = HighlightPascal.PAREN_STAR_STAR;
+        break;
+
+      case HighlightPascal.PAREN_STAR_STAR:
+        this.append(c);
+        if (c == ')') {
+          this.pop();
+          this.state = HighlightPascal.NORMAL;
+        } else if (c != '*') {
+          this.state = HighlightPascal.PAREN_STAR;
+        }
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightPascal.WORD:
+      if (PASCAL_KEYWORDS.has(this.word.toLowerCase())) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (PASCAL_TYPES.has(this.word.toLowerCase())) {
+        this.push("span", "type");
+        this.append(this.word);
+        this.pop();
+      } else if (PASCAL_BUILTINS.has(this.word.toLowerCase())) {
+        this.push("span", "builtin");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightPascal.SLASH:
+      this.append('/');
+      break;
+    case HighlightPascal.PAREN:
+      this.append('(');
+      break;
+    case HighlightPascal.QUOTE:
+    case HighlightPascal.DQUOTE:
+    case HighlightPascal.SLASH_SLASH:
+    case HighlightPascal.CURLY:
+    case HighlightPascal.PAREN_STAR:
+    case HighlightPascal.PAREN_STAR_STAR:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightPascal.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

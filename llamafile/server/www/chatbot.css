@@ -11,6 +11,11 @@ body {
   background: #f5f5f5;
 }
 
+p {
+  margin: 1rem auto;
+  box-sizing: border-box;
+}
+
 .chat-container {
   max-width: 800px;
   margin: 2rem auto;
@@ -30,9 +35,12 @@ body {
 }
 
 .chat-header h1 {
-  font-size: 1.25rem;
+  font-size: 2rem;
   color: #212529;
-  vertical-align: center;
+}
+
+.chat-header img {
+  vertical-align: middle;
 }
 
 .chat-messages {
@@ -105,8 +113,29 @@ body {
   cursor: not-allowed;
 }
 
+.stop-button {
+    padding: 0.75rem 1.5rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.stop-button:hover {
+    background: #bb2d3b;
+}
+
+.stop-button:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
 .message pre {
-  background: #f8f9fa;
+  margin: 1rem auto;
+  background: #fefefe;
   padding: 0.5rem;
   border-radius: 4px;
   overflow-x: auto;

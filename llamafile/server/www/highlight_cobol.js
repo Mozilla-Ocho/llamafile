@@ -435,16 +435,164 @@ const COBOL_KEYWORDS = new Set([
 
 class HighlightCobol extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static QUOTE = 2;
+  static QUOTE_BACKSLASH = 3;
+  static DQUOTE = 4;
+  static DQUOTE_BACKSLASH = 5;
+  static COMMENT = 6;
+
   constructor(delegate) {
     super(delegate);
+    this.col = -1;
+    this.word = '';
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      ++this.col;
+      if (c == '\n')
+        this.col = -1;
+
+      if (this.state == HighlightCobol.NORMAL) {
+        if (this.col == 6 && c == '*') {
+          this.state = HighlightCobol.COMMENT;
+          this.push("span", "comment");
+        } else if (this.col == 6 && c == '-') {
+          this.push("span", "contin");
+          this.append(c);
+          this.pop();
+          continue;
+        } else if (this.col < 6 && isdigit(c)) {
+          this.push("span", "lineno");
+          this.append(c);
+          this.pop();
+          continue;
+        }
+      }
+
+      switch (this.state) {
+
+      case HighlightCobol.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_' || c == '-') {
+          this.word += c;
+          this.state = HighlightCobol.WORD;
+        } else if (c == '!') {
+          this.state = HighlightCobol.COMMENT;
+          this.push("span", "comment");
+          this.append(c);
+        } else if (c == '\'') {
+          this.state = HighlightCobol.QUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '"') {
+          this.state = HighlightCobol.DQUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightCobol.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_' || c == '-') {
+          this.word += c;
+        } else if (c == '.' && this.word[0] == '.') {
+          this.word += c;
+          if (COBOL_KEYWORDS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.state = HighlightCobol.NORMAL;
+        } else {
+          if (COBOL_KEYWORDS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightCobol.NORMAL);
+        }
+        break;
+
+      case HighlightCobol.COMMENT:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightCobol.NORMAL;
+        }
+        break;
+
+      case HighlightCobol.QUOTE:
+        this.append(c);
+        if (c == '\'') {
+          this.pop();
+          this.state = HighlightCobol.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightCobol.QUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightCobol.QUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightCobol.QUOTE;
+        break;
+
+      case HighlightCobol.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightCobol.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightCobol.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightCobol.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightCobol.DQUOTE;
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightCobol.WORD:
+      if (COBOL_KEYWORDS.has(this.word.toLowerCase())) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightCobol.QUOTE:
+    case HighlightCobol.QUOTE_BACKSLASH:
+    case HighlightCobol.DQUOTE:
+    case HighlightCobol.DQUOTE_BACKSLASH:
+    case HighlightCobol.COMMENT:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightBasic.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

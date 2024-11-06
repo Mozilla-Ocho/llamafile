@@ -150,16 +150,337 @@ const JS_CONSTANTS = new Set([
 
 class HighlightJs extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static QUOTE = 2;
+  static QUOTE_BACKSLASH = 3;
+  static DQUOTE = 4;
+  static DQUOTE_BACKSLASH = 5;
+  static SLASH = 6;
+  static SLASH_SLASH = 7;
+  static SLASH_STAR = 8;
+  static SLASH_STAR_STAR = 9;
+  static TICK = 10;
+  static TICK_BACKSLASH = 11;
+  static TICK_DOLLAR = 12;
+  static REGEX = 13;
+  static REGEX_BACKSLASH = 14;
+  static REGEX_SQUARE = 15;
+  static REGEX_SQUARE_BACKSLASH = 16;
+
+  static EXPECT_VALUE = 0;
+  static EXPECT_OPERATOR = 1;
+
+  // https://262.ecma-international.org/12.0/#sec-line-terminators
+  static is_line_terminator(c) {
+    switch (c) {
+    case '\r':
+    case '\n':
+    case '\u2028': // LINE SEPARATOR
+    case '\u2029': // PARAGRAPH SEPARATOR
+      return true;
+    default:
+      return false;
+    }
+  }
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
+    this.expect = HighlightJs.EXPECT_VALUE;
+    this.nest = [];
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      if (c == '\r')
+        continue;
+      if (c == 0xFEFF)
+        continue; // utf-8 bom
+      switch (this.state) {
+
+      case HighlightJs.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_') {
+          this.state = HighlightJs.WORD;
+          this.word += c;
+        } else if (c == '/') {
+          this.state = HighlightJs.SLASH;
+        } else if (c == '\'') {
+          this.state = HighlightJs.QUOTE;
+          this.push("span", "string");
+          this.append('\'');
+          this.expect = HighlightJs.EXPECT_OPERATOR;
+        } else if (c == '"') {
+          this.state = HighlightJs.DQUOTE;
+          this.push("span", "string");
+          this.append('"');
+          this.expect = HighlightJs.EXPECT_OPERATOR;
+        } else if (c == '`') {
+          this.state = HighlightJs.TICK;
+          this.push("span", "string");
+          this.append('`');
+          this.expect = HighlightJs.EXPECT_OPERATOR;
+        } else if (c == '{' && this.nest) {
+          this.expect = HighlightJs.EXPECT_VALUE;
+          this.append('{');
+          this.nest.push(HighlightJs.NORMAL);
+        } else if (c == '}' && this.nest) {
+          if ((this.state = this.nest.pop()) != HighlightJs.NORMAL)
+            this.push("span", "string");
+          this.append('}');
+        } else if (c == ')' || c == '}' || c == ']') {
+          this.expect = HighlightJs.EXPECT_OPERATOR;
+          this.append(c);
+        } else if (isdigit(c) || c == '.') {
+          this.expect = HighlightJs.EXPECT_OPERATOR;
+          this.append(c);
+        } else if (ispunct(c)) {
+          this.expect = HighlightJs.EXPECT_VALUE;
+          this.append(c);
+        } else if (isdigit(c)) {
+          this.expect = HighlightJs.EXPECT_OPERATOR;
+          this.append(c);
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightJs.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_') {
+          this.word += c;
+        } else {
+          if (JS_KEYWORDS.has(this.word)) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+            this.expect = HighlightJs.EXPECT_VALUE;
+          } else if (JS_BUILTINS.has(this.word)) {
+            this.push("span", "builtin");
+            this.append(this.word);
+            this.pop();
+            this.expect = HighlightJs.EXPECT_OPERATOR;
+          } else if (JS_CONSTANTS.has(this.word)) {
+            this.push("span", "constant");
+            this.append(this.word);
+            this.pop();
+            this.expect = HighlightJs.EXPECT_OPERATOR;
+          } else {
+            this.append(this.word);
+            this.expect = HighlightJs.EXPECT_OPERATOR;
+          }
+          this.word = '';
+          this.epsilon(HighlightJs.NORMAL);
+        }
+        break;
+
+      case HighlightJs.SLASH:
+        if (c == '/') {
+          this.push("span", "comment");
+          this.append("//");
+          this.state = HighlightJs.SLASH_SLASH;
+        } else if (c == '*') {
+          this.push("span", "comment");
+          this.append("/*");
+          this.state = HighlightJs.SLASH_STAR;
+        } else if (this.expect == HighlightJs.EXPECT_VALUE) {
+          this.expect = HighlightJs.EXPECT_OPERATOR;
+          this.push("span", "string");
+          this.append('/');
+          this.append(c);
+          if (c == '\\') {
+            this.state = HighlightJs.REGEX_BACKSLASH;
+          } else if (c == '[') {
+            this.state = HighlightJs.REGEX_SQUARE;
+          } else {
+            this.state = HighlightJs.REGEX;
+          }
+        } else {
+          this.append('/');
+          this.epsilon(HighlightJs.NORMAL);
+        }
+        break;
+
+      case HighlightJs.SLASH_SLASH:
+        this.append(c);
+        if (HighlightJs.is_line_terminator(c)) {
+          this.pop();
+          this.state = HighlightJs.NORMAL;
+        }
+        break;
+
+      case HighlightJs.SLASH_STAR:
+        this.append(c);
+        if (c == '*')
+          this.state = HighlightJs.SLASH_STAR_STAR;
+        break;
+
+      case HighlightJs.SLASH_STAR_STAR:
+        this.append(c);
+        if (c == '/') {
+          this.pop();
+          this.state = HighlightJs.NORMAL;
+        } else if (c != '*') {
+          this.state = HighlightJs.SLASH_STAR;
+        }
+        break;
+
+      case HighlightJs.QUOTE:
+        this.append(c);
+        if (c == '\'') {
+          this.pop();
+          this.state = HighlightJs.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightJs.QUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightJs.QUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightJs.QUOTE;
+        break;
+
+      case HighlightJs.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightJs.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightJs.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightJs.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightJs.DQUOTE;
+        break;
+
+      case HighlightJs.TICK:
+        if (c == '`') {
+          this.append('`');
+          this.pop();
+          this.state = HighlightJs.NORMAL;
+        } else if (c == '$') {
+          this.state = HighlightJs.TICK_DOLLAR;
+        } else if (c == '\\') {
+          this.append('\\');
+          this.state = HighlightJs.TICK_BACKSLASH;
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightJs.TICK_BACKSLASH:
+        this.append(c);
+        this.state = HighlightJs.TICK;
+        break;
+
+      case HighlightJs.TICK_DOLLAR:
+        if (c == '{') {
+          this.push("span", "bold");
+          this.append('$');
+          this.pop();
+          this.append('{');
+          this.pop();
+          this.expect = HighlightJs.EXPECT_VALUE;
+          this.nest.push(HighlightJs.TICK);
+          this.state = HighlightJs.NORMAL;
+        } else {
+          this.push("span", "warning");
+          this.append('$');
+          this.pop();
+          this.epsilon(HighlightJs.TICK);
+        }
+        break;
+
+      case HighlightJs.REGEX:
+        this.append(c);
+        if (c == '/') {
+          this.pop();
+          this.state = HighlightJs.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightJs.REGEX_BACKSLASH;
+        } else if (c == '[') {
+          this.state = HighlightJs.REGEX_SQUARE;
+        }
+        break;
+
+      case HighlightJs.REGEX_BACKSLASH:
+        this.append(c);
+        this.state = HighlightJs.REGEX;
+        break;
+
+      case HighlightJs.REGEX_SQUARE:
+        // because /[/]/g is valid code
+        this.append(c);
+        if (c == '\\') {
+          this.state = HighlightJs.REGEX_SQUARE_BACKSLASH;
+        } else if (c == ']') {
+          this.state = HighlightJs.REGEX;
+        }
+        break;
+
+      case HighlightJs.REGEX_SQUARE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightJs.REGEX_SQUARE;
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightJs.WORD:
+      if (JS_KEYWORDS.has(this.word)) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (JS_BUILTINS.has(this.word)) {
+        this.push("span", "builtin");
+        this.append(this.word);
+        this.pop();
+      } else if (JS_CONSTANTS.has(this.word)) {
+        this.push("span", "constant");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightJs.SLASH:
+      this.append('/');
+      break;
+    case HighlightJs.TICK_DOLLAR:
+      this.append('$');
+      this.pop();
+      break;
+    case HighlightJs.TICK:
+    case HighlightJs.TICK_BACKSLASH:
+    case HighlightJs.QUOTE:
+    case HighlightJs.QUOTE_BACKSLASH:
+    case HighlightJs.DQUOTE:
+    case HighlightJs.DQUOTE_BACKSLASH:
+    case HighlightJs.SLASH_SLASH:
+    case HighlightJs.SLASH_STAR:
+    case HighlightJs.SLASH_STAR_STAR:
+    case HighlightJs.REGEX:
+    case HighlightJs.REGEX_BACKSLASH:
+    case HighlightJs.REGEX_SQUARE:
+    case HighlightJs.REGEX_SQUARE_BACKSLASH:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.nest = [];
+    this.state = HighlightJs.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

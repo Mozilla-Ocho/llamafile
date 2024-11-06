@@ -274,12 +274,9 @@ const SWIFT_TYPES = new Set([
   'ASCII',
   'AcceptPolicy',
   'ActivationType',
-  'ActivityOptions',
-  'AddingOptions',
   'AdditiveArithmetic',
   'AffineTransform',
   'AllCases',
-  'AncestorRepresentation',
   'Any',
   'AnyBidirectionalCollection',
   'AnyClass',
@@ -294,21 +291,12 @@ const SWIFT_TYPES = new Set([
   'Array',
   'ArrayLiteralElement',
   'ArraySlice',
-  'AuthChallengeDisposition',
-  'AutoreleasingUnsafeMutablePointer',
-  'BackgroundTaskCancelledReason',
-  'Base64DecodingOptions',
-  'Base64EncodingOptions',
   'Behavior',
-  'BidirectionalCollection',
   'BinaryFloatingPoint',
   'BinaryInteger',
   'BiquadFunctions',
   'BlockOperation',
   'Body',
-  'BookmarkCreationOptions',
-  'BookmarkFileCreationOptions',
-  'BookmarkResolutionOptions',
   'Bool',
   'BooleanLiteralType',
   'Bound',
@@ -362,7 +350,6 @@ const SWIFT_TYPES = new Set([
   'CommandLine',
   'Comparable',
   'Comparator',
-  'CompareOptions',
   'ComparisonResult',
   'CompletionHandler',
   'Component',
@@ -409,7 +396,6 @@ const SWIFT_TYPES = new Set([
   'DictionaryIterator',
   'DictionaryLiteral',
   'Dimension',
-  'DirectoryEnumerationOptions',
   'DirectoryEnumerator',
   'DisplayStyle',
   'Distance',
@@ -418,7 +404,6 @@ const SWIFT_TYPES = new Set([
   'DocumentReadingOptionKey',
   'DocumentType',
   'Double',
-  'DrawingOptions',
   'DropFirstSequence',
   'DropWhileSequence',
   'Element',
@@ -428,28 +413,16 @@ const SWIFT_TYPES = new Set([
   'EncodedScalar',
   'Encoder',
   'Encoding',
-  'EncodingConversionOptions',
   'EncodingError',
   'EnergyFormatter',
   'EnumeratedIterator',
   'EnumeratedSequence',
-  'EnumerationOptions',
   'Equatable',
   'Error',
   'ErrorCode',
   'ErrorPointer',
   'Event',
   'Exponent',
-  'ExpressibleByArrayLiteral',
-  'ExpressibleByBooleanLiteral',
-  'ExpressibleByDictionaryLiteral',
-  'ExpressibleByExtendedGraphemeClusterLiteral',
-  'ExpressibleByFloatLiteral',
-  'ExpressibleByIntegerLiteral',
-  'ExpressibleByNilLiteral',
-  'ExpressibleByStringInterpolation',
-  'ExpressibleByStringLiteral',
-  'ExpressibleByUnicodeScalarLiteral',
   'ExpressionType',
   'ExtendedGraphemeClusterLiteralType',
   'ExtendedGraphemeClusterType',
@@ -504,7 +477,6 @@ const SWIFT_TYPES = new Set([
   'Int64',
   'Int8',
   'IntegerLiteralType',
-  'ItemReplacementOptions',
   'Iterator',
   'IteratorProtocol',
   'IteratorSequence',
@@ -513,14 +485,8 @@ const SWIFT_TYPES = new Set([
   'JSONSerialization',
   'JoinedSequence',
   'Key',
-  'KeyDecodingStrategy',
-  'KeyEncodingStrategy',
   'KeyPath',
   'KeyValuePairs',
-  'KeyedDecodingContainer',
-  'KeyedDecodingContainerProtocol',
-  'KeyedEncodingContainer',
-  'KeyedEncodingContainerProtocol',
   'Keys',
   'Kind',
   'LanguageDirection',
@@ -549,7 +515,6 @@ const SWIFT_TYPES = new Set([
   'MaskStorage',
   'MassFormatter',
   'MatchingFlags',
-  'MatchingOptions',
   'MatchingPolicy',
   'Measurement',
   'MeasurementFormatter',
@@ -560,39 +525,9 @@ const SWIFT_TYPES = new Set([
   'MirrorPath',
   'Mode',
   'Modifier',
-  'MultipathServiceType',
-  'MutabilityOptions',
-  'MutableCollection',
-  'MutableURLRequest',
-  'NSASCIIStringEncoding',
-  'NSAffineTransform',
-  'NSAffineTransformStruct',
-  'NSAppleEventDescriptor',
-  'NSAppleEventManager',
-  'NSAppleEventTimeOutDefault',
-  'NSAppleEventTimeOutNone',
   'NSAppleScript',
   'NSArchiver',
-  'NSArgumentEvaluationScriptError',
-  'NSArgumentsWrongScriptError',
   'NSArray',
-  'NSAssertionHandler',
-  'NSAssertionHandlerKey',
-  'NSAttributedString',
-  'NSBackgroundActivityScheduler',
-  'NSBinarySearchingOptions',
-  'NSBuddhistCalendar',
-  'NSBundleErrorMaximum',
-  'NSBundleErrorMinimum',
-  'NSBundleExecutableArchitectureI386',
-  'NSBundleExecutableArchitecturePPC',
-  'NSBundleExecutableArchitecturePPC64',
-  'NSBundleExecutableArchitectureX86_64',
-  'NSBundleOnDemandResourceExceededMaximumSizeError',
-  'NSBundleOnDemandResourceInvalidTagError',
-  'NSBundleOnDemandResourceOutOfSpaceError',
-  'NSBundleResourceRequest',
-  'NSBundleResourceRequestLoadingPriorityUrgent',
   'NSCache',
   'NSCacheDelegate',
   'NSCalendar',
@@ -627,7 +562,6 @@ const SWIFT_TYPES = new Set([
   'NSCompressionFailedError',
   'NSCondition',
   'NSConditionLock',
-  'NSContainerSpecifierError',
   'NSCopying',
   'NSCountCommand',
   'NSCountedSet',
@@ -647,11 +581,9 @@ const SWIFT_TYPES = new Set([
   'NSDecompressionFailedError',
   'NSDeleteCommand',
   'NSDictionary',
-  'NSDiscardableContent',
   'NSDistributedLock',
   'NSEdgeInsets',
   'NSEdgeInsetsZero',
-  'NSEnumerationOptions',
   'NSEnumerator',
   'NSError',
   'NSErrorDomain',
@@ -668,58 +600,10 @@ const SWIFT_TYPES = new Set([
   'NSExecutableRuntimeMismatchError',
   'NSExistsCommand',
   'NSExpression',
-  'NSExtensionContext',
-  'NSExtensionItem',
-  'NSExtensionItemAttachmentsKey',
-  'NSExtensionItemAttributedContentTextKey',
-  'NSExtensionItemAttributedTitleKey',
-  'NSExtensionItemsAndErrorsKey',
-  'NSExtensionJavaScriptFinalizeArgumentKey',
-  'NSExtensionJavaScriptPreprocessingResultsKey',
-  'NSExtensionRequestHandling',
   'NSFastEnumeration',
   'NSFastEnumerationIterator',
   'NSFastEnumerationState',
   'NSFeatureUnsupportedError',
-  'NSFileAccessIntent',
-  'NSFileCoordinator',
-  'NSFileErrorMaximum',
-  'NSFileErrorMinimum',
-  'NSFileHandleNotificationDataItem',
-  'NSFileHandleNotificationFileHandleItem',
-  'NSFileHandleNotificationMonitorModes',
-  'NSFileLockingError',
-  'NSFileManagerUnmountBusyError',
-  'NSFileManagerUnmountDissentingProcessIdentifierErrorKey',
-  'NSFileManagerUnmountUnknownError',
-  'NSFileNoSuchFileError',
-  'NSFilePathErrorKey',
-  'NSFilePresenter',
-  'NSFileProviderService',
-  'NSFileProviderServiceName',
-  'NSFileReadCorruptFileError',
-  'NSFileReadInapplicableStringEncodingError',
-  'NSFileReadInvalidFileNameError',
-  'NSFileReadNoPermissionError',
-  'NSFileReadNoSuchFileError',
-  'NSFileReadTooLargeError',
-  'NSFileReadUnknownError',
-  'NSFileReadUnknownStringEncodingError',
-  'NSFileReadUnsupportedSchemeError',
-  'NSFileSecurity',
-  'NSFileVersion',
-  'NSFileWriteFileExistsError',
-  'NSFileWriteInapplicableStringEncodingError',
-  'NSFileWriteInvalidFileNameError',
-  'NSFileWriteNoPermissionError',
-  'NSFileWriteOutOfSpaceError',
-  'NSFileWriteUnknownError',
-  'NSFileWriteUnsupportedSchemeError',
-  'NSFileWriteVolumeReadOnlyError',
-  'NSFormattingError',
-  'NSFormattingErrorMaximum',
-  'NSFormattingErrorMinimum',
-  'NSFoundationVersionNumber',
   'NSGetCommand',
   'NSGrammarCorrections',
   'NSGrammarRange',
@@ -728,8 +612,6 @@ const SWIFT_TYPES = new Set([
   'NSHPUXOperatingSystem',
   'NSHashEnumerator',
   'NSHashTable',
-  'NSHashTableCallBacks',
-  'NSHashTableOptions',
   'NSHebrewCalendar',
   'NSHelpAnchorErrorKey',
   'NSISO2022JPStringEncoding',
@@ -738,34 +620,12 @@ const SWIFT_TYPES = new Set([
   'NSISOLatin2StringEncoding',
   'NSIndexPath',
   'NSIndexSet',
-  'NSIndexSetIterator',
-  'NSIndexSpecifier',
-  'NSIndianCalendar',
-  'NSIntMapKeyCallBacks',
-  'NSIntMapValueCallBacks',
-  'NSIntegerHashCallBacks',
-  'NSIntegerMapKeyCallBacks',
-  'NSIntegerMapValueCallBacks',
-  'NSInternalScriptError',
-  'NSInternalSpecifierError',
-  'NSInvalidIndexSpecifierError',
-  'NSIslamicCalendar',
-  'NSIslamicCivilCalendar',
-  'NSItemProvider',
-  'NSItemProviderFileOptions',
-  'NSItemProviderPreferredImageSizeKey',
-  'NSItemProviderReading',
-  'NSItemProviderRepresentationVisibility',
-  'NSItemProviderWriting',
-  'NSJapaneseCalendar',
-  'NSJapaneseEUCStringEncoding',
   'NSKeySpecifierEvaluationScriptError',
   'NSKeyValueChange',
   'NSKeyValueChangeKey',
   'NSKeyValueObservation',
   'NSKeyValueObservedChange',
   'NSKeyValueObservingCustomization',
-  'NSKeyValueObservingOptions',
   'NSKeyValueOperator',
   'NSKeyValueSetMutationKind',
   'NSKeyValueValidationError',
@@ -780,11 +640,6 @@ const SWIFT_TYPES = new Set([
   'NSLinguisticTaggerUnit',
   'NSLoadedClasses',
   'NSLocale',
-  'NSLocalizedDescriptionKey',
-  'NSLocalizedFailureErrorKey',
-  'NSLocalizedFailureReasonErrorKey',
-  'NSLocalizedRecoveryOptionsErrorKey',
-  'NSLocalizedRecoverySuggestionErrorKey',
   'NSLock',
   'NSLocking',
   'NSLogicalTest',
@@ -796,211 +651,10 @@ const SWIFT_TYPES = new Set([
   'NSMapEnumerator',
   'NSMapTable',
   'NSMapTableCopyIn',
-  'NSMapTableKeyCallBacks',
   'NSMapTableObjectPointerPersonality',
-  'NSMapTableOptions',
   'NSMapTableStrongMemory',
-  'NSMapTableValueCallBacks',
   'NSMapTableWeakMemory',
   'NSMeasurement',
-  'NSMetadataItem',
-  'NSMetadataItemAcquisitionMakeKey',
-  'NSMetadataItemAcquisitionModelKey',
-  'NSMetadataItemAlbumKey',
-  'NSMetadataItemAltitudeKey',
-  'NSMetadataItemApertureKey',
-  'NSMetadataItemAppleLoopDescriptorsKey',
-  'NSMetadataItemAppleLoopsKeyFilterTypeKey',
-  'NSMetadataItemAppleLoopsLoopModeKey',
-  'NSMetadataItemAppleLoopsRootKeyKey',
-  'NSMetadataItemApplicationCategoriesKey',
-  'NSMetadataItemAttributeChangeDateKey',
-  'NSMetadataItemAudiencesKey',
-  'NSMetadataItemAudioBitRateKey',
-  'NSMetadataItemAudioChannelCountKey',
-  'NSMetadataItemAudioEncodingApplicationKey',
-  'NSMetadataItemAudioSampleRateKey',
-  'NSMetadataItemAudioTrackNumberKey',
-  'NSMetadataItemAuthorAddressesKey',
-  'NSMetadataItemAuthorEmailAddressesKey',
-  'NSMetadataItemAuthorsKey',
-  'NSMetadataItemBitsPerSampleKey',
-  'NSMetadataItemCFBundleIdentifierKey',
-  'NSMetadataItemCameraOwnerKey',
-  'NSMetadataItemCityKey',
-  'NSMetadataItemCodecsKey',
-  'NSMetadataItemColorSpaceKey',
-  'NSMetadataItemCommentKey',
-  'NSMetadataItemComposerKey',
-  'NSMetadataItemContactKeywordsKey',
-  'NSMetadataItemContentCreationDateKey',
-  'NSMetadataItemContentModificationDateKey',
-  'NSMetadataItemContentTypeKey',
-  'NSMetadataItemContentTypeTreeKey',
-  'NSMetadataItemContributorsKey',
-  'NSMetadataItemCopyrightKey',
-  'NSMetadataItemCountryKey',
-  'NSMetadataItemCoverageKey',
-  'NSMetadataItemCreatorKey',
-  'NSMetadataItemDateAddedKey',
-  'NSMetadataItemDeliveryTypeKey',
-  'NSMetadataItemDescriptionKey',
-  'NSMetadataItemDirectorKey',
-  'NSMetadataItemDisplayNameKey',
-  'NSMetadataItemDownloadedDateKey',
-  'NSMetadataItemDueDateKey',
-  'NSMetadataItemDurationSecondsKey',
-  'NSMetadataItemEXIFGPSVersionKey',
-  'NSMetadataItemEXIFVersionKey',
-  'NSMetadataItemEditorsKey',
-  'NSMetadataItemEmailAddressesKey',
-  'NSMetadataItemEncodingApplicationsKey',
-  'NSMetadataItemExecutableArchitecturesKey',
-  'NSMetadataItemExecutablePlatformKey',
-  'NSMetadataItemExposureModeKey',
-  'NSMetadataItemExposureProgramKey',
-  'NSMetadataItemExposureTimeSecondsKey',
-  'NSMetadataItemExposureTimeStringKey',
-  'NSMetadataItemFNumberKey',
-  'NSMetadataItemFSContentChangeDateKey',
-  'NSMetadataItemFSCreationDateKey',
-  'NSMetadataItemFSNameKey',
-  'NSMetadataItemFSSizeKey',
-  'NSMetadataItemFinderCommentKey',
-  'NSMetadataItemFlashOnOffKey',
-  'NSMetadataItemFocalLength35mmKey',
-  'NSMetadataItemFocalLengthKey',
-  'NSMetadataItemFontsKey',
-  'NSMetadataItemGPSAreaInformationKey',
-  'NSMetadataItemGPSDOPKey',
-  'NSMetadataItemGPSDateStampKey',
-  'NSMetadataItemGPSDestBearingKey',
-  'NSMetadataItemGPSDestDistanceKey',
-  'NSMetadataItemGPSDestLatitudeKey',
-  'NSMetadataItemGPSDestLongitudeKey',
-  'NSMetadataItemGPSDifferentalKey',
-  'NSMetadataItemGPSMapDatumKey',
-  'NSMetadataItemGPSMeasureModeKey',
-  'NSMetadataItemGPSProcessingMethodKey',
-  'NSMetadataItemGPSStatusKey',
-  'NSMetadataItemGPSTrackKey',
-  'NSMetadataItemGenreKey',
-  'NSMetadataItemHasAlphaChannelKey',
-  'NSMetadataItemHeadlineKey',
-  'NSMetadataItemISOSpeedKey',
-  'NSMetadataItemIdentifierKey',
-  'NSMetadataItemImageDirectionKey',
-  'NSMetadataItemInformationKey',
-  'NSMetadataItemInstantMessageAddressesKey',
-  'NSMetadataItemInstructionsKey',
-  'NSMetadataItemIsApplicationManagedKey',
-  'NSMetadataItemIsGeneralMIDISequenceKey',
-  'NSMetadataItemIsLikelyJunkKey',
-  'NSMetadataItemIsUbiquitousKey',
-  'NSMetadataItemKeySignatureKey',
-  'NSMetadataItemKeywordsKey',
-  'NSMetadataItemKindKey',
-  'NSMetadataItemLanguagesKey',
-  'NSMetadataItemLastUsedDateKey',
-  'NSMetadataItemLatitudeKey',
-  'NSMetadataItemLayerNamesKey',
-  'NSMetadataItemLensModelKey',
-  'NSMetadataItemLongitudeKey',
-  'NSMetadataItemLyricistKey',
-  'NSMetadataItemMaxApertureKey',
-  'NSMetadataItemMediaTypesKey',
-  'NSMetadataItemMeteringModeKey',
-  'NSMetadataItemMusicalGenreKey',
-  'NSMetadataItemMusicalInstrumentCategoryKey',
-  'NSMetadataItemMusicalInstrumentNameKey',
-  'NSMetadataItemNamedLocationKey',
-  'NSMetadataItemNumberOfPagesKey',
-  'NSMetadataItemOrganizationsKey',
-  'NSMetadataItemOrientationKey',
-  'NSMetadataItemOriginalFormatKey',
-  'NSMetadataItemOriginalSourceKey',
-  'NSMetadataItemPageHeightKey',
-  'NSMetadataItemPageWidthKey',
-  'NSMetadataItemParticipantsKey',
-  'NSMetadataItemPathKey',
-  'NSMetadataItemPerformersKey',
-  'NSMetadataItemPhoneNumbersKey',
-  'NSMetadataItemPixelCountKey',
-  'NSMetadataItemPixelHeightKey',
-  'NSMetadataItemPixelWidthKey',
-  'NSMetadataItemProducerKey',
-  'NSMetadataItemProfileNameKey',
-  'NSMetadataItemProjectsKey',
-  'NSMetadataItemPublishersKey',
-  'NSMetadataItemRecipientAddressesKey',
-  'NSMetadataItemRecipientEmailAddressesKey',
-  'NSMetadataItemRecipientsKey',
-  'NSMetadataItemRecordingDateKey',
-  'NSMetadataItemRecordingYearKey',
-  'NSMetadataItemRedEyeOnOffKey',
-  'NSMetadataItemResolutionHeightDPIKey',
-  'NSMetadataItemResolutionWidthDPIKey',
-  'NSMetadataItemRightsKey',
-  'NSMetadataItemSecurityMethodKey',
-  'NSMetadataItemSpeedKey',
-  'NSMetadataItemStarRatingKey',
-  'NSMetadataItemStateOrProvinceKey',
-  'NSMetadataItemStreamableKey',
-  'NSMetadataItemSubjectKey',
-  'NSMetadataItemTempoKey',
-  'NSMetadataItemTextContentKey',
-  'NSMetadataItemThemeKey',
-  'NSMetadataItemTimeSignatureKey',
-  'NSMetadataItemTimestampKey',
-  'NSMetadataItemTitleKey',
-  'NSMetadataItemTotalBitRateKey',
-  'NSMetadataItemURLKey',
-  'NSMetadataItemVersionKey',
-  'NSMetadataItemVideoBitRateKey',
-  'NSMetadataItemWhereFromsKey',
-  'NSMetadataItemWhiteBalanceKey',
-  'NSMetadataQuery',
-  'NSMetadataQueryAccessibleUbiquitousExternalDocumentsScope',
-  'NSMetadataQueryAttributeValueTuple',
-  'NSMetadataQueryDelegate',
-  'NSMetadataQueryIndexedLocalComputerScope',
-  'NSMetadataQueryIndexedNetworkScope',
-  'NSMetadataQueryLocalComputerScope',
-  'NSMetadataQueryNetworkScope',
-  'NSMetadataQueryResultContentRelevanceAttribute',
-  'NSMetadataQueryResultGroup',
-  'NSMetadataQueryUbiquitousDataScope',
-  'NSMetadataQueryUbiquitousDocumentsScope',
-  'NSMetadataQueryUpdateAddedItemsKey',
-  'NSMetadataQueryUpdateChangedItemsKey',
-  'NSMetadataQueryUpdateRemovedItemsKey',
-  'NSMetadataQueryUserHomeScope',
-  'NSMetadataUbiquitousItemContainerDisplayNameKey',
-  'NSMetadataUbiquitousItemDownloadRequestedKey',
-  'NSMetadataUbiquitousItemDownloadingErrorKey',
-  'NSMetadataUbiquitousItemDownloadingStatusCurrent',
-  'NSMetadataUbiquitousItemDownloadingStatusDownloaded',
-  'NSMetadataUbiquitousItemDownloadingStatusKey',
-  'NSMetadataUbiquitousItemDownloadingStatusNotDownloaded',
-  'NSMetadataUbiquitousItemHasUnresolvedConflictsKey',
-  'NSMetadataUbiquitousItemIsDownloadedKey',
-  'NSMetadataUbiquitousItemIsDownloadingKey',
-  'NSMetadataUbiquitousItemIsExternalDocumentKey',
-  'NSMetadataUbiquitousItemIsSharedKey',
-  'NSMetadataUbiquitousItemIsUploadedKey',
-  'NSMetadataUbiquitousItemIsUploadingKey',
-  'NSMetadataUbiquitousItemPercentDownloadedKey',
-  'NSMetadataUbiquitousItemPercentUploadedKey',
-  'NSMetadataUbiquitousItemURLInLocalContainerKey',
-  'NSMetadataUbiquitousItemUploadingErrorKey',
-  'NSMetadataUbiquitousSharedItemCurrentUserPermissionsKey',
-  'NSMetadataUbiquitousSharedItemCurrentUserRoleKey',
-  'NSMetadataUbiquitousSharedItemMostRecentEditorNameComponentsKey',
-  'NSMetadataUbiquitousSharedItemOwnerNameComponentsKey',
-  'NSMetadataUbiquitousSharedItemPermissionsReadOnly',
-  'NSMetadataUbiquitousSharedItemPermissionsReadWrite',
-  'NSMetadataUbiquitousSharedItemRoleOwner',
-  'NSMetadataUbiquitousSharedItemRoleParticipant',
   'NSMiddleSpecifier',
   'NSMoveCommand',
   'NSMutableArray',
@@ -1018,290 +672,47 @@ const SWIFT_TYPES = new Set([
   'NSNameSpecifier',
   'NSNoScriptError',
   'NSNoSpecifierError',
-  'NSNoTopLevelContainersSpecifierError',
-  'NSNonLossyASCIIStringEncoding',
-  'NSNonOwnedPointerHashCallBacks',
-  'NSNonOwnedPointerMapKeyCallBacks',
-  'NSNonOwnedPointerMapValueCallBacks',
-  'NSNonOwnedPointerOrNullMapKeyCallBacks',
-  'NSNonRetainedObjectHashCallBacks',
-  'NSNonRetainedObjectMapKeyCallBacks',
-  'NSNonRetainedObjectMapValueCallBacks',
   'NSNotFound',
   'NSNotification',
-  'NSNotificationDeliverImmediately',
-  'NSNotificationPostToAllSessions',
   'NSNull',
   'NSNumber',
-  'NSOSF1OperatingSystem',
-  'NSOSStatusErrorDomain',
   'NSObject',
-  'NSObjectHashCallBacks',
-  'NSObjectMapKeyCallBacks',
-  'NSObjectMapValueCallBacks',
   'NSObjectProtocol',
-  'NSOpenStepUnicodeReservedBase',
-  'NSOperationNotSupportedForKeyException',
-  'NSOperationNotSupportedForKeyScriptError',
-  'NSOperationNotSupportedForKeySpecifierError',
   'NSOrderedSet',
   'NSOrthography',
-  'NSOwnedObjectIdentityHashCallBacks',
-  'NSOwnedPointerHashCallBacks',
-  'NSOwnedPointerMapKeyCallBacks',
-  'NSOwnedPointerMapValueCallBacks',
-  'NSPOSIXErrorDomain',
-  'NSPersianCalendar',
-  'NSPersonNameComponentDelimiter',
-  'NSPersonNameComponentFamilyName',
-  'NSPersonNameComponentGivenName',
-  'NSPersonNameComponentKey',
-  'NSPersonNameComponentMiddleName',
-  'NSPersonNameComponentNickname',
-  'NSPersonNameComponentPrefix',
-  'NSPersonNameComponentSuffix',
-  'NSPersonNameComponents',
   'NSPoint',
   'NSPointerArray',
   'NSPointerFunctions',
-  'NSPointerToStructHashCallBacks',
   'NSPositionalSpecifier',
   'NSPredicate',
-  'NSPropertyListErrorMaximum',
-  'NSPropertyListErrorMinimum',
-  'NSPropertyListReadCorruptError',
-  'NSPropertyListReadStreamError',
-  'NSPropertyListReadUnknownVersionError',
-  'NSPropertyListWriteInvalidError',
-  'NSPropertyListWriteStreamError',
-  'NSPropertySpecifier',
-  'NSProprietaryStringEncoding',
-  'NSProtocolChecker',
   'NSProxy',
   'NSPurgeableData',
   'NSQuitCommand',
   'NSRandomSpecifier',
   'NSRange',
-  'NSRangeSpecifier',
-  'NSReceiverEvaluationScriptError',
-  'NSReceiversCantHandleCommandScriptError',
-  'NSRecoveryAttempterErrorKey',
   'NSRect',
   'NSRecursiveLock',
   'NSRegularExpression',
   'NSRelativeSpecifier',
-  'NSRepublicOfChinaCalendar',
-  'NSRequiredArgumentsMissingScriptError',
-  'NSSaveOptions',
   'NSScannedOption',
-  'NSScriptClassDescription',
-  'NSScriptCoercionHandler',
-  'NSScriptCommand',
-  'NSScriptCommandDescription',
-  'NSScriptExecutionContext',
-  'NSScriptObjectSpecifier',
-  'NSScriptSuiteRegistry',
-  'NSScriptWhoseTest',
   'NSSecureCoding',
   'NSSet',
   'NSSetCommand',
-  'NSShiftJISStringEncoding',
   'NSSize',
-  'NSSolarisOperatingSystem',
   'NSSortDescriptor',
-  'NSSortOptions',
   'NSSpecifierTest',
   'NSSpellServer',
   'NSSpellServerDelegate',
   'NSStreamSOCKSErrorDomain',
   'NSStreamSocketSSLErrorDomain',
   'NSString',
-  'NSStringEncodingErrorKey',
-  'NSSunOSOperatingSystem',
-  'NSSwappedDouble',
-  'NSSwappedFloat',
-  'NSSymbolStringEncoding',
-  'NSTextCheckingAllCustomTypes',
-  'NSTextCheckingAllSystemTypes',
-  'NSTextCheckingAllTypes',
-  'NSTextCheckingKey',
-  'NSTextCheckingResult',
-  'NSTextCheckingTypes',
-  'NSTextWritingDirection',
-  'NSTimeIntervalSince1970',
   'NSTimeZone',
-  'NSTypeIdentifierAddressText',
-  'NSTypeIdentifierDateText',
-  'NSTypeIdentifierPhoneNumberText',
-  'NSTypeIdentifierTransitInformationText',
   'NSURL',
-  'NSURLAuthenticationMethodClientCertificate',
-  'NSURLAuthenticationMethodDefault',
-  'NSURLAuthenticationMethodHTMLForm',
-  'NSURLAuthenticationMethodHTTPBasic',
-  'NSURLAuthenticationMethodHTTPDigest',
-  'NSURLAuthenticationMethodNTLM',
-  'NSURLAuthenticationMethodNegotiate',
-  'NSURLAuthenticationMethodServerTrust',
-  'NSURLComponents',
-  'NSURLConnection',
-  'NSURLConnectionDataDelegate',
-  'NSURLConnectionDelegate',
-  'NSURLConnectionDownloadDelegate',
-  'NSURLCredentialStorageRemoveSynchronizableCredentials',
-  'NSURLDownload',
-  'NSURLDownloadDelegate',
-  'NSURLErrorAppTransportSecurityRequiresSecureConnection',
-  'NSURLErrorBackgroundSessionInUseByAnotherProcess',
-  'NSURLErrorBackgroundSessionRequiresSharedContainer',
-  'NSURLErrorBackgroundSessionWasDisconnected',
-  'NSURLErrorBackgroundTaskCancelledReasonKey',
-  'NSURLErrorBadServerResponse',
-  'NSURLErrorBadURL',
-  'NSURLErrorCallIsActive',
-  'NSURLErrorCancelled',
-  'NSURLErrorCancelledReasonBackgroundUpdatesDisabled',
-  'NSURLErrorCancelledReasonInsufficientSystemResources',
-  'NSURLErrorCancelledReasonUserForceQuitApplication',
-  'NSURLErrorCannotCloseFile',
-  'NSURLErrorCannotConnectToHost',
-  'NSURLErrorCannotCreateFile',
-  'NSURLErrorCannotDecodeContentData',
-  'NSURLErrorCannotDecodeRawData',
-  'NSURLErrorCannotFindHost',
-  'NSURLErrorCannotLoadFromNetwork',
-  'NSURLErrorCannotMoveFile',
-  'NSURLErrorCannotOpenFile',
-  'NSURLErrorCannotParseResponse',
-  'NSURLErrorCannotRemoveFile',
-  'NSURLErrorCannotWriteToFile',
-  'NSURLErrorClientCertificateRejected',
-  'NSURLErrorClientCertificateRequired',
-  'NSURLErrorDNSLookupFailed',
-  'NSURLErrorDataLengthExceedsMaximum',
-  'NSURLErrorDataNotAllowed',
-  'NSURLErrorDomain',
-  'NSURLErrorDownloadDecodingFailedMidStream',
-  'NSURLErrorDownloadDecodingFailedToComplete',
-  'NSURLErrorFailingURLErrorKey',
-  'NSURLErrorFailingURLPeerTrustErrorKey',
-  'NSURLErrorFailingURLStringErrorKey',
-  'NSURLErrorFileDoesNotExist',
-  'NSURLErrorFileIsDirectory',
-  'NSURLErrorFileOutsideSafeArea',
-  'NSURLErrorHTTPTooManyRedirects',
-  'NSURLErrorInternationalRoamingOff',
-  'NSURLErrorKey',
-  'NSURLErrorNetworkConnectionLost',
-  'NSURLErrorNetworkUnavailableReasonKey',
-  'NSURLErrorNoPermissionsToReadFile',
-  'NSURLErrorNotConnectedToInternet',
-  'NSURLErrorRedirectToNonExistentLocation',
-  'NSURLErrorRequestBodyStreamExhausted',
-  'NSURLErrorResourceUnavailable',
-  'NSURLErrorSecureConnectionFailed',
-  'NSURLErrorServerCertificateHasBadDate',
-  'NSURLErrorServerCertificateHasUnknownRoot',
-  'NSURLErrorServerCertificateNotYetValid',
-  'NSURLErrorServerCertificateUntrusted',
-  'NSURLErrorTimedOut',
-  'NSURLErrorUnknown',
-  'NSURLErrorUnsupportedURL',
-  'NSURLErrorUserAuthenticationRequired',
-  'NSURLErrorUserCancelledAuthentication',
-  'NSURLErrorZeroByteResource',
-  'NSURLFileScheme',
-  'NSURLHandle',
-  'NSURLProtectionSpaceFTP',
-  'NSURLProtectionSpaceFTPProxy',
-  'NSURLProtectionSpaceHTTP',
-  'NSURLProtectionSpaceHTTPProxy',
-  'NSURLProtectionSpaceHTTPS',
-  'NSURLProtectionSpaceHTTPSProxy',
-  'NSURLProtectionSpaceSOCKSProxy',
-  'NSURLQueryItem',
   'NSURLRequest',
-  'NSURLSessionDownloadTaskResumeData',
-  'NSURLSessionTransferSizeUnknown',
-  'NSUTF16BigEndianStringEncoding',
-  'NSUTF16LittleEndianStringEncoding',
-  'NSUTF16StringEncoding',
-  'NSUTF32BigEndianStringEncoding',
-  'NSUTF32LittleEndianStringEncoding',
-  'NSUTF32StringEncoding',
-  'NSUTF8StringEncoding',
   'NSUUID',
-  'NSUbiquitousFileErrorMaximum',
-  'NSUbiquitousFileErrorMinimum',
-  'NSUbiquitousFileNotUploadedDueToQuotaError',
-  'NSUbiquitousFileUbiquityServerNotAvailable',
-  'NSUbiquitousFileUnavailableError',
-  'NSUbiquitousKeyValueStore',
-  'NSUbiquitousKeyValueStoreAccountChange',
-  'NSUbiquitousKeyValueStoreChangeReasonKey',
-  'NSUbiquitousKeyValueStoreChangedKeysKey',
-  'NSUbiquitousKeyValueStoreInitialSyncChange',
-  'NSUbiquitousKeyValueStoreQuotaViolationChange',
-  'NSUbiquitousKeyValueStoreServerChange',
   'NSUnarchiver',
-  'NSUncaughtExceptionHandler',
-  'NSUndefinedDateComponent',
-  'NSUnderlineStyle',
-  'NSUnderlyingErrorKey',
-  'NSUndoCloseGroupingRunLoopOrdering',
-  'NSUndoManagerGroupIsDiscardableKey',
-  'NSUnicodeStringEncoding',
-  'NSUniqueIDSpecifier',
-  'NSUnknownKeyScriptError',
-  'NSUnknownKeySpecifierError',
-  'NSUserActivity',
-  'NSUserActivityConnectionUnavailableError',
-  'NSUserActivityDelegate',
-  'NSUserActivityErrorMaximum',
-  'NSUserActivityErrorMinimum',
-  'NSUserActivityHandoffFailedError',
-  'NSUserActivityHandoffUserInfoTooLargeError',
-  'NSUserActivityPersistentIdentifier',
-  'NSUserActivityRemoteApplicationTimedOutError',
-  'NSUserActivityTypeBrowsingWeb',
-  'NSUserAppleScriptTask',
-  'NSUserAutomatorTask',
-  'NSUserCancelledError',
-  'NSUserNotification',
-  'NSUserNotificationAction',
-  'NSUserNotificationCenter',
-  'NSUserNotificationCenterDelegate',
-  'NSUserNotificationDefaultSoundName',
-  'NSUserScriptTask',
-  'NSUserUnixTask',
-  'NSValidationErrorMaximum',
-  'NSValidationErrorMinimum',
   'NSValue',
-  'NSValueTransformerName',
   'NSWhoseSpecifier',
-  'NSWindows95OperatingSystem',
-  'NSWindowsCP1250StringEncoding',
-  'NSWindowsCP1251StringEncoding',
-  'NSWindowsCP1252StringEncoding',
-  'NSWindowsCP1253StringEncoding',
-  'NSWindowsCP1254StringEncoding',
-  'NSWindowsNTOperatingSystem',
-  'NSWrapCalendarComponents',
-  'NSWritingDirectionFormatType',
-  'NSXPCConnection',
-  'NSXPCConnectionErrorMaximum',
-  'NSXPCConnectionErrorMinimum',
-  'NSXPCConnectionInterrupted',
-  'NSXPCConnectionInvalid',
-  'NSXPCConnectionReplyInvalid',
-  'NSXPCInterface',
-  'NSXPCListener',
-  'NSXPCListenerDelegate',
-  'NSXPCListenerEndpoint',
-  'NSXPCProxyCreating',
-  'NS_BigEndian',
-  'NS_LittleEndian',
-  'NS_UnknownByteOrder',
   'Name',
   'NameStyle',
   'NetService',
@@ -1311,8 +722,6 @@ const SWIFT_TYPES = new Set([
   'NetworkServiceType',
   'NetworkUnavailableReason',
   'Never',
-  'NonConformingFloatDecodingStrategy',
-  'NonConformingFloatEncodingStrategy',
   'Notification',
   'NotificationCenter',
   'NotificationCoalescing',
@@ -1328,9 +737,7 @@ const SWIFT_TYPES = new Set([
   'Operation',
   'OperationQueue',
   'Operator',
-  'OptionSet',
   'Optional',
-  'Options',
   'Output',
   'OutputFormatting',
   'OutputStream',
@@ -1343,8 +750,6 @@ const SWIFT_TYPES = new Set([
   'PartialRangeThrough',
   'PartialRangeUpTo',
   'Persistence',
-  'PersonNameComponents',
-  'PersonNameComponentsFormatter',
   'Pipe',
   'PlaygroundQuickLook',
   'Pointee',
@@ -1352,7 +757,6 @@ const SWIFT_TYPES = new Set([
   'PortDelegate',
   'PortMessage',
   'PostingStyle',
-  'PreferredPresentationStyle',
   'PrefixSequence',
   'Process',
   'ProcessInfo',
@@ -1362,10 +766,6 @@ const SWIFT_TYPES = new Set([
   'ProgressUserInfoKey',
   'Properties',
   'PropertyKey',
-  'PropertyListDecoder',
-  'PropertyListEncoder',
-  'PropertyListFormat',
-  'PropertyListSerialization',
   'Published',
   'Publisher',
   'PublishingHandler',
@@ -1381,8 +781,6 @@ const SWIFT_TYPES = new Set([
   'RawRepresentable',
   'RawSignificand',
   'RawValue',
-  'ReadOptions',
-  'ReadingOptions',
   'RecoverableError',
   'ReferenceConvertible',
   'ReferenceType',
@@ -1391,7 +789,6 @@ const SWIFT_TYPES = new Set([
   'RelativePosition',
   'Repeated',
   'RepeatedTimePolicy',
-  'ReplacingOptions',
   'ResourceFetchType',
   'ResponseDisposition',
   'Result',
@@ -1419,13 +816,10 @@ const SWIFT_TYPES = new Set([
   'SIMDStorage',
   'Scalar',
   'Scanner',
-  'SchedulerOptions',
   'SchedulerTimeType',
   'SearchDirection',
-  'SearchOptions',
   'SearchPathDirectory',
   'SearchPathDomainMask',
-  'SendOptions',
   'Sequence',
   'Set',
   'SetAlgebra',
@@ -1433,8 +827,6 @@ const SWIFT_TYPES = new Set([
   'SetIterator',
   'SignedInteger',
   'SignedNumeric',
-  'SingleValueDecodingContainer',
-  'SingleValueEncodingContainer',
   'Slice',
   'SocketNativeHandle',
   'SocketPort',
@@ -1445,10 +837,6 @@ const SWIFT_TYPES = new Set([
   'StoragePolicy',
   'Stream',
   'StreamDelegate',
-  'StreamNetworkServiceTypeValue',
-  'StreamSOCKSProxyConfiguration',
-  'StreamSOCKSProxyVersion',
-  'StreamSocketSecurityLevel',
   'Stride',
   'StrideThrough',
   'StrideThroughIterator',
@@ -1456,7 +844,6 @@ const SWIFT_TYPES = new Set([
   'StrideToIterator',
   'Strideable',
   'String',
-  'StringEncodingDetectionOptionsKey',
   'StringInterpolation',
   'StringInterpolationProtocol',
   'StringLiteralType',
@@ -1482,15 +869,12 @@ const SWIFT_TYPES = new Set([
   'Timer',
   'TimerPublisher',
   'Tuple',
-  'UIItemProviderPresentationSizeProviding',
   'UInt',
   'UInt16',
   'UInt32',
   'UInt64',
   'UInt8',
   'URL',
-  'URLAuthenticationChallenge',
-  'URLAuthenticationChallengeSender',
   'URLCache',
   'URLComponents',
   'URLCredential',
@@ -1508,25 +892,6 @@ const SWIFT_TYPES = new Set([
   'URLResourceValues',
   'URLResponse',
   'URLSession',
-  'URLSessionConfiguration',
-  'URLSessionDataDelegate',
-  'URLSessionDataTask',
-  'URLSessionDelegate',
-  'URLSessionDownloadDelegate',
-  'URLSessionDownloadTask',
-  'URLSessionStreamDelegate',
-  'URLSessionStreamTask',
-  'URLSessionTask',
-  'URLSessionTaskDelegate',
-  'URLSessionTaskMetrics',
-  'URLSessionTaskTransactionMetrics',
-  'URLSessionUploadTask',
-  'URLSessionWebSocketDelegate',
-  'URLSessionWebSocketTask',
-  'URLThumbnailDictionaryItem',
-  'URLUbiquitousItemDownloadingStatus',
-  'URLUbiquitousSharedItemPermissions',
-  'URLUbiquitousSharedItemRole',
   'UTF16',
   'UTF16View',
   'UTF32',
@@ -1534,7 +899,6 @@ const SWIFT_TYPES = new Set([
   'UTF8View',
   'UUID',
   'UnboundedRange',
-  'UnboundedRange_',
   'UndoManager',
   'UnfoldFirstSequence',
   'UnfoldSequence',
@@ -1555,17 +919,12 @@ const SWIFT_TYPES = new Set([
   'UnitConverterLinear',
   'UnitDispersion',
   'UnitDuration',
-  'UnitElectricCharge',
-  'UnitElectricCurrent',
-  'UnitElectricPotentialDifference',
-  'UnitElectricResistance',
   'UnitEnergy',
   'UnitFrequency',
   'UnitFuelEfficiency',
   'UnitIlluminance',
   'UnitLength',
   'UnitMass',
-  'UnitOptions',
   'UnitPower',
   'UnitPressure',
   'UnitSpeed',
@@ -1574,10 +933,7 @@ const SWIFT_TYPES = new Set([
   'UnitVolume',
   'Units',
   'UnitsStyle',
-  'UnkeyedDecodingContainer',
-  'UnkeyedEncodingContainer',
   'Unmanaged',
-  'UnmountOptions',
   'UnpublishingHandler',
   'UnsafeBufferPointer',
   'UnsafeMutableBufferPointer',
@@ -1595,11 +951,7 @@ const SWIFT_TYPES = new Set([
   'Values',
   'Version',
   'Void',
-  'VolumeEnumerationOptions',
   'Words',
-  'WritableKeyPath',
-  'WriteOptions',
-  'WritingOptions',
   'XMLDTD',
   'XMLDTDNode',
   'XMLDocument',
@@ -1607,25 +959,391 @@ const SWIFT_TYPES = new Set([
   'XMLNode',
   'XMLParser',
   'XMLParserDelegate',
-  'ZeroFormattingBehavior',
   'Zip2Sequence',
-  '_AppendKeyPath',
   'swift',
   'unichar',
 ]);
 
 class HighlightSwift extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static SLASH = 2;
+  static SLASH_SLASH = 3;
+  static SLASH_STAR = 4;
+  static SLASH_SLASH_BACKSLASH = 5;
+  static SLASH_STAR_STAR = 6;
+  static HASH = 7;
+  static DQUOTE = 8;
+  static DQUOTESTR = 9;
+  static DQUOTESTR_BACKSLASH = 10;
+  static DQUOTESTR_END = 11;
+  static DQUOTE2 = 12;
+  static DQUOTE3 = 13;
+  static DQUOTE3_BACKSLASH = 14;
+  static DQUOTE31 = 15;
+  static DQUOTE32 = 16;
+  static DQUOTE3_END = 17;
+  static REGEX = 18;
+  static REGEX_END = 19;
+  static REGEX_BACKSLASH = 20;
+
   constructor(delegate) {
     super(delegate);
+    this.hash1 = 0;
+    this.hash2 = 0;
+    this.word = '';
+    this.nest = [];
+    this.hash = [];
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightSwift.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_') {
+          this.state = HighlightSwift.WORD;
+          this.word += c;
+        } else if (c == '/') {
+          this.state = HighlightSwift.SLASH;
+        } else if (c == '"') {
+          this.state = HighlightSwift.DQUOTE;
+          this.push("span", "string");
+          this.append('"');
+          this.hash1 = 0;
+        } else if (c == '#') {
+          this.state = HighlightSwift.HASH;
+          this.hash1 = 1;
+        } else if (c == '(' && this.nest) {
+          this.append('(');
+          this.nest.push(HighlightSwift.NORMAL);
+          this.hash.push(0);
+        } else if (c == ')' && this.nest) {
+          this.state = this.nest.pop();
+          this.hash1 = this.hash.pop();
+          if (this.state != HighlightSwift.NORMAL)
+            this.push("span", "string");
+          this.append(')');
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightSwift.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_') {
+          this.word += c;
+        } else {
+          if (SWIFT_KEYWORDS.has(this.word)) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (SWIFT_TYPES.has(this.word)) {
+            this.push("span", "type");
+            this.append(this.word);
+            this.pop();
+          } else if (SWIFT_BUILTINS.has(this.word)) {
+            this.push("span", "builtin");
+            this.append(this.word);
+            this.pop();
+          } else if (SWIFT_CONSTANTS.has(this.word)) {
+            this.push("span", "constant");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightSwift.NORMAL);
+        }
+        break;
+
+      case HighlightSwift.SLASH:
+        if (c == '/') {
+          this.push("span", "comment");
+          this.append("//");
+          this.state = HighlightSwift.SLASH_SLASH;
+        } else if (c == '*') {
+          this.push("span", "comment");
+          this.append("/*");
+          this.state = HighlightSwift.SLASH_STAR;
+        } else {
+          this.push("span", "string");
+          this.append('/');
+          this.hash1 = 0;
+          this.epsilon(HighlightSwift.REGEX);
+        }
+        break;
+
+      case HighlightSwift.SLASH_SLASH:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightSwift.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightSwift.SLASH_SLASH_BACKSLASH;
+        }
+        break;
+
+      case HighlightSwift.SLASH_SLASH_BACKSLASH:
+        this.append(c);
+        this.state = HighlightSwift.SLASH_SLASH;
+        break;
+
+      case HighlightSwift.SLASH_STAR:
+        this.append(c);
+        if (c == '*')
+          this.state = HighlightSwift.SLASH_STAR_STAR;
+        break;
+
+      case HighlightSwift.SLASH_STAR_STAR:
+        this.append(c);
+        if (c == '/') {
+          this.pop();
+          this.state = HighlightSwift.NORMAL;
+        } else if (c != '*') {
+          this.state = HighlightSwift.SLASH_STAR;
+        }
+        break;
+
+      case HighlightSwift.HASH:
+        if (c == '#') {
+          ++this.hash1;
+        } else if (c == '"') {
+          this.push("span", "string");
+          for (let i = 0; i < this.hash1; ++i)
+            this.append('#');
+          this.append('"');
+          this.state = HighlightSwift.DQUOTE;
+        } else if (c == '/') {
+          this.push("span", "string");
+          for (let i = 0; i < this.hash1; ++i)
+            this.append('#');
+          this.append('/');
+          this.state = HighlightSwift.REGEX;
+        } else {
+          for (let i = 0; i < this.hash1; ++i)
+            this.append('#');
+          this.epsilon(HighlightSwift.NORMAL);
+        }
+        break;
+
+      case HighlightSwift.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.state = HighlightSwift.DQUOTE2;
+          this.hash2 = 0;
+        } else if (c == '\\') {
+          this.state = HighlightSwift.DQUOTESTR_BACKSLASH;
+          this.hash2 = 0;
+        } else {
+          this.state = HighlightSwift.DQUOTESTR;
+        }
+        break;
+
+      case HighlightSwift.DQUOTESTR:
+        this.append(c);
+        if (c == '"') {
+          this.state = HighlightSwift.DQUOTESTR_END;
+          this.hash2 = 0;
+        } else if (c == '\\') {
+          this.state = HighlightSwift.DQUOTESTR_BACKSLASH;
+          this.hash2 = 0;
+        }
+        break;
+
+      case HighlightSwift.DQUOTESTR_END:
+        if (this.hash2 == this.hash1) {
+          this.pop();
+          this.epsilon(HighlightSwift.NORMAL);
+        } else if (c == '#') {
+          this.append('#');
+          ++this.hash2;
+        } else {
+          this.epsilon(HighlightSwift.DQUOTESTR);
+        }
+        break;
+
+      case HighlightSwift.DQUOTESTR_BACKSLASH:
+        if (c == '#' && this.hash2 < this.hash1) {
+          this.append('#');
+          ++this.hash2;
+        } else if (c == '(' && this.hash2 == this.hash1) {
+          this.append('(');
+          this.pop();
+          this.nest.push(HighlightSwift.DQUOTESTR);
+          this.hash.push(this.hash1);
+          this.state = HighlightSwift.NORMAL;
+        } else {
+          this.epsilon(HighlightSwift.DQUOTESTR);
+        }
+        break;
+
+      case HighlightSwift.DQUOTE2:
+        if (c == '"') {
+          this.append('"');
+          this.state = HighlightSwift.DQUOTE3;
+        } else if (c == '#' && this.hash2 < this.hash1) {
+          this.append('#');
+          ++this.hash2;
+        } else if (this.hash2 == this.hash1) {
+          this.pop();
+          this.epsilon(HighlightSwift.NORMAL);
+        } else {
+          this.epsilon(HighlightSwift.DQUOTESTR);
+        }
+        break;
+
+      case HighlightSwift.DQUOTE3:
+        this.append(c);
+        if (c == '"') {
+          this.state = HighlightSwift.DQUOTE31;
+        } else if (c == '\\') {
+          this.state = HighlightSwift.DQUOTE3_BACKSLASH;
+          this.hash2 = 0;
+        }
+        break;
+
+      case HighlightSwift.DQUOTE31:
+        if (c == '"') {
+          this.append('"');
+          this.state = HighlightSwift.DQUOTE32;
+        } else {
+          this.epsilon(HighlightSwift.DQUOTE3);
+        }
+        break;
+
+      case HighlightSwift.DQUOTE32:
+        if (c == '"') {
+          this.append('"');
+          this.state = HighlightSwift.DQUOTESTR_END;
+          this.hash2 = 0;
+        } else {
+          this.epsilon(HighlightSwift.DQUOTE3);
+        }
+        break;
+
+      case HighlightSwift.DQUOTE3_BACKSLASH:
+        if (c == '#' && this.hash2 < this.hash1) {
+          this.append('#');
+          ++this.hash2;
+        } else if (c == '(' && this.hash2 == this.hash1) {
+          this.append('(');
+          this.pop();
+          this.nest.push(HighlightSwift.DQUOTE3);
+          this.hash.push(this.hash1);
+          this.state = HighlightSwift.NORMAL;
+        } else {
+          this.epsilon(HighlightSwift.DQUOTE3);
+        }
+        break;
+
+      case HighlightSwift.DQUOTE3_END:
+        if (this.hash2 == this.hash1) {
+          this.pop();
+          this.epsilon(HighlightSwift.NORMAL);
+        } else if (c == '#') {
+          this.append('#');
+          ++this.hash2;
+        } else {
+          this.epsilon(HighlightSwift.DQUOTE3);
+        }
+        break;
+
+      case HighlightSwift.REGEX:
+        this.append(c);
+        if (c == '/') {
+          this.state = HighlightSwift.REGEX_END;
+          this.hash2 = 0;
+        } else if (c == '\\') {
+          this.state = HighlightSwift.REGEX_BACKSLASH;
+          this.hash2 = 0;
+        }
+        break;
+
+      case HighlightSwift.REGEX_END:
+        if (this.hash2 == this.hash1) {
+          this.pop();
+          this.epsilon(HighlightSwift.NORMAL);
+        } else if (c == '#') {
+          this.append('#');
+          ++this.hash2;
+        } else {
+          this.epsilon(HighlightSwift.REGEX);
+        }
+        break;
+
+      case HighlightSwift.REGEX_BACKSLASH:
+        this.append(c);
+        this.state = HighlightSwift.REGEX;
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightSwift.WORD:
+      if (SWIFT_KEYWORDS.has(this.word)) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (SWIFT_TYPES.has(this.word)) {
+        this.push("span", "type");
+        this.append(this.word);
+        this.pop();
+      } else if (SWIFT_BUILTINS.has(this.word)) {
+        this.push("span", "builtin");
+        this.append(this.word);
+        this.pop();
+      } else if (SWIFT_CONSTANTS.has(this.word)) {
+        this.push("span", "constant");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightSwift.SLASH:
+      this.append('/');
+      break;
+    case HighlightSwift.HASH:
+      for (let i = 0; i < this.hash1; ++i)
+        this.append('#');
+      break;
+    case HighlightSwift.SLASH_SLASH:
+    case HighlightSwift.SLASH_SLASH_BACKSLASH:
+    case HighlightSwift.SLASH_STAR:
+    case HighlightSwift.SLASH_STAR_STAR:
+    case HighlightSwift.DQUOTE:
+    case HighlightSwift.DQUOTESTR:
+    case HighlightSwift.DQUOTESTR_BACKSLASH:
+    case HighlightSwift.DQUOTESTR_END:
+    case HighlightSwift.DQUOTE2:
+    case HighlightSwift.DQUOTE3:
+    case HighlightSwift.DQUOTE3_BACKSLASH:
+    case HighlightSwift.DQUOTE31:
+    case HighlightSwift.DQUOTE32:
+    case HighlightSwift.DQUOTE3_END:
+    case HighlightSwift.REGEX:
+    case HighlightSwift.REGEX_END:
+    case HighlightSwift.REGEX_BACKSLASH:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightSwift.NORMAL;
+    this.nest = [];
+    this.hash = [];
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

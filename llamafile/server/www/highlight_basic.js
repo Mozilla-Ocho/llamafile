@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const BASIC_KEYWORDSS = new Set([
+const BASIC_KEYWORDS = new Set([
   '#const',
   '#else',
   '#elseif',
@@ -433,29 +433,55 @@ class HighlightBasic extends Highlighter {
 
       switch (this.state) {
       case HighlightBasic.NORMAL:
-        if (!isascii(c) || isalpha(c)) {
-          this.epsilon(HighlightBasic.WORD);
-        } else if (c === '-') {
-          this.state = HighlightBasic.HYPHEN;
-        } else if (c === '\'' && this.last !== ')') {
-          this.push('span', 'string');
-          this.append(c);
-          this.state = HighlightBasic.QUOTE;
-        } else if (c === '"') {
-          this.push('span', 'string');
-          this.append(c);
+        if (!isascii(c) || isalpha(c) || c == '_') {
+          this.state = HighlightBasic.WORD;
+          this.word += c;
+        } else if (c == '\'') {
+          this.state = HighlightBasic.COMMENT;
+          this.push("span", "comment");
+          this.append('\'');
+        } else if (c == '"') {
           this.state = HighlightBasic.DQUOTE;
+          this.push("span", "string");
+          this.append('"');
+        } else if (c == '#' && this.is_bol) {
+          this.state = HighlightBasic.DIRECTIVE;
+          this.push("span", "directive");
+          this.append('#');
+        } else if (isdigit(c) && this.is_bol) {
+          this.push("span", "lineno");
+          this.append(c);
+          this.state = HighlightBasic.LINENO;
         } else {
           this.append(c);
         }
         break;
 
       case HighlightBasic.WORD:
-        if (!isascii(c) || isalnum(c) || c === '_' || c === '\'') {
+        if (!isascii(c) || isalnum(c) || c == '_') {
           this.word += c;
         } else {
-          if (is_keyword_basic(this.word)) {
-            this.push('span', 'keyword');
+          if (BASIC_KEYWORDS.has(this.word.toLowerCase())) {
+            if (this.word.toLowerCase() == "rem") {
+              this.push("span", "comment");
+              this.append(this.word);
+              this.epsilon(HighlightBasic.COMMENT);
+              this.word = '';
+            } else {
+              this.push("span", "keyword");
+              this.append(this.word);
+              this.pop();
+            }
+          } else if (BASIC_TYPES.has(this.word.toLowerCase())) {
+            this.push("span", "type");
+            this.append(this.word);
+            this.pop();
+          } else if (BASIC_BUILTINS.has(this.word.toLowerCase())) {
+            this.push("span", "builtin");
+            this.append(this.word);
+            this.pop();
+          } else if (BASIC_CONSTANTS.has(this.word.toLowerCase())) {
+            this.push("span", "constant");
             this.append(this.word);
             this.pop();
           } else {
@@ -466,38 +492,30 @@ class HighlightBasic extends Highlighter {
         }
         break;
 
-      case HighlightBasic.HYPHEN:
-        if (c === '-') {
-          this.push('span', 'comment');
-          this.append('--');
-          this.state = HighlightBasic.COMMENT;
+      case HighlightBasic.DQUOTE:
+        this.append(c);
+        if (c == '"' || c == '\n') {
+          this.pop();
+          this.state = HighlightBasic.NORMAL;
+        }
+        break;
+
+      case HighlightBasic.LINENO:
+        if (isdigit(c)) {
+          this.append(c);
         } else {
-          this.append('-');
+          this.pop();
           this.epsilon(HighlightBasic.NORMAL);
         }
         break;
 
       case HighlightBasic.COMMENT:
+      case HighlightBasic.DIRECTIVE:
         this.append(c);
-        if (c === '\n') {
+        if (c == '\n') {
           this.pop();
           this.state = HighlightBasic.NORMAL;
-        }
-        break;
-
-      case HighlightBasic.QUOTE:
-        this.append(c);
-        if (c === '\'') {
-          this.pop();
-          this.state = HighlightBasic.NORMAL;
-        }
-        break;
-
-      case HighlightBasic.DQUOTE:
-        this.append(c);
-        if (c === '"') {
-          this.pop();
-          this.state = HighlightBasic.NORMAL;
+        } else {
         }
         break;
 
@@ -517,20 +535,37 @@ class HighlightBasic extends Highlighter {
   flush() {
     switch (this.state) {
     case HighlightBasic.WORD:
-      if (is_keyword_basic(this.word)) {
-        this.push('span', 'keyword');
+      if (BASIC_KEYWORDS.has(this.word.toLowerCase())) {
+        if (this.word.toLowerCase() == "rem") {
+          this.push("span", "keyword");
+          this.append(this.word);
+          this.pop();
+        } else {
+          this.push("span", "keyword");
+          this.append(this.word);
+          this.pop();
+        }
+      } else if (BASIC_TYPES.has(this.word.toLowerCase())) {
+        this.push("span", "type");
         this.append(this.word);
+        this.pop();
+      } else if (BASIC_BUILTINS.has(this.word.toLowerCase())) {
+        this.push("span", "builtin");
+        this.append(this.word);
+        this.pop();
+      } else if (BASIC_CONSTANTS.has(this.word.toLowerCase())) {
+        this.push("span", "constant");
+        this.append(this.word);
+        this.pop();
       } else {
         this.append(this.word);
       }
       this.word = '';
       break;
-    case HighlightBasic.HYPHEN:
-      this.append('-');
-      break;
-    case HighlightBasic.QUOTE:
+    case HighlightBasic.LINENO:
     case HighlightBasic.DQUOTE:
     case HighlightBasic.COMMENT:
+    case HighlightBasic.DIRECTIVE:
       this.pop();
       break;
     default:
@@ -538,6 +573,7 @@ class HighlightBasic extends Highlighter {
     }
     this.state = HighlightBasic.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

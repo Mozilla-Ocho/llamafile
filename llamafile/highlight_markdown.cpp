@@ -35,6 +35,7 @@ enum {
     INCODE,
     INCODE2,
     INCODE2_TICK,
+    INCODE2_TICK2,
     EMPHASIS,
     EMPHASIS_BACKSLASH,
 };
@@ -81,6 +82,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 // handle \*\*not bold\*\* etc.
                 t_ = BACKSLASH;
                 *r += '\\';
+                bol_ = false;
             } else {
                 lf::append_wchar(r, c);
             }
@@ -119,6 +121,7 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
                 if (c == '\\')
                     t_ = EMPHASIS_BACKSLASH;
             }
+            bol_ = false;
             break;
 
         case EMPHASIS:
@@ -171,13 +174,20 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
 
         case TICK:
             if (c == '`') {
-                t_ = TICK_TICK;
+                if (bol_) {
+                    t_ = TICK_TICK;
+                } else {
+                    *r += HI_INCODE;
+                    *r += "``";
+                    t_ = INCODE2;
+                }
             } else {
                 *r += HI_INCODE;
                 *r += '`';
                 lf::append_wchar(r, c);
                 t_ = INCODE;
             }
+            bol_ = false;
             break;
 
         case INCODE:
@@ -202,10 +212,19 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         case INCODE2_TICK:
             lf::append_wchar(r, c);
             if (c == '`') {
-                *r += HI_RESET;
-                t_ = NORMAL;
+                t_ = INCODE2_TICK2;
             } else {
                 t_ = INCODE2;
+            }
+            break;
+
+        case INCODE2_TICK2:
+            if (c == '`') {
+                *r += '`';
+            } else {
+                *r += HI_RESET;
+                t_ = NORMAL;
+                goto Normal;
             }
             break;
 
@@ -300,6 +319,7 @@ void HighlightMarkdown::flush(std::string *r) {
     case INCODE:
     case INCODE2:
     case INCODE2_TICK:
+    case INCODE2_TICK2:
     case STRONG:
     case STRONG_BACKSLASH:
     case STRONG_STAR:

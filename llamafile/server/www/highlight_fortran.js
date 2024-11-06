@@ -253,16 +253,181 @@ const FORTRAN_TYPES = new Set([
 
 class HighlightFortran extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static QUOTE = 2;
+  static QUOTE_BACKSLASH = 3;
+  static DQUOTE = 4;
+  static DQUOTE_BACKSLASH = 5;
+  static COMMENT = 6;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
+    this.col = -1;
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+
+      ++this.col;
+      if (c == '\n')
+        this.col = -1;
+
+      if (this.state == HighlightFortran.NORMAL) {
+        if (this.col == 0 && (c == '*' || c == 'c' || c == 'C')) {
+          this.state = HighlightFortran.COMMENT;
+          this.push("span", "comment");
+        } else if (this.col == 5 && c != ' ') {
+          this.push("span", "contin");
+          this.append(c);
+          this.pop();
+          continue;
+        } else if (this.col <= 4 && isdigit(c)) {
+          this.push("span", "label");
+          this.append(c);
+          this.pop();
+          continue;
+        }
+      }
+
+      switch (this.state) {
+
+      case HighlightFortran.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_' || c == '.') {
+          this.word += c;
+          this.state = HighlightFortran.WORD;
+        } else if (c == '!') {
+          this.state = HighlightFortran.COMMENT;
+          this.push("span", "comment");
+          this.append(c);
+        } else if (c == '\'') {
+          this.state = HighlightFortran.QUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '"') {
+          this.state = HighlightFortran.DQUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightFortran.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_') {
+          this.word += c;
+        } else if (c == '.' && this.word[0] == '.') {
+          this.word += c;
+          if (FORTRAN_KEYWORDS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.state = HighlightFortran.NORMAL;
+        } else {
+          if (FORTRAN_KEYWORDS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (FORTRAN_TYPES.has(this.word.toLowerCase())) {
+            this.push("span", "type");
+            this.append(this.word);
+            this.pop();
+          } else if (FORTRAN_BUILTINS.has(this.word.toLowerCase())) {
+            this.push("span", "builtin");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightFortran.NORMAL);
+        }
+        break;
+
+      case HighlightFortran.COMMENT:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightFortran.NORMAL;
+        }
+        break;
+
+      case HighlightFortran.QUOTE:
+        this.append(c);
+        if (c == '\'') {
+          this.pop();
+          this.state = HighlightFortran.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightFortran.QUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightFortran.QUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightFortran.QUOTE;
+        break;
+
+      case HighlightFortran.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightFortran.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightFortran.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightFortran.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightFortran.DQUOTE;
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightFortran.WORD:
+      if (FORTRAN_KEYWORDS.has(this.word.toLowerCase())) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (FORTRAN_TYPES.has(this.word.toLowerCase())) {
+        this.push("span", "type");
+        this.append(this.word);
+        this.pop();
+      } else if (FORTRAN_BUILTINS.has(this.word.toLowerCase())) {
+        this.push("span", "builtin");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightFortran.QUOTE:
+    case HighlightFortran.QUOTE_BACKSLASH:
+    case HighlightFortran.DQUOTE:
+    case HighlightFortran.DQUOTE_BACKSLASH:
+    case HighlightFortran.COMMENT:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightFortran.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

@@ -73,16 +73,122 @@ const FORTH_DEFS = new Set([
 
 class HighlightForth extends Highlighter {
 
+  static NORMAL = 0;
+  static SYNTAX = 1;
+
   constructor(delegate) {
     super(delegate);
+    this.is_label = false;
+    this.closer = '';
+    this.word = '';
+    this.pushed = 0;
+  }
+
+  push(tagName, className) {
+    while (this.pushed)
+      this.pop();
+    ++this.pushed;
+    return this.delegate.push(tagName, className);
+  }
+
+  pop() {
+    if (!this.pushed)
+      throw new Error('bad pop');
+    --this.pushed;
+    this.delegate.pop();
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightForth.NORMAL:
+        if (!isspace(c)) {
+          this.word += c;
+        } else if (this.word != "") {
+          if (this.is_label) {
+            this.append(this.word);
+            this.pop();
+            this.is_label = false;
+          } else if (this.word == "\\") { // line comment
+            this.push("span", "comment");
+            this.append(this.word);
+            this.state = HighlightForth.SYNTAX;
+            this.closer = '\n';
+          } else if (this.word == "(" || // inline comment, e.g. ( arg1 arg2 -- res1 )
+                     this.word == ".(") { // printed comment, e.g. .( compiling... )
+            this.push("span", "comment");
+            this.append(this.word);
+            this.state = HighlightForth.SYNTAX;
+            this.closer = ')';
+          } else if (this.word == ".\"" || // string
+                     this.word == "s\"" || // stack string
+                     this.word == "S\"" || // stack string
+                     this.word == "c\"" || // counted string
+                     this.word == "C\"") { // counted string
+            this.push("span", "string");
+            this.append(this.word);
+            this.state = HighlightForth.SYNTAX;
+            this.closer = '"';
+          } else if (FORTH_DEFS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.push("span", "def");
+            this.is_label = true;
+          } else if (FORTH_KEYWORDS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.append(c);
+          break;
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightForth.SYNTAX:
+        this.append(c);
+        if (c == this.closer) {
+          this.pop();
+          this.state = HighlightForth.NORMAL;
+        }
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightForth.NORMAL:
+      if (this.is_label) {
+        this.append(this.word);
+      } else if (FORTH_KEYWORDS.has(this.word.toLowerCase()) ||
+                 FORTH_DEFS.has(this.word.toLowerCase())) {
+        this.push("span", "keyword");
+        this.append(this.word);
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    default:
+      break;
+    }
+    while (this.pushed)
+      this.pop();
+    this.is_label = false;
+    this.state = HighlightForth.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

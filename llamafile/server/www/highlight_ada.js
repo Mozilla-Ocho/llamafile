@@ -226,6 +226,7 @@ class HighlightAda extends Highlighter {
     }
     this.state = HighlightAda.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

@@ -284,6 +284,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         if (params.n_threads_batch <= 0) {
             params.n_threads_batch = cpu_get_num_math(); // [jart]
         }
+        FLAG_threads_batch = params.n_threads_batch; // [jart]
         return true;
     }
     if (arg == "-td" || arg == "--threads-draft") {
@@ -832,6 +833,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
             invalid_param = true;
             return true;
         }
+        FLAG_split_mode = params.split_mode; // [jart]
 // #ifndef GGML_USE_CUDA_SYCL_VULKAN // [jart]
 //         fprintf(stderr, "warning: llama.cpp was compiled without CUDA/SYCL/Vulkan. Setting the split mode has no effect.\n");
 // #endif // GGML_USE_CUDA_SYCL_VULKAN

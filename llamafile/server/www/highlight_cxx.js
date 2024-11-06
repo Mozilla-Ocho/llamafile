@@ -196,8 +196,8 @@ class HighlightCxx extends HighlightC {
 }
 
 Highlighter.REGISTRY['c++'] = HighlightCxx;
-Highlighter.REGISTRY['cxx'] = HighlightCxx;
-Highlighter.REGISTRY['cpp'] = HighlightCxx;
-Highlighter.REGISTRY['hpp'] = HighlightCxx;
 Highlighter.REGISTRY['cc'] = HighlightCxx;
+Highlighter.REGISTRY['cpp'] = HighlightCxx;
 Highlighter.REGISTRY['cu'] = HighlightCxx;
+Highlighter.REGISTRY['cxx'] = HighlightCxx;
+Highlighter.REGISTRY['hpp'] = HighlightCxx;

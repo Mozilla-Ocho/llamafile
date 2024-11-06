@@ -26,6 +26,7 @@ const LISP_KEYWORDS = new Set([
   'ctypecase',
   'declaim',
   'declare',
+  'def',
   'defadvice',
   'defalias',
   'defconst',
@@ -74,6 +75,7 @@ const LISP_KEYWORDS = new Set([
   'eval-when',
   'flet',
   'flet*',
+  'fn',
   'go',
   'handler-bind',
   'handler-case',
@@ -85,9 +87,12 @@ const LISP_KEYWORDS = new Set([
   'let',
   'let*',
   'letf',
+  'letfn',
   'locally',
   'loop',
   'macrolet',
+  'monitor-enter',
+  'monitor-exit',
   'multiple-value-bind',
   'multiple-value-prog1',
   'proclaim',
@@ -97,16 +102,22 @@ const LISP_KEYWORDS = new Set([
   'prog2',
   'progn',
   'progv',
+  'quote',
+  'recur',
   'restart-bind',
   'restart-case',
   'return',
   'return-from',
+  'set!',
   'symbol-macrolet',
   'tagbody',
   'the',
+  'throw',
+  'try',
   'typecase',
   'unless',
   'unwind-protect',
+  'var',
   'when',
   'while',
   'with-accessors',
@@ -125,16 +136,142 @@ const LISP_KEYWORDS = new Set([
 
 class HighlightLisp extends Highlighter {
 
+  static NORMAL = 0;
+  static SYMBOL = 1;
+  static DQUOTE = 2;
+  static DQUOTE_BACKSLASH = 3;
+  static COMMENT = 4;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
+    this.is_first = false;
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightLisp.NORMAL:
+        if (c == '(') {
+          this.append(c);
+          this.is_first = true;
+        } else if (c == ';') {
+          this.push("span", "comment");
+          this.append(c);
+          this.state = HighlightLisp.COMMENT;
+        } else if (c == '[') {
+          this.append(c);
+          this.state = HighlightLisp.SYMBOL;
+          this.is_first = false;
+        } else if (c == ')' || c == ']') {
+          this.append(c);
+          this.is_first = false;
+        } else if (c == '\'' || c == '#' || c == '`' || c == ',') {
+          this.append(c);
+          this.is_first = false;
+        } else if (c == '"') {
+          this.push("span", "string");
+          this.append(c);
+          this.state = HighlightLisp.DQUOTE;
+          this.is_first = false;
+        } else if (isspace(c)) {
+          this.append(c);
+        } else {
+          this.word += c;
+          this.state = HighlightLisp.SYMBOL;
+        }
+        break;
+
+      case HighlightLisp.SYMBOL:
+        if (isspace(c) || //
+            c == '(' || //
+            c == ')' || //
+            c == '[' || //
+            c == ']' || //
+            c == ',' || //
+            c == '#' || //
+            c == '`' || //
+            c == '"' || //
+            c == '\'') {
+          if (this.is_first && LISP_KEYWORDS.has(this.word)) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (this.word.length > 1 && this.word[0] == ':') {
+            this.push("span", "lispkw");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.is_first = false;
+          this.word = '';
+          this.epsilon(HighlightLisp.NORMAL);
+        } else {
+          this.word += c;
+        }
+        break;
+
+      case HighlightLisp.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightLisp.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightLisp.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightLisp.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightLisp.DQUOTE;
+        break;
+
+      case HighlightLisp.COMMENT:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightLisp.NORMAL;
+        }
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightLisp.SYMBOL:
+      if (this.is_first && LISP_KEYWORDS.has(this.word)) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (this.word.length > 1 && this.word[0] == ':') {
+        this.push("span", "lispkw");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightLisp.DQUOTE:
+    case HighlightLisp.DQUOTE_BACKSLASH:
+    case HighlightLisp.COMMENT:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.is_first = false;
+    this.state = HighlightLisp.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

@@ -516,16 +516,147 @@ const MATLAB_CONSTANTS = new Set([
 
 class HighlightMatlab extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static COMMENT = 2;
+  static QUOTE = 3;
+  static QUOTE_BACKSLASH = 4;
+  static DQUOTE = 5;
+  static DQUOTE_BACKSLASH = 6;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightMatlab.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_') {
+          this.state = HighlightMatlab.WORD;
+          this.word += c;
+        } else if (c == '%') {
+          this.state = HighlightMatlab.COMMENT;
+          this.push("span", "comment");
+          this.append('%');
+        } else if (c == '\'') {
+          this.state = HighlightMatlab.QUOTE;
+          this.push("span", "string");
+          this.append('\'');
+        } else if (c == '"') {
+          this.state = HighlightMatlab.DQUOTE;
+          this.push("span", "string");
+          this.append('"');
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightMatlab.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_') {
+          this.word += c;
+        } else {
+          if (MATLAB_KEYWORDS.has(this.word)) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (MATLAB_BUILTINS.has(this.word)) {
+            this.push("span", "builtin");
+            this.append(this.word);
+            this.pop();
+          } else if (MATLAB_CONSTANTS.has(this.word)) {
+            this.push("span", "constant");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightMatlab.NORMAL);
+        }
+        break;
+
+      case HighlightMatlab.COMMENT:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightMatlab.NORMAL;
+        }
+        break;
+
+      case HighlightMatlab.QUOTE:
+        this.append(c);
+        if (c == '\'') {
+          this.pop();
+          this.state = HighlightMatlab.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightMatlab.QUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightMatlab.QUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightMatlab.QUOTE;
+        break;
+
+      case HighlightMatlab.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightMatlab.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightMatlab.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightMatlab.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightMatlab.DQUOTE;
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightMatlab.WORD:
+      if (MATLAB_KEYWORDS.has(this.word)) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (MATLAB_BUILTINS.has(this.word)) {
+        this.push("span", "builtin");
+        this.append(this.word);
+        this.pop();
+      } else if (MATLAB_CONSTANTS.has(this.word)) {
+        this.push("span", "constant");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightMatlab.QUOTE:
+    case HighlightMatlab.QUOTE_BACKSLASH:
+    case HighlightMatlab.DQUOTE:
+    case HighlightMatlab.DQUOTE_BACKSLASH:
+    case HighlightMatlab.COMMENT:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightMatlab.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

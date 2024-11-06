@@ -34,6 +34,7 @@ class HighlightMarkdown extends Highlighter {
   static LANG2 = 17;
   static NEWLINE = 18;
   static EAT_NEWLINE = 19;
+  static INCODE2_TICK2 = 20;
 
   constructor(delegate) {
     super(delegate);
@@ -60,6 +61,7 @@ class HighlightMarkdown extends Highlighter {
         } else if (c == '\\') {
           // handle \*\*not bold\*\* etc.
           this.state = HighlightMarkdown.BACKSLASH;
+          this.bol = false;
         } else if (c == '\n') {
           this.bol = true;
           this.tail = false;
@@ -111,6 +113,7 @@ class HighlightMarkdown extends Highlighter {
           if (c == '\\')
             this.state = HighlightMarkdown.EMPHASIS_BACKSLASH;
         }
+        this.bol = false;
         break;
 
       case HighlightMarkdown.EMPHASIS:
@@ -166,12 +169,18 @@ class HighlightMarkdown extends Highlighter {
 
       case HighlightMarkdown.TICK:
         if (c == '`') {
-          this.state = HighlightMarkdown.TICK_TICK;
+          if (this.bol) {
+            this.state = HighlightMarkdown.TICK_TICK;
+          } else {
+            this.push("span", "incode");
+            this.state = HighlightMarkdown.INCODE2;
+          }
         } else {
           this.push('code', '');
           this.append(c);
           this.state = HighlightMarkdown.INCODE;
         }
+        this.bol = false;
         break;
 
       case HighlightMarkdown.INCODE:
@@ -197,11 +206,20 @@ class HighlightMarkdown extends Highlighter {
 
       case HighlightMarkdown.INCODE2_TICK:
         if (c == '`') {
-          this.pop();
-          this.state = HighlightMarkdown.NORMAL;
+          this.state = HighlightMarkdown.INCODE2_TICK2;
         } else {
+          this.append('`');
           this.append(c);
           this.state = HighlightMarkdown.INCODE2;
+        }
+        break;
+
+      case HighlightMarkdown.INCODE2_TICK2:
+        if (c == '`') {
+          this.append('`');
+        } else {
+          this.pop();
+          this.epsilon(HighlightMarkdown.NORMAL);
         }
         break;
 
@@ -227,7 +245,6 @@ class HighlightMarkdown extends Highlighter {
         if (c == "\n") {
           this.flush();
           let hdom = new HighlightDom(this.push('pre', ''));
-          console.log(this.lang);
           if (!(this.highlighter = Highlighter.create(this.lang, hdom)))
             this.highlighter = Highlighter.create('txt', hdom);
           this.state = HighlightMarkdown.CODE;
@@ -293,6 +310,7 @@ class HighlightMarkdown extends Highlighter {
     case HighlightMarkdown.INCODE:
     case HighlightMarkdown.INCODE2:
     case HighlightMarkdown.INCODE2_TICK:
+    case HighlightMarkdown.INCODE2_TICK2:
     case HighlightMarkdown.STRONG:
     case HighlightMarkdown.STRONG_BACKSLASH:
     case HighlightMarkdown.STRONG_STAR:
@@ -325,6 +343,7 @@ class HighlightMarkdown extends Highlighter {
     this.tail = false;
     this.newlines = 0;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

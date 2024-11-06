@@ -183,16 +183,109 @@ const M4_KEYWORDS = new Set([
 
 class HighlightM4 extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static COMMENT = 2;
+  static DOLLAR = 3;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightM4.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_') {
+          this.state = HighlightM4.WORD;
+          this.word += c;
+        } else if (c == '#') {
+          this.state = HighlightM4.COMMENT;
+          this.push("span", "comment");
+          this.append('#');
+        } else if (c == '$') {
+          this.state = HighlightM4.DOLLAR;
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightM4.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_') {
+          this.word += c;
+        } else {
+          if (M4_KEYWORDS.has(this.word)) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (this.word == "dnl" || this.word == "m4_dnl") {
+            this.push("span", "comment");
+            this.append(this.word);
+            this.word = '';
+            this.epsilon(HighlightM4.COMMENT);
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightM4.NORMAL);
+        }
+        break;
+
+      case HighlightM4.DOLLAR:
+        if (isdigit(c) || c == '*' || c == '#' || c == '@') {
+          this.append('$');
+          this.push("span", "var");
+          this.append(c);
+          this.pop();
+          this.state = HighlightM4.NORMAL;
+        } else {
+          this.append('$');
+          this.epsilon(HighlightM4.NORMAL);
+        }
+        break;
+
+      case HighlightM4.COMMENT:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightM4.NORMAL;
+        }
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightM4.WORD:
+      if (M4_KEYWORDS.has(this.word)) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightM4.DOLLAR:
+      this.append('$');
+      break;
+    case HighlightM4.COMMENT:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightM4.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

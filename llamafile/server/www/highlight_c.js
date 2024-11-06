@@ -1978,7 +1978,7 @@ class HighlightC extends Highlighter {
       case HighlightC.RAW:
         this.append(c);
         if (this.heredoc[this.i] == c) {
-          if (++this.i == this.heredoc.size()) {
+          if (++this.i == this.heredoc.length) {
             this.state = HighlightC.NORMAL;
             this.pop();
           }
@@ -2081,6 +2081,7 @@ class HighlightC extends Highlighter {
     this.is_bol = true;
     this.state = HighlightC.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

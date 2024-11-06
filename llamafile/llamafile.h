@@ -43,6 +43,7 @@ extern int FLAG_seed;
 extern int FLAG_slots;
 extern int FLAG_split_mode;
 extern int FLAG_threads;
+extern int FLAG_threads_batch;
 extern int FLAG_token_burst;
 extern int FLAG_token_cidr;
 extern int FLAG_ubatch;

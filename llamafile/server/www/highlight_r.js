@@ -195,16 +195,238 @@ const R_CONSTANTS = new Set([
 
 class HighlightR extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static COMMENT = 2;
+  static QUOTE = 3;
+  static QUOTE_BACKSLASH = 4;
+  static DQUOTE = 5;
+  static DQUOTE_BACKSLASH = 6;
+  static HYPHEN = 7;
+  static HYPHEN_GT = 8;
+  static LT = 9;
+  static LT_LT = 10;
+  static COLON = 11;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightR.NORMAL:
+        if (!isascii(c) || isalpha(c)) {
+          this.state = HighlightR.WORD;
+          this.word += c;
+        } else if (c == '#') {
+          this.push("span", "comment");
+          this.append('#');
+          this.state = HighlightR.COMMENT;
+        } else if (c == '\'') {
+          this.state = HighlightR.QUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '"') {
+          this.state = HighlightR.DQUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '-') {
+          this.state = HighlightR.HYPHEN;
+        } else if (c == '<') {
+          this.state = HighlightR.LT;
+        } else if (c == ':') {
+          this.state = HighlightR.COLON;
+        } else if (c == '$' || c == '@') {
+          this.push("span", "operator");
+          this.append(c);
+          this.pop();
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightR.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_' || c == '.') {
+          this.word += c;
+        } else {
+          if (R_KEYWORDS.has(this.word)) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (R_BUILTINS.has(this.word)) {
+            this.push("span", "builtin");
+            this.append(this.word);
+            this.pop();
+          } else if (R_CONSTANTS.has(this.word)) {
+            this.push("span", "constant");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightR.NORMAL);
+        }
+        break;
+
+      case HighlightR.COMMENT:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightR.NORMAL;
+        }
+        break;
+
+      case HighlightR.QUOTE:
+        this.append(c);
+        if (c == '\'') {
+          this.pop();
+          this.state = HighlightR.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightR.QUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightR.QUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightR.QUOTE;
+        break;
+
+      case HighlightR.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightR.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightR.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightR.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightR.DQUOTE;
+        break;
+
+      case HighlightR.COLON:
+        if (c == ':') {
+          this.push("span", "operator");
+          this.append("::");
+          this.pop();
+          this.state = HighlightR.NORMAL;
+        } else {
+          this.append(':');
+          this.epsilon(HighlightR.NORMAL);
+        }
+        break;
+
+      case HighlightR.LT:
+        if (c == '<') {
+          this.state = HighlightR.LT_LT;
+        } else if (c == '-') {
+          this.push("span", "operator");
+          this.append("<-");
+          this.pop();
+          this.state = HighlightR.NORMAL;
+        } else {
+          this.append('<');
+          this.epsilon(HighlightR.NORMAL);
+        }
+        break;
+
+      case HighlightR.HYPHEN:
+        if (c == '>') {
+          this.state = HighlightR.HYPHEN_GT;
+        } else {
+          this.append('-');
+          this.epsilon(HighlightR.NORMAL);
+        }
+        break;
+
+      case HighlightR.LT_LT:
+        if (c == '-') {
+          this.push("span", "operator");
+          this.append("<<-");
+          this.pop();
+          this.state = HighlightR.NORMAL;
+        } else {
+          this.append("<<");
+          this.epsilon(HighlightR.NORMAL);
+        }
+        break;
+
+      case HighlightR.HYPHEN_GT:
+        if (c == '>') {
+          this.push("span", "operator");
+          this.append("->>");
+          this.pop();
+          this.state = HighlightR.NORMAL;
+        } else {
+          this.push("span", "operator");
+          this.append("->");
+          this.pop();
+          this.epsilon(HighlightR.NORMAL);
+        }
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightR.WORD:
+      if (R_KEYWORDS.has(this.word)) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (R_BUILTINS.has(this.word)) {
+        this.push("span", "builtin");
+        this.append(this.word);
+        this.pop();
+      } else if (R_CONSTANTS.has(this.word)) {
+        this.push("span", "constant");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightR.HYPHEN:
+      this.append('-');
+      break;
+    case HighlightR.HYPHEN_GT:
+      this.append("->");
+      break;
+    case HighlightR.LT:
+      this.append('<');
+      break;
+    case HighlightR.LT_LT:
+      this.append("<<");
+      break;
+    case HighlightR.COLON:
+      this.append(':');
+      break;
+    case HighlightR.QUOTE:
+    case HighlightR.QUOTE_BACKSLASH:
+    case HighlightR.DQUOTE:
+    case HighlightR.DQUOTE_BACKSLASH:
+    case HighlightR.COMMENT:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightR.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

@@ -72,10 +72,11 @@ Slot::start()
     cparams.n_batch = FLAG_batch;
     cparams.n_ubatch = FLAG_ubatch;
     cparams.n_seq_max = 1;
-    cparams.n_threads = FLAG_threads;
-    cparams.n_threads_batch = MIN(FLAG_threads, 20);
-    cparams.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_NONE;
-    cparams.pooling_type = LLAMA_POOLING_TYPE_NONE;
+    cparams.n_threads = MIN(FLAG_threads, 20);
+    cparams.n_threads_batch = FLAG_threads;
+    cparams.rope_scaling_type = LLAMA_ROPE_SCALING_TYPE_UNSPECIFIED;
+    cparams.pooling_type = LLAMA_POOLING_TYPE_UNSPECIFIED;
+    cparams.attention_type = LLAMA_ATTENTION_TYPE_UNSPECIFIED;
     cparams.rope_freq_base = 0;
     cparams.yarn_ext_factor = -1;
     cparams.yarn_attn_factor = 1;
@@ -83,8 +84,9 @@ Slot::start()
     cparams.yarn_beta_slow = 1;
     cparams.yarn_orig_ctx = 0;
     cparams.defrag_thold = -1;
-    cparams.type_k = GGML_TYPE_F16;
-    cparams.type_v = GGML_TYPE_F16;
+    cparams.offload_kqv = true;
+    cparams.type_k = X86_HAVE(AVX512_BF16) ? GGML_TYPE_BF16 : GGML_TYPE_F16;
+    cparams.type_v = X86_HAVE(AVX512_BF16) ? GGML_TYPE_BF16 : GGML_TYPE_F16;
     cparams.flash_attn = FLAG_flash_attn;
     system_fingerprint_ = generate_system_fingerprint(&cparams);
     if (!(ctx_ = llama_new_context_with_model(model_, cparams)))
@@ -154,4 +156,13 @@ Slot::prefill(const std::vector<int>& tokens)
          erase_count,
          reuse_count);
     return eval_tokens(new_tokens);
+}
+
+std::string
+Slot::dump()
+{
+    std::string r;
+    for (size_t i = 0; i < history_.size(); ++i)
+        r += llama_token_to_piece(ctx_, history_[i], RENDER_SPECIAL_TOKENS);
+    return r;
 }

@@ -116,7 +116,6 @@ class Highlighter extends Highlight {
     super();
     this.delegate = delegate;
     this.state = 0;
-    this.delta = 1;
   }
 
   push(tagName, className) {

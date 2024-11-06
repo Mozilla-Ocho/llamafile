@@ -954,16 +954,188 @@ const SQL_TYPES = new Set([
 
 class HighlightSql extends Highlighter {
 
+  static NORMAL = 0;
+  static WORD = 1;
+  static QUOTE = 2;
+  static QUOTE_BACKSLASH = 3;
+  static DQUOTE = 4;
+  static DQUOTE_BACKSLASH = 5;
+  static HYPHEN = 6;
+  static HYPHEN_HYPHEN = 7;
+  static SLASH = 8;
+  static SLASH_STAR = 9;
+  static SLASH_STAR_STAR = 10;
+
   constructor(delegate) {
     super(delegate);
+    this.word = '';
   }
 
   feed(input) {
-    this.append(input);
+    for (let i = 0; i < input.length; i += this.delta) {
+      this.delta = 1;
+      let c = input[i];
+      switch (this.state) {
+
+      case HighlightSql.NORMAL:
+        if (!isascii(c) || isalpha(c) || c == '_') {
+          this.epsilon(HighlightSql.WORD);
+        } else if (c == '/') {
+          this.state = HighlightSql.SLASH;
+        } else if (c == '-') {
+          this.state = HighlightSql.HYPHEN;
+        } else if (c == '\'') {
+          this.state = HighlightSql.QUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else if (c == '"') {
+          this.state = HighlightSql.DQUOTE;
+          this.push("span", "string");
+          this.append(c);
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightSql.WORD:
+        if (!isascii(c) || isalnum(c) || c == '_' || c == '-') {
+          this.word += c;
+        } else {
+          if (SQL_KEYWORDS.has(this.word.toLowerCase())) {
+            this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (SQL_TYPES.has(this.word.toLowerCase())) {
+            this.push("span", "type");
+            this.append(this.word);
+            this.pop();
+          } else {
+            this.append(this.word);
+          }
+          this.word = '';
+          this.epsilon(HighlightSql.NORMAL);
+        }
+        break;
+
+      case HighlightSql.SLASH:
+        if (c == '*') {
+          this.push("span", "comment");
+          this.append("/*");
+          this.state = HighlightSql.SLASH_STAR;
+        } else {
+          this.append('/');
+          this.epsilon(HighlightSql.NORMAL);
+        }
+        break;
+
+      case HighlightSql.SLASH_STAR:
+        this.append(c);
+        if (c == '*')
+          this.state = HighlightSql.SLASH_STAR_STAR;
+        break;
+
+      case HighlightSql.SLASH_STAR_STAR:
+        this.append(c);
+        if (c == '/') {
+          this.pop();
+          this.state = HighlightSql.NORMAL;
+        } else if (c != '*') {
+          this.state = HighlightSql.SLASH_STAR;
+        }
+        break;
+
+      case HighlightSql.QUOTE:
+        this.append(c);
+        if (c == '\'') {
+          this.pop();
+          this.state = HighlightSql.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightSql.QUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightSql.QUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightSql.QUOTE;
+        break;
+
+      case HighlightSql.DQUOTE:
+        this.append(c);
+        if (c == '"') {
+          this.pop();
+          this.state = HighlightSql.NORMAL;
+        } else if (c == '\\') {
+          this.state = HighlightSql.DQUOTE_BACKSLASH;
+        }
+        break;
+
+      case HighlightSql.DQUOTE_BACKSLASH:
+        this.append(c);
+        this.state = HighlightSql.DQUOTE;
+        break;
+
+      case HighlightSql.HYPHEN:
+        if (c == '-') {
+          this.push("span", "comment");
+          this.append("--");
+          this.state = HighlightSql.HYPHEN_HYPHEN;
+        } else {
+          this.append('-');
+          this.epsilon(HighlightSql.NORMAL);
+        }
+        break;
+
+      case HighlightSql.HYPHEN_HYPHEN:
+        this.append(c);
+        if (c == '\n') {
+          this.pop();
+          this.state = HighlightSql.NORMAL;
+        }
+        break;
+
+      default:
+        throw new Error('Invalid state');
+      }
+    }
   }
 
   flush() {
+    switch (this.state) {
+    case HighlightSql.WORD:
+      if (SQL_KEYWORDS.has(this.word.toLowerCase())) {
+        this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (SQL_TYPES.has(this.word.toLowerCase())) {
+        this.push("span", "type");
+        this.append(this.word);
+        this.pop();
+      } else {
+        this.append(this.word);
+      }
+      this.word = '';
+      break;
+    case HighlightSql.SLASH:
+      this.append('/');
+      break;
+    case HighlightSql.HYPHEN:
+      this.append('-');
+      break;
+    case HighlightSql.QUOTE:
+    case HighlightSql.QUOTE_BACKSLASH:
+    case HighlightSql.DQUOTE:
+    case HighlightSql.DQUOTE_BACKSLASH:
+    case HighlightSql.SLASH_STAR:
+    case HighlightSql.SLASH_STAR_STAR:
+    case HighlightSql.HYPHEN_HYPHEN:
+      this.pop();
+      break;
+    default:
+      break;
+    }
+    this.state = HighlightSql.NORMAL;
     this.delegate.flush();
+    this.delta = 1;
   }
 }
 

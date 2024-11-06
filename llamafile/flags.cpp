@@ -68,6 +68,7 @@ int FLAG_seed = LLAMA_DEFAULT_SEED;
 int FLAG_slots = 1;
 int FLAG_split_mode = LLAMA_SPLIT_MODE_LAYER;
 int FLAG_threads;
+int FLAG_threads_batch;
 int FLAG_token_burst = 100;
 int FLAG_token_cidr = 24;
 int FLAG_ubatch = 512;
@@ -312,6 +313,13 @@ void llamafile_get_flags(int argc, char **argv) {
             if (i == argc)
                 missing("--threads");
             FLAG_threads = atoi(argv[i++]);
+            continue;
+        }
+
+        if (!strcmp(flag, "-tb") || !strcmp(flag, "--threads-batch")) {
+            if (i == argc)
+                missing("--threads-batch");
+            FLAG_threads_batch = atoi(argv[i++]);
             continue;
         }
 
