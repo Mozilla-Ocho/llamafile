@@ -951,6 +951,8 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         return success;
                     if (status != success)
                         return status;
+                    if (!key.isString())
+                        return object_key_must_be_string;
                     status = parse(value, p, e, COLON, depth - 1);
                     if (status == absent_value)
                         return object_missing_value;
