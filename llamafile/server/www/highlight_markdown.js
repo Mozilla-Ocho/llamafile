@@ -45,6 +45,32 @@ class HighlightMarkdown extends Highlighter {
   static STYLE_EMPHASIS = 1;
   static STYLE_LIST = 2;
 
+  static is_escapable(c) {
+    switch (c) {
+    case '!':
+    case '#':
+    case '(':
+    case ')':
+    case '*':
+    case '+':
+    case '-':
+    case '.':
+    case '<':
+    case '>':
+    case '[':
+    case '\\':
+    case ']':
+    case '_':
+    case '`':
+    case '{':
+    case '|':
+    case '}':
+      return true;
+    default:
+      return false;
+    }
+  }
+
   constructor(delegate) {
     super(delegate);
     this.bol = true;
@@ -150,6 +176,7 @@ class HighlightMarkdown extends Highlighter {
 
       case HighlightMarkdown.HYPHEN:
         if (isblank(c)) {
+          // - handle list item
           this.li('-');
           this.append(c);
           this.state = HighlightMarkdown.NORMAL;
@@ -160,13 +187,19 @@ class HighlightMarkdown extends Highlighter {
         break;
 
       case HighlightMarkdown.BACKSLASH:
-        this.append(c);
-        this.state = HighlightMarkdown.NORMAL;
+        if (HighlightMarkdown.is_escapable(c)) {
+          this.append(c);
+          this.state = HighlightMarkdown.NORMAL;
+        } else {
+          this.append('\\');
+          this.epsilon(HighlightMarkdown.NORMAL);
+        }
         break;
 
       case HighlightMarkdown.STAR:
         if (c == '*') {
           // handle **strong** text
+          // we don't call this.got() in case this is *** bar
           this.push('strong', '');
           this.state = HighlightMarkdown.NORMAL;
           this.style.push(HighlightMarkdown.STYLE_STRONG);
@@ -360,6 +393,8 @@ class HighlightMarkdown extends Highlighter {
         break;
 
       case HighlightMarkdown.LAB_BACKSLASH:
+        if (!HighlightMarkdown.is_escapable(c))
+          this.href += '\\';
         this.href += c;
         this.state = HighlightMarkdown.LAB;
         break;
@@ -375,6 +410,8 @@ class HighlightMarkdown extends Highlighter {
         break;
 
       case HighlightMarkdown.LSB_BACKSLASH:
+        if (!HighlightMarkdown.is_escapable(c))
+          this.text += '\\';
         this.text += c;
         this.state = HighlightMarkdown.LSB;
         break;
@@ -406,6 +443,8 @@ class HighlightMarkdown extends Highlighter {
         break;
 
       case HighlightMarkdown.LSB_RSB_LPAREN_BACKSLASH:
+        if (!HighlightMarkdown.is_escapable(c))
+          this.href += '\\';
         this.href += c;
         this.state = HighlightMarkdown.LSB_RSB_LPAREN;
         break;
@@ -492,12 +531,29 @@ class HighlightMarkdown extends Highlighter {
   setupCodeBlock(pre) {
     const copyButton = document.createElement('button');
     copyButton.className = 'copy-button';
-    copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+    copyButton.innerHTML =
+      `<svg xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24" fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+       </svg>`;
     copyButton.addEventListener('click', function() {
       try {
         copyTextToClipboard(pre.innerText);
         const originalInnerHTML = copyButton.innerHTML;
-        copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="green" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        copyButton.innerHTML =
+          `<svg xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="none"
+                stroke="green"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+             <polyline points="20 6 9 17 4 12"></polyline>
+           </svg>`;
         setTimeout(() => {
           copyButton.innerHTML = originalInnerHTML;
         }, 2000);

@@ -377,5 +377,6 @@ void HighlightJs::flush(std::string *r) {
     c_ = 0;
     u_ = 0;
     t_ = NORMAL;
+    expect_ = 0;
     nesti_ = 0;
 }

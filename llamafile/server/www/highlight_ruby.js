@@ -162,6 +162,18 @@ class HighlightRuby extends Highlighter {
   static MULTICOM_BOL = 27;
   static REGEX = 28;
   static REGEX_BACKSLASH = 29;
+  static DQUOTE_HASH = 30;
+  static QUESTION = 31;
+  static QUESTION_BACKSLASH = 32;
+  static REGEX_HASH = 33;
+  static REGEX_HASH_DOLLAR = 34;
+  static REGEX_HASH_DOLLAR_WORD = 35;
+  static DQUOTE_HASH = 36;
+  static DQUOTE_HASH_DOLLAR = 37;
+  static DQUOTE_HASH_DOLLAR_WORD = 38;
+
+  static EXPECT_VALUE = 0;
+  static EXPECT_OPERATOR = 1;
 
   static mirror(c) {
     switch (c) {
@@ -175,6 +187,61 @@ class HighlightRuby extends Highlighter {
       return '>';
     default:
       return c;
+    }
+  }
+
+  static ispunct_overridable(c) {
+    switch (c) {
+    case '%':
+    case '&':
+    case '*':
+    case '+':
+    case '-':
+    case '/':
+    case '<':
+    case '>':
+    case '^':
+    case '_':
+    case '`':
+    case '|':
+    case '~':
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static is_dollar_one(c) {
+    switch (c) {
+    case '!':
+    case '"':
+    case '#':
+    case '$':
+    case '&':
+    case '-':
+    case '/':
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '<':
+    case '=':
+    case '>':
+    case '@':
+    case '\'':
+    case '\\':
+    case '^':
+    case '_':
+    case '`':
+      return true;
+    default:
+      return false;
     }
   }
 
@@ -198,7 +265,6 @@ class HighlightRuby extends Highlighter {
     super(delegate);
     this.i = 0;
     this.q = 0;
-    this.last = 0;
     this.level = 0;
     this.opener = 0;
     this.closer = 0;
@@ -206,57 +272,86 @@ class HighlightRuby extends Highlighter {
     this.indented_heredoc = false;
     this.heredoc = '';
     this.word = '';
+    this.nest = [];
+    this.is_definition = false;
+    this.expect = HighlightRuby.EXPECT_VALUE;
   }
 
   feed(input) {
     for (let i = 0; i < input.length; i += this.delta) {
       this.delta = 1;
       let c = input[i];
-
-      if (!isblank(c) && c != '/' && c != '<')
-        this.last = c;
-
       switch (this.state) {
 
       case HighlightRuby.NORMAL:
-        if (!isascii(c) || isalpha(c) || c == '_') {
+        if (!isascii(c) || isalpha(c) || c == '_' ||
+            (this.is_definition && HighlightRuby.ispunct_overridable(c))) {
           this.state = HighlightRuby.WORD;
           this.word += c;
+          this.is_definition = false;
         } else if (c == ':') {
           this.state = HighlightRuby.COLON;
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.is_definition = false;
         } else if (c == '@') {
           this.state = HighlightRuby.AT;
+          this.is_definition = false;
         } else if (c == '=') {
           this.state = HighlightRuby.EQUAL;
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.is_definition = false;
+        } else if (c == '?' && this.expect == HighlightRuby.EXPECT_VALUE) {
+          this.state = HighlightRuby.QUESTION;
+          this.is_definition = false;
         } else if (c == '$') {
           this.state = HighlightRuby.DOLLAR;
-        } else if (c == '%') {
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
+          this.is_definition = false;
+        } else if (c == '%' && this.expect == HighlightRuby.EXPECT_VALUE) {
           this.state = HighlightRuby.PERCENT;
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.q = 0;
         } else if (c == '\'') {
           this.state = HighlightRuby.QUOTE;
           this.push("span", "string");
           this.append(c);
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
+          this.is_definition = false;
         } else if (c == '"') {
           this.state = HighlightRuby.DQUOTE;
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.push("span", "string");
           this.append(c);
+          this.is_definition = false;
         } else if (c == '`') {
           this.state = HighlightRuby.TICK;
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.push("span", "string");
           this.append(c);
         } else if (c == '#') {
           this.push("span", "comment");
           this.append(c);
           this.state = HighlightRuby.COMMENT;
-        } else if (c == '<' && !isalnum(this.last)) {
+        } else if (c == '<' && this.expect == HighlightRuby.EXPECT_VALUE) {
           this.append(c);
           this.state = HighlightRuby.LT;
-        } else if (c == '/' && !isalnum(this.last)) {
+        } else if (c == '/' && this.expect == HighlightRuby.EXPECT_VALUE) {
           this.state = HighlightRuby.REGEX;
           this.push("span", "string");
           this.append(c);
+        } else if (c == '{' && this.nest.length) {
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.append('{');
+          this.nest.push(HighlightRuby.NORMAL);
+          this.is_definition = false;
+        } else if (c == '}' && this.nest.length) {
+          if ((this.state = this.nest.pop()) != HighlightRuby.NORMAL)
+            this.push("span", "string");
+          this.append('}');
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
+          this.is_definition = false;
         } else if (c == '\n') {
+          this.expect = HighlightRuby.EXPECT_VALUE;
           this.append(c);
           if (this.pending_heredoc) {
             this.push("span", "string");
@@ -264,8 +359,23 @@ class HighlightRuby extends Highlighter {
             this.state = HighlightRuby.HEREDOC_BOL;
             this.i = 0;
           }
+        } else if (c == ']') {
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
+          this.append(']');
+          this.is_definition = false;
+        } else if (ispunct(c)) {
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.append(c);
+          this.is_definition = false;
+        } else if (isdigit(c) || c == '.') {
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
+          this.append(c);
+          this.is_definition = false;
+        } else if (isspace(c)) {
+          this.append(c);
         } else {
           this.append(c);
+          this.is_definition = false;
         }
         break;
 
@@ -309,21 +419,28 @@ class HighlightRuby extends Highlighter {
             this.push("span", "keyword");
             this.append(this.word);
             this.pop();
-            this.last = 0;
+            this.expect = HighlightRuby.EXPECT_VALUE;
+            if (this.word == 'def') {
+              this.is_definition = true;
+            }
           } else if (RUBY_BUILTINS.has(this.word)) {
             this.push("span", "builtin");
             this.append(this.word);
             this.pop();
+            this.expect = HighlightRuby.EXPECT_VALUE;
           } else if (RUBY_CONSTANTS.has(this.word)) {
             this.push("span", "constant");
             this.append(this.word);
             this.pop();
+            this.expect = HighlightRuby.EXPECT_OPERATOR;
           } else if (this.word && this.word[0] == this.word[0].toUpperCase()) {
             this.push("span", "class");
             this.append(this.word);
             this.pop();
+            this.expect = HighlightRuby.EXPECT_OPERATOR;
           } else {
             this.append(this.word);
+            this.expect = HighlightRuby.EXPECT_OPERATOR;
           }
           this.word = '';
           this.epsilon(HighlightRuby.NORMAL);
@@ -331,12 +448,65 @@ class HighlightRuby extends Highlighter {
         break;
 
       case HighlightRuby.REGEX:
-        this.append(c);
         if (c == '/') {
+          this.append(c);
           this.pop();
           this.state = HighlightRuby.NORMAL;
+        } else if (c == '#') {
+          this.state = HighlightRuby.REGEX_HASH;
         } else if (c == '\\') {
+          this.append(c);
           this.state = HighlightRuby.REGEX_BACKSLASH;
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightRuby.REGEX_HASH:
+        if (c == '{') {
+          this.push("strong", "");
+          this.append('#');
+          this.pop();
+          this.append('{');
+          this.pop();
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.nest.push(HighlightRuby.REGEX);
+          this.state = HighlightRuby.NORMAL;
+        } else if (c == '$') {
+          this.state = HighlightRuby.REGEX_HASH_DOLLAR;
+        } else {
+          this.append('#');
+          this.epsilon(HighlightRuby.REGEX);
+        }
+        break;
+
+      case HighlightRuby.REGEX_HASH_DOLLAR:
+        if (HighlightRuby.is_dollar_one(c)) {
+          this.append('#');
+          this.push("strong", "");
+          this.append('$');
+          this.append(c);
+          this.pop();
+          this.state = HighlightRuby.REGEX;
+        } else if (isalpha(c)) {
+          this.append('#');
+          this.push("strong", "");
+          this.append('$');
+          this.append(c);
+          this.state = HighlightRuby.REGEX_HASH_DOLLAR_WORD;
+        } else {
+          this.append('#');
+          this.append('$');
+          this.epsilon(HighlightRuby.REGEX);
+        }
+        break;
+
+      case HighlightRuby.REGEX_HASH_DOLLAR_WORD:
+        if (HighlightRuby.isident(c)) {
+          this.append(c);
+        } else {
+          this.pop();
+          this.epsilon(HighlightRuby.REGEX);
         }
         break;
 
@@ -455,23 +625,7 @@ class HighlightRuby extends Highlighter {
         break;
 
       case HighlightRuby.DOLLAR:
-        if (isdigit(c) || //
-            c == '!' || //
-            c == '"' || //
-            c == '#' || //
-            c == '$' || //
-            c == '&' || //
-            c == '-' || //
-            c == '/' || //
-            c == '<' || //
-            c == '=' || //
-            c == '>' || //
-            c == '@' || //
-            c == '\'' || //
-            c == '\\' || //
-            c == '^' || //
-            c == '_' || //
-            c == '`') {
+        if (HighlightRuby.is_dollar_one(c)) {
           this.push("span", "var");
           this.append('$');
           this.append(c);
@@ -521,12 +675,65 @@ class HighlightRuby extends Highlighter {
         break;
 
       case HighlightRuby.DQUOTE:
-        this.append(c);
         if (c == '"') {
+          this.append(c);
           this.pop();
           this.state = HighlightRuby.NORMAL;
+        } else if (c == '#') {
+          this.state = HighlightRuby.DQUOTE_HASH;
         } else if (c == '\\') {
           this.state = HighlightRuby.DQUOTE_BACKSLASH;
+          this.append(c);
+        } else {
+          this.append(c);
+        }
+        break;
+
+      case HighlightRuby.DQUOTE_HASH:
+        if (c == '{') {
+          this.push("strong", "");
+          this.append('#');
+          this.pop();
+          this.append('{');
+          this.pop();
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.nest.push(HighlightRuby.DQUOTE);
+          this.state = HighlightRuby.NORMAL;
+        } else if (c == '$') {
+          this.state = HighlightRuby.DQUOTE_HASH_DOLLAR;
+        } else {
+          this.append('#');
+          this.epsilon(HighlightRuby.DQUOTE);
+        }
+        break;
+
+      case HighlightRuby.DQUOTE_HASH_DOLLAR:
+        if (HighlightRuby.is_dollar_one(c)) {
+          this.append('#');
+          this.push("strong", "");
+          this.append('$');
+          this.append(c);
+          this.pop();
+          this.state = HighlightRuby.DQUOTE;
+        } else if (isalpha(c)) {
+          this.append('#');
+          this.push("strong", "");
+          this.append('$');
+          this.append(c);
+          this.state = HighlightRuby.DQUOTE_HASH_DOLLAR_WORD;
+        } else {
+          this.append('#');
+          this.append('$');
+          this.epsilon(HighlightRuby.DQUOTE);
+        }
+        break;
+
+      case HighlightRuby.DQUOTE_HASH_DOLLAR_WORD:
+        if (HighlightRuby.isident(c)) {
+          this.append(c);
+        } else {
+          this.pop();
+          this.epsilon(HighlightRuby.DQUOTE);
         }
         break;
 
@@ -631,6 +838,29 @@ class HighlightRuby extends Highlighter {
           this.state = HighlightRuby.HEREDOC_BOL;
         break;
 
+      case HighlightRuby.QUESTION:
+        if (c == '\\') {
+          this.state = HighlightRuby.QUESTION_BACKSLASH;
+        } else if (isspace(c)) {
+          this.append('?');
+          this.epsilon(HighlightRuby.NORMAL);
+        } else {
+          this.push('span', 'escape');
+          this.append('?');
+          this.append(c);
+          this.pop();
+          this.state = HighlightRuby.NORMAL;
+        }
+        break;
+
+      case HighlightRuby.QUESTION_BACKSLASH:
+        this.push('span', 'escape');
+        this.append("?\\");
+        this.append(c);
+        this.pop();
+        this.state = HighlightRuby.NORMAL;
+        break;
+
       default:
         throw new Error('Invalid state');
       }
@@ -683,8 +913,31 @@ class HighlightRuby extends Highlighter {
       this.append('%');
       this.append(this.q);
       break;
+    case HighlightRuby.QUESTION:
+      this.append('?');
+      break;
+    case HighlightRuby.QUESTION_BACKSLASH:
+      this.append("?\\");
+      break;
+    case HighlightRuby.DQUOTE_HASH:
+      this.append('#');
+      this.pop();
+      break;
+    case HighlightRuby.DQUOTE_HASH_DOLLAR:
+      this.append("#$");
+      this.pop();
+      break;
+    case HighlightRuby.REGEX_HASH:
+      this.append('#');
+      this.pop();
+      break;
+    case HighlightRuby.REGEX_HASH_DOLLAR:
+      this.append("#$");
+      this.pop();
+      break;
     case HighlightRuby.REGEX:
     case HighlightRuby.REGEX_BACKSLASH:
+    case HighlightRuby.REGEX_HASH_DOLLAR_WORD:
     case HighlightRuby.PERCENT_STRING:
     case HighlightRuby.AT_WORD:
     case HighlightRuby.DOLLAR_WORD:
@@ -694,6 +947,7 @@ class HighlightRuby extends Highlighter {
     case HighlightRuby.QUOTE_BACKSLASH:
     case HighlightRuby.DQUOTE:
     case HighlightRuby.DQUOTE_BACKSLASH:
+    case HighlightRuby.DQUOTE_HASH_DOLLAR_WORD:
     case HighlightRuby.COMMENT:
     case HighlightRuby.HEREDOC_BOL:
     case HighlightRuby.HEREDOC:
@@ -706,6 +960,9 @@ class HighlightRuby extends Highlighter {
     default:
       break;
     }
+    this.nest = [];
+    this.expect = HighlightRuby.EXPECT_VALUE;
+    this.is_definition = false;
     this.state = HighlightRuby.NORMAL;
     this.delegate.flush();
     this.delta = 1;

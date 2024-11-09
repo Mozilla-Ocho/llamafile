@@ -543,15 +543,20 @@ class HighlightRuby : public Highlight {
     void flush(std::string *result) override;
 
   private:
+    int c_ = 0;
+    int u_ = 0;
     int t_ = 0;
     int i_ = 0;
     int level_ = 0;
+    int nesti_ = 0;
+    int expect_ = 0;
     unsigned char q_ = 0;
-    unsigned char last_ = 0;
     unsigned char opener_ = 0;
     unsigned char closer_ = 0;
+    bool is_definition_ = 0;
     bool pending_heredoc_ = false;
     bool indented_heredoc_ = false;
+    unsigned char nest_[16];
     std::string word_;
     std::string heredoc_;
 };

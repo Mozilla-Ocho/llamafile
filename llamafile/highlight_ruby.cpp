@@ -16,7 +16,8 @@
 // limitations under the License.
 
 #include "highlight.h"
-
+#include "string.h"
+#include <cosmo.h>
 #include <ctype.h>
 
 // ruby lexical syntax is bananas and isn't even formally documented
@@ -46,6 +47,9 @@ enum {
     QUOTE,
     QUOTE_BACKSLASH,
     DQUOTE,
+    DQUOTE_HASH,
+    DQUOTE_HASH_DOLLAR,
+    DQUOTE_HASH_DOLLAR_WORD,
     DQUOTE_BACKSLASH,
     TICK,
     TICK_BACKSLASH,
@@ -68,7 +72,17 @@ enum {
     MULTICOM,
     MULTICOM_BOL,
     REGEX,
+    REGEX_HASH,
+    REGEX_HASH_DOLLAR,
+    REGEX_HASH_DOLLAR_WORD,
     REGEX_BACKSLASH,
+    QUESTION,
+    QUESTION_BACKSLASH,
+};
+
+enum {
+    EXPECT_VALUE,
+    EXPECT_OPERATOR,
 };
 
 static int mirror(int c) {
@@ -83,6 +97,61 @@ static int mirror(int c) {
         return '>';
     default:
         return c;
+    }
+}
+
+static bool ispunct_overridable(int c) {
+    switch (c) {
+    case '%':
+    case '&':
+    case '*':
+    case '+':
+    case '-':
+    case '/':
+    case '<':
+    case '>':
+    case '^':
+    case '_':
+    case '`':
+    case '|':
+    case '~':
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool is_dollar_one(int c) {
+    switch (c) {
+    case '!':
+    case '"':
+    case '#':
+    case '$':
+    case '&':
+    case '-':
+    case '/':
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '<':
+    case '=':
+    case '>':
+    case '@':
+    case '\'':
+    case '\\':
+    case '^':
+    case '_':
+    case '`':
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -111,69 +180,131 @@ HighlightRuby::~HighlightRuby() {
 void HighlightRuby::feed(std::string *r, std::string_view input) {
     int c;
     for (size_t i = 0; i < input.size(); ++i) {
-        c = input[i] & 255;
-
-        if (!isblank(c) && c != '/' && c != '<')
-            last_ = c;
-
+        wchar_t c;
+        int b = input[i] & 255;
+        if (!u_) {
+            if (b < 0300) {
+                c = b;
+            } else {
+                c_ = ThomPikeByte(b);
+                u_ = ThomPikeLen(b) - 1;
+                continue;
+            }
+        } else if (ThomPikeCont(b)) {
+            c = c_ = ThomPikeMerge(c_, b);
+            if (--u_)
+                continue;
+        } else {
+            u_ = 0;
+            c = b;
+        }
+        if (c == '\r')
+            continue;
+        if (c == 0xFEFF)
+            continue; // utf-8 bom
         switch (t_) {
 
         Normal:
         case NORMAL:
-            if (!isascii(c) || isalpha(c) || c == '_') {
+            if (!isascii(c) || isalpha(c) || c == '_' ||
+                (is_definition_ && ispunct_overridable(c))) {
                 t_ = WORD;
-                word_ += c;
+                lf::append_wchar(&word_, c);
+                is_definition_ = false;
             } else if (c == ':') {
                 t_ = COLON;
+                expect_ = EXPECT_OPERATOR;
+                is_definition_ = false;
             } else if (c == '@') {
                 t_ = AT;
+                is_definition_ = false;
             } else if (c == '=') {
                 t_ = EQUAL;
+                expect_ = EXPECT_VALUE;
+                is_definition_ = false;
+            } else if (c == '?' && expect_ == EXPECT_VALUE) {
+                t_ = QUESTION;
+                is_definition_ = false;
             } else if (c == '$') {
                 t_ = DOLLAR;
-            } else if (c == '%') {
+                expect_ = EXPECT_OPERATOR;
+                is_definition_ = false;
+            } else if (c == '%' && expect_ == EXPECT_VALUE) {
                 t_ = PERCENT;
                 q_ = 0;
+                expect_ = EXPECT_OPERATOR;
             } else if (c == '\'') {
                 t_ = QUOTE;
                 *r += HI_STRING;
-                *r += c;
+                lf::append_wchar(r, c);
+                expect_ = EXPECT_OPERATOR;
+                is_definition_ = false;
             } else if (c == '"') {
                 t_ = DQUOTE;
                 *r += HI_STRING;
-                *r += c;
+                lf::append_wchar(r, c);
+                expect_ = EXPECT_OPERATOR;
+                is_definition_ = false;
             } else if (c == '`') {
                 t_ = TICK;
                 *r += HI_STRING;
-                *r += c;
+                lf::append_wchar(r, c);
+                expect_ = EXPECT_OPERATOR;
             } else if (c == '#') {
                 *r += HI_COMMENT;
-                *r += c;
+                lf::append_wchar(r, c);
                 t_ = COMMENT;
-            } else if (c == '<' && !isalnum(last_)) {
-                *r += c;
+            } else if (c == '<' && expect_ == EXPECT_VALUE) {
+                lf::append_wchar(r, c);
                 t_ = LT;
-            } else if (c == '/' && !isalnum(last_)) {
+            } else if (c == '/' && expect_ == EXPECT_VALUE) {
                 t_ = REGEX;
                 *r += HI_STRING;
-                *r += c;
+                lf::append_wchar(r, c);
+            } else if (c == '{' && nesti_ && nesti_ < sizeof(nest_)) {
+                expect_ = EXPECT_VALUE;
+                *r += '{';
+                nest_[nesti_++] = NORMAL;
+                is_definition_ = false;
+            } else if (c == '}' && nesti_) {
+                if ((t_ = nest_[--nesti_]) != NORMAL)
+                    *r += HI_STRING;
+                *r += '}';
+                expect_ = EXPECT_OPERATOR;
+                is_definition_ = false;
             } else if (c == '\n') {
-                *r += c;
+                expect_ = EXPECT_VALUE;
+                lf::append_wchar(r, c);
                 if (pending_heredoc_) {
                     *r += HI_STRING;
                     pending_heredoc_ = false;
                     t_ = HEREDOC_BOL;
                     i_ = 0;
                 }
+            } else if (c == ']') {
+                expect_ = EXPECT_OPERATOR;
+                *r += ']';
+                is_definition_ = false;
+            } else if (ispunct(c)) {
+                expect_ = EXPECT_VALUE;
+                lf::append_wchar(r, c);
+                is_definition_ = false;
+            } else if (isdigit(c) || c == '.') {
+                expect_ = EXPECT_OPERATOR;
+                lf::append_wchar(r, c);
+                is_definition_ = false;
+            } else if (isspace(c)) {
+                lf::append_wchar(r, c);
             } else {
-                *r += c;
+                lf::append_wchar(r, c);
+                is_definition_ = false;
             }
             break;
 
         case EQUAL:
             if (!isascii(c) || isalpha(c) || c == '_') {
                 t_ = EQUAL_WORD;
-                word_ += c;
+                lf::append_wchar(&word_, c);
             } else {
                 *r += '=';
                 t_ = NORMAL;
@@ -183,12 +314,12 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
 
         case EQUAL_WORD:
             if (isident(c)) {
-                word_ += c;
+                lf::append_wchar(&word_, c);
                 break;
             } else if (word_ == "begin") {
                 *r += HI_COMMENT;
                 *r += "=begin";
-                *r += c;
+                lf::append_wchar(r, c);
                 if (c == '\n') {
                     t_ = MULTICOM_BOL;
                     i_ = 0;
@@ -205,27 +336,34 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
 
         case WORD:
             if (isident(c)) {
-                word_ += c;
+                lf::append_wchar(&word_, c);
             } else {
                 if (is_keyword_ruby(word_.data(), word_.size())) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
-                    last_ = 0;
+                    expect_ = EXPECT_VALUE;
+                    if (word_ == "def") {
+                        is_definition_ = true;
+                    }
                 } else if (is_keyword_ruby_builtin(word_.data(), word_.size())) {
                     *r += HI_BUILTIN;
                     *r += word_;
                     *r += HI_RESET;
+                    expect_ = EXPECT_VALUE;
                 } else if (is_keyword_ruby_constant(word_.data(), word_.size())) {
                     *r += HI_CONSTANT;
                     *r += word_;
                     *r += HI_RESET;
+                    expect_ = EXPECT_OPERATOR;
                 } else if (!word_.empty() && isupper(word_[0])) {
                     *r += HI_CLASS;
                     *r += word_;
                     *r += HI_RESET;
+                    expect_ = EXPECT_OPERATOR;
                 } else {
                     *r += word_;
+                    expect_ = EXPECT_OPERATOR;
                 }
                 word_.clear();
                 t_ = NORMAL;
@@ -233,23 +371,81 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        Regex:
         case REGEX:
-            *r += c;
             if (c == '/') {
+                lf::append_wchar(r, c);
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '#') {
+                t_ = REGEX_HASH;
             } else if (c == '\\') {
+                lf::append_wchar(r, c);
                 t_ = REGEX_BACKSLASH;
+            } else {
+                lf::append_wchar(r, c);
+            }
+            break;
+
+        case REGEX_HASH:
+            if (c == '{' && nesti_ < sizeof(nest_)) {
+                *r += HI_BOLD;
+                *r += '#';
+                *r += HI_UNBOLD;
+                *r += HI_STRING;
+                *r += '{';
+                *r += HI_RESET;
+                expect_ = EXPECT_VALUE;
+                nest_[nesti_++] = REGEX;
+                t_ = NORMAL;
+            } else if (c == '$') {
+                t_ = REGEX_HASH_DOLLAR;
+            } else {
+                *r += '#';
+                t_ = REGEX;
+                goto Regex;
+            }
+            break;
+
+        case REGEX_HASH_DOLLAR:
+            if (is_dollar_one(c)) {
+                *r += '#';
+                *r += HI_BOLD;
+                *r += '$';
+                lf::append_wchar(r, c);
+                *r += HI_UNBOLD;
+                t_ = REGEX;
+            } else if (isalpha(c)) {
+                *r += '#';
+                *r += HI_BOLD;
+                *r += '$';
+                lf::append_wchar(r, c);
+                t_ = REGEX_HASH_DOLLAR_WORD;
+            } else {
+                *r += '#';
+                *r += '$';
+                t_ = REGEX;
+                goto Regex;
+            }
+            break;
+
+        case REGEX_HASH_DOLLAR_WORD:
+            if (isident(c)) {
+                lf::append_wchar(r, c);
+            } else {
+                *r += HI_UNBOLD;
+                t_ = REGEX;
+                goto Regex;
             }
             break;
 
         case REGEX_BACKSLASH:
-            *r += c;
+            lf::append_wchar(r, c);
             t_ = REGEX;
             break;
 
         case MULTICOM:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 t_ = MULTICOM_BOL;
                 i_ = 0;
@@ -257,7 +453,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case MULTICOM_BOL:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == "=end"[i_]) {
                 if (++i_ == 4) {
                     t_ = NORMAL;
@@ -272,7 +468,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             if (isident(c)) {
                 *r += HI_LISPKW;
                 *r += ':';
-                *r += c;
+                lf::append_wchar(r, c);
                 t_ = COLON_WORD;
             } else {
                 *r += ':';
@@ -283,7 +479,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
 
         case COLON_WORD:
             if (isident(c)) {
-                *r += c;
+                lf::append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -295,7 +491,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             if (isident(c)) {
                 *r += HI_VAR;
                 *r += '@';
-                *r += c;
+                lf::append_wchar(r, c);
                 t_ = AT_WORD;
             } else {
                 *r += '@';
@@ -306,7 +502,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
 
         case AT_WORD:
             if (isident(c)) {
-                *r += c;
+                lf::append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -324,7 +520,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 closer_ = mirror(c);
                 *r += HI_STRING;
                 *r += '%';
-                *r += c;
+                lf::append_wchar(r, c);
                 t_ = PERCENT_STRING;
             } else {
                 *r += '%';
@@ -341,7 +537,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 *r += HI_STRING;
                 *r += '%';
                 *r += q_;
-                *r += c;
+                lf::append_wchar(r, c);
                 t_ = PERCENT_STRING;
             } else {
                 *r += '%';
@@ -352,7 +548,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case PERCENT_STRING:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == opener_ && opener_ != closer_) {
                 ++level_;
             } else if (c == closer_) {
@@ -364,32 +560,16 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case DOLLAR:
-            if (isdigit(c) || //
-                c == '!' || //
-                c == '"' || //
-                c == '#' || //
-                c == '$' || //
-                c == '&' || //
-                c == '-' || //
-                c == '/' || //
-                c == '<' || //
-                c == '=' || //
-                c == '>' || //
-                c == '@' || //
-                c == '\'' || //
-                c == '\\' || //
-                c == '^' || //
-                c == '_' || //
-                c == '`') {
+            if (is_dollar_one(c)) {
                 *r += HI_VAR;
                 *r += '$';
-                *r += c;
+                lf::append_wchar(r, c);
                 *r += HI_RESET;
                 t_ = NORMAL;
             } else if (isalpha(c)) {
                 *r += HI_VAR;
                 *r += '$';
-                *r += c;
+                lf::append_wchar(r, c);
                 t_ = DOLLAR_WORD;
             } else {
                 *r += '$';
@@ -400,7 +580,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
 
         case DOLLAR_WORD:
             if (isident(c)) {
-                *r += c;
+                lf::append_wchar(r, c);
             } else {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -409,7 +589,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case COMMENT:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -417,7 +597,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == '\'') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -427,27 +607,85 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case QUOTE_BACKSLASH:
-            *r += c;
+            lf::append_wchar(r, c);
             t_ = QUOTE;
             break;
 
+        Dquote:
         case DQUOTE:
-            *r += c;
             if (c == '"') {
+                *r += '"';
                 *r += HI_RESET;
                 t_ = NORMAL;
+            } else if (c == '#') {
+                t_ = DQUOTE_HASH;
             } else if (c == '\\') {
                 t_ = DQUOTE_BACKSLASH;
+                *r += '\\';
+            } else {
+                lf::append_wchar(r, c);
+            }
+            break;
+
+        case DQUOTE_HASH:
+            if (c == '{' && nesti_ < sizeof(nest_)) {
+                *r += HI_BOLD;
+                *r += '#';
+                *r += HI_UNBOLD;
+                *r += HI_STRING;
+                *r += '{';
+                *r += HI_RESET;
+                expect_ = EXPECT_VALUE;
+                nest_[nesti_++] = DQUOTE;
+                t_ = NORMAL;
+            } else if (c == '$') {
+                t_ = DQUOTE_HASH_DOLLAR;
+            } else {
+                *r += '#';
+                t_ = DQUOTE;
+                goto Dquote;
             }
             break;
 
         case DQUOTE_BACKSLASH:
-            *r += c;
+            lf::append_wchar(r, c);
             t_ = DQUOTE;
             break;
 
+        case DQUOTE_HASH_DOLLAR:
+            if (is_dollar_one(c)) {
+                *r += '#';
+                *r += HI_BOLD;
+                *r += '$';
+                lf::append_wchar(r, c);
+                *r += HI_UNBOLD;
+                t_ = DQUOTE;
+            } else if (isalpha(c)) {
+                *r += '#';
+                *r += HI_BOLD;
+                *r += '$';
+                lf::append_wchar(r, c);
+                t_ = DQUOTE_HASH_DOLLAR_WORD;
+            } else {
+                *r += '#';
+                *r += '$';
+                t_ = DQUOTE;
+                goto Dquote;
+            }
+            break;
+
+        case DQUOTE_HASH_DOLLAR_WORD:
+            if (isident(c)) {
+                lf::append_wchar(r, c);
+            } else {
+                *r += HI_UNBOLD;
+                t_ = DQUOTE;
+                goto Dquote;
+            }
+            break;
+
         case TICK:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == '`') {
                 *r += HI_RESET;
                 t_ = NORMAL;
@@ -457,13 +695,13 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case TICK_BACKSLASH:
-            *r += c;
+            lf::append_wchar(r, c);
             t_ = TICK;
             break;
 
         case LT:
             if (c == '<') {
-                *r += c;
+                lf::append_wchar(r, c);
                 t_ = LT_LT;
                 heredoc_.clear();
                 pending_heredoc_ = false;
@@ -477,16 +715,16 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
         case LT_LT:
             if (c == '-') {
                 indented_heredoc_ = true;
-                *r += c;
+                lf::append_wchar(r, c);
             } else if (c == '\'' || c == '`' || c == '"') {
                 closer_ = c;
                 t_ = LT_LT_QNAME;
                 *r += HI_STRING;
-                *r += c;
+                lf::append_wchar(r, c);
             } else if (isalpha(c) || c == '_') {
                 t_ = LT_LT_NAME;
                 heredoc_ += c;
-                *r += c;
+                lf::append_wchar(r, c);
             } else {
                 t_ = NORMAL;
                 goto Normal;
@@ -497,9 +735,9 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             if (isalnum(c) || c == '_') {
                 t_ = LT_LT_NAME;
                 heredoc_ += c;
-                *r += c;
+                lf::append_wchar(r, c);
             } else if (c == '\n') {
-                *r += c;
+                lf::append_wchar(r, c);
                 *r += HI_STRING;
                 t_ = HEREDOC_BOL;
             } else {
@@ -510,7 +748,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case LT_LT_QNAME:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == closer_) {
                 *r += HI_RESET;
                 t_ = HEREDOC_BOL;
@@ -522,7 +760,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case HEREDOC_BOL:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == '\n') {
                 if (i_ == heredoc_.size()) {
                     t_ = NORMAL;
@@ -540,9 +778,33 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case HEREDOC:
-            *r += c;
+            lf::append_wchar(r, c);
             if (c == '\n')
                 t_ = HEREDOC_BOL;
+            break;
+
+        case QUESTION:
+            if (c == '\\') {
+                t_ = QUESTION_BACKSLASH;
+            } else if (isspace(c)) {
+                *r += '?';
+                t_ = NORMAL;
+                goto Normal;
+            } else {
+                *r += HI_ESCAPE;
+                *r += '?';
+                lf::append_wchar(r, c);
+                *r += HI_RESET;
+                t_ = NORMAL;
+            }
+            break;
+
+        case QUESTION_BACKSLASH:
+            *r += HI_ESCAPE;
+            *r += "?\\";
+            lf::append_wchar(r, c);
+            *r += HI_RESET;
+            t_ = NORMAL;
             break;
 
         default:
@@ -597,8 +859,31 @@ void HighlightRuby::flush(std::string *r) {
         *r += '%';
         *r += q_;
         break;
+    case QUESTION:
+        *r += '?';
+        break;
+    case QUESTION_BACKSLASH:
+        *r += "?\\";
+        break;
+    case DQUOTE_HASH:
+        *r += '#';
+        *r += HI_RESET;
+        break;
+    case DQUOTE_HASH_DOLLAR:
+        *r += "#$";
+        *r += HI_RESET;
+        break;
+    case REGEX_HASH:
+        *r += '#';
+        *r += HI_RESET;
+        break;
+    case REGEX_HASH_DOLLAR:
+        *r += "#$";
+        *r += HI_RESET;
+        break;
     case REGEX:
     case REGEX_BACKSLASH:
+    case REGEX_HASH_DOLLAR_WORD:
     case PERCENT_STRING:
     case AT_WORD:
     case DOLLAR_WORD:
@@ -608,6 +893,7 @@ void HighlightRuby::flush(std::string *r) {
     case QUOTE_BACKSLASH:
     case DQUOTE:
     case DQUOTE_BACKSLASH:
+    case DQUOTE_HASH_DOLLAR_WORD:
     case COMMENT:
     case HEREDOC_BOL:
     case HEREDOC:
@@ -620,5 +906,10 @@ void HighlightRuby::flush(std::string *r) {
     default:
         break;
     }
+    c_ = 0;
+    u_ = 0;
     t_ = NORMAL;
+    is_definition_ = 0;
+    expect_ = EXPECT_VALUE;
+    nesti_ = 0;
 }
