@@ -31,6 +31,8 @@ enum {
     SLASH,
     SLASH_STAR,
     SLASH_STAR_STAR,
+    AT,
+    BANG,
 };
 
 HighlightCss::HighlightCss() {
@@ -52,6 +54,7 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
             t_ = SELECTOR;
             // fallthrough
 
+        Selector:
         case SELECTOR:
             if (c == '{') {
                 t_ = PROPERTY;
@@ -64,6 +67,8 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
                 *r += HI_SELECTOR;
             } else if (c == '/') {
                 t_ = SELECTOR << 8 | SLASH;
+            } else if (c == '@') {
+                t_ = SELECTOR << 8 | AT;
             } else if (c == '\'') {
                 t_ = SELECTOR << 8 | QUOTE;
                 *r += HI_STRING;
@@ -77,9 +82,12 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        Property:
         case PROPERTY:
             if (c == '/') {
                 t_ = PROPERTY << 8 | SLASH;
+            } else if (c == '@') {
+                t_ = VALUE << 8 | AT;
             } else if (c == '\'') {
                 t_ = PROPERTY << 8 | QUOTE;
                 *r += HI_STRING;
@@ -102,9 +110,14 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        Value:
         case VALUE:
             if (c == '/') {
                 t_ = VALUE << 8 | SLASH;
+            } else if (c == '@') {
+                t_ = VALUE << 8 | AT;
+            } else if (c == '!') {
+                t_ = VALUE << 8 | BANG;
             } else if (c == '\'') {
                 t_ = VALUE << 8 | QUOTE;
                 *r += HI_STRING;
@@ -123,6 +136,60 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
                 *r += HI_SELECTOR;
             } else {
                 *r += c;
+            }
+            break;
+
+        case AT:
+            if (isalpha(c) || c == '-') {
+                word_ += c;
+            } else {
+                if (is_keyword_css_at(word_.data(), word_.size())) {
+                    *r += HI_BUILTIN;
+                    *r += '@';
+                    *r += word_;
+                    *r += HI_RESET;
+                } else {
+                    *r += '@';
+                    *r += word_;
+                }
+                word_.clear();
+                t_ >>= 8;
+                switch (t_ & 255) {
+                case SELECTOR:
+                    *r += HI_SELECTOR;
+                    goto Selector;
+                case PROPERTY:
+                    *r += HI_PROPERTY;
+                    goto Property;
+                case VALUE:
+                    goto Value;
+                default:
+                    __builtin_unreachable();
+                }
+            }
+            break;
+
+        case BANG:
+            if (isalpha(c) || c == '-') {
+                word_ += c;
+            } else {
+                if (is_keyword_css_bang(word_.data(), word_.size())) {
+                    *r += HI_WARNING;
+                    *r += '!';
+                    *r += word_;
+                    *r += HI_RESET;
+                } else {
+                    *r += '!';
+                    *r += word_;
+                }
+                word_.clear();
+                t_ >>= 8;
+                switch (t_ & 255) {
+                case VALUE:
+                    goto Value;
+                default:
+                    __builtin_unreachable();
+                }
             }
             break;
 
@@ -207,18 +274,31 @@ void HighlightCss::feed(std::string *r, std::string_view input) {
 }
 
 void HighlightCss::flush(std::string *r) {
-    switch (t_ & 255) {
-    case SLASH:
-        *r += '/';
-        break;
-    case SELECTOR:
-    case PROPERTY:
-    case DQUOTE:
-    case DQUOTE_BACKSLASH:
-        *r += HI_RESET;
-        break;
-    default:
-        break;
+    while (t_) {
+        switch (t_ & 255) {
+        case AT:
+            *r += '@';
+            *r += word_;
+            word_.clear();
+            break;
+        case BANG:
+            *r += '!';
+            *r += word_;
+            word_.clear();
+            break;
+        case SLASH:
+            *r += '/';
+            break;
+        case SELECTOR:
+        case PROPERTY:
+        case DQUOTE:
+        case DQUOTE_BACKSLASH:
+            *r += HI_RESET;
+            break;
+        default:
+            break;
+        }
+        t_ >>= 8;
     }
     *r += HI_RESET;
     t_ = NORMAL;

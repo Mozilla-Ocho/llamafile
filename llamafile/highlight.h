@@ -145,6 +145,8 @@ is_keyword_f is_keyword_ocaml;
 is_keyword_f is_keyword_ocaml_builtin;
 is_keyword_f is_keyword_ocaml_constant;
 is_keyword_f is_keyword_cmake;
+is_keyword_f is_keyword_css_at;
+is_keyword_f is_keyword_css_bang;
 }
 
 class Highlight {
@@ -366,6 +368,7 @@ class HighlightCss : public Highlight {
 
   private:
     int t_ = 0;
+    std::string word_;
 };
 
 class HighlightHtml : public Highlight {

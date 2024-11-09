@@ -260,3 +260,37 @@ ul li:first-child {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
+
+@media print {
+
+  .noprint {
+    display: none;
+  }
+
+  .copy-button {
+    display: none;
+  }
+
+  .chat-container {
+    box-shadow: none;
+  }
+
+  .chat-header {
+    border: none !important;
+  }
+
+  .chat-messages {
+    overflow-y: visible;
+    border: none !important;
+    height: auto !important;
+    max-width: none !important;
+  }
+
+  .message {
+    max-width: none !important;
+  }
+
+  .message.user {
+    border: 1px solid #999;
+  }
+}
