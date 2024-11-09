@@ -171,6 +171,9 @@ class HighlightRuby extends Highlighter {
   static DQUOTE_HASH = 36;
   static DQUOTE_HASH_DOLLAR = 37;
   static DQUOTE_HASH_DOLLAR_WORD = 38;
+  static PERCENT_HASH = 39;
+  static PERCENT_HASH_DOLLAR = 40;
+  static PERCENT_HASH_DOLLAR_WORD = 41;
 
   static EXPECT_VALUE = 0;
   static EXPECT_OPERATOR = 1;
@@ -239,6 +242,23 @@ class HighlightRuby extends Highlighter {
     case '^':
     case '_':
     case '`':
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static is_percent_literal(c) {
+    switch (c) {
+    case 'q':
+    case 'Q':
+    case 'r':
+    case 's':
+    case 'w':
+    case 'W':
+    case 'x':
+    case 'i':
+    case 'I':
       return true;
     default:
       return false;
@@ -332,6 +352,7 @@ class HighlightRuby extends Highlighter {
           this.push("span", "comment");
           this.append(c);
           this.state = HighlightRuby.COMMENT;
+          this.expect = HighlightRuby.EXPECT_VALUE;
         } else if (c == '<' && this.expect == HighlightRuby.EXPECT_VALUE) {
           this.append(c);
           this.state = HighlightRuby.LT;
@@ -578,7 +599,7 @@ class HighlightRuby extends Highlighter {
         break;
 
       case HighlightRuby.PERCENT:
-        if (c == 'q' || c == 'Q') {
+        if (HighlightRuby.is_percent_literal(c)) {
           this.q = c;
           this.state = HighlightRuby.PERCENT2;
         } else if (ispunct(c)) {
@@ -612,10 +633,60 @@ class HighlightRuby extends Highlighter {
         }
         break;
 
+      case HighlightRuby.PERCENT_HASH:
+        if (c == '{') {
+          this.push("strong", "");
+          this.append('#');
+          this.pop();
+          this.append('{');
+          this.pop();
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.nest.push(HighlightRuby.PERCENT_STRING);
+          this.state = HighlightRuby.NORMAL;
+        } else if (c == '$') {
+          this.state = HighlightRuby.PERCENT_HASH_DOLLAR;
+        } else {
+          this.append('#');
+          this.epsilon(HighlightRuby.PERCENT_STRING);
+        }
+        break;
+
+      case PERCENT_HASH_DOLLAR:
+        if (HighlightRuby.is_dollar_one(c)) {
+          this.append('#');
+          this.push("strong", "");
+          this.append('$');
+          this.append(c);
+          this.pop();
+          this.state = HighlightRuby.PERCENT_STRING;
+        } else if (isalpha(c)) {
+          this.append('#');
+          this.push("strong", "");
+          this.append('$');
+          this.append(c);
+          this.state = HighlightRuby.PERCENT_HASH_DOLLAR_WORD;
+        } else {
+          this.append('#');
+          this.append('$');
+          this.epsilon(HighlightRuby.PERCENT_STRING);
+        }
+        break;
+
+      case PERCENT_HASH_DOLLAR_WORD:
+        if (HighlightRuby.isident(c)) {
+          this.append(c);
+        } else {
+          this.push("strong", "");
+          this.epsilon(HighlightRuby.PERCENT_STRING);
+        }
+        break;
+
       case HighlightRuby.PERCENT_STRING:
         this.append(c);
         if (c == this.opener && this.opener != this.closer) {
           ++this.level;
+        } else if (c == '#') {
+          this.state = HighlightRuby.PERCENT_HASH;
         } else if (c == this.closer) {
           if (!--this.level) {
             this.pop();
@@ -770,7 +841,7 @@ class HighlightRuby extends Highlighter {
         break;
 
       case HighlightRuby.LT_LT:
-        if (c == '-') {
+        if (c == '-' || c == '~') {
           this.indented_heredoc = true;
           this.append(c);
         } else if (c == '\'' || c == '`' || c == '"') {
@@ -822,7 +893,7 @@ class HighlightRuby extends Highlighter {
             this.pop();
           }
           this.i = 0;
-        } else if (c == '\t' && this.indented_heredoc) {
+        } else if (isblank(c) && this.indented_heredoc) {
           // do nothing
         } else if (this.i < this.heredoc.length && this.heredoc[this.i] == c) {
           this.i++;
@@ -913,6 +984,14 @@ class HighlightRuby extends Highlighter {
       this.append('%');
       this.append(this.q);
       break;
+    case HighlightRuby.PERCENT_HASH:
+      this.append('#');
+      this.pop();
+      break;
+    case HighlightRuby.PERCENT_HASH_DOLLAR:
+      this.append("#$");
+      this.pop();
+      break;
     case HighlightRuby.QUESTION:
       this.append('?');
       break;
@@ -939,6 +1018,7 @@ class HighlightRuby extends Highlighter {
     case HighlightRuby.REGEX_BACKSLASH:
     case HighlightRuby.REGEX_HASH_DOLLAR_WORD:
     case HighlightRuby.PERCENT_STRING:
+    case HighlightRuby.PERCENT_HASH_DOLLAR_WORD:
     case HighlightRuby.AT_WORD:
     case HighlightRuby.DOLLAR_WORD:
     case HighlightRuby.TICK:

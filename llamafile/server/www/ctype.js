@@ -51,7 +51,7 @@ function isspace(c) {
 function isblank(c) {
   switch (c) {
   case ' ':
-  case '\n':
+  case '\t':
     return true;
   default:
     return false;

@@ -20,25 +20,6 @@
 #include <cosmo.h>
 #include <ctype.h>
 
-// ruby lexical syntax is bananas and isn't even formally documented
-//
-// known issues
-//
-// 1. we can't tell this backtick apart from command substitution
-//
-//     def `(command)
-//       return "just testing a backquote override"
-//     end
-//
-// 2. we don't know <<arg isn't a heredoc. emacs doesn't get this right
-//    either, but somehow vim does.
-//
-//     when /\.*\.h/
-//       options[:includes] <<arg; true
-//     when /--(\w+)=\"?(.*)\"?/
-//       options[$1.to_sym] = $2; true
-//
-
 enum {
     NORMAL,
     WORD,
@@ -69,6 +50,9 @@ enum {
     PERCENT,
     PERCENT2,
     PERCENT_STRING,
+    PERCENT_HASH,
+    PERCENT_HASH_DOLLAR,
+    PERCENT_HASH_DOLLAR_WORD,
     MULTICOM,
     MULTICOM_BOL,
     REGEX,
@@ -149,6 +133,23 @@ static bool is_dollar_one(int c) {
     case '^':
     case '_':
     case '`':
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool is_percent_literal(int c) {
+    switch (c) {
+    case 'q':
+    case 'Q':
+    case 'r':
+    case 's':
+    case 'w':
+    case 'W':
+    case 'x':
+    case 'i':
+    case 'I':
         return true;
     default:
         return false;
@@ -251,6 +252,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 lf::append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '#') {
+                expect_ = EXPECT_VALUE;
                 *r += HI_COMMENT;
                 lf::append_wchar(r, c);
                 t_ = COMMENT;
@@ -281,9 +283,9 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                     t_ = HEREDOC_BOL;
                     i_ = 0;
                 }
-            } else if (c == ']') {
+            } else if (c == ']' || c == ')') {
                 expect_ = EXPECT_OPERATOR;
-                *r += ']';
+                lf::append_wchar(r, c);
                 is_definition_ = false;
             } else if (ispunct(c)) {
                 expect_ = EXPECT_VALUE;
@@ -511,7 +513,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case PERCENT:
-            if (c == 'q' || c == 'Q') {
+            if (is_percent_literal(c)) {
                 q_ = c;
                 t_ = PERCENT2;
             } else if (ispunct(c)) {
@@ -547,15 +549,72 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             }
             break;
 
+        case PERCENT_HASH:
+            if (c == '{' && nesti_ < sizeof(nest_)) {
+                *r += HI_BOLD;
+                *r += '#';
+                *r += HI_UNBOLD;
+                *r += '{';
+                *r += HI_RESET;
+                expect_ = EXPECT_VALUE;
+                nest_[nesti_++] = PERCENT_STRING;
+                t_ = NORMAL;
+            } else if (c == '$') {
+                t_ = PERCENT_HASH_DOLLAR;
+            } else {
+                *r += '#';
+                t_ = PERCENT_STRING;
+                goto PercentString;
+            }
+            break;
+
+        case PERCENT_HASH_DOLLAR:
+            if (is_dollar_one(c)) {
+                *r += '#';
+                *r += HI_BOLD;
+                *r += '$';
+                lf::append_wchar(r, c);
+                *r += HI_UNBOLD;
+                t_ = PERCENT_STRING;
+            } else if (isalpha(c)) {
+                *r += '#';
+                *r += HI_BOLD;
+                *r += '$';
+                lf::append_wchar(r, c);
+                t_ = PERCENT_HASH_DOLLAR_WORD;
+            } else {
+                *r += '#';
+                *r += '$';
+                t_ = PERCENT_STRING;
+                goto PercentString;
+            }
+            break;
+
+        case PERCENT_HASH_DOLLAR_WORD:
+            if (isident(c)) {
+                lf::append_wchar(r, c);
+            } else {
+                *r += HI_UNBOLD;
+                t_ = PERCENT_STRING;
+                goto PercentString;
+            }
+            break;
+
+        PercentString:
         case PERCENT_STRING:
-            lf::append_wchar(r, c);
             if (c == opener_ && opener_ != closer_) {
+                lf::append_wchar(r, c);
                 ++level_;
+            } else if (c == '#') {
+                t_ = PERCENT_HASH;
             } else if (c == closer_) {
+                lf::append_wchar(r, c);
                 if (!--level_) {
                     *r += HI_RESET;
                     t_ = NORMAL;
                 }
+            } else {
+                lf::append_wchar(r, c);
             }
             break;
 
@@ -713,7 +772,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             break;
 
         case LT_LT:
-            if (c == '-') {
+            if (c == '-' || c == '~') {
                 indented_heredoc_ = true;
                 lf::append_wchar(r, c);
             } else if (c == '\'' || c == '`' || c == '"') {
@@ -723,7 +782,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 lf::append_wchar(r, c);
             } else if (isalpha(c) || c == '_') {
                 t_ = LT_LT_NAME;
-                heredoc_ += c;
+                lf::append_wchar(&heredoc_, c);
                 lf::append_wchar(r, c);
             } else {
                 t_ = NORMAL;
@@ -734,7 +793,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
         case LT_LT_NAME:
             if (isalnum(c) || c == '_') {
                 t_ = LT_LT_NAME;
-                heredoc_ += c;
+                lf::append_wchar(&heredoc_, c);
                 lf::append_wchar(r, c);
             } else if (c == '\n') {
                 lf::append_wchar(r, c);
@@ -755,7 +814,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 pending_heredoc_ = true;
                 t_ = NORMAL;
             } else {
-                heredoc_ += c;
+                lf::append_wchar(&heredoc_, c);
             }
             break;
 
@@ -767,7 +826,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                     *r += HI_RESET;
                 }
                 i_ = 0;
-            } else if (c == '\t' && indented_heredoc_) {
+            } else if (isblank(c) && indented_heredoc_) {
                 // do nothing
             } else if (i_ < heredoc_.size() && (heredoc_[i_] & 255) == c) {
                 i_++;
@@ -859,6 +918,14 @@ void HighlightRuby::flush(std::string *r) {
         *r += '%';
         *r += q_;
         break;
+    case PERCENT_HASH:
+        *r += '#';
+        *r += HI_RESET;
+        break;
+    case PERCENT_HASH_DOLLAR:
+        *r += "#$";
+        *r += HI_RESET;
+        break;
     case QUESTION:
         *r += '?';
         break;
@@ -885,6 +952,7 @@ void HighlightRuby::flush(std::string *r) {
     case REGEX_BACKSLASH:
     case REGEX_HASH_DOLLAR_WORD:
     case PERCENT_STRING:
+    case PERCENT_HASH_DOLLAR_WORD:
     case AT_WORD:
     case DOLLAR_WORD:
     case TICK:
