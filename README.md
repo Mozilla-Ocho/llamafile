@@ -643,9 +643,20 @@ The manifest maps each file related to the model (e.g. GGUF weights, license, pr
 
 Each sha256 digest is also used as a filename in the `~/.ollama/models/blobs` directory (if you look into that directory you'll see *only* those sha256-* filenames). This means you can directly run llamafile by passing the sha256 digest as the model filename. So if e.g. the `llama3:latest` GGUF file digest is `sha256-00e1317cbf74d901080d7100f57580ba8dd8de57203072dc6f668324ba545f29`, you can run llamafile as follows:
 
-```
+```sh
 cd ~/.ollama/models/blobs
 llamafile -m sha256-00e1317cbf74d901080d7100f57580ba8dd8de57203072dc6f668324ba545f29
+```
+
+### KitOps
+
+[KitOps](kitops.ml) - Starting with KitOps [release 0.4.0](https://github.com/jozu-ai/kitops/releases/tag/v0.4.0) the `kit dev` command uses llamafile to run models.
+
+KitOps can use any Docker-compatible registry to store its ModelKits. However, you can find a curated list of popular models on [Jozu Hub](jozu.ml). For instance, to run a llama3.2-1b
+
+```sh
+kit unpack jozu.ml/jozu/llama3.2-1b:1B-text-q5_0 -d ./workingdir
+kit dev start ./workingdir 
 ```
 
 ## Technical details
