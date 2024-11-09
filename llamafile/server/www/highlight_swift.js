@@ -988,6 +988,9 @@ class HighlightSwift extends Highlighter {
   static REGEX_END = 19;
   static REGEX_BACKSLASH = 20;
 
+  static EXPECT_VALUE = 0;
+  static EXPECT_OPERATOR = 1;
+
   constructor(delegate) {
     super(delegate);
     this.hash1 = 0;
@@ -995,6 +998,7 @@ class HighlightSwift extends Highlighter {
     this.word = '';
     this.nest = [];
     this.hash = [];
+    this.expect = HighlightSwift.EXPECT_VALUE;
   }
 
   feed(input) {
@@ -1014,19 +1018,29 @@ class HighlightSwift extends Highlighter {
           this.push("span", "string");
           this.append('"');
           this.hash1 = 0;
+          this.expect = HighlightSwift.EXPECT_OPERATOR;
         } else if (c == '#') {
           this.state = HighlightSwift.HASH;
           this.hash1 = 1;
+          this.expect = HighlightSwift.EXPECT_OPERATOR;
         } else if (c == '(' && this.nest.length) {
           this.append('(');
           this.nest.push(HighlightSwift.NORMAL);
           this.hash.push(0);
+          this.expect = HighlightSwift.EXPECT_VALUE;
         } else if (c == ')' && this.nest.length) {
+          this.expect = HighlightSwift.EXPECT_OPERATOR;
           this.state = this.nest.pop();
           this.hash1 = this.hash.pop();
           if (this.state != HighlightSwift.NORMAL)
             this.push("span", "string");
           this.append(')');
+        } else if (c == ')' || c == ']' || isdigit(c) || c == '.') {
+          this.expect = HighlightSwift.EXPECT_OPERATOR;
+          this.append(c);
+        } else if (ispunct(c) || c == '\n') {
+          this.expect = HighlightSwift.EXPECT_VALUE;
+          this.append(c);
         } else {
           this.append(c);
         }
@@ -1069,11 +1083,14 @@ class HighlightSwift extends Highlighter {
           this.push("span", "comment");
           this.append("/*");
           this.state = HighlightSwift.SLASH_STAR;
-        } else {
+        } else if (expect_ == EXPECT_VALUE) {
           this.push("span", "string");
           this.append('/');
           this.hash1 = 0;
           this.epsilon(HighlightSwift.REGEX);
+        } else {
+          this.append('/');
+          this.epsilon(HighlightSwift.NORMAL);
         }
         break;
 
@@ -1344,6 +1361,7 @@ class HighlightSwift extends Highlighter {
     this.hash = [];
     this.delegate.flush();
     this.delta = 1;
+    this.expect = HighlightSwift.EXPECT_VALUE;
   }
 }
 

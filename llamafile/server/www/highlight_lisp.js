@@ -276,6 +276,7 @@ class HighlightLisp extends Highlighter {
 }
 
 Highlighter.REGISTRY['clojure'] = HighlightLisp;
+Highlighter.REGISTRY['racket'] = HighlightLisp;
 Highlighter.REGISTRY['scheme'] = HighlightLisp;
 Highlighter.REGISTRY['elisp'] = HighlightLisp;
 Highlighter.REGISTRY['clisp'] = HighlightLisp;

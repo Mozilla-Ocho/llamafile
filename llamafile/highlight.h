@@ -69,6 +69,7 @@ is_keyword_f is_keyword_js_constant;
 is_keyword_f is_keyword_java;
 is_keyword_f is_keyword_java_constant;
 is_keyword_f is_keyword_python;
+is_keyword_f is_keyword_python_builtin;
 is_keyword_f is_keyword_python_constant;
 is_keyword_f is_keyword_rust;
 is_keyword_f is_keyword_rust_type;
@@ -715,6 +716,7 @@ class HighlightSwift : public Highlight {
     int hash1_ = 0;
     int hash2_ = 0;
     int nesti_ = 0;
+    int expect_ = 0;
     std::string word_;
     unsigned char nest_[16];
     unsigned char hash_[16];

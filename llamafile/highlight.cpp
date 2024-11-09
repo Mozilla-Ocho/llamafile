@@ -138,6 +138,7 @@ Highlight *Highlight::create(const std::string_view &lang) {
         lang == "cl" || //
         lang == "clisp" || //
         lang == "scheme" || //
+        lang == "racket" || //
         lang == "clojure")
         return new HighlightLisp;
 

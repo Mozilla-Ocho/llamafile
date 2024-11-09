@@ -37,7 +37,7 @@ function createMessageElement(content, role) {
   const messageDiv = document.createElement("div");
   messageDiv.classList.add("message", role);
   let hdom = new HighlightDom(messageDiv);
-  const high = new HighlightMarkdown(hdom);
+  const high = new RenderMarkdown(hdom);
   high.feed(content);
   high.flush();
   return messageDiv;
@@ -73,7 +73,7 @@ async function handleChatStream(response) {
   let currentMessageElement = createMessageElement("", "assistant");
   chatMessages.appendChild(currentMessageElement);
   let hdom = new HighlightDom(currentMessageElement);
-  const high = new HighlightMarkdown(hdom);
+  const high = new RenderMarkdown(hdom);
   streamingMessageContent = [];
 
   try {

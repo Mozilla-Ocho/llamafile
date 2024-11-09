@@ -53,6 +53,80 @@ const PYTHON_CONSTANTS = new Set([
   'True',
 ]);
 
+const PYTHON_BUILTINS = new Set([
+  '__import__',
+  'abs',
+  'aiter',
+  'all',
+  'anext',
+  'any',
+  'ascii',
+  'bin',
+  'bool',
+  'breakpoint',
+  'bytearray',
+  'bytes',
+  'callable',
+  'chr',
+  'classmethod',
+  'compile',
+  'complex',
+  'delattr',
+  'dict',
+  'dir',
+  'divmod',
+  'enumerate',
+  'eval',
+  'exec',
+  'filter',
+  'float',
+  'format',
+  'frozenset',
+  'getattr',
+  'globals',
+  'hasattr',
+  'hash',
+  'help',
+  'hex',
+  'id',
+  'input',
+  'int',
+  'isinstance',
+  'issubclass',
+  'iter',
+  'len',
+  'list',
+  'locals',
+  'map',
+  'max',
+  'memoryview',
+  'min',
+  'next',
+  'object',
+  'oct',
+  'open',
+  'ord',
+  'pow',
+  'print',
+  'property',
+  'range',
+  'repr',
+  'reversed',
+  'round',
+  'set',
+  'setattr',
+  'slice',
+  'sorted',
+  'staticmethod',
+  'str',
+  'sum',
+  'super',
+  'tuple',
+  'type',
+  'vars',
+  'zip',
+]);
+
 class HighlightPython extends Highlighter {
 
   static NORMAL = 0;
@@ -112,6 +186,10 @@ class HighlightPython extends Highlighter {
         } else {
           if (PYTHON_KEYWORDS.has(this.word)) {
             this.push("span", "keyword");
+            this.append(this.word);
+            this.pop();
+          } else if (PYTHON_BUILTINS.has(this.word)) {
+            this.push("span", "builtin");
             this.append(this.word);
             this.pop();
           } else if (PYTHON_CONSTANTS.has(this.word)) {
@@ -291,6 +369,10 @@ class HighlightPython extends Highlighter {
     case HighlightPython.WORD:
       if (PYTHON_KEYWORDS.has(this.word)) {
         this.push("span", "keyword");
+        this.append(this.word);
+        this.pop();
+      } else if (PYTHON_BUILTINS.has(this.word)) {
+        this.push("span", "builtin");
         this.append(this.word);
         this.pop();
       } else if (PYTHON_CONSTANTS.has(this.word)) {

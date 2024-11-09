@@ -17,6 +17,11 @@ function isascii(c) {
   return 0 <= i && i <= 127;
 }
 
+function isgraph(c) {
+  let i = c.charCodeAt(0);
+  return 0x21 <= i && i <= 0x7E;
+}
+
 function isdigit(c) {
   let i = c.charCodeAt(0);
   return (48 <= i && i <= 57);

@@ -58,6 +58,11 @@ enum {
     REGEX_BACKSLASH,
 };
 
+enum {
+    EXPECT_VALUE,
+    EXPECT_OPERATOR,
+};
+
 HighlightSwift::HighlightSwift() {
 }
 
@@ -100,21 +105,31 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
                 *r += HI_STRING;
                 *r += '"';
                 hash1_ = 0;
+                expect_ = EXPECT_OPERATOR;
             } else if (c == '#') {
                 t_ = HASH;
                 hash1_ = 1;
+                expect_ = EXPECT_OPERATOR;
             } else if (c == '(' && nesti_ && nesti_ < sizeof(nest_)) {
                 *r += '(';
                 nest_[nesti_] = NORMAL;
                 hash_[nesti_] = 0;
                 nesti_++;
+                expect_ = EXPECT_VALUE;
             } else if (c == ')' && nesti_) {
+                expect_ = EXPECT_OPERATOR;
                 --nesti_;
                 t_ = nest_[nesti_];
                 hash1_ = hash_[nesti_];
                 if (t_ != NORMAL)
                     *r += HI_STRING;
                 *r += ')';
+            } else if (c == ')' || c == ']' || isdigit(c) || c == '.') {
+                expect_ = EXPECT_OPERATOR;
+                lf::append_wchar(r, c);
+            } else if (ispunct(c) || c == '\n') {
+                expect_ = EXPECT_VALUE;
+                lf::append_wchar(r, c);
             } else {
                 lf::append_wchar(r, c);
             }
@@ -159,12 +174,16 @@ void HighlightSwift::feed(std::string *r, std::string_view input) {
                 *r += HI_COMMENT;
                 *r += "/*";
                 t_ = SLASH_STAR;
-            } else {
+            } else if (expect_ == EXPECT_VALUE) {
                 *r += HI_STRING;
                 *r += '/';
                 hash1_ = 0;
                 t_ = REGEX;
                 goto Regex;
+            } else {
+                *r += '/';
+                t_ = NORMAL;
+                goto Normal;
             }
             break;
 
@@ -452,5 +471,6 @@ void HighlightSwift::flush(std::string *r) {
     c_ = 0;
     u_ = 0;
     t_ = NORMAL;
+    expect_ = 0;
     nesti_ = 0;
 }

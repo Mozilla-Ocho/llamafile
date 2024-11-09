@@ -84,6 +84,10 @@ void HighlightPython::feed(std::string *r, std::string_view input) {
                     *r += HI_KEYWORD;
                     *r += word_;
                     *r += HI_RESET;
+                } else if (is_keyword_python_builtin(word_.data(), word_.size())) {
+                    *r += HI_BUILTIN;
+                    *r += word_;
+                    *r += HI_RESET;
                 } else if (is_keyword_python_constant(word_.data(), word_.size())) {
                     *r += HI_CONSTANT;
                     *r += word_;
@@ -266,6 +270,10 @@ void HighlightPython::flush(std::string *r) {
     case WORD:
         if (is_keyword_python(word_.data(), word_.size())) {
             *r += HI_KEYWORD;
+            *r += word_;
+            *r += HI_RESET;
+        } else if (is_keyword_python_builtin(word_.data(), word_.size())) {
+            *r += HI_BUILTIN;
             *r += word_;
             *r += HI_RESET;
         } else if (is_keyword_python_constant(word_.data(), word_.size())) {

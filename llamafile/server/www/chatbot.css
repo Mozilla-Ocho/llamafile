@@ -207,6 +207,23 @@ ul li:first-child {
   position: relative;
 }
 
+.message blockquote {
+  border-left: 4px solid #8b5cf6; /* Purple accent line */
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: rgba(139, 92, 246, 0.05); /* Very light purple background */
+  border-radius: 0.375rem;
+  font-style: italic;
+  color: #4b5563; /* Slightly muted text */
+}
+
+/* Optional: Style nested blockquotes differently */
+.message blockquote blockquote {
+  border-left-color: #6d28d9; /* Darker purple for nested quotes */
+  background: rgba(109, 40, 217, 0.05);
+  margin-left: 1rem;
+}
+
 .copy-button {
   position: absolute;
   top: 0.5rem;
