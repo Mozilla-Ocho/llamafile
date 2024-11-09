@@ -45,24 +45,9 @@ class HighlightDom extends Highlight {
 
   feed(s) {
     for (let i = 0; i < s.length; ++i) {
-      if (s[i] == '\n') {
-        let classes = [];
+      this.text += s[i];
+      if (isspace(s[i])) {
         this.flushText();
-        while (this.currentElement.tagName == 'SPAN') {
-          classes.push([this.currentElement.tagName,
-                        this.currentElement.className]);
-          this.currentElement = this.currentElement.parentNode;
-        }
-        this.currentElement.appendChild(document.createElement('br'));
-        while (classes.length) {
-          let c = classes.pop();
-          this.push(c[0], c[1]);
-        }
-      } else {
-        this.text += s[i];
-        if (isspace(s[i])) {
-          this.flushText();
-        }
       }
     }
   }
@@ -70,7 +55,8 @@ class HighlightDom extends Highlight {
   push(tagName, className) {
     this.flushText();
     const elem = document.createElement(tagName);
-    elem.className = className;
+    if (className)
+      elem.className = className;
     this.currentElement.appendChild(elem);
     this.currentElement = elem;
     return elem;

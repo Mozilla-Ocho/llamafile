@@ -40,10 +40,33 @@ class HighlightMarkdown extends Highlighter {
   static LAB = 23;
   static LAB_BACKSLASH = 24;
   static HYPHEN = 25;
+  static TILDE = 26;
+  static EMPHASIS_STAR2 = 27;
+  static OLNAME = 28;
+  static OLNAME_DOT = 29;
 
-  static STYLE_STRONG = 0;
-  static STYLE_EMPHASIS = 1;
-  static STYLE_LIST = 2;
+  static STYLE_SPAN = 16;
+  static STYLE_STRONG = 16;
+  static STYLE_EMPHASIS = 17;
+  static STYLE_STRIKE = 18;
+
+  static STYLE_LIST = 32;
+  static STYLE_UL = 32;
+  static STYLE_OL = 33;
+
+  static STYLE_DIV = 64;
+  static STYLE_LI = 64;
+
+  static get_style_tag(t) {
+    switch (t) {
+    case HighlightMarkdown.STYLE_UL:
+      return 'UL';
+    case HighlightMarkdown.STYLE_OL:
+      return 'OL';
+    default:
+      throw new Error('bad style');
+    }
+  }
 
   static is_escapable(c) {
     switch (c) {
@@ -71,6 +94,14 @@ class HighlightMarkdown extends Highlighter {
     }
   }
 
+  static is_sublist(depth, next) {
+    if (!depth) {
+      return next > 0;
+    } else {
+      return next >= depth + 4;
+    }
+  }
+
   constructor(delegate) {
     super(delegate);
     this.bol = true;
@@ -82,33 +113,48 @@ class HighlightMarkdown extends Highlighter {
     this.text = '';
     this.href = '';
     this.style = [];
+    this.trailing_spaces = 0;
+    this.olname = '';
   }
 
   inside(style) {
-    return this.style.length && this.style[this.style.length - 1] == style;
+    return this.style.length && this.style[this.style.length - 1][0] == style;
   }
 
-  li(c) {
-    if (this.inside(HighlightMarkdown.STYLE_LIST)) {
+  li(t) {
+    while (this.style.length &&
+           (this.style[this.style.length - 1][0] == HighlightMarkdown.STYLE_LI ||
+            (this.style[this.style.length - 1][0] & HighlightMarkdown.STYLE_SPAN) ||
+            ((this.style[this.style.length - 1][0] & HighlightMarkdown.STYLE_LIST) &&
+             (this.spaces < this.style[this.style.length - 1][1] ||
+              (this.style[this.style.length - 1][0] != t &&
+               !HighlightMarkdown.is_sublist(this.style[this.style.length - 1][1], this.spaces)))))) {
       this.pop();
-      this.push('li', '');
-    } else if (!this.style.length) {
-      this.style.push(HighlightMarkdown.STYLE_LIST);
-      this.push('li', '');
-    } else {
-      this.append(c);
+      this.style.pop();
     }
+    if (!this.style.length ||
+        ((this.style[this.style.length - 1][0] & HighlightMarkdown.STYLE_LIST) &&
+         HighlightMarkdown.is_sublist(this.style[this.style.length - 1][1], this.spaces))) {
+      this.style.push([t, this.spaces]);
+      this.push(HighlightMarkdown.get_style_tag(t), '');
+    }
+    this.style.push([HighlightMarkdown.STYLE_LI, this.spaces]);
+    this.push('LI', '');
     this.bol = false;
   }
 
   got() {
     if (this.bol) {
       this.bol = false;
-      if (this.spaces < 2 && this.inside(HighlightMarkdown.STYLE_LIST)) {
+      while (this.style.length &&
+             (this.style[this.style.length - 1][0] == HighlightMarkdown.STYLE_LI ||
+              (this.style[this.style.length - 1][0] & HighlightMarkdown.STYLE_LIST)) &&
+             this.spaces <= this.style[this.style.length - 1][1]) {
         this.pop();
         this.style.pop();
       }
     }
+    this.spaces = 0;
   }
 
   feed(input) {
@@ -130,42 +176,58 @@ class HighlightMarkdown extends Highlighter {
             this.state = HighlightMarkdown.STAR;
           }
           break;
-        } else if (c == '[') {
-          this.state = HighlightMarkdown.LSB;
-        } else if (c == '<') {
-          this.state = HighlightMarkdown.LAB;
-        } else if (c == '\\') {
-          this.state = HighlightMarkdown.BACKSLASH;
         } else if (c == '-' && this.bol) {
           this.state = HighlightMarkdown.HYPHEN;
+          break;
+        } else if (isdigit(c) && this.bol) {
+          this.epsilon(HighlightMarkdown.OLNAME);
         } else if (c == '\n') {
           this.bol = true;
           this.tail = false;
           this.state = HighlightMarkdown.NEWLINE;
           this.newlines = 1;
+          this.trailing_spaces = this.spaces;
           this.spaces = 0;
           break;
+        } else if (c == '~') {
+          this.state = HighlightMarkdown.TILDE;
+          this.got();
+        } else if (c == '[') {
+          this.state = HighlightMarkdown.LSB;
+          this.got();
+        } else if (c == '<') {
+          this.state = HighlightMarkdown.LAB;
+          this.got();
+        } else if (c == '\\') {
+          this.state = HighlightMarkdown.BACKSLASH;
+          this.got();
+        } else if (c == ' ') {
+          ++this.spaces;
+          this.append(c);
+        } else if (c == '\t') {
+          this.spaces += 4;
+          this.append(c);
         } else {
+          this.got();
           this.append(c);
         }
         this.tail = true;
-        if (isblank(c)) {
-          ++this.spaces;
-        } else {
-          this.got();
-        }
         break;
 
       case HighlightMarkdown.NEWLINE:
         if (c == '\n') {
           ++this.newlines;
+          this.spaces = 0;
+        } else if (c == ' ') {
+          ++this.spaces;
+        } else if (c == '\t') {
+          this.spaces += 4;
         } else {
           if (this.newlines >= 2) {
-            if (this.inside(HighlightMarkdown.STYLE_LIST)) {
-              this.pop();
-              this.style.pop();
-            }
-            this.push('p', '');
+            this.push("p", "");
+            this.pop();
+          } else if (this.trailing_spaces >= 2) {
+            this.push('br', '');
             this.pop();
           } else {
             this.append('\n');
@@ -174,14 +236,53 @@ class HighlightMarkdown extends Highlighter {
         }
         break;
 
+      case HighlightMarkdown.SPACE_SPACE:
+        if (c == '\n') {
+          this.state = HighlightMarkdown.NORMAL;
+          this.push('br', '');
+          this.pop();
+          this.append('\n');
+        } else {
+          this.append("  ");
+          this.epsilon(HighlightMarkdown.NORMAL);
+        }
+        break;
+
       case HighlightMarkdown.HYPHEN:
         if (isblank(c)) {
           // - handle list item
-          this.li('-');
+          this.li(HighlightMarkdown.STYLE_UL);
           this.append(c);
           this.state = HighlightMarkdown.NORMAL;
         } else {
           this.append('-');
+          this.epsilon(HighlightMarkdown.NORMAL);
+        }
+        break;
+
+      case HighlightMarkdown.OLNAME:
+        if (isdigit(c)) {
+          this.olname += c;
+        } else if (c == '.') {
+          this.olname += '.';
+          this.state = HighlightMarkdown.OLNAME_DOT;
+        } else {
+          this.got();
+          this.append(this.olname);
+          this.olname = '';
+          this.epsilon(HighlightMarkdown.NORMAL);
+        }
+        break;
+
+      case HighlightMarkdown.OLNAME_DOT:
+        if (isspace(c)) {
+          this.li(HighlightMarkdown.STYLE_OL);
+          this.olname = '';
+          this.state = HighlightMarkdown.NORMAL;
+        } else {
+          this.got();
+          this.append(this.olname);
+          this.olname = '';
           this.epsilon(HighlightMarkdown.NORMAL);
         }
         break;
@@ -200,33 +301,59 @@ class HighlightMarkdown extends Highlighter {
         if (c == '*') {
           // handle **strong** text
           // we don't call this.got() in case this is *** bar
+          this.got();
           this.push('strong', '');
           this.state = HighlightMarkdown.NORMAL;
-          this.style.push(HighlightMarkdown.STYLE_STRONG);
+          this.style.push([HighlightMarkdown.STYLE_STRONG, 0]);
         } else if (this.bol && isblank(c)) {
           // * handle list item
-          this.li('*');
+          this.li(HighlightMarkdown.STYLE_UL);
           this.append(c);
           this.state = HighlightMarkdown.NORMAL;
         } else {
           // handle *emphasis* text
           this.got();
           this.push('em', '');
-          this.style.push(HighlightMarkdown.STYLE_EMPHASIS);
+          this.style.push([HighlightMarkdown.STYLE_EMPHASIS, 0]);
           this.epsilon(HighlightMarkdown.NORMAL);
         }
         break;
 
       case HighlightMarkdown.EMPHASIS_STAR:
         if (c == '*') {
-          // handle *italic **strong** text*
-          this.push('strong', '');
-          this.state = HighlightMarkdown.NORMAL;
-          this.style.push(HighlightMarkdown.STYLE_STRONG);
+          this.state = HighlightMarkdown.EMPHASIS_STAR2;
         } else {
           // leave *italic* text
+          //               ^
           this.style.pop();
           this.pop();
+          this.epsilon(HighlightMarkdown.NORMAL);
+        }
+        break;
+
+      case HighlightMarkdown.EMPHASIS_STAR2:
+        if (c == '*') {
+          this.style.pop();
+          this.pop();
+          if (this.inside(HighlightMarkdown.STYLE_STRONG)) {
+            // handle ***strong emphasis*** closing
+            //                            ^
+            this.style.pop();
+            this.pop();
+            this.state = HighlightMarkdown.NORMAL;
+          } else {
+            // handle *emphasis***strong**
+            //                   ^
+            this.push('strong', '');
+            this.state = HighlightMarkdown.NORMAL;
+            this.style.push([HighlightMarkdown.STYLE_STRONG, 0]);
+            this.state = HighlightMarkdown.NORMAL;
+          }
+        } else {
+          // handle *italic **strong** text*
+          //                  ^
+          this.push('strong', '');
+          this.style.push([HighlightMarkdown.STYLE_STRONG, 0]);
           this.epsilon(HighlightMarkdown.NORMAL);
         }
         break;
@@ -238,6 +365,7 @@ class HighlightMarkdown extends Highlighter {
           this.pop();
         } else if (c == '\n' && !this.tail) {
           // handle *** line break
+          this.got();
           this.style.pop();
           this.pop();
           this.push('hr', '');
@@ -245,7 +373,24 @@ class HighlightMarkdown extends Highlighter {
           this.epsilon(HighlightMarkdown.NORMAL);
         } else {
           this.push('em', '');
-          this.style.push(HighlightMarkdown.STYLE_EMPHASIS);
+          this.style.push([HighlightMarkdown.STYLE_EMPHASIS, 0]);
+          this.epsilon(HighlightMarkdown.NORMAL);
+        }
+        break;
+
+      case HighlightMarkdown.TILDE:
+        if (c == '~') {
+          // handle ~~strikethrough text~~
+          if (this.inside(HighlightMarkdown.STYLE_STRIKE)) {
+            this.pop();
+            this.style.pop();
+          } else {
+            this.push('s', '');
+            this.style.push([HighlightMarkdown.STYLE_STRIKE, 0]);
+          }
+          this.state = HighlightMarkdown.NORMAL;
+        } else {
+          this.append('~');
           this.epsilon(HighlightMarkdown.NORMAL);
         }
         break;
@@ -255,11 +400,11 @@ class HighlightMarkdown extends Highlighter {
           if (this.bol) {
             this.state = HighlightMarkdown.TICK_TICK;
           } else {
-            this.push("span", "incode");
+            this.push("code", "");
             this.state = HighlightMarkdown.INCODE2;
           }
         } else {
-          this.push('code', '');
+          this.push("code", "");
           this.append(c);
           this.state = HighlightMarkdown.INCODE;
         }
@@ -461,7 +606,12 @@ class HighlightMarkdown extends Highlighter {
       this.lang = '';
       break;
     case HighlightMarkdown.STAR:
+    case HighlightMarkdown.STRONG_STAR:
+    case HighlightMarkdown.EMPHASIS_STAR:
       this.append('*');
+      break;
+    case HighlightMarkdown.EMPHASIS_STAR2:
+      this.append("**");
       break;
     case HighlightMarkdown.TICK:
       this.append('`');
@@ -511,6 +661,18 @@ class HighlightMarkdown extends Highlighter {
       this.append('[' + this.text + '](' + this.href);
       this.text = '';
       this.href = '';
+      break;
+    case HighlightMarkdown.TILDE:
+      this.append('~');
+      break;
+    case HighlightMarkdown.SPACE:
+      for (let i = 0; i < this.spaces; ++i)
+        this.append(' ');
+      break;
+    case HighlightMarkdown.OLNAME:
+    case HighlightMarkdown.OLNAME_DOT:
+      this.append(this.olname);
+      this.olname = '';
       break;
     default:
       break;

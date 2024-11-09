@@ -651,7 +651,7 @@ class HighlightRuby extends Highlighter {
         }
         break;
 
-      case PERCENT_HASH_DOLLAR:
+      case HighlightRuby.PERCENT_HASH_DOLLAR:
         if (HighlightRuby.is_dollar_one(c)) {
           this.append('#');
           this.push("strong", "");
@@ -672,7 +672,7 @@ class HighlightRuby extends Highlighter {
         }
         break;
 
-      case PERCENT_HASH_DOLLAR_WORD:
+      case HighlightRuby.PERCENT_HASH_DOLLAR_WORD:
         if (HighlightRuby.isident(c)) {
           this.append(c);
         } else {

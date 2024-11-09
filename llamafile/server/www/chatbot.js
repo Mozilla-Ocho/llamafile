@@ -19,7 +19,7 @@ const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
-const stopButton = document.getElementById('stop-button');
+const stopButton = document.getElementById("stop-button");
 
 let abortController = null;
 let streamingMessageContent = [];
@@ -51,12 +51,17 @@ function setTypingIndicatorVisibility(visible) {
   typingIndicator.style.display = visible ? "flex" : "none";
 }
 
+function onChatInput() {
+  chatInput.style.height = "auto";  // computes scrollHeight
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + "px";
+}
+
 function cleanupAfterMessage() {
   setTypingIndicatorVisibility(false);
   chatMessages.scrollTop = chatMessages.scrollHeight;
   chatInput.disabled = false;
-  sendButton.style.display = 'inline-block';
-  stopButton.style.display = 'none';
+  sendButton.style.display = "inline-block";
+  stopButton.style.display = "none";
   abortController = null;
   chatInput.focus();
 }
@@ -102,7 +107,7 @@ async function handleChatStream(response) {
       buffer = lines[lines.length - 1];
     }
   } catch (error) {
-    if (error.name !== 'AbortError') {
+    if (error.name !== "AbortError") {
       console.error("Error reading stream:", error);
     }
   } finally {
@@ -125,7 +130,8 @@ async function sendMessage() {
   // disable input while processing
   chatInput.value = "";
   chatInput.disabled = true;
-  sendButton.style.display = 'none';
+  onChatInput();
+  sendButton.style.display = "none";
   stopButton.style.display = "inline-block";
   stopButton.focus();
   abortController = new AbortController();
@@ -164,11 +170,11 @@ async function sendMessage() {
     await handleChatStream(response);
 
     // update chat history with response
-    const lastMessage = streamingMessageContent.join('');
+    const lastMessage = streamingMessageContent.join("");
     chatHistory.push({ role: "assistant", content: lastMessage });
 
   } catch (error) {
-    if (error.name !== 'AbortError') {
+    if (error.name !== "AbortError") {
       console.error("Error:", error);
       const errorMessage = createMessageElement(
         "Sorry, there was an error processing your request.",
@@ -189,7 +195,8 @@ for (let i = 0; i < chatHistory.length; i++) {
 // setup events
 sendButton.addEventListener("click", sendMessage);
 stopButton.addEventListener("click", stopMessage);
-chatInput.addEventListener("keypress", (e) => {
+chatInput.addEventListener("input", onChatInput);
+chatInput.addEventListener("keydown", function(e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage();

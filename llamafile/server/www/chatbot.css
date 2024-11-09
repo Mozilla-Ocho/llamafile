@@ -49,6 +49,37 @@ p {
   padding: 1rem;
 }
 
+ol,
+ul {
+  margin: 0.5rem 0;
+  padding-left: 2rem;
+}
+
+ol li,
+ul li {
+  padding: 0.25rem 0;
+  margin: 0;
+}
+
+ol li::marker {
+  color: #666;
+  font-weight: 500;
+}
+
+ul li::marker {
+  color: #666;
+}
+
+ol li:last-child,
+ul li:last-child {
+  padding-bottom: 0;
+}
+
+ol li:first-child,
+ul li:first-child {
+  padding-top: 0;
+}
+
 .message {
   margin-bottom: 1rem;
   padding: 0.75rem;
@@ -86,6 +117,40 @@ p {
   border-radius: 6px;
   font-size: 1rem;
   outline: none;
+  resize: none;
+  max-height: 200px;
+  min-height: 44px;
+  line-height: 1.5;
+  font-family: inherit;
+  overflow-y: auto;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #cbd5e1 transparent; /* Firefox */
+}
+
+/* Chrome, Edge, and Safari */
+.chat-input::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+
+.chat-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-input::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Only show scrollbar when needed */
+.chat-input::-webkit-scrollbar-thumb:vertical {
+  min-height: 30px;
+}
+
+.chat-input:not(:hover)::-webkit-scrollbar-thumb {
+  background-color: transparent;
 }
 
 .chat-input:focus {
