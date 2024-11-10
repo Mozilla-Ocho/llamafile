@@ -13043,6 +13043,7 @@ static void ggml_compute_forward_rope(
 
     const struct ggml_tensor * src0 = dst->src[0];
 
+    // TODO[jart]: support bf16
     switch (src0->type) {
         case GGML_TYPE_F16:
             {
@@ -13067,6 +13068,7 @@ static void ggml_compute_forward_rope_back(
 
     const struct ggml_tensor * src0 = dst->src[0];
 
+    // TODO[jart]: support bf16
     switch (src0->type) {
         case GGML_TYPE_F16:
             {

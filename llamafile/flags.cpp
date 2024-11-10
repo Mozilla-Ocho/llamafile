@@ -17,7 +17,6 @@
 
 #include "flags.h"
 #include "debug.h"
-#include "llama.cpp/cores.h"
 #include "llamafile.h"
 #include "trust.h"
 
@@ -31,7 +30,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "llama.cpp/cores.h"
 #include "llama.cpp/llama.h"
+#include "llamafile/macros.h"
 
 bool FLAGS_READY = false;
 bool FLAG_ascii = false;
@@ -49,6 +50,7 @@ bool FLAG_unsecure = false;
 const char *FLAG_file = nullptr;
 const char *FLAG_ip_header = nullptr;
 const char *FLAG_listen = "127.0.0.1:8080";
+const char *FLAG_mmproj = nullptr;
 const char *FLAG_model = nullptr;
 const char *FLAG_prompt = nullptr;
 const char *FLAG_url_prefix = "";
@@ -67,8 +69,8 @@ int FLAG_n_gpu_layers = -1;
 int FLAG_seed = LLAMA_DEFAULT_SEED;
 int FLAG_slots = 1;
 int FLAG_split_mode = LLAMA_SPLIT_MODE_LAYER;
-int FLAG_threads;
-int FLAG_threads_batch;
+int FLAG_threads = MIN(cpu_get_num_math(), 20);
+int FLAG_threads_batch = cpu_get_num_math();
 int FLAG_token_burst = 100;
 int FLAG_token_cidr = 24;
 int FLAG_ubatch = 512;
@@ -116,7 +118,6 @@ static wontreturn void unknown(const char *flag) {
 
 void llamafile_get_flags(int argc, char **argv) {
     bool program_supports_gpu = FLAG_gpu != LLAMAFILE_GPU_DISABLE;
-    FLAG_threads = cpu_get_num_math();
     for (int i = 1; i < argc;) {
         const char *flag = argv[i++];
 
@@ -285,6 +286,13 @@ void llamafile_get_flags(int argc, char **argv) {
             if (i == argc)
                 missing("--model");
             FLAG_model = argv[i++];
+            continue;
+        }
+
+        if (!strcmp(flag, "-mm") || !strcmp(flag, "--mmproj")) {
+            if (i == argc)
+                missing("--mmproj");
+            FLAG_mmproj = argv[i++];
             continue;
         }
 

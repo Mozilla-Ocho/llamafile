@@ -27,6 +27,7 @@ void on_help(const std::vector<std::string> &args) {
   /context                 print context window usage\n\
   /dump [FILE]             print or save context window to file\n\
   /exit                    end program\n\
+  /forget                  erase oldest message from context\n\
   /help [COMMAND]          show help\n\
   /manual [on|off]         toggle manual role mode\n\
   /pop                     restore context window size\n\
@@ -34,6 +35,7 @@ void on_help(const std::vector<std::string> &args) {
   /stack                   prints context window stack\n\
   /stats                   print performance metrics\n\
   /undo                    erases last message in conversation\n\
+  /upload FILE             share image or text file with assistant\n\
 ");
     } else if (args[1] == "context") {
         fprintf(stderr, "\
@@ -117,6 +119,25 @@ usage: /undo" RESET "\n\
 erases last exchange in conversation. in the normal mode, this includes\n\
 what the assistant last said, as well as the question that was asked. in\n\
 manual mode, this will erase only the last chat message.\n\
+");
+    } else if (args[1] == "upload") {
+        fprintf(stderr, "\
+usage: /upload FILE" RESET "\n\
+shares file from local hard drive with assistant. if this is a text file\n\
+then a markdown system prompt is generated and added to the conversation\n\
+history that gives the assistant readonly access to the file content and\n\
+metadata. files with nul characters in them are currently not supported.\n\
+image files (png/jpg/gif/bmp/hdr/psd/tga/pgm/ppm) may be uploaded if you\n\
+specified a clip vision model (eg. LLaVA) earlier with the --mmproj flag\n\
+");
+    } else if (args[1] == "forget") {
+        fprintf(stderr, "\
+usage: /forget" RESET "\n\
+erase oldest chat message from context window. if you run out of context\n\
+window, then this command can help you free up space. the oldest message\n\
+excludes the original system prompt, with is preserved. this command may\n\
+be run multiple times to erase multiple messages. there's also the /undo\n\
+command which deletes the most recent chat message instead.\n\
 ");
     } else {
         fprintf(stderr, BRIGHT_RED "%s: unknown command" RESET "\n", args[1].c_str());

@@ -15,8 +15,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#include "xterm.h"
 
-bool is_rgb_terminal(void);
-int print_image(int, const char *, int);
-int rgb2xterm256(int);
+#include <cosmo.h>
+#include <stdlib.h>
+#include <string.h>
+
+/**
+ * Detect if terminal supports 24-bit color.
+ */
+bool is_rgb_terminal(void) {
+
+    if (IsWindows())
+        return true;
+
+    const char *colorterm = getenv("COLORTERM");
+    if (colorterm && (!strcasecmp(colorterm, "truecolor") || //
+                      !strcasecmp(colorterm, "24bit"))) {
+        return true;
+    }
+
+    const char *term = getenv("TERM");
+    if (term && (strstr(term, "24bit") || //
+                 strstr(term, "truecolor") || //
+                 strstr(term, "iterm") || //
+                 strstr(term, "kitty") || //
+                 strstr(term, "wezterm"))) {
+        return true;
+    }
+
+    return false;
+}

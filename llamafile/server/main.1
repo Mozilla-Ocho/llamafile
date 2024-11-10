@@ -28,6 +28,8 @@ Path of GGUF model weights. Each server process is currently limited to
 serving only one model. If you need to host multiple models, then it's
 recommended that you run multiple instances of llamafiler behind a
 reverse proxy such as NGINX or Redbean.
+.It Fl mm Ar FNAME , Fl Fl mmproj Ar FNAME
+Path of vision model weights.
 .It Fl l Ar HOSTPORT , Fl Fl listen Ar HOSTPORT
 Specifies the local [HOST:]PORT on which the HTTP server should listen.
 By default this is 0.0.0.0:8080 which means llamafiler will bind to port

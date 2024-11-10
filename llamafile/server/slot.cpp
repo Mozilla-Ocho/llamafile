@@ -85,8 +85,8 @@ Slot::start()
     cparams.yarn_orig_ctx = 0;
     cparams.defrag_thold = -1;
     cparams.offload_kqv = true;
-    cparams.type_k = X86_HAVE(AVX512_BF16) ? GGML_TYPE_BF16 : GGML_TYPE_F16;
-    cparams.type_v = X86_HAVE(AVX512_BF16) ? GGML_TYPE_BF16 : GGML_TYPE_F16;
+    cparams.type_k = GGML_TYPE_F16;
+    cparams.type_v = GGML_TYPE_F16;
     cparams.flash_attn = FLAG_flash_attn;
     system_fingerprint_ = generate_system_fingerprint(&cparams);
     if (!(ctx_ = llama_new_context_with_model(model_, cparams)))

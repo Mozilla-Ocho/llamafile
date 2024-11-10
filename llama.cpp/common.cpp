@@ -168,6 +168,8 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
 
     FLAGS_READY = true;
     params.n_gpu_layers = llamafile_gpu_layers(params.n_gpu_layers);
+    FLAG_threads = params.n_threads; // [jart]
+    FLAG_threads_batch = params.n_threads_batch; // [jart]
 
     return true;
 }
@@ -275,7 +277,6 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         if (params.n_threads <= 0) {
             params.n_threads = MIN(cpu_get_num_math(), 20); // [jart]
         }
-        FLAG_threads = params.n_threads; // [jart]
         return true;
     }
     if (arg == "-tb" || arg == "--threads-batch") {
@@ -284,7 +285,6 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         if (params.n_threads_batch <= 0) {
             params.n_threads_batch = cpu_get_num_math(); // [jart]
         }
-        FLAG_threads_batch = params.n_threads_batch; // [jart]
         return true;
     }
     if (arg == "-td" || arg == "--threads-draft") {
@@ -691,9 +691,10 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         params.control_vector_layer_end = std::stoi(argv[i]);
         return true;
     }
-    if (arg == "--mmproj") {
+    if (arg == "-mm" || arg == "--mmproj") { // [jart]
         CHECK_ARG
         params.mmproj = argv[i];
+        FLAG_mmproj = argv[i]; // [jart]
         return true;
     }
     if (arg == "--image") {

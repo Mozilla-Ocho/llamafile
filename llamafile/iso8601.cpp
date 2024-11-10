@@ -15,8 +15,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#include "string.h"
 
-bool is_rgb_terminal(void);
-int print_image(int, const char *, int);
-int rgb2xterm256(int);
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <time.h>
+
+namespace lf {
+
+/**
+ * Turns timestamp into string.
+ */
+std::string iso8601(struct timespec ts) {
+    struct tm tm;
+    if (!localtime_r(&ts.tv_sec, &tm))
+        if (!gmtime_r(&ts.tv_sec, &tm))
+            abort();
+    char res[256];
+    char *ptr = res;
+    char *end = res + sizeof(res);
+    ptr += strftime(ptr, end - ptr, "%Y-%m-%d %H:%M:%S", &tm);
+    ptr += snprintf(ptr, end - ptr, ".%09ld", ts.tv_nsec);
+    ptr += strftime(ptr, end - ptr, "%z %Z", &tm);
+    npassert(ptr + 1 <= end);
+    return res;
+}
+
+} // namespace lf

@@ -23,6 +23,7 @@ extern bool FLAG_unsecure;
 extern const char *FLAG_file;
 extern const char *FLAG_ip_header;
 extern const char *FLAG_listen;
+extern const char *FLAG_mmproj;
 extern const char *FLAG_model;
 extern const char *FLAG_prompt;
 extern const char *FLAG_url_prefix;

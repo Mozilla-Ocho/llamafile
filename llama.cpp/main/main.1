@@ -147,7 +147,33 @@ flag:
 .Pp
 Default: empty
 .It Fl n Ar N , Fl Fl n-predict Ar N
-Number of tokens to predict.
+Sets number of tokens to predict when generating text.
+.Pp
+This option controls the number of tokens the model generates in
+response to the input prompt. By adjusting this value, you can influence
+the length of the generated text. A higher value will result in longer
+text, while a lower value will produce shorter text.
+.Pp
+A value of -1 will enable infinite text generation, even though we have
+a finite context window. When the context window is full, some of the
+earlier tokens (half of the tokens after
+.Fl Fl n-keep )
+will be discarded. The context must then be re-evaluated before
+generation can resume. On large models and/or large context windows,
+this will result in significant pause in output.
+.Pp
+If the pause is undesirable, a value of -2 will stop generation
+immediately when the context is filled.
+.Pp
+It is important to note that the generated text may be shorter than the
+specified number of tokens if an End-of-Sequence (EOS) token or a
+reverse prompt is encountered. In interactive mode text generation will
+pause and control will be returned to the user. In non-interactive mode,
+the program will end. In both cases, the text generation may stop before
+reaching the specified `n-predict` value. If you want the model to keep
+going without ever producing End-of-Sequence on its own, you can use the
+.Fl Fl ignore-eos
+parameter.
 .Pp
 .Bl -dash -compact
 .It
@@ -164,56 +190,91 @@ mode, this value sets a hard limit on how long your conversation can be.
 The default is 8192 tokens. If this value is zero, then it'll be set to
 the maximum context size the model allows.
 .It Fl b Ar N , Fl Fl batch-size Ar N
-Batch size for prompt processing.
+Set batch size for prompt processing.
 .Pp
 Default: 2048
 .It Fl Fl top-k Ar N
-Top-k sampling.
+Limits next token selection to K most probable tokens.
 .Pp
-.Bl -dash -compact
-.It
-0 = disabled
-.El
+Top-k sampling is a text generation method that selects the next token
+only from the top k most likely tokens predicted by the model. It helps
+reduce the risk of generating low-probability or nonsensical tokens, but
+it may also limit the diversity of the output. A higher value for top-k
+(e.g., 100) will consider more tokens and lead to more diverse text,
+while a lower value (e.g., 10) will focus on the most probable tokens
+and generate more conservative text.
 .Pp
 Default: 40
 .It Fl Fl top-p Ar N
-Top-p sampling.
+Limits next token selection to a subset of tokens with a cumulative
+probability above a threshold P.
 .Pp
-.Bl -dash -compact
-.It
-1.0 = disabled
-.El
+Top-p sampling, also known as nucleus sampling, is another text
+generation method that selects the next token from a subset of tokens
+that together have a cumulative probability of at least p. This method
+provides a balance between diversity and quality by considering both the
+probabilities of tokens and the number of tokens to sample from. A
+higher value for top-p (e.g., 0.95) will lead to more diverse text,
+while a lower value (e.g., 0.5) will generate more focused and
+conservative text.
 .Pp
 Default: 0.9
 .It Fl Fl min-p Ar N
-Min-p sampling.
+Sets minimum base probability threshold for token selection.
 .Pp
-.Bl -dash -compact
-.It
-0.0 = disabled
-.El
+The Min-P sampling method was designed as an alternative to Top-P, and
+aims to ensure a balance of quality and variety. The parameter p
+represents the minimum probability for a token to be considered,
+relative to the probability of the most likely token. For example, with
+p=0.05 and the most likely token having a probability of 0.9, logits
+with a value less than 0.045 are filtered out.
 .Pp
-Default: 0.1
+Default: 0.05
 .It Fl Fl tfs Ar N
-Tail free sampling, parameter z.
+Enables tail free sampling with parameter z.
 .Pp
-.Bl -dash -compact
-.It
-1.0 = disabled
-.El
+Tail free sampling (TFS) is a text generation technique that aims to
+reduce the impact of less likely tokens, which may be less relevant,
+less coherent, or nonsensical, on the output. Similar to Top-P it tries
+to determine the bulk of the most likely tokens dynamically. But TFS
+filters out logits based on the second derivative of their
+probabilities. Adding tokens is stopped after the sum of the second
+derivatives reaches the parameter z. In short: TFS looks how quickly the
+probabilities of the tokens decrease and cuts off the tail of unlikely
+tokens using the parameter z. Typical values for z are in the range of
+0.9 to 0.95. A value of 1.0 would include all tokens, and thus disables
+the effect of TFS.
 .Pp
-Default: 1.0
+Default: 1.0 (which means disabled)
 .It Fl Fl typical Ar N
-Locally typical sampling, parameter p.
+Enables locally typical sampling with parameter p.
 .Pp
-.Bl -dash -compact
-.It
-1.0 = disabled
-.El
+Locally typical sampling promotes the generation of contextually
+coherent and diverse text by sampling tokens that are typical or
+expected based on the surrounding context. By setting the parameter p
+between 0 and 1, you can control the balance between producing text that
+is locally coherent and diverse. A value closer to 1 will promote more
+contextually coherent tokens, while a value closer to 0 will promote
+more diverse tokens. A value equal to 1 disables locally typical
+sampling.
 .Pp
-Default: 1.0
+Default: 1.0 (which means disabled)
+.It Fl Fl repeat-penalty Ar N
+Controls repetition of token sequences in generated text.
+.Pp
+This can help prevent the model from generating repetitive or monotonous
+text. A higher value (e.g., 1.5) will penalize repetitions more
+strongly, while a lower value (e.g., 0.9) will be more lenient.
+.Pp
+Default: 1.1
 .It Fl Fl repeat-last-n Ar N
-Last n tokens to consider for penalize.
+Last n tokens to consider for penalizing repetition.
+.Pp
+This controls the number of tokens in the history to consider for
+penalizing repetition. A larger value will look further back in the
+generated text to prevent repetitions, while a smaller value will only
+consider recent tokens. A value of 0 disables the penalty, and a value
+of -1 sets the number of tokens considered equal to the context size.
 .Pp
 .Bl -dash -compact
 .It
@@ -223,15 +284,15 @@ Last n tokens to consider for penalize.
 .El
 .Pp
 Default: 64
-.It Fl Fl repeat-penalty Ar N
-Penalize repeat sequence of tokens.
+.It Fl Fl no-penalize-nl
+Disables penalization of newline tokens when applying the repeat
+penalty.
 .Pp
-.Bl -dash -compact
-.It
-1.0 = disabled
-.El
-.Pp
-Default: 1.1
+This option is particularly useful for generating chat conversations,
+dialogues, code, poetry, or any text where newline tokens play a
+significant role in structure and formatting. Disabling newline
+penalization helps maintain the natural flow and intended formatting in
+these specific use cases.
 .It Fl Fl presence-penalty Ar N
 Repeat alpha presence penalty.
 .Pp
@@ -251,7 +312,16 @@ Repeat alpha frequency penalty.
 .Pp
 Default: 0.0
 .It Fl Fl mirostat Ar N
-Use Mirostat sampling. Top K, Nucleus, Tail Free and Locally Typical samplers are ignored if used..
+Use Mirostat sampling.
+.Pp
+Mirostat is an algorithm that actively maintains the quality of
+generated text within a desired range during text generation. It aims to
+strike a balance between coherence and diversity, avoiding low-quality
+output caused by excessive repetition (boredom traps) or incoherence
+(confusion traps).
+.Pp
+Using Mirostat causes the Top K, Nucleus, Tail Free and Locally Typical
+samplers parameter to be ignored if used.
 .Pp
 .Bl -dash -compact
 .It
@@ -264,11 +334,22 @@ Use Mirostat sampling. Top K, Nucleus, Tail Free and Locally Typical samplers ar
 .Pp
 Default: 0
 .It Fl Fl mirostat-lr Ar N
-Mirostat learning rate, parameter eta.
+Sets the Mirostat learning rate (eta).
+.Pp
+The learning rate influences how quickly the algorithm responds to
+feedback from the generated text. A lower learning rate will result in
+slower adjustments, while a higher learning rate will make the algorithm
+more responsive.
 .Pp
 Default: 0.1
 .It Fl Fl mirostat-ent Ar N
-Mirostat target entropy, parameter tau.
+Sets the Mirostat target entropy (tau).
+.Pp
+This represents the desired perplexity value for the generated text.
+Adjusting the target entropy allows you to control the balance between
+coherence and diversity in the generated text. A lower value will result
+in more focused and coherent text, while a higher value will lead to
+more diverse and potentially less coherent text.
 .Pp
 Default: 5.0
 .It Fl l Ar TOKEN_ID(+/-)BIAS , Fl Fl logit-bias Ar TOKEN_ID(+/-)BIAS
@@ -352,10 +433,17 @@ Default: 32.0
 .It Fl Fl ignore-eos
 Ignore end of stream token and continue generating (implies
 .Fl Fl logit-bias Ar 2-inf )
-.It Fl Fl no-penalize-nl
-Do not penalize newline token.
 .It Fl Fl temp Ar N
-Temperature.
+Adjust the randomness of the generated text.
+.Pp
+Temperature is a hyperparameter that controls the randomness of the
+generated text. It affects the probability distribution of the model's
+output tokens. A higher temperature (e.g., 1.5) makes the output more
+random and creative, while a lower temperature (e.g., 0.5) makes the
+output more focused, deterministic, and conservative. The default value
+is 0.8, which provides a balance between randomness and determinism. At
+the extreme, a temperature of 0 will always pick the most likely next
+token, leading to identical outputs in each run.
 .Pp
 Default: 0.8
 .It Fl Fl logits-all
@@ -525,10 +613,6 @@ Run in chatml mode (use with ChatML-compatible models)
 Verbose print of the KV cache.
 .It Fl nkvo , Fl Fl no-kv-offload
 Disable KV offload.
-.It Fl ctk Ar TYPE , Fl Fl cache-type-k Ar TYPE
-KV cache data type for K.
-.It Fl ctv Ar TYPE , Fl Fl cache-type-v Ar TYPE
-KV cache data type for V.
 .It Fl gan Ar N , Fl Fl grp-attn-n Ar N
 Group-attention factor.
 .Pp

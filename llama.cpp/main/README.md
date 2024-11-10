@@ -83,30 +83,58 @@ The `main` program provides several ways to interact with the LLaMA models using
 
 ## Interaction
 
-The `main` program offers a seamless way to interact with LLaMA models, allowing users to engage in real-time conversations or provide instructions for specific tasks. The interactive mode can be triggered using various options, including `--interactive`, `--interactive-first`, and `--instruct`.
+The `main` program offers a seamless way to interact with LLaMA models,
+allowing users to engage in real-time conversations or provide
+instructions for specific tasks. The interactive mode can be triggered
+using various options, including `--interactive`, `--interactive-first`,
+and `--instruct`.
 
-In interactive mode, users can participate in text generation by injecting their input during the process. Users can press `Ctrl+C` at any time to interject and type their input, followed by pressing `Return` to submit it to the LLaMA model. To submit additional lines without finalizing input, users can end the current line with a backslash (`\`) and continue typing.
+In interactive mode, users can participate in text generation by
+injecting their input during the process. Users can press `Ctrl+C` at
+any time to interject and type their input, followed by pressing
+`Return` to submit it to the LLaMA model. To submit additional lines
+without finalizing input, users can end the current line with a
+backslash (`\`) and continue typing.
 
 ### Interaction Options
 
--   `-i, --interactive`: Run the program in interactive mode, allowing users to engage in real-time conversations or provide specific instructions to the model.
--   `--interactive-first`: Run the program in interactive mode and immediately wait for user input before starting the text generation.
--   `-ins, --instruct`: Run the program in instruction mode, which is specifically designed to work with Alpaca models that excel in completing tasks based on user instructions.
--   `--color`: Enable colorized output to differentiate visually distinguishing between prompts, user input, and generated text.
+-   `-i, --interactive`: Run the program in interactive mode, allowing
+    users to engage in real-time conversations or provide specific
+    instructions to the model.
+-   `--interactive-first`: Run the program in interactive mode and
+    immediately wait for user input before starting the text generation.
+-   `-ins, --instruct`: Run the program in instruction mode, which is
+    specifically designed to work with Alpaca models that excel in
+    completing tasks based on user instructions.
+-   `--color`: Enable colorized output to differentiate visually
+    distinguishing between prompts, user input, and generated text.
 
-By understanding and utilizing these interaction options, you can create engaging and dynamic experiences with the LLaMA models, tailoring the text generation process to your specific needs.
+By understanding and utilizing these interaction options, you can create
+engaging and dynamic experiences with the LLaMA models, tailoring the
+text generation process to your specific needs.
 
 ### Reverse Prompts
 
-Reverse prompts are a powerful way to create a chat-like experience with a LLaMA model by pausing the text generation when specific text strings are encountered:
+Reverse prompts are a powerful way to create a chat-like experience with
+a LLaMA model by pausing the text generation when specific text strings
+are encountered:
 
--   `-r PROMPT, --reverse-prompt PROMPT`: Specify one or multiple reverse prompts to pause text generation and switch to interactive mode. For example, `-r "User:"` can be used to jump back into the conversation whenever it's the user's turn to speak. This helps create a more interactive and conversational experience. However, the reverse prompt doesn't work when it ends with a space.
+-   `-r PROMPT, --reverse-prompt PROMPT`: Specify one or multiple
+    reverse prompts to pause text generation and switch to interactive
+    mode. For example, `-r "User:"` can be used to jump back into the
+    conversation whenever it's the user's turn to speak. This helps
+    create a more interactive and conversational experience. However,
+    the reverse prompt doesn't work when it ends with a space.
 
-To overcome this limitation, you can use the `--in-prefix` flag to add a space or any other characters after the reverse prompt.
+To overcome this limitation, you can use the `--in-prefix` flag to add a
+space or any other characters after the reverse prompt.
 
 ### In-Prefix
 
-The `--in-prefix` flag is used to add a prefix to your input, primarily, this is used to insert a space after the reverse prompt. Here's an example of how to use the `--in-prefix` flag in conjunction with the `--reverse-prompt` flag:
+The `--in-prefix` flag is used to add a prefix to your input, primarily,
+this is used to insert a space after the reverse prompt. Here's an
+example of how to use the `--in-prefix` flag in conjunction with the
+`--reverse-prompt` flag:
 
 ```sh
 ./main -r "User:" --in-prefix " "
@@ -114,7 +142,11 @@ The `--in-prefix` flag is used to add a prefix to your input, primarily, this is
 
 ### In-Suffix
 
-The `--in-suffix` flag is used to add a suffix after your input. This is useful for adding an "Assistant:" prompt after the user's input. It's added after the new-line character (`\n`) that's automatically added to the end of the user's input. Here's an example of how to use the `--in-suffix` flag in conjunction with the `--reverse-prompt` flag:
+The `--in-suffix` flag is used to add a suffix after your input. This is
+useful for adding an "Assistant:" prompt after the user's input. It's
+added after the new-line character (`\n`) that's automatically added to
+the end of the user's input. Here's an example of how to use the
+`--in-suffix` flag in conjunction with the `--reverse-prompt` flag:
 
 ```sh
 ./main -r "User:" --in-prefix " " --in-suffix "Assistant:"
@@ -122,13 +154,21 @@ The `--in-suffix` flag is used to add a suffix after your input. This is useful 
 
 ### Instruction Mode
 
-Instruction mode is particularly useful when working with Alpaca models, which are designed to follow user instructions for specific tasks:
+Instruction mode is particularly useful when working with Alpaca models,
+which are designed to follow user instructions for specific tasks:
 
--   `-ins, --instruct`: Enable instruction mode to leverage the capabilities of Alpaca models in completing tasks based on user-provided instructions.
+-   `-ins, --instruct`: Enable instruction mode to leverage the
+    capabilities of Alpaca models in completing tasks based on
+    user-provided instructions.
 
-Technical detail: the user's input is internally prefixed with the reverse prompt (or `### Instruction:` as the default), and followed by `### Response:` (except if you just press Return without any input, to keep generating a longer response).
+Technical detail: the user's input is internally prefixed with the
+reverse prompt (or `### Instruction:` as the default), and followed by
+`### Response:` (except if you just press Return without any input, to
+keep generating a longer response).
 
-By understanding and utilizing these interaction options, you can create engaging and dynamic experiences with the LLaMA models, tailoring the text generation process to your specific needs.
+By understanding and utilizing these interaction options, you can create
+engaging and dynamic experiences with the LLaMA models, tailoring the
+text generation process to your specific needs.
 
 ## Context Management
 
@@ -146,7 +186,11 @@ used by the LLaMA models during text generation. A larger context size
 helps the model to better comprehend and generate responses for longer
 input or conversations.
 
--   `-c N, --ctx-size N`: Set the size of the prompt context (default: 512). The LLaMA models were built with a context of 2048, which will yield the best results on longer input/inference. However, increasing the context size beyond 2048 may lead to unpredictable results.
+-   `-c N, --ctx-size N`: Set the size of the prompt context (default:
+    512). The LLaMA models were built with a context of 2048, which will
+    yield the best results on longer input/inference. However,
+    increasing the context size beyond 2048 may lead to unpredictable
+    results.
 
 ### Extended Context Size
 
@@ -156,7 +200,8 @@ For example, if the original pre-trained model have a context length
 That is a scaling factor of 8, and should work by setting the above
 `--ctx-size` to 32768 (32k) and `--rope-scale` to 8.
 
--   `--rope-scale N`: Where N is the linear scaling factor used by the fine-tuned model.
+-   `--rope-scale N`: Where N is the linear scaling factor used by the
+    fine-tuned model.
 
 ### Keep Prompt
 
@@ -169,7 +214,10 @@ instruction or conversation topic is maintained.
     value is set to 0 (meaning no tokens are kept). Use `-1` to retain
     all tokens from the initial prompt.
 
-By utilizing context management options like `--ctx-size` and `--keep`, you can maintain a more coherent and consistent interaction with the LLaMA models, ensuring that the generated text remains relevant to the original prompt or conversation.
+By utilizing context management options like `--ctx-size` and `--keep`,
+you can maintain a more coherent and consistent interaction with the
+LLaMA models, ensuring that the generated text remains relevant to the
+original prompt or conversation.
 
 ## Generation Flags
 
@@ -181,101 +229,210 @@ best settings for your specific use case.
 
 ### Number of Tokens to Predict
 
--   `-n N, --n-predict N`: Set the number of tokens to predict when generating text (default: 128, -1 = infinity, -2 = until context filled)
+-   `-n N, --n-predict N`: Set the number of tokens to predict when
+    generating text (default: 128, -1 = infinity, -2 = until context
+    filled)
 
-The `--n-predict` option controls the number of tokens the model generates in response to the input prompt. By adjusting this value, you can influence the length of the generated text. A higher value will result in longer text, while a lower value will produce shorter text.
+The `--n-predict` option controls the number of tokens the model
+generates in response to the input prompt. By adjusting this value, you
+can influence the length of the generated text. A higher value will
+result in longer text, while a lower value will produce shorter text.
 
-A value of -1 will enable infinite text generation, even though we have a finite context window. When the context window is full, some of the earlier tokens (half of the tokens after `--n-keep`) will be discarded. The context must then be re-evaluated before generation can resume. On large models and/or large context windows, this will result in significant pause in output.
+A value of -1 will enable infinite text generation, even though we have
+a finite context window. When the context window is full, some of the
+earlier tokens (half of the tokens after `--n-keep`) will be discarded.
+The context must then be re-evaluated before generation can resume. On
+large models and/or large context windows, this will result in
+significant pause in output.
 
-If the pause is undesirable, a value of -2 will stop generation immediately when the context is filled.
+If the pause is undesirable, a value of -2 will stop generation
+immediately when the context is filled.
 
-It is important to note that the generated text may be shorter than the specified number of tokens if an End-of-Sequence (EOS) token or a reverse prompt is encountered. In interactive mode text generation will pause and control will be returned to the user. In non-interactive mode, the program will end. In both cases, the text generation may stop before reaching the specified `n-predict` value. If you want the model to keep going without ever producing End-of-Sequence on its own, you can use the `--ignore-eos` parameter.
+It is important to note that the generated text may be shorter than the
+specified number of tokens if an End-of-Sequence (EOS) token or a
+reverse prompt is encountered. In interactive mode text generation will
+pause and control will be returned to the user. In non-interactive mode,
+the program will end. In both cases, the text generation may stop before
+reaching the specified `n-predict` value. If you want the model to keep
+going without ever producing End-of-Sequence on its own, you can use the
+`--ignore-eos` parameter.
 
 ### Temperature
 
 -   `--temp N`: Adjust the randomness of the generated text (default: 0.8).
 
-Temperature is a hyperparameter that controls the randomness of the generated text. It affects the probability distribution of the model's output tokens. A higher temperature (e.g., 1.5) makes the output more random and creative, while a lower temperature (e.g., 0.5) makes the output more focused, deterministic, and conservative. The default value is 0.8, which provides a balance between randomness and determinism. At the extreme, a temperature of 0 will always pick the most likely next token, leading to identical outputs in each run.
+Temperature is a hyperparameter that controls the randomness of the
+generated text. It affects the probability distribution of the model's
+output tokens. A higher temperature (e.g., 1.5) makes the output more
+random and creative, while a lower temperature (e.g., 0.5) makes the
+output more focused, deterministic, and conservative. The default value
+is 0.8, which provides a balance between randomness and determinism. At
+the extreme, a temperature of 0 will always pick the most likely next
+token, leading to identical outputs in each run.
 
 Example usage: `--temp 0.5`
 
 ### Repeat Penalty
 
--   `--repeat-penalty N`: Control the repetition of token sequences in the generated text (default: 1.1).
--   `--repeat-last-n N`: Last n tokens to consider for penalizing repetition (default: 64, 0 = disabled, -1 = ctx-size).
--   `--no-penalize-nl`: Disable penalization for newline tokens when applying the repeat penalty.
+-   `--repeat-penalty N`: Control the repetition of token sequences in
+    the generated text (default: 1.1).
+-   `--repeat-last-n N`: Last n tokens to consider for penalizing
+    repetition (default: 64, 0 = disabled, -1 = ctx-size).
+-   `--no-penalize-nl`: Disable penalization for newline tokens when
+    applying the repeat penalty.
 
-The `repeat-penalty` option helps prevent the model from generating repetitive or monotonous text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. The default value is 1.1.
+The `repeat-penalty` option helps prevent the model from generating
+repetitive or monotonous text. A higher value (e.g., 1.5) will penalize
+repetitions more strongly, while a lower value (e.g., 0.9) will be more
+lenient. The default value is 1.1.
 
-The `repeat-last-n` option controls the number of tokens in the history to consider for penalizing repetition. A larger value will look further back in the generated text to prevent repetitions, while a smaller value will only consider recent tokens. A value of 0 disables the penalty, and a value of -1 sets the number of tokens considered equal to the context size (`ctx-size`).
+The `repeat-last-n` option controls the number of tokens in the history
+to consider for penalizing repetition. A larger value will look further
+back in the generated text to prevent repetitions, while a smaller value
+will only consider recent tokens. A value of 0 disables the penalty, and
+a value of -1 sets the number of tokens considered equal to the context
+size (`ctx-size`).
 
-Use the `--no-penalize-nl` option to disable newline penalization when applying the repeat penalty. This option is particularly useful for generating chat conversations, dialogues, code, poetry, or any text where newline tokens play a significant role in structure and formatting. Disabling newline penalization helps maintain the natural flow and intended formatting in these specific use cases.
+Use the `--no-penalize-nl` option to disable newline penalization when
+applying the repeat penalty. This option is particularly useful for
+generating chat conversations, dialogues, code, poetry, or any text
+where newline tokens play a significant role in structure and
+formatting. Disabling newline penalization helps maintain the natural
+flow and intended formatting in these specific use cases.
 
 Example usage: `--repeat-penalty 1.15 --repeat-last-n 128 --no-penalize-nl`
 
 ### Top-K Sampling
 
--   `--top-k N`: Limit the next token selection to the K most probable tokens (default: 40).
+-   `--top-k N`: Limit the next token selection to the K most probable
+    tokens (default: 40).
 
-Top-k sampling is a text generation method that selects the next token only from the top k most likely tokens predicted by the model. It helps reduce the risk of generating low-probability or nonsensical tokens, but it may also limit the diversity of the output. A higher value for top-k (e.g., 100) will consider more tokens and lead to more diverse text, while a lower value (e.g., 10) will focus on the most probable tokens and generate more conservative text. The default value is 40.
+Top-k sampling is a text generation method that selects the next token
+only from the top k most likely tokens predicted by the model. It helps
+reduce the risk of generating low-probability or nonsensical tokens, but
+it may also limit the diversity of the output. A higher value for top-k
+(e.g., 100) will consider more tokens and lead to more diverse text,
+while a lower value (e.g., 10) will focus on the most probable tokens
+and generate more conservative text. The default value is 40.
 
 Example usage: `--top-k 30`
 
 ### Top-P Sampling
 
--   `--top-p N`: Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P (default: 0.9).
+-   `--top-p N`: Limit the next token selection to a subset of tokens
+    with a cumulative probability above a threshold P (default: 0.9).
 
-Top-p sampling, also known as nucleus sampling, is another text generation method that selects the next token from a subset of tokens that together have a cumulative probability of at least p. This method provides a balance between diversity and quality by considering both the probabilities of tokens and the number of tokens to sample from. A higher value for top-p (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. The default value is 0.9.
+Top-p sampling, also known as nucleus sampling, is another text
+generation method that selects the next token from a subset of tokens
+that together have a cumulative probability of at least p. This method
+provides a balance between diversity and quality by considering both the
+probabilities of tokens and the number of tokens to sample from. A
+higher value for top-p (e.g., 0.95) will lead to more diverse text,
+while a lower value (e.g., 0.5) will generate more focused and
+conservative text. The default value is 0.9.
 
 Example usage: `--top-p 0.95`
 
 ### Min P Sampling
 
--   `--min-p N`: Sets a minimum base probability threshold for token selection (default: 0.05).
+-   `--min-p N`: Sets a minimum base probability threshold for token
+    selection (default: 0.05).
 
-The Min-P sampling method was designed as an alternative to Top-P, and aims to ensure a balance of quality and variety. The parameter *p* represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with *p*=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.
+The Min-P sampling method was designed as an alternative to Top-P, and
+aims to ensure a balance of quality and variety. The parameter *p*
+represents the minimum probability for a token to be considered,
+relative to the probability of the most likely token. For example, with
+*p*=0.05 and the most likely token having a probability of 0.9, logits
+with a value less than 0.045 are filtered out.
 
 Example usage: `--min-p 0.05`
 
 ### Tail Free Sampling (TFS)
 
--   `--tfs N`: Enable tail free sampling with parameter z (default: 1.0, 1.0 = disabled).
+-   `--tfs N`: Enable tail free sampling with parameter z (default: 1.0,
+    1.0 = disabled).
 
-Tail free sampling (TFS) is a text generation technique that aims to reduce the impact of less likely tokens, which may be less relevant, less coherent, or nonsensical, on the output. Similar to Top-P it tries to determine the bulk of the most likely tokens dynamically. But TFS filters out logits based on the second derivative of their probabilities. Adding tokens is stopped after the sum of the second derivatives reaches the parameter z. In short: TFS looks how quickly the probabilities of the tokens decrease and cuts off the tail of unlikely tokens using the parameter z. Typical values for z are in the range of 0.9 to 0.95. A value of 1.0 would include all tokens, and thus disables the effect of TFS.
+Tail free sampling (TFS) is a text generation technique that aims to
+reduce the impact of less likely tokens, which may be less relevant,
+less coherent, or nonsensical, on the output. Similar to Top-P it tries
+to determine the bulk of the most likely tokens dynamically. But TFS
+filters out logits based on the second derivative of their
+probabilities. Adding tokens is stopped after the sum of the second
+derivatives reaches the parameter z. In short: TFS looks how quickly the
+probabilities of the tokens decrease and cuts off the tail of unlikely
+tokens using the parameter z. Typical values for z are in the range of
+0.9 to 0.95. A value of 1.0 would include all tokens, and thus disables
+the effect of TFS.
 
 Example usage: `--tfs 0.95`
 
 ### Locally Typical Sampling
 
--   `--typical N`: Enable locally typical sampling with parameter p (default: 1.0, 1.0 = disabled).
+-   `--typical N`: Enable locally typical sampling with parameter p
+    (default: 1.0, 1.0 = disabled).
 
-Locally typical sampling promotes the generation of contextually coherent and diverse text by sampling tokens that are typical or expected based on the surrounding context. By setting the parameter p between 0 and 1, you can control the balance between producing text that is locally coherent and diverse. A value closer to 1 will promote more contextually coherent tokens, while a value closer to 0 will promote more diverse tokens. A value equal to 1 disables locally typical sampling.
+Locally typical sampling promotes the generation of contextually
+coherent and diverse text by sampling tokens that are typical or
+expected based on the surrounding context. By setting the parameter p
+between 0 and 1, you can control the balance between producing text that
+is locally coherent and diverse. A value closer to 1 will promote more
+contextually coherent tokens, while a value closer to 0 will promote
+more diverse tokens. A value equal to 1 disables locally typical
+sampling.
 
 Example usage: `--typical 0.9`
 
 ### Mirostat Sampling
 
--   `--mirostat N`: Enable Mirostat sampling, controlling perplexity during text generation (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0).
--   `--mirostat-lr N`: Set the Mirostat learning rate, parameter eta (default: 0.1).
--   `--mirostat-ent N`: Set the Mirostat target entropy, parameter tau (default: 5.0).
+-   `--mirostat N`: Enable Mirostat sampling, controlling perplexity
+    during text generation (default: 0, 0 = disabled, 1 = Mirostat, 2 =
+    Mirostat 2.0).
+-   `--mirostat-lr N`: Set the Mirostat learning rate, parameter eta
+    (default: 0.1).
+-   `--mirostat-ent N`: Set the Mirostat target entropy, parameter tau
+    (default: 5.0).
 
-Mirostat is an algorithm that actively maintains the quality of generated text within a desired range during text generation. It aims to strike a balance between coherence and diversity, avoiding low-quality output caused by excessive repetition (boredom traps) or incoherence (confusion traps).
+Mirostat is an algorithm that actively maintains the quality of
+generated text within a desired range during text generation. It aims to
+strike a balance between coherence and diversity, avoiding low-quality
+output caused by excessive repetition (boredom traps) or incoherence
+(confusion traps).
 
-The `--mirostat-lr` option sets the Mirostat learning rate (eta). The learning rate influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive. The default value is `0.1`.
+The `--mirostat-lr` option sets the Mirostat learning rate (eta). The
+learning rate influences how quickly the algorithm responds to feedback
+from the generated text. A lower learning rate will result in slower
+adjustments, while a higher learning rate will make the algorithm more
+responsive. The default value is `0.1`.
 
-The `--mirostat-ent` option sets the Mirostat target entropy (tau), which represents the desired perplexity value for the generated text. Adjusting the target entropy allows you to control the balance between coherence and diversity in the generated text. A lower value will result in more focused and coherent text, while a higher value will lead to more diverse and potentially less coherent text. The default value is `5.0`.
+The `--mirostat-ent` option sets the Mirostat target entropy (tau),
+which represents the desired perplexity value for the generated text.
+Adjusting the target entropy allows you to control the balance between
+coherence and diversity in the generated text. A lower value will result
+in more focused and coherent text, while a higher value will lead to
+more diverse and potentially less coherent text. The default value is
+`5.0`.
 
 Example usage: `--mirostat 2 --mirostat-lr 0.05 --mirostat-ent 3.0`
 
 ### Logit Bias
 
--   `-l TOKEN_ID(+/-)BIAS, --logit-bias TOKEN_ID(+/-)BIAS`: Modify the likelihood of a token appearing in the generated text completion.
+-   `-l TOKEN_ID(+/-)BIAS, --logit-bias TOKEN_ID(+/-)BIAS`: Modify the
+    likelihood of a token appearing in the generated text completion.
 
-The logit bias option allows you to manually adjust the likelihood of specific tokens appearing in the generated text. By providing a token ID and a positive or negative bias value, you can increase or decrease the probability of that token being generated.
+The logit bias option allows you to manually adjust the likelihood of
+specific tokens appearing in the generated text. By providing a token ID
+and a positive or negative bias value, you can increase or decrease the
+probability of that token being generated.
 
-For example, use `--logit-bias 15043+1` to increase the likelihood of the token 'Hello', or `--logit-bias 15043-1` to decrease its likelihood. Using a value of negative infinity, `--logit-bias 15043-inf` ensures that the token `Hello` is never produced.
+For example, use `--logit-bias 15043+1` to increase the likelihood of
+the token 'Hello', or `--logit-bias 15043-1` to decrease its likelihood.
+Using a value of negative infinity, `--logit-bias 15043-inf` ensures
+that the token `Hello` is never produced.
 
-A more practical use case might be to prevent the generation of `\code{begin}` and `\code{end}` by setting the `\` token (29905) to negative infinity with `-l 29905-inf`. (This is due to the prevalence of LaTeX codes that show up in LLaMA model inference.)
+A more practical use case might be to prevent the generation of
+`\code{begin}` and `\code{end}` by setting the `\` token (29905) to
+negative infinity with `-l 29905-inf`. (This is due to the prevalence of
+LaTeX codes that show up in LLaMA model inference.)
 
 Example usage: `--logit-bias 29905-inf`
 
@@ -287,7 +444,10 @@ The RNG seed is used to initialize the random number generator that influences t
 
 ## Performance Tuning and Memory Options
 
-These options help improve the performance and memory usage of the LLaMA models. By adjusting these settings, you can fine-tune the model's behavior to better suit your system's capabilities and achieve optimal performance for your specific use case.
+These options help improve the performance and memory usage of the LLaMA
+models. By adjusting these settings, you can fine-tune the model's
+behavior to better suit your system's capabilities and achieve optimal
+performance for your specific use case.
 
 ### Number of Threads
 
@@ -312,7 +472,11 @@ These options help improve the performance and memory usage of the LLaMA models.
 
 ### Batch Size
 
--   `-b N, --batch-size N`: Set the batch size for prompt processing (default: 512). This large batch size benefits users who have BLAS installed and enabled it during the build. If you don't have BLAS enabled ("BLAS=0"), you can use a smaller number, such as 8, to see the prompt progress as it's evaluated in some situations.
+-   `-b N, --batch-size N`: Set the batch size for prompt processing
+    (default: 512). This large batch size benefits users who have BLAS
+    installed and enabled it during the build. If you don't have BLAS
+    enabled ("BLAS=0"), you can use a smaller number, such as 8, to see
+    the prompt progress as it's evaluated in some situations.
 
 ### Prompt Caching
 

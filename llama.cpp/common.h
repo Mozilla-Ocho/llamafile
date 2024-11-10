@@ -194,8 +194,9 @@ struct gpt_params {
     bool warmup            = true;  // warmup run
     bool check_tensors     = false; // validate tensor data
 
-    std::string cache_type_k = X86_HAVE(AVX512_BF16) ? "bf16" : "f16"; // KV cache data type for the K [jart]
-    std::string cache_type_v = X86_HAVE(AVX512_BF16) ? "bf16" : "f16"; // KV cache data type for the V [jart]
+    // [jart] warning: rope only supports f32 and f16
+    std::string cache_type_k = "f16"; // KV cache data type for the K
+    std::string cache_type_v = "f16"; // KV cache data type for the V
 
     // multimodal models (see examples/llava)
     std::string mmproj = "";        // path to multimodal projector
