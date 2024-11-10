@@ -2029,6 +2029,10 @@ static ssize_t bestlineCompleteLine(struct bestlineState *ls, char *seq, int siz
                 ls->len = saved.len;
                 ls->pos = saved.pos;
                 ls->buf = saved.buf;
+                if (lc.len == 1) {
+                    nread = 0;
+                    goto FinishQuickly;
+                }
             } else {
                 bestlineRefreshLine(ls);
             }
@@ -2045,6 +2049,7 @@ static ssize_t bestlineCompleteLine(struct bestlineState *ls, char *seq, int siz
                 break;
             default:
                 if (i < lc.len) {
+                FinishQuickly:
                     n = strlen(lc.cvec[i]);
                     if (bestlineGrow(ls, n + 1)) {
                         memcpy(ls->buf, lc.cvec[i], n + 1);
