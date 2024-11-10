@@ -1114,15 +1114,19 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
         }
     }
 
-#ifdef GGML_USE_CUDA
-    new_clip->backend = ggml_backend_cuda_init(0);
-    LOG_TEE("%s: CLIP using CUDA backend\n", __func__);
-#endif
+// #ifdef GGML_USE_CUDA
+    if (!new_clip->backend) { // [jart]
+        if ((new_clip->backend = ggml_backend_cuda_init(0)))
+            LOG_TEE("%s: CLIP using CUDA backend\n", __func__);
+    }
+// #endif
 
-#ifdef GGML_USE_METAL
-    new_clip->backend = ggml_backend_metal_init();
-    LOG_TEE("%s: CLIP using Metal backend\n", __func__);
-#endif
+// #ifdef GGML_USE_METAL
+    if (!new_clip->backend) { // [jart]
+        if ((new_clip->backend = ggml_backend_metal_init()))
+            LOG_TEE("%s: CLIP using Metal backend\n", __func__);
+    }
+// #endif
 
 #ifdef GGML_USE_CANN
     new_clip->backend = ggml_backend_cann_init(0);
