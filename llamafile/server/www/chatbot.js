@@ -18,7 +18,6 @@ const API_KEY = "your-api-key-here";
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
-const typingIndicator = document.getElementById("typing-indicator");
 const stopButton = document.getElementById("stop-button");
 
 let abortController = null;
@@ -44,11 +43,7 @@ function createMessageElement(content, role) {
 }
 
 function scrollToBottom() {
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function setTypingIndicatorVisibility(visible) {
-  typingIndicator.style.display = visible ? "flex" : "none";
+  chatInput.scrollIntoView({behavior: "instant"});
 }
 
 function onChatInput() {
@@ -57,7 +52,6 @@ function onChatInput() {
 }
 
 function cleanupAfterMessage() {
-  setTypingIndicatorVisibility(false);
   chatMessages.scrollTop = chatMessages.scrollHeight;
   chatInput.disabled = false;
   sendButton.style.display = "inline-block";
@@ -144,9 +138,6 @@ async function sendMessage() {
   // update chat history
   chatHistory.push({ role: "user", content: message });
 
-  // show typing indicator
-  setTypingIndicatorVisibility(true);
-
   try {
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
@@ -190,6 +181,7 @@ chatMessages.innerHTML = "";
 for (let i = 0; i < chatHistory.length; i++) {
   chatMessages.appendChild(createMessageElement(chatHistory[i].content,
                                                 chatHistory[i].role));
+  scrollToBottom();
 }
 
 // setup events

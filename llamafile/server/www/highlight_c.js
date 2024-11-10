@@ -2028,7 +2028,7 @@ class HighlightC extends Highlighter {
           this.push('span', 'builtin');
           this.append(this.word);
           this.pop();
-        } else if (this.constants && this.constants(this.word)) {
+        } else if (this.constants && this.constants.has(this.word)) {
           this.push('span', 'constant');
           this.append(this.word);
           this.pop();

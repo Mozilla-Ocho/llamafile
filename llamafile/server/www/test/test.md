@@ -62,11 +62,15 @@ int main() {
    years old." << std::endl;`:** This line prints a message to the
    console. Let's break it down:
    - `std::cout` is the standard output stream object.
-   - `<<` is the insertion operator, used to send data to the output stream.
-   - `"Hello, world! My name is AI, and I am "` is a string literal that will be printed as is.
-   - `age` is the variable we declared earlier. Its value (25) will be inserted into the output stream.
+   - `<<` is the insertion operator, used to send data to the output
+     stream.
+   - `"Hello, world! My name is AI, and I am "` is a string literal that
+     will be printed as is.
+   - `age` is the variable we declared earlier. Its value (25) will be
+     inserted into the output stream.
    - `" years old."` is another string literal.
-   - `std::endl` inserts a newline character, moving the cursor to the next line for any subsequent output.
+   - `std::endl` inserts a newline character, moving the cursor to the
+     next line for any subsequent output.
 
 5. **`return 0;`:** This line indicates that the program executed
    successfully. Returning 0 from the `main` function is a convention in
@@ -161,3 +165,53 @@ part of the code.
 This program is a simple example of how to use variables, input/output
 operations, conditional statements, and loops in FORTRAN66. It
 demonstrates basic input/output operations and error handling.
+
+## Rubby
+
+```ruby
+# comment
+42
+"String with #{ :interpolation }"
+/regex$/
+$/
+[?😀, ?\ , ?', ?(] ?'a':'b'
+"%d %d %d"%[1,2,3]
+% 5 #
+
+/
+$$#$/
+/omix
+
+puts <<HERE<<<<THERE
+foo 42
+HERE
+bla 43
+THERE
+
+puts "This is #{<<HERE.strip} evil"
+incredibly
+HERE
+
+def `
+  `hello` / /regex/
+end
+
+"hi #$" there" a
+"hi #$abc there" a
+"hi #{hi} there" a
+/hi #$" there/ a
+/hi #$abc there/ a
+/hi #{hi} there/ a
+_=;"#$q"
+
+# Examples:
+%q(Don't worry)            # => "Don't worry"
+%Q(Today is #{Date.today}) # => "Today is 2024-11-08"
+%r{^/path/to/\w+}          # => /^\/path\/to\/\w+/
+%s(my_symbol)              # => :my_symbol
+%w(foo bar baz)            # => ["foo", "bar", "baz"]
+%W(foo #{1+1} baz)         # => ["foo", "2", "baz"]
+%x(ls -l)                  # Executes `ls -l` and returns output
+%i(foo bar baz)            # => [:foo, :bar, :baz]
+%I(foo#{1+1} bar baz)      # => [:foo2, :bar, :baz]
+```

@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+  overflow-y: auto;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.6;
@@ -17,14 +23,13 @@ p {
 }
 
 .chat-container {
-  max-width: 800px;
+  max-width: 960px;
   margin: 2rem auto;
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 4rem);
 }
 
 .chat-header {
@@ -248,37 +253,13 @@ ul li:first-child {
   display: block;
 }
 
-.typing-indicator {
-  display: none;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  color: #6c757d;
-}
-
-.typing-indicator span {
-  width: 4px;
-  height: 4px;
-  background: #6c757d;
-  border-radius: 50%;
-  display: inline-block;
-  animation: typing 1s infinite ease-in-out;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes typing {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-
 @media print {
+
+  html,
+  body {
+    height: auto !important;
+    overflow-y: visible;
+  }
 
   .noprint {
     display: none;
@@ -290,10 +271,14 @@ ul li:first-child {
 
   .chat-container {
     box-shadow: none;
+    height: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
   }
 
   .chat-header {
     border: none !important;
+    page-break-inside: avoid;
   }
 
   .chat-messages {

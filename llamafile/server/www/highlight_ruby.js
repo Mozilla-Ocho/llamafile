@@ -682,16 +682,19 @@ class HighlightRuby extends Highlighter {
         break;
 
       case HighlightRuby.PERCENT_STRING:
-        this.append(c);
         if (c == this.opener && this.opener != this.closer) {
+          this.append(c);
           ++this.level;
         } else if (c == '#') {
           this.state = HighlightRuby.PERCENT_HASH;
         } else if (c == this.closer) {
+          this.append(c);
           if (!--this.level) {
             this.pop();
             this.state = HighlightRuby.NORMAL;
           }
+        } else {
+          this.append(c);
         }
         break;
 
