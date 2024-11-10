@@ -17,7 +17,7 @@
 
 #include "chatbot.h"
 
-void on_help(const std::vector<std::string> &args) {
+void chatbot_help(const std::vector<std::string> &args) {
     if (args.size() == 1) {
         fprintf(stderr, "\
 " BOLD "available commands" RESET "\n\

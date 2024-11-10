@@ -489,8 +489,6 @@ How to split tensors across multiple GPUs, comma-separated list of
 proportions, e.g. 3,1
 .It Fl mg Ar i , Fl Fl main-gpu Ar i
 The GPU to use for scratch and small tensors.
-.It Fl nommq , Fl Fl no-mul-mat-q
-Use cuBLAS instead of custom mul_mat_q CUDA kernels. Not recommended since this is both slower and uses more VRAM.
 .It Fl Fl verbose-prompt
 Print prompt before generation.
 .It Fl Fl simple-io

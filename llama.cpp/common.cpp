@@ -225,6 +225,10 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         FLAG_ascii = true;
         return true;
     }
+    if (arg == "--nologo") {
+        FLAG_nologo = true;
+        return true;
+    }
     if (arg == "--precise") {
         FLAG_precise = true;
         return true;
@@ -260,6 +264,9 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         if (FLAG_gpu == LLAMAFILE_GPU_ERROR) {
             fprintf(stderr, "error: invalid --gpu flag value: %s\n", argv[i]);
             exit(1);
+        }
+        if (FLAG_gpu >= 0 && params.n_gpu_layers == -1) {
+            params.n_gpu_layers = 999;
         }
         return true;
     }

@@ -14,6 +14,7 @@ extern bool FLAG_log_disable;
 extern bool FLAG_mlock;
 extern bool FLAG_mmap;
 extern bool FLAG_nocompile;
+extern bool FLAG_nologo;
 extern bool FLAG_precise;
 extern bool FLAG_recompile;
 extern bool FLAG_tinyblas;

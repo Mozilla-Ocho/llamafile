@@ -25,7 +25,7 @@
 #include "llama.cpp/ggml.h"
 #include "stable-diffusion.h"
 
-#include "stb/stb_image_resize.h"
+#include "stb/stb_image_resize2.h"
 
 bool ends_with(const std::string& str, const std::string& ending) {
     if (str.length() >= ending.length()) {
@@ -286,9 +286,9 @@ sd_image_t* preprocess_id_image(sd_image_t* img) {
     // 1. do resize using stb_resize functions
 
     unsigned char* buf = (unsigned char*)malloc(sizeof(unsigned char) * 3 * size * size);
-    if (!stbir_resize_uint8(img->data, w, h, 0,
-                            buf, size, size, 0,
-                            c)) {
+    if (!stbir_resize_uint8_srgb(img->data, w, h, 0,
+                                 buf, size, size, 0,
+                                 (stbir_pixel_layout)c)) {
         fprintf(stderr, "%s: resize operation failed \n ", __func__);
         return resized;
     }

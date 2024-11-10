@@ -18,5 +18,4 @@
 #pragma once
 
 bool is_rgb_terminal(void);
-int print_image(int, const char *, int);
 int rgb2xterm256(int);

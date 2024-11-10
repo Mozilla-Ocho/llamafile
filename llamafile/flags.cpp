@@ -42,6 +42,7 @@ bool FLAG_log_disable = false;
 bool FLAG_mlock = false;
 bool FLAG_mmap = true;
 bool FLAG_nocompile = false;
+bool FLAG_nologo = false;
 bool FLAG_precise = false;
 bool FLAG_recompile = false;
 bool FLAG_tinyblas = false;
@@ -134,6 +135,19 @@ void llamafile_get_flags(int argc, char **argv) {
 
         if (!strcmp(flag, "-v") || !strcmp(flag, "--verbose")) {
             FLAG_verbose++;
+            continue;
+        }
+
+        //////////////////////////////////////////////////////////////////////
+        // chatbot flags
+
+        if (!strcmp(flag, "--ascii")) {
+            FLAG_ascii = true;
+            continue;
+        }
+
+        if (!strcmp(flag, "--nologo")) {
+            FLAG_nologo = true;
             continue;
         }
 

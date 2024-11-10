@@ -46,6 +46,15 @@ tensor. Experience indicates that it is better to not utilize the
 importance matrix when quantizing
 .Pa output.weight ,
 so this is set to false by default.
+.It Fl Fl chunks Ar N
+Max number of chunks to process.
+.Pp
+.Bl -dash -compact
+.It
+-1 = all
+.El
+.Pp
+Default: -1
 .El
 .Sh PROTIPS
 For faster computation, pass the

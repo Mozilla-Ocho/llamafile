@@ -104,6 +104,91 @@ this flag is supplied, then the
 and
 .Fl Fl image
 flags should also be supplied.
+.It Fl ngl Ar N , Fl Fl n-gpu-layers Ar N
+Enables GPU by specifying number of layers to store in VRAM.
+.Pp
+By default, llamafile runs in CPU mode. The only exception is Apple
+Metal, which is reliable enough to be enabled by default. So if you have
+an NVIDIA or AMD GPU in your system, then you need to pass this flag to
+enable GPU support. The simplest way to do this is to say:
+.Pp
+.Dl "llamafile -ngl 999 -m model.gguf"
+.Pp
+Which will cause llamafile to offload as many layers to the GPU as
+possible. If you get an out of memory error, then you may tune this to a
+smaller number, e.g. 10, to ask llamafile to use both CPU and GPU when
+running your model.
+.It Fl Fl gpu Ar GPU
+Specifies which brand of GPU should be used. Valid choices are:
+.Pp
+.Bl -dash
+.It
+.Ar AUTO :
+Use any GPU if possible, otherwise fall back to CPU inference
+.It
+.Ar APPLE :
+Use Apple Metal GPU. This is only available on MacOS ARM64. If Metal
+could not be used for any reason, then a fatal error will be raised.
+.It
+.Ar AMD :
+Use AMD GPUs. The AMD HIP ROCm SDK should be installed in which case we
+assume the HIP_PATH environment variable has been defined. The set of
+gfx microarchitectures needed to run on the host machine is determined
+automatically based on the output of the hipInfo command. On Windows,
+.Nm
+release binaries are distributed with a tinyBLAS DLL so it'll work out
+of the box without requiring the HIP SDK to be installed. However,
+tinyBLAS is slower than rocBLAS for batch and image processing, so it's
+recommended that the SDK be installed anyway. If an AMD GPU could not be
+used for any reason, then a fatal error will be raised.
+.It
+.Ar NVIDIA :
+Use NVIDIA GPUs. If an NVIDIA GPU could not be used for any reason, a
+fatal error will be raised. On Windows, NVIDIA GPU support will use our
+tinyBLAS library, since it works on stock Windows installs. However,
+tinyBLAS goes slower for batch and image processing. It's possible to
+use NVIDIA's closed-source cuBLAS library instead. To do that, both MSVC
+and CUDA need to be installed and the
+.Nm
+command should be run once from the x64 MSVC command prompt with the
+.Fl Fl recompile
+flag passed. The GGML library will then be compiled and saved to
+.Pa ~/.llamafile/
+so the special process only needs to happen a single time.
+.It
+.Ar DISABLE :
+Never use GPU and instead use CPU inference. This setting is implied by
+.Fl ngl Ar 0 .
+.El
+.Pp
+This flag is useful on systems that have multiple kinds of GPUs. For
+example, if you have two graphics cards in your computer, one being AMD
+and the other is NVIDIA, then you can use this flag to force llamafile
+to use a particular brand.
+.Pp
+This flag is also useful for preventing CPU fallback. For example, if
+you pass
+.Fl Fl gpu Ar metal
+and llamafile is running on a PC with an NVIDIA card, then the process
+will print an error and exit.
+.Pp
+The default behavior is
+.Ar AUTO
+however it should be noted that GPU support isn't enabled by default,
+since the
+.Fl ngl
+flag is normally used to enable GPU offloading. As a convenience, if the
+.Fl Fl gpu
+flag is explicitly passed on the command line, and it's set to
+.Ar AUTO ,
+.Ar AMD ,
+.Ar APPLE ,
+or
+.Ar NVIDIA ,
+but the
+.Fl ngl
+flag is not passed, then the number of GPU layers will be automatically
+set to 999.
 .It Fl s Ar SEED , Fl Fl seed Ar SEED
 Random Number Generator (RNG) seed. A random seed is used if this is
 less than zero.
@@ -117,72 +202,6 @@ Default: $(nproc)/2 max 20
 Number of threads to use during prompt processing.
 .Pp
 Default: $(nproc)/2
-.It Fl Fl in-prefix-bos
-Prefix BOS to user inputs, preceding the
-.Fl Fl in-prefix
-string.
-.It Fl Fl in-prefix Ar STRING
-This flag is used to add a prefix to your input, primarily, this is used
-to insert a space after the reverse prompt. Here's an example of how to
-use the
-.Fl Fl in-prefix
-flag in conjunction with the
-.Fl Fl reverse-prompt
-flag:
-.Pp
-.Dl "./main -r \[dq]User:\[dq] --in-prefix \[dq] \[dq]"
-.Pp
-Default: empty
-.It Fl Fl in-suffix Ar STRING
-This flag is used to add a suffix after your input. This is useful for
-adding an \[dq]Assistant:\[dq] prompt after the user's input. It's added
-after the new-line character (\[rs]n) that's automatically added to the
-end of the user's input. Here's an example of how to use the
-.Fl Fl in-suffix
-flag in conjunction with the
-.Fl Fl reverse-prompt
-flag:
-.Pp
-.Dl "./main -r \[dq]User:\[dq] --in-prefix \[dq] \[dq] --in-suffix \[dq]Assistant:\[dq]"
-.Pp
-Default: empty
-.It Fl n Ar N , Fl Fl n-predict Ar N
-Sets number of tokens to predict when generating text.
-.Pp
-This option controls the number of tokens the model generates in
-response to the input prompt. By adjusting this value, you can influence
-the length of the generated text. A higher value will result in longer
-text, while a lower value will produce shorter text.
-.Pp
-A value of -1 will enable infinite text generation, even though we have
-a finite context window. When the context window is full, some of the
-earlier tokens (half of the tokens after
-.Fl Fl n-keep )
-will be discarded. The context must then be re-evaluated before
-generation can resume. On large models and/or large context windows,
-this will result in significant pause in output.
-.Pp
-If the pause is undesirable, a value of -2 will stop generation
-immediately when the context is filled.
-.Pp
-It is important to note that the generated text may be shorter than the
-specified number of tokens if an End-of-Sequence (EOS) token or a
-reverse prompt is encountered. In interactive mode text generation will
-pause and control will be returned to the user. In non-interactive mode,
-the program will end. In both cases, the text generation may stop before
-reaching the specified `n-predict` value. If you want the model to keep
-going without ever producing End-of-Sequence on its own, you can use the
-.Fl Fl ignore-eos
-parameter.
-.Pp
-.Bl -dash -compact
-.It
--1 = infinity
-.It
--2 = until context filled
-.El
-.Pp
-Default: -1
 .It Fl c Ar N , Fl Fl ctx-size Ar N
 Sets the maximum context size, in tokens. In
 .Fl Fl chat
@@ -361,11 +380,6 @@ or
 .Fl Fl logit-bias Ar 15043-1
 to decrease likelihood of token
 .Ar ' Hello' .
-.It Fl md Ar FNAME , Fl Fl model-draft Ar FNAME
-Draft model for speculative decoding.
-.Pp
-Default:
-.Pa models/7B/ggml-model-f16.gguf
 .It Fl Fl cfg-negative-prompt Ar PROMPT
 Negative prompt to use for guidance..
 .Pp
@@ -430,9 +444,6 @@ Default: 1.0
 YaRN: low correction dim or beta.
 .Pp
 Default: 32.0
-.It Fl Fl ignore-eos
-Ignore end of stream token and continue generating (implies
-.Fl Fl logit-bias Ar 2-inf )
 .It Fl Fl temp Ar N
 Adjust the randomness of the generated text.
 .Pp
@@ -445,46 +456,11 @@ is 0.8, which provides a balance between randomness and determinism. At
 the extreme, a temperature of 0 will always pick the most likely next
 token, leading to identical outputs in each run.
 .Pp
-Default: 0.8
+Default: 0.8 in cli and server mode, and 0.0 in chat mode
 .It Fl Fl logits-all
 Return logits for all tokens in the batch.
 .Pp
 Default: disabled
-.It Fl Fl hellaswag
-Compute HellaSwag score over random tasks from datafile supplied with -f
-.It Fl Fl hellaswag-tasks Ar N
-Number of tasks to use when computing the HellaSwag score.
-.Pp
-Default: 400
-.It Fl Fl keep Ar N
-This flag allows users to retain the original prompt when the model runs
-out of context, ensuring a connection to the initial instruction or
-conversation topic is maintained, where
-.Ar N
-is the number of tokens from the initial prompt to retain when the model
-resets its internal context.
-.Pp
-.Bl -dash -compact
-.It
-0 = no tokens are kept from initial prompt
-.It
--1 = retain all tokens from initial prompt
-.El
-.Pp
-Default: 0
-.It Fl Fl draft Ar N
-Number of tokens to draft for speculative decoding.
-.Pp
-Default: 16
-.It Fl Fl chunks Ar N
-Max number of chunks to process.
-.Pp
-.Bl -dash -compact
-.It
--1 = all
-.El
-.Pp
-Default: -1
 .It Fl ns Ar N , Fl Fl sequences Ar N
 Number of sequences to decode.
 .Pp
@@ -516,53 +492,6 @@ and linked if possible. Otherwise,
 .Nm
 will skip any attempt to compile GPU support and simply fall back to
 using CPU inference.
-.It Fl Fl gpu Ar GPU
-Specifies which brand of GPU should be used. Valid choices are:
-.Pp
-.Bl -dash
-.It
-.Ar AUTO :
-Use any GPU if possible, otherwise fall back to CPU inference (default)
-.It
-.Ar APPLE :
-Use Apple Metal GPU. This is only available on MacOS ARM64. If Metal
-could not be used for any reason, then a fatal error will be raised.
-.It
-.Ar AMD :
-Use AMD GPUs. The AMD HIP ROCm SDK should be installed in which case we
-assume the HIP_PATH environment variable has been defined. The set of
-gfx microarchitectures needed to run on the host machine is determined
-automatically based on the output of the hipInfo command. On Windows,
-.Nm
-release binaries are distributed with a tinyBLAS DLL so it'll work out
-of the box without requiring the HIP SDK to be installed. However,
-tinyBLAS is slower than rocBLAS for batch and image processing, so it's
-recommended that the SDK be installed anyway. If an AMD GPU could not be
-used for any reason, then a fatal error will be raised.
-.It
-.Ar NVIDIA :
-Use NVIDIA GPUs. If an NVIDIA GPU could not be used for any reason, a
-fatal error will be raised. On Windows, NVIDIA GPU support will use our
-tinyBLAS library, since it works on stock Windows installs. However,
-tinyBLAS goes slower for batch and image processing. It's possible to
-use NVIDIA's closed-source cuBLAS library instead. To do that, both MSVC
-and CUDA need to be installed and the
-.Nm
-command should be run once from the x64 MSVC command prompt with the
-.Fl Fl recompile
-flag passed. The GGML library will then be compiled and saved to
-.Pa ~/.llamafile/
-so the special process only needs to happen a single time.
-.It
-.Ar DISABLE :
-Never use GPU and instead use CPU inference. This setting is implied by
-.Fl ngl Ar 0 .
-.El
-.Pp
-.It Fl ngl Ar N , Fl Fl n-gpu-layers Ar N
-Number of layers to store in VRAM.
-.It Fl ngld Ar N , Fl Fl n-gpu-layers-draft Ar N
-Number of layers to store in VRAM for the draft model.
 .It Fl sm Ar SPLIT_MODE , Fl Fl split-mode Ar SPLIT_MODE
 How to split the model across multiple GPUs, one of:
 .Bl -dash -compact
@@ -586,12 +515,8 @@ How to split tensors across multiple GPUs, comma-separated list of
 proportions, e.g. 3,1
 .It Fl mg Ar i , Fl Fl main-gpu Ar i
 The GPU to use for scratch and small tensors.
-.It Fl nommq , Fl Fl no-mul-mat-q
-Use cuBLAS instead of custom mul_mat_q CUDA kernels. Not recommended since this is both slower and uses more VRAM.
 .It Fl Fl verbose-prompt
 Print prompt before generation.
-.It Fl Fl simple-io
-Use basic IO for better compatibility in subprocesses and limited consoles.
 .It Fl Fl lora Ar FNAME
 Apply LoRA adapter (implies
 .Fl Fl no-mmap )
@@ -607,8 +532,6 @@ Samplers that will be used for generation in the order, separated by
 semicolon, for example: top_k;tfs;typical;top_p;min_p;temp
 .It Fl Fl samplers-seq
 Simplified sequence for samplers that will be used.
-.It Fl cml , Fl Fl chatml
-Run in chatml mode (use with ChatML-compatible models)
 .It Fl dkvc , Fl Fl dump-kv-cache
 Verbose print of the KV cache.
 .It Fl nkvo , Fl Fl no-kv-offload
@@ -623,14 +546,6 @@ Group-attention width.
 Default: 512
 .It Fl bf Ar FNAME , Fl Fl binary-file Ar FNAME
 Binary file containing multiple choice tasks.
-.It Fl Fl winogrande
-Compute Winogrande score over random tasks from datafile supplied by the
-.Fl f
-flag.
-.It Fl Fl winogrande-tasks Ar N
-Number of tasks to use when computing the Winogrande score.
-.Pp
-Default: 0
 .It Fl Fl multiple-choice
 Compute multiple choice score over random tasks from datafile supplied
 by the
@@ -666,6 +581,42 @@ cls
 .Pp
 The model default is used if unspecified.
 .El
+.Sh CHAT OPTIONS
+The following options may be specified when
+.Nm
+is running in
+.Fl Fl chat
+mode.
+.Bl -tag -width indent
+.It Fl p Ar STRING , Fl Fl prompt Ar STRING
+Specifies system prompt.
+.Pp
+The system prompt is used to give instructions to the LLM at the
+beginning of the conversation. For many model architectures, this is
+done under a special role. The system prompt also gets special treatment
+when managing the context window. For example, the /clear command will
+erase everything except the system prompt, and the /forget command will
+erase the oldest chat message that isn't the system prompt.
+.Pp
+For example:
+.Pp
+.Dl "llamafile --chat -m model.gguf -p \[dq]You are Mosaic's Godzilla.\[dq]"
+.Pp
+may be used to instruct your llamafile to roleplay as Mozilla.
+.It Fl f Ar FNAME , Fl Fl file Ar FNAME
+Uses content of file as system prompt.
+.It Fl Fl no-display-prompt , Fl Fl silent-prompt
+Suppress printing of system prompt at beginning of conversation.
+.It Fl Fl nologo
+Disables printing the llamafile logo during chatbot startup.
+.It Fl Fl ascii
+This flag may be used in
+.Fl Fl chat
+mode to print the llamafile logo in ASCII rather than UNICODE.
+.It Fl Fl verbose
+Enables verbose logger output in chatbot. This can be helpful for
+troubleshooting issues.
+.El
 .Sh CLI OPTIONS
 The following options may be specified when
 .Nm
@@ -673,12 +624,6 @@ is running in
 .Fl Fl cli
 mode.
 .Bl -tag -width indent
-.It Fl Fl ascii
-This flag may be used in
-.Fl Fl chat
-mode to print the llamafile logo in ASCII rather than UNICODE.
-.It Fl e , Fl Fl escape
-Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]\[dq], \[rs]\[rs])
 .It Fl p Ar STRING , Fl Fl prompt Ar STRING
 Prompt to start text generation. Your LLM works by auto-completing this
 text. For example:
@@ -698,6 +643,49 @@ In most cases, simply colons and newlines will work too:
 .Pp
 .It Fl f Ar FNAME , Fl Fl file Ar FNAME
 Prompt file to start generation.
+.It Fl n Ar N , Fl Fl n-predict Ar N
+Sets number of tokens to predict when generating text.
+.Pp
+This option controls the number of tokens the model generates in
+response to the input prompt. By adjusting this value, you can influence
+the length of the generated text. A higher value will result in longer
+text, while a lower value will produce shorter text.
+.Pp
+A value of -1 will enable infinite text generation, even though we have
+a finite context window. When the context window is full, some of the
+earlier tokens (half of the tokens after
+.Fl Fl n-keep )
+will be discarded. The context must then be re-evaluated before
+generation can resume. On large models and/or large context windows,
+this will result in significant pause in output.
+.Pp
+If the pause is undesirable, a value of -2 will stop generation
+immediately when the context is filled.
+.Pp
+It is important to note that the generated text may be shorter than the
+specified number of tokens if an End-of-Sequence (EOS) token or a
+reverse prompt is encountered. In interactive mode text generation will
+pause and control will be returned to the user. In non-interactive mode,
+the program will end. In both cases, the text generation may stop before
+reaching the specified `n-predict` value. If you want the model to keep
+going without ever producing End-of-Sequence on its own, you can use the
+.Fl Fl ignore-eos
+parameter.
+.Pp
+.Bl -dash -compact
+.It
+-1 = infinity
+.It
+-2 = until context filled
+.El
+.Pp
+Default: -1
+.It Fl Fl simple-io
+Use basic IO for better compatibility in subprocesses and limited consoles.
+.It Fl cml , Fl Fl chatml
+Run in chatml mode (use with ChatML-compatible models)
+.It Fl e , Fl Fl escape
+Process prompt escapes sequences (\[rs]n, \[rs]r, \[rs]t, \[rs]\[aa], \[rs]\[dq], \[rs]\[rs])
 .It Fl Fl grammar Ar GRAMMAR
 BNF-like grammar to constrain which tokens may be selected when
 generating text. For example, the grammar:
@@ -811,6 +799,54 @@ and
 .Fl Fl interactive
 flags are passed, then a pretty-printed summary of embeddings along with
 a cosine similarity matrix will be printed to the terminal.
+.It Fl Fl ignore-eos
+Ignore end of stream token and continue generating (implies
+.Fl Fl logit-bias Ar 2-inf )
+.It Fl Fl keep Ar N
+This flag allows users to retain the original prompt when the model runs
+out of context, ensuring a connection to the initial instruction or
+conversation topic is maintained, where
+.Ar N
+is the number of tokens from the initial prompt to retain when the model
+resets its internal context.
+.Pp
+.Bl -dash -compact
+.It
+0 = no tokens are kept from initial prompt
+.It
+-1 = retain all tokens from initial prompt
+.El
+.Pp
+Default: 0
+.It Fl Fl in-prefix-bos
+Prefix BOS to user inputs, preceding the
+.Fl Fl in-prefix
+string.
+.It Fl Fl in-prefix Ar STRING
+This flag is used to add a prefix to your input, primarily, this is used
+to insert a space after the reverse prompt. Here's an example of how to
+use the
+.Fl Fl in-prefix
+flag in conjunction with the
+.Fl Fl reverse-prompt
+flag:
+.Pp
+.Dl "./main -r \[dq]User:\[dq] --in-prefix \[dq] \[dq]"
+.Pp
+Default: empty
+.It Fl Fl in-suffix Ar STRING
+This flag is used to add a suffix after your input. This is useful for
+adding an \[dq]Assistant:\[dq] prompt after the user's input. It's added
+after the new-line character (\[rs]n) that's automatically added to the
+end of the user's input. Here's an example of how to use the
+.Fl Fl in-suffix
+flag in conjunction with the
+.Fl Fl reverse-prompt
+flag:
+.Pp
+.Dl "./main -r \[dq]User:\[dq] --in-prefix \[dq] \[dq] --in-suffix \[dq]Assistant:\[dq]"
+.Pp
+Default: empty
 .El
 .Sh SERVER OPTIONS
 The following options may be specified when

@@ -15,6 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "chatbot.h"
+
 #include <assert.h>
 #include <cosmo.h>
 #include <ctype.h>
@@ -34,14 +36,14 @@
 #include "llama.cpp/llava/llava.h"
 #include "llama.cpp/server/server.h"
 #include "llamafile/bestline.h"
-#include "llamafile/chatbot.h"
 #include "llamafile/compute.h"
+#include "llamafile/datauri.h"
 #include "llamafile/highlight.h"
+#include "llamafile/image.h"
 #include "llamafile/llama.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/string.h"
 #include "llamafile/xterm.h"
-#include "stb/stb_image.h"
 
 #define IMAGE_PLACEHOLDER_TOKEN -31337
 
@@ -57,7 +59,9 @@ struct ServerArgs {
 };
 
 static bool g_manual_mode;
+static bool g_has_ephemeral;
 static bool g_said_something;
+static char g_last_printed_char;
 static int g_system_prompt_tokens;
 static gpt_params g_params;
 static clip_ctx *g_clip;
@@ -96,6 +100,7 @@ static void fix_stack(std::vector<llama_pos> *stack) {
 static void fix_stacks(void) {
     fix_stack(&g_undo);
     fix_stack(&g_stack);
+    g_system_prompt_tokens = MIN(g_system_prompt_tokens, tokens_used());
 }
 
 static std::vector<llama_pos> adjust_stack(llama_pos erase_begin, llama_pos erase_end,
@@ -175,18 +180,6 @@ static enum Role cycle_role(enum Role role) {
         return ROLE_USER;
     default:
         __builtin_unreachable();
-    }
-}
-
-static bool is_image_file(const char *path) {
-    int width, height, channels;
-    stbi_set_flip_vertically_on_load(false); // force full image decode
-    unsigned char *data = stbi_load(path, &width, &height, &channels, 0);
-    if (data != nullptr) {
-        stbi_image_free(data);
-        return true;
-    } else {
-        return false;
     }
 }
 
@@ -271,8 +264,37 @@ static std::string describe_position(llama_pos pos) {
     return description;
 }
 
+static void print(const std::string_view &s) {
+    for (char c : s) {
+        g_last_printed_char = c;
+        fputc(c, stdout);
+        if (c == '\n')
+            g_has_ephemeral = false;
+    }
+}
+
+static void ensure_newline() {
+    if (g_last_printed_char != '\n')
+        print("\n");
+}
+
+static void print_ephemeral(const std::string_view &description) {
+    fprintf(stderr, " " BRIGHT_BLACK "%.*s" UNFOREGROUND "\r", (int)description.size(),
+            description.data());
+    g_has_ephemeral = true;
+}
+
+static void clear_ephemeral(void) {
+    if (g_has_ephemeral) {
+        fprintf(stderr, CLEAR_FORWARD);
+        g_has_ephemeral = false;
+    }
+}
+
 static void err(const char *fmt, ...) {
     va_list ap;
+    clear_ephemeral();
+    ensure_newline();
     va_start(ap, fmt);
     fputs(BRIGHT_RED, stderr);
     vfprintf(stderr, fmt, ap);
@@ -280,17 +302,7 @@ static void err(const char *fmt, ...) {
     va_end(ap);
 }
 
-static void print_ephemeral(const std::string_view &description) {
-    fprintf(stderr, " " BRIGHT_BLACK "%.*s" UNFOREGROUND "\r", (int)description.size(),
-            description.data());
-}
-
-static void clear_ephemeral(void) {
-    fprintf(stderr, CLEAR_FORWARD);
-}
-
 static bool out_of_context(int extra) {
-    clear_ephemeral();
     err("error: ran out of context window at %d tokens\n"
         "consider passing `-c %d` at startup for the maximum\n"
         "you can free up more space using /forget or /clear",
@@ -305,8 +317,7 @@ static bool eval_tokens(std::vector<llama_token> tokens) {
     for (int i = 0; i < N; i += g_params.n_batch) {
         if (g_got_sigint) {
             g_got_sigint = false;
-            if (N > g_params.n_batch)
-                clear_ephemeral();
+            clear_ephemeral();
             return false;
         }
         if (N > g_params.n_batch)
@@ -318,19 +329,14 @@ static bool eval_tokens(std::vector<llama_token> tokens) {
             return out_of_context(n_eval);
         g_history.insert(g_history.end(), tokens.begin() + i, tokens.begin() + i + n_eval);
     }
-    if (N > g_params.n_batch)
-        clear_ephemeral();
+    clear_ephemeral();
+    // this function is what computes /stats. we need to call it now
+    // since llama_decode() kicks the can down the road to functions
+    // like llama_sampling_sample(). that is bad because the chatbot
+    // returns control to the repl rather than sampling when loading
+    // system and image prompts.
+    llama_synchronize(g_ctx);
     return true;
-}
-
-static bool eval_id(int id) {
-    std::vector<llama_token> tokens;
-    tokens.push_back(id);
-    return eval_tokens(tokens);
-}
-
-static bool eval_string(const std::string &str, bool add_special, bool parse_special) {
-    return eval_tokens(llama_tokenize(g_model, str, add_special, parse_special));
 }
 
 static bool eval_image_embed(const struct llava_image_embed *image_embed) {
@@ -341,8 +347,7 @@ static bool eval_image_embed(const struct llava_image_embed *image_embed) {
     for (int i = 0; i < N; i += g_params.n_batch) {
         if (g_got_sigint) {
             g_got_sigint = false;
-            if (N > g_params.n_batch)
-                clear_ephemeral();
+            clear_ephemeral();
             return false;
         }
         if (N > g_params.n_batch)
@@ -362,24 +367,58 @@ static bool eval_image_embed(const struct llava_image_embed *image_embed) {
         for (int i = 0; i < n_eval; ++i)
             g_history.push_back(IMAGE_PLACEHOLDER_TOKEN);
     }
-    if (N > g_params.n_batch)
-        clear_ephemeral();
+    clear_ephemeral();
     return true;
 }
 
-static bool eval_image(const char *image_path) {
+static bool eval_image(const std::string_view binary) {
     unassert(g_clip);
     llava_image_embed *image_embed;
     print_ephemeral("analyzing image...");
-    image_embed = llava_image_embed_make_with_filename(g_clip, FLAG_threads_batch, image_path);
+    image_embed = llava_image_embed_make_with_bytes(
+        g_clip, FLAG_threads_batch, (const unsigned char *)binary.data(), binary.size());
     clear_ephemeral();
     if (!image_embed) {
-        err("%s: failed to load image", image_path);
+        err("failed to load image");
         return false;
     }
     bool ok = eval_image_embed(image_embed);
     llava_image_embed_free(image_embed);
     return ok;
+}
+
+static bool eval_token(int id) {
+    return eval_tokens({id});
+}
+
+static bool eval_plain_text(const std::string &str, bool add_special, bool parse_special) {
+    return eval_tokens(llama_tokenize(g_model, str, add_special, parse_special));
+}
+
+static bool eval_string(std::string_view s, bool add_special, bool parse_special) {
+    size_t i = 0;
+    for (;;) {
+        size_t pos = s.find("data:", i);
+        if (pos == std::string_view::npos)
+            return eval_plain_text(std::string(s), add_special, parse_special);
+        DataUri uri;
+        size_t end = uri.parse(s.substr(pos + 5));
+        if (end == std::string_view::npos) {
+            i = pos + 5;
+            continue;
+        }
+        std::string image = uri.decode();
+        if (!lf::is_image(image)) {
+            i = pos + 5;
+            continue;
+        }
+        if (!eval_plain_text(std::string(s.substr(0, pos)), add_special, parse_special))
+            return false;
+        if (!eval_image(image))
+            return false;
+        s = s.substr(pos + 5 + end);
+        i = 0;
+    }
 }
 
 static void rewind(int pos) {
@@ -394,7 +433,7 @@ static void on_manual(const std::vector<std::string> &args) {
     } else if (args.size() == 2 && (args[1] == "on" || args[1] == "off")) {
         g_manual_mode = args[1] == "on";
     } else {
-        err("error: bad /manual command" RESET "\n"
+        err("error: bad /manual command\n"
             "usage: /manual [on|off]");
         return;
     }
@@ -473,6 +512,7 @@ static void on_forget(const std::vector<std::string> &args) {
     g_history.erase(g_history.begin() + erase_begin, //
                     g_history.begin() + erase_end);
     adjust_stacks(erase_begin, erase_end);
+    fix_stacks();
 }
 
 static void on_stack(const std::vector<std::string> &args) {
@@ -525,54 +565,45 @@ static void on_upload(const std::vector<std::string> &args) {
         return;
     }
     int tokens_used_before = tokens_used();
-    if (is_image_file(path)) {
-        if (!g_clip) {
-            err("%s: need --mmproj model to process image", path);
-            return;
-        }
-        std::vector<llama_chat_msg> chat = {
-            {get_role_name(g_role), lf::format("/upload %s", path)},
-        };
-        if (!eval_string(llama_chat_apply_template(g_model, g_params.chat_template, chat,
-                                                   DONT_ADD_ASSISTANT),
-                         DONT_ADD_SPECIAL, PARSE_SPECIAL)) {
-            rewind(tokens_used_before);
-            return;
-        }
-        if (!eval_image(path)) {
-            rewind(tokens_used_before);
-            return;
-        }
-        print_image(1, path, 80);
+    std::string content;
+    if (!lf::slurp(&content, path)) {
+        err("%s: failed to slurp file", path);
         return;
-    } else {
-        std::string markdown;
-        markdown += "- **Filename**: `";
-        markdown += path;
-        markdown += "`\n- **Last modified**: ";
-        markdown += lf::iso8601(st.st_mtim);
-        markdown += "\n\n``````";
-        markdown += lf::extname(path);
-        markdown += '\n';
-        if (!lf::slurp(&markdown, path)) {
-            err("%s: failed to slurp file", path);
+    }
+    std::string markdown;
+    markdown += "- **Filename**: `";
+    markdown += path;
+    markdown += "`\n- **Last modified**: ";
+    markdown += lf::iso8601(st.st_mtim);
+    markdown += "\n\n";
+    if (lf::is_image(content)) {
+        if (!g_clip) {
+            err("%s: need --mmproj model to process images", path);
             return;
         }
-        if (markdown.back() != '\n')
-            markdown += '\n';
-        markdown += "``````";
-        if (has_binary(markdown)) {
+        lf::print_image(1, content, 80);
+        lf::convert_image_to_uri(&markdown, content);
+    } else {
+        if (has_binary(content)) {
             err("%s: binary file type not supported", path);
             return;
         }
-        std::vector<llama_chat_msg> chat = {{"system", markdown}};
-        if (!eval_string(llama_chat_apply_template(g_model, g_params.chat_template, chat,
-                                                   DONT_ADD_ASSISTANT),
-                         DONT_ADD_SPECIAL, PARSE_SPECIAL)) {
-            rewind(tokens_used_before);
-            return;
-        }
+        markdown += "``````";
+        markdown += lf::extname(path);
+        markdown += '\n';
+        markdown += content;
+        if (markdown.back() != '\n')
+            markdown += '\n';
+        markdown += "``````";
     }
+    std::vector<llama_chat_msg> chat = {{"system", std::move(markdown)}};
+    if (!eval_string(
+            llama_chat_apply_template(g_model, g_params.chat_template, chat, DONT_ADD_ASSISTANT),
+            DONT_ADD_SPECIAL, PARSE_SPECIAL)) {
+        rewind(tokens_used_before);
+        return;
+    }
+    llama_synchronize(g_ctx);
 }
 
 static const char *on_hint_impl(const char *line) {
@@ -664,7 +695,7 @@ static void on_completion(const char *line, int pos, bestlineCompletions *comp) 
 static bool handle_command(const char *command) {
     if (!strcmp(command, "/?")) {
         const std::vector<std::string> args = {"?"};
-        on_help(args);
+        chatbot_help(args);
         return true;
     }
     if (!(command[0] == '/' && std::isalpha(command[1])))
@@ -677,7 +708,7 @@ static bool handle_command(const char *command) {
     if (args[0] == "exit" || args[0] == "bye") {
         exit(0);
     } else if (args[0] == "help") {
-        on_help(args);
+        chatbot_help(args);
     } else if (args[0] == "stats") {
         on_stats(args);
     } else if (args[0] == "context") {
@@ -706,27 +737,6 @@ static bool handle_command(const char *command) {
     return true;
 }
 
-static void print_logo(const char16_t *s) {
-    for (int i = 0; s[i]; ++i) {
-        switch (s[i]) {
-        case u'█':
-            printf(GREEN "█" UNFOREGROUND);
-            break;
-        case u'╚':
-        case u'═':
-        case u'╝':
-        case u'╗':
-        case u'║':
-        case u'╔':
-            printf(FAINT "%C" UNBOLD, s[i]);
-            break;
-        default:
-            printf("%C", s[i]);
-            break;
-        }
-    }
-}
-
 static void on_server_listening(const char *host, int port) {
     pthread_mutex_lock(&g_lock);
     g_listen_url = lf::format("http://%s:%d/", host, port);
@@ -744,37 +754,34 @@ static void *server_thread(void *arg) {
 }
 
 int chatbot_main(int argc, char **argv) {
-    log_disable();
 
-    if (llamafile_has(argv, "--ascii")) {
-        printf("\
- _ _                        __ _ _\n\
-| | | __ _ _ __ ___   __ _ / _(_) | ___\n\
-| | |/ _` | '_ ` _ \\ / _` | |_| | |/ _ \\\n\
-| | | (_| | | | | | | (_| |  _| | |  __/\n\
-|_|_|\\__,_|_| |_| |_|\\__,_|_| |_|_|\\___|\n");
-    } else {
-        print_logo(u"\n\
-██╗     ██╗      █████╗ ███╗   ███╗ █████╗ ███████╗██╗██╗     ███████╗\n\
-██║     ██║     ██╔══██╗████╗ ████║██╔══██╗██╔════╝██║██║     ██╔════╝\n\
-██║     ██║     ███████║██╔████╔██║███████║█████╗  ██║██║     █████╗\n\
-██║     ██║     ██╔══██║██║╚██╔╝██║██╔══██║██╔══╝  ██║██║     ██╔══╝\n\
-███████╗███████╗██║  ██║██║ ╚═╝ ██║██║  ██║██║     ██║███████╗███████╗\n\
-╚══════╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝\n");
-    }
+    // print logo
+    chatbot_logo(argv);
 
-    print_ephemeral("loading backend...");
-    llama_backend_init();
+    // disable llamafile gpu initialization log messages
+    if (!llamafile_has(argv, "--verbose"))
+        FLAG_log_disable = true;
+
+    // override defaults for some flags
     g_params.n_batch = 256; // for better progress indication
     g_params.sparams.temp = 0; // don't believe in randomness by default
     g_params.prompt = "A chat between a curious human and an artificial intelligence assistant. "
                       "The assistant gives helpful, detailed, and polite answers to the "
                       "human's questions.";
+
+    // parse flags (sadly initializes gpu support as side-effect)
+    print_ephemeral("loading backend...");
+    llama_backend_init();
     if (!gpt_params_parse(argc, argv, g_params)) { // also loads gpu module
         fprintf(stderr, "error: failed to parse flags\n");
         exit(1);
     }
     clear_ephemeral();
+
+    // setup logging
+    FLAG_log_disable = false;
+    if (!g_params.verbosity)
+        log_disable();
 
     print_ephemeral("loading model...");
     llama_model_params model_params = llama_model_params_from_gpt_params(g_params);
@@ -806,13 +813,15 @@ int chatbot_main(int argc, char **argv) {
         clear_ephemeral();
     }
 
-    printf(BOLD "software" UNBOLD ": llamafile " LLAMAFILE_VERSION_STRING "\n" //
-           BOLD "model" UNBOLD ":    %s\n",
-           lf::basename(g_params.model).c_str());
-    printf(BOLD "compute" UNBOLD ":  %s\n", describe_compute().c_str());
-    if (want_server)
-        printf(BOLD "server" UNBOLD ":   %s\n", g_listen_url.c_str());
-    printf("\n");
+    if (!FLAG_nologo) {
+        printf(BOLD "software" UNBOLD ": llamafile " LLAMAFILE_VERSION_STRING "\n" //
+               BOLD "model" UNBOLD ":    %s\n",
+               lf::basename(g_params.model).c_str());
+        printf(BOLD "compute" UNBOLD ":  %s\n", describe_compute().c_str());
+        if (want_server)
+            printf(BOLD "server" UNBOLD ":   %s\n", g_listen_url.c_str());
+        printf("\n");
+    }
 
     print_ephemeral("initializing context...");
     llama_context_params ctx_params = llama_context_params_from_gpt_params(g_params);
@@ -828,7 +837,7 @@ int chatbot_main(int argc, char **argv) {
 
     if (FLAG_mmproj) {
         print_ephemeral("initializing vision model...");
-        g_clip = clip_model_load(FLAG_mmproj, 0);
+        g_clip = clip_model_load(FLAG_mmproj, g_params.verbosity);
         clear_ephemeral();
         if (!g_clip) {
             fprintf(stderr, "%s: failed to initialize clip image model\n", FLAG_mmproj);
@@ -838,7 +847,7 @@ int chatbot_main(int argc, char **argv) {
 
     // setup conversation
     if (llama_should_add_bos_token(g_model))
-        if (!eval_id(llama_token_bos(g_model)))
+        if (!eval_token(llama_token_bos(g_model)))
             exit(6);
     record_undo();
 
@@ -848,9 +857,11 @@ int chatbot_main(int argc, char **argv) {
         llama_chat_apply_template(g_model, g_params.chat_template, chat, DONT_ADD_ASSISTANT);
     if (!eval_string(msg, DONT_ADD_SPECIAL, PARSE_SPECIAL))
         exit(6);
+    llama_synchronize(g_ctx);
     g_system_prompt_tokens = tokens_used();
     clear_ephemeral();
-    printf("%s\n", g_params.special ? msg.c_str() : g_params.prompt.c_str());
+    if (g_params.display_prompt)
+        printf("%s\n", g_params.special ? msg.c_str() : g_params.prompt.c_str());
 
     // perform important setup
     HighlightMarkdown highlighter;
@@ -870,7 +881,7 @@ int chatbot_main(int argc, char **argv) {
         write(1, UNFOREGROUND, strlen(UNFOREGROUND));
         if (!line) {
             if (g_got_sigint)
-                printf("\n");
+                ensure_newline();
             break;
         }
         if (is_empty(line)) {
@@ -902,25 +913,26 @@ int chatbot_main(int argc, char **argv) {
         }
         for (;;) {
             if (g_got_sigint) {
-                eval_id(llamafile_token_eot(g_model));
+                eval_token(llamafile_token_eot(g_model));
                 break;
             }
             llama_token id = llama_sampling_sample(sampler, g_ctx, NULL);
             llama_sampling_accept(sampler, g_ctx, id, APPLY_GRAMMAR);
-            if (!eval_id(id))
+            if (!eval_token(id))
                 break;
             if (llama_token_is_eog(g_model, id))
                 break;
             std::string s;
             bleeder.feed(&s, token_to_piece(g_ctx, id, g_params.special));
-            printf("%s", s.c_str());
+            print(s);
             fflush(stdout);
         }
         g_got_sigint = 0;
         free(line);
         std::string s;
         bleeder.flush(&s);
-        printf("%s\n", s.c_str());
+        print(s);
+        ensure_newline();
     }
 
     if (g_clip) {

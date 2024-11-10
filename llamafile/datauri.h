@@ -17,23 +17,18 @@
 
 #pragma once
 #include <string>
+#include <utility>
 #include <vector>
 
-#define RESET "\e[0m"
-#define BOLD "\e[1m"
-#define FAINT "\e[2m"
-#define UNBOLD "\e[22m"
-#define RED "\e[31m"
-#define GREEN "\e[32m"
-#define MAGENTA "\e[35m"
-#define YELLOW "\e[33m"
-#define CYAN "\e[36m"
-#define UNFOREGROUND "\e[39m"
-#define BRIGHT_BLACK "\e[90m"
-#define BRIGHT_RED "\e[91m"
-#define BRIGHT_GREEN "\e[92m"
-#define CLEAR_FORWARD "\e[K"
+struct DataUri {
+    std::string_view mime;
+    std::string_view data;
+    std::vector<std::pair<std::string_view, std::string_view>> params;
 
-int chatbot_main(int, char **);
-void chatbot_help(const std::vector<std::string> &);
-void chatbot_logo(char **);
+    DataUri();
+    ~DataUri();
+    size_t parse(std::string_view);
+    bool has_param(std::string_view);
+    std::string_view get_param(std::string_view);
+    std::string decode();
+};

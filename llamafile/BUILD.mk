@@ -56,12 +56,13 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/tokenize			\
 		o/$(MODE)/llamafile/addnl			\
 		o/$(MODE)/llamafile/high			\
-		o/$(MODE)/llamafile/highlight_test.runs		\
+		o/$(MODE)/llamafile/datauri_test.runs		\
 		o/$(MODE)/llamafile/highlight_c_test.runs	\
 		o/$(MODE)/llamafile/highlight_python_test.runs	\
-		o/$(MODE)/llamafile/pool_test.runs		\
-		o/$(MODE)/llamafile/pool_cancel_test.runs	\
+		o/$(MODE)/llamafile/highlight_test.runs		\
 		o/$(MODE)/llamafile/parse_cidr_test.runs	\
+		o/$(MODE)/llamafile/pool_cancel_test.runs	\
+		o/$(MODE)/llamafile/pool_test.runs		\
 		o/$(MODE)/llamafile/thread_test.runs		\
 		o/$(MODE)/llamafile/vmathf_test.runs		\
 
@@ -188,6 +189,11 @@ o/$(MODE)/llamafile/highlight_python_test:				\
 		o/$(MODE)/llamafile/is_keyword_python.o			\
 		o/$(MODE)/llamafile/is_keyword_python_builtin.o		\
 		o/$(MODE)/llamafile/is_keyword_python_constant.o	\
+
+o/$(MODE)/llamafile/datauri_test:			\
+		o/$(MODE)/llamafile/datauri_test.o	\
+		o/$(MODE)/llama.cpp/llama.cpp.a		\
+		o/$(MODE)/stb/stb.a			\
 
 o/$(MODE)/llamafile/high:				\
 		o/$(MODE)/llamafile/high.o		\

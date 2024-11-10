@@ -24,10 +24,33 @@ Show help message and exit.
 Model path (default: models/7B/ggml-model-f16.gguf)
 .It Fl f Ar FNAME , Fl Fl file Ar FNAME
 Raw data input file.
+.It Fl Fl chunks Ar N
+Max number of chunks to process.
+.Pp
+.Bl -dash -compact
+.It
+-1 = all
+.El
+.Pp
+Default: -1
 .It Fl t Ar N , Fl Fl threads Ar N
 Number of threads to use during generation (default: nproc/2)
 .It Fl s Ar SEED , Fl Fl seed Ar SEED
 Random Number Generator (RNG) seed (default: -1, use random seed for < 0)
+.It Fl Fl hellaswag
+Compute HellaSwag score over random tasks from datafile supplied with -f
+.It Fl Fl hellaswag-tasks Ar N
+Number of tasks to use when computing the HellaSwag score.
+.Pp
+Default: 400
+.It Fl Fl winogrande
+Compute Winogrande score over random tasks from datafile supplied by the
+.Fl f
+flag.
+.It Fl Fl winogrande-tasks Ar N
+Number of tasks to use when computing the Winogrande score.
+.Pp
+Default: 0
 .Sh EXAMPLE
 One dataset commonly used in the llama.cpp community for measuring
 perplexity is wikitext-2-raw. To use it when testing how well both your

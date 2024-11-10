@@ -2589,6 +2589,10 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             FLAG_ascii = true;
         }
+        else if (arg == "--nologo")
+        {
+            FLAG_nologo = true;
+        }
         else if (arg == "--trap")
         {
             FLAG_trap = true;

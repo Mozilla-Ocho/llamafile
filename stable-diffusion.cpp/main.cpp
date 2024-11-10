@@ -23,7 +23,7 @@
 
 // #define STB_IMAGE_RESIZE_IMPLEMENTATION
 // #define STB_IMAGE_RESIZE_STATIC
-#include "stb/stb_image_resize.h"
+#include "stb/stb_image_resize2.h"
 
 #include "llamafile/llamafile.h"
 #include "llamafile/debug.h"
@@ -743,11 +743,9 @@ int main(int argc, const char* argv[]) {
                 return 1;
             }
             stbir_resize(input_image_buffer, width, height, 0,
-                         resized_image_buffer, resized_width, resized_height, 0, STBIR_TYPE_UINT8,
-                         3 /*RGB channel*/, STBIR_ALPHA_CHANNEL_NONE, 0,
-                         STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP,
-                         STBIR_FILTER_BOX, STBIR_FILTER_BOX,
-                         STBIR_COLORSPACE_SRGB, nullptr);
+                         resized_image_buffer, resized_width, resized_height, 0,
+                         STBIR_RGB, STBIR_TYPE_UINT8_SRGB, STBIR_EDGE_CLAMP,
+                         STBIR_FILTER_BOX);
 
             // Save resized result
             free(input_image_buffer);
