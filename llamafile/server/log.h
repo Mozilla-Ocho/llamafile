@@ -26,6 +26,9 @@
             get_thread_name(), \
             ##__VA_ARGS__)
 
+namespace lf {
+namespace server {
+
 const char*
 get_thread_name(void);
 
@@ -34,3 +37,6 @@ get_log_timestamp(void);
 
 void
 set_thread_name(const char*);
+
+} // namespace server
+} // namespace lf

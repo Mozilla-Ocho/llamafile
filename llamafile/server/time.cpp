@@ -16,18 +16,19 @@
 // limitations under the License.
 
 #include "time.h"
-
-#include <atomic>
-#include <pthread.h>
-#include <signal.h>
-#include <unistd.h>
-
 #include "llamafile/crash.h"
 #include "llamafile/server/log.h"
+#include <atomic>
+#include <csignal>
+#include <pthread.h>
+#include <unistd.h>
 
 //
 // lockless implementation of gmtime_r() and localtime_r()
 //
+
+namespace lf {
+namespace server {
 
 struct Clock
 {
@@ -203,3 +204,6 @@ localtime_lockless(long now, tm* tm)
 {
     time_lockless(&g_clck[1], now, tm);
 }
+
+} // namespace server
+} // namespace lf

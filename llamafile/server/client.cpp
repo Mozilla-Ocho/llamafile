@@ -16,7 +16,19 @@
 // limitations under the License.
 
 #include "client.h"
-
+#include "llama.cpp/llama.h"
+#include "llamafile/flags.h"
+#include "llamafile/llamafile.h"
+#include "llamafile/server/cleanup.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/server.h"
+#include "llamafile/server/time.h"
+#include "llamafile/server/tokenbucket.h"
+#include "llamafile/server/worker.h"
+#include "llamafile/string.h"
+#include "llamafile/threadlocal.h"
+#include "llamafile/trust.h"
+#include "llamafile/version.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -28,25 +40,13 @@
 #include <unistd.h>
 #include <vector>
 
-#include "llama.cpp/llama.h"
-#include "llamafile/flags.h"
-#include "llamafile/llamafile.h"
-#include "llamafile/string.h"
-#include "llamafile/threadlocal.h"
-#include "llamafile/trust.h"
-#include "llamafile/version.h"
-
-#include "cleanup.h"
-#include "log.h"
-#include "server.h"
-#include "time.h"
-#include "tokenbucket.h"
-#include "worker.h"
-
 #define STANDARD_RESPONSE_HEADERS \
     "Server: llamafile/" LLAMAFILE_VERSION_STRING "\r\n" \
     "Referrer-Policy: origin\r\n" \
     "Cache-Control: private; max-age=0\r\n"
+
+namespace lf {
+namespace server {
 
 static void
 on_http_cancel(Client* client)
@@ -644,7 +644,7 @@ Client::dispatcher()
     // serve static endpoints
     int infd;
     size_t size;
-    resolved_ = lf::resolve(FLAG_www_root, p1);
+    resolved_ = resolve(FLAG_www_root, p1);
     for (;;) {
         infd = open(resolved_.c_str(), O_RDONLY);
         if (infd == -1) {
@@ -670,7 +670,7 @@ Client::dispatcher()
             break;
         } else if (S_ISDIR(st.st_mode)) {
             ::close(infd);
-            resolved_ = lf::resolve(resolved_, "index.html");
+            resolved_ = resolve(resolved_, "index.html");
         } else {
             ::close(infd);
             SLOG("won't serve special file: %s", resolved_.c_str());
@@ -734,3 +734,6 @@ Client::param(std::string_view key)
                                                       url_.params.p[i].val.n));
     return {};
 }
+
+} // namespace server
+} // namespace lf

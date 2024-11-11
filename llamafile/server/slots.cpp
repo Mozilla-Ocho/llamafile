@@ -21,7 +21,10 @@
 #include "llamafile/server/slot.h"
 #include "llamafile/server/slot_entry.h"
 #include "llamafile/vector.h"
-#include <assert.h>
+#include <cassert>
+
+namespace lf {
+namespace server {
 
 Slots::Slots(llama_model* model) : model_(model)
 {
@@ -87,7 +90,7 @@ Slots::take(const std::vector<Atom>& prefix)
             --i;
             Slot* slot = i->slot();
             unassert(slot);
-            int cpl = lf::vector_common_prefix_length(slot->history_, prefix);
+            int cpl = vector_common_prefix_length(slot->history_, prefix);
             if (cpl == slot->history_.size()) {
                 slots_.erase(i);
                 pthread_mutex_unlock(&lock_);
@@ -121,3 +124,6 @@ Slots::give(Slot* slot)
     pthread_cond_signal(&cond_);
     pthread_mutex_unlock(&lock_);
 }
+
+} // namespace server
+} // namespace lf

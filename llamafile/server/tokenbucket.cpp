@@ -23,6 +23,9 @@
 #include <signal.h>
 #include <stdatomic.h>
 
+namespace lf {
+namespace server {
+
 union TokenBucket
 {
     atomic_uint_fast64_t* w;
@@ -121,3 +124,6 @@ tokenbucket_acquire(unsigned ip)
 {
     return acquire_token(g_tokens.b, ip, FLAG_token_cidr);
 }
+
+} // namespace server
+} // namespace lf

@@ -16,11 +16,12 @@
 // limitations under the License.
 
 #include "cleanup.h"
-
+#include "llama.cpp/llama.h"
 #include <unistd.h>
 #include <vector>
 
-#include "llama.cpp/llama.h"
+namespace lf {
+namespace server {
 
 void
 cleanup_fildes(void* arg)
@@ -53,3 +54,6 @@ cleanup_llama_context(void* arg)
 {
     llama_free((llama_context*)arg);
 }
+
+} // namespace server
+} // namespace lf

@@ -16,21 +16,22 @@
 // limitations under the License.
 
 #include "server.h"
-#include "slots.h"
-
-#include <assert.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <time.h>
-#include <unistd.h>
-
 #include "llamafile/crash.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/server.h"
+#include "llamafile/server/slots.h"
 #include "llamafile/server/worker.h"
+#include <cassert>
+#include <cstdio>
+#include <ctime>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+namespace lf {
+namespace server {
 
 Server::Server(int fd, Slots* slots, llama_model* model)
   : fd(fd), slots_(slots), model_(model)
@@ -194,3 +195,6 @@ Server::shutdown()
         unlock();
     }
 }
+
+} // namespace server
+} // namespace lf

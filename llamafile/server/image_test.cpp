@@ -19,7 +19,11 @@
 #include "image.h"
 #include <cstdlib>
 
-static const Image images[] = {
+namespace lf {
+namespace server {
+namespace {
+
+const Image images[] = {
     Image("", 0),
     Image("hello", 1),
     Image("there", 1),
@@ -99,9 +103,19 @@ test_image_operator_eq()
                     exit(8);
 }
 
-int
-main()
+void
+image_test()
 {
     test_image_operator_lt();
     test_image_operator_eq();
+}
+
+} // namespace
+} // namespace server
+} // namespace lf
+
+int
+main()
+{
+    lf::server::image_test();
 }

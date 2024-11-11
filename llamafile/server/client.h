@@ -16,9 +16,8 @@
 // limitations under the License.
 
 #pragma once
-
 #include "buffer.h"
-
+#include <ctime>
 #include <libc/fmt/itoa.h>
 #include <libc/str/slice.h>
 #include <net/http/http.h>
@@ -26,7 +25,6 @@
 #include <optional>
 #include <string>
 #include <sys/resource.h>
-#include <time.h>
 
 #define HasHeader(H) (!!msg_.headers[H].a)
 #define HeaderData(H) (ibuf_.p + msg_.headers[H].a)
@@ -36,19 +34,17 @@
 #define HeaderEqualCase(H, S) \
     SlicesEqualCase(S, strlen(S), HeaderData(H), HeaderLength(H))
 
+struct llama_model;
+
+namespace lf {
+namespace server {
+
+struct Cleanup;
 struct Slot;
 struct Worker;
-struct llama_model;
 struct TokenizeParams;
 struct EmbeddingParams;
 struct V1ChatCompletionParams;
-
-struct Cleanup
-{
-    Cleanup* next;
-    void (*func)(void*);
-    void* arg;
-};
 
 struct Client
 {
@@ -117,3 +113,6 @@ struct Client
 
     bool slotz() __wur;
 };
+
+} // namespace server
+} // namespace lf

@@ -18,6 +18,9 @@
 #pragma once
 #include <time.h>
 
+namespace lf {
+namespace server {
+
 void
 time_init();
 
@@ -29,3 +32,6 @@ gmtime_lockless(long, tm*);
 
 void
 localtime_lockless(long, tm*);
+
+} // namespace server
+} // namespace lf

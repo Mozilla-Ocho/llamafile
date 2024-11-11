@@ -24,9 +24,12 @@
 #include "llamafile/server/tokenbucket.h"
 #include "llamafile/threadlocal.h"
 #include "llamafile/trust.h"
-#include <assert.h>
+#include <cassert>
 #include <exception>
 #include <pthread.h>
+
+namespace lf {
+namespace server {
 
 Worker::Worker(Server* server, llama_model* model)
   : server_(server), client_(model)
@@ -156,3 +159,6 @@ Worker::run()
     cleanup.set(nullptr);
     retire();
 }
+
+} // namespace server
+} // namespace lf

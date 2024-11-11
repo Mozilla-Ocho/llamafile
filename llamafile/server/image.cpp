@@ -20,6 +20,9 @@
 #include <cassert>
 #include <utility>
 
+namespace lf {
+namespace server {
+
 Image::~Image() = default;
 
 Image::Image(const Image& old) : Image(old.bytes_, old.ctx_used_)
@@ -68,3 +71,6 @@ operator==(const Image& lhs, const Image& rhs)
 {
     return lhs.bytes() == rhs.bytes();
 }
+
+} // namespace server
+} // namespace lf

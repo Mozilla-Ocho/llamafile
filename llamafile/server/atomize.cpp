@@ -25,6 +25,9 @@
 #include <string>
 #include <vector>
 
+namespace lf {
+namespace server {
+
 static void
 append_tokens(const llama_model* model,
               std::vector<Atom>* result,
@@ -63,7 +66,7 @@ atomize(const llama_model* model,
         } catch (const base64_error& e) {
             continue;
         }
-        if (!lf::get_image_type(image))
+        if (!get_image_type(image))
             continue;
         append_tokens(model, result, s.substr(0, pos), parse_special);
         result->emplace_back(new Image(image, -1));
@@ -71,3 +74,6 @@ atomize(const llama_model* model,
         i = 0;
     }
 }
+
+} // namespace server
+} // namespace lf

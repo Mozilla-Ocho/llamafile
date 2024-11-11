@@ -20,8 +20,12 @@
 #include <cosmo.h>
 #include <pthread.h>
 
-struct Slots;
 struct llama_model;
+
+namespace lf {
+namespace server {
+
+struct Slots;
 
 struct Server
 {
@@ -54,3 +58,6 @@ extern Server* g_server;
 
 int
 create_listening_socket(const char*);
+
+} // namespace server
+} // namespace lf

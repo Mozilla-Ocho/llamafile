@@ -32,10 +32,13 @@
 #include "llamafile/server/worker.h"
 #include "llamafile/string.h"
 #include "llamafile/vector.h"
-#include <math.h>
-#include <string.h>
+#include <cmath>
+#include <cstring>
 #include <sys/resource.h>
 #include <vector>
+
+namespace lf {
+namespace server {
 
 struct V1ChatCompletionParams
 {
@@ -61,7 +64,7 @@ struct V1ChatCompletionParams
     bool should_stop(const std::vector<Atom>& history)
     {
         for (const auto& suffix : stop)
-            if (lf::vector_ends_with(history, suffix))
+            if (vector_ends_with(history, suffix))
                 return true;
         return false;
     }
@@ -576,3 +579,6 @@ Client::v1_chat_completions()
         return send_response(obuf_.p, p, response->content);
     }
 }
+
+} // namespace server
+} // namespace lf

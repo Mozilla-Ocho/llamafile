@@ -16,13 +16,14 @@
 // limitations under the License.
 
 #include "fastjson.h"
-
+#include "double-conversion/double-to-string.h"
+#include "double-conversion/utils.h"
 #include <cosmo.h>
 #include <net/http/escape.h>
 #include <string>
 
-#include "double-conversion/double-to-string.h"
-#include "double-conversion/utils.h"
+namespace lf {
+namespace server {
 
 static const char kEscapeLiteral[128] = {
     9, 9, 9, 9, 9, 9, 9, 9, 9, 1, 2, 9, 4, 3, 9, 9, // 0x00
@@ -179,3 +180,6 @@ encode_js_string_literal(char* p, const std::string_view s) noexcept
     *p = 0;
     return p;
 }
+
+} // namespace server
+} // namespace lf

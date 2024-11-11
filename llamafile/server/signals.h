@@ -18,10 +18,14 @@
 #pragma once
 #include <signal.h>
 
-struct StackFrame;
+namespace lf {
+namespace server {
 
 void
 signals_init(void);
 
 void
 signals_destroy(void);
+
+} // namespace server
+} // namespace lf

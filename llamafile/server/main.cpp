@@ -15,9 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <assert.h>
-#include <cosmo.h>
-
 #include "llama.cpp/llama.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/pool.h"
@@ -29,6 +26,11 @@
 #include "llamafile/server/tokenbucket.h"
 #include "llamafile/server/utils.h"
 #include "llamafile/version.h"
+#include <cassert>
+#include <cosmo.h>
+
+namespace lf {
+namespace server {
 
 Server* g_server;
 
@@ -136,4 +138,14 @@ main(int argc, char* argv[])
     while (!pthread_orphan_np())
         pthread_decimate_np();
     CheckForMemoryLeaks();
+    return 0;
+}
+
+} // namespace server
+} // namespace lf
+
+int
+main(int argc, char* argv[])
+{
+    return lf::server::main(argc, argv);
 }

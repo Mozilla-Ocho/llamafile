@@ -18,6 +18,9 @@
 #pragma once
 #include <cstddef>
 
+namespace lf {
+namespace server {
+
 struct Buffer
 {
     size_t i;
@@ -28,3 +31,6 @@ struct Buffer
     explicit Buffer(size_t) noexcept;
     ~Buffer() noexcept;
 };
+
+} // namespace server
+} // namespace lf

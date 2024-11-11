@@ -18,6 +18,9 @@
 #include "utils.h"
 #include <string_view>
 
+namespace lf {
+namespace server {
+
 bool
 atob(std::string_view val, bool dflt)
 {
@@ -31,3 +34,6 @@ atob(std::string_view val, bool dflt)
         return true;
     return dflt;
 }
+
+} // namespace server
+} // namespace lf

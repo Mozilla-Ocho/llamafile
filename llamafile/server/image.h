@@ -18,6 +18,9 @@
 #pragma once
 #include <string>
 
+namespace lf {
+namespace server {
+
 class Image
 {
   public:
@@ -37,3 +40,6 @@ operator<(const Image&, const Image&);
 
 bool
 operator==(const Image&, const Image&);
+
+} // namespace server
+} // namespace lf

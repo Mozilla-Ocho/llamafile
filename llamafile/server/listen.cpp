@@ -15,19 +15,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "server.h"
-
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-
 #include "llamafile/llamafile.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/server.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+
+namespace lf {
+namespace server {
 
 void
 print_listening_url(unsigned ip, int port)
@@ -116,3 +116,6 @@ create_listening_socket(const char* hostport)
     freeaddrinfo(ai);
     return fd;
 }
+
+} // namespace server
+} // namespace lf

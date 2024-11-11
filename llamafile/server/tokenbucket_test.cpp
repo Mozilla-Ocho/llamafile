@@ -15,50 +15,63 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tokenbucket.h"
-
-#include <cosmo.h>
-#include <limits.h>
-
 #include "llamafile/llamafile.h"
+#include "llamafile/server/tokenbucket.h"
+#include <climits>
+#include <cosmo.h>
+#include <cstdlib>
 
-int
-main(int argc, char* argv[])
+namespace lf {
+namespace server {
+namespace {
+
+void
+tokenbucket_test()
 {
     FLAG_token_rate = .0001;
     FLAG_token_cidr = 24;
     tokenbucket_init();
 
     if (tokenbucket_acquire(0x7f000001) != 0)
-        return 1;
+        exit(1);
     if (tokenbucket_acquire(0x7f000002) != 1)
-        return 1;
+        exit(1);
     if (tokenbucket_acquire(0x7f000003) != 2)
-        return 1;
+        exit(1);
     if (tokenbucket_acquire(0x7f000100) != 0)
-        return 1;
+        exit(1);
     if (tokenbucket_acquire(0x7f000101) != 1)
-        return 1;
+        exit(1);
 
     tokenbucket_replenish();
     tokenbucket_replenish();
 
     if (tokenbucket_acquire(0x7f000003) != 1)
-        return 1;
+        exit(1);
     if (tokenbucket_acquire(0x7f000003) != 2)
-        return 1;
+        exit(1);
     if (tokenbucket_acquire(0x7f000101) != 0)
-        return 1;
+        exit(1);
 
     tokenbucket_replenish();
     tokenbucket_replenish();
     tokenbucket_replenish();
 
     if (tokenbucket_acquire(0x7f000003) != 0)
-        return 1;
+        exit(1);
     if (tokenbucket_acquire(0x7f000101) != 0)
-        return 1;
+        exit(1);
 
     tokenbucket_destroy();
     CheckForMemoryLeaks();
+}
+
+} // namespace
+} // namespace server
+} // namespace lf
+
+int
+main()
+{
+    lf::server::tokenbucket_test();
 }

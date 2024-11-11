@@ -17,10 +17,13 @@
 
 #include "fastjson.h"
 
-#include <limits.h>
-#include <math.h>
-#include <stdio.h>
+#include <climits>
+#include <cmath>
+#include <cstdio>
 #include <string>
+
+namespace lf {
+namespace server {
 
 std::string
 encode_json(int x) noexcept
@@ -72,9 +75,8 @@ encode_js_string_literal(const std::string_view x) noexcept
 }
 
 int
-main(int argc, char* argv[])
+fastjson_test()
 {
-
     if (encode_json(0) != "0")
         return 1;
     if (encode_json(INT_MAX) != "2147483647")
@@ -123,4 +125,13 @@ main(int argc, char* argv[])
         return 21;
 
     return 0;
+}
+
+} // namespace server
+} // namespace lf
+
+int
+main()
+{
+    return lf::server::fastjson_test();
 }

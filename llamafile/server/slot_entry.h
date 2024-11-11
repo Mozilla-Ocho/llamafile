@@ -18,6 +18,9 @@
 #pragma once
 #include <vector>
 
+namespace lf {
+namespace server {
+
 struct Slot;
 struct Atom;
 
@@ -37,3 +40,6 @@ class SlotEntry
 
 bool
 operator<(const SlotEntry&, const SlotEntry&);
+
+} // namespace server
+} // namespace lf

@@ -16,7 +16,9 @@
 // limitations under the License.
 
 #pragma once
-#include <__fwd/string.h>
+
+namespace lf {
+namespace server {
 
 class Image;
 
@@ -45,3 +47,6 @@ operator<(const Atom&, const Atom&);
 
 bool
 operator==(const Atom&, const Atom&);
+
+} // namespace server
+} // namespace lf

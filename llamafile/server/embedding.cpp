@@ -16,18 +16,19 @@
 // limitations under the License.
 
 #include "client.h"
-
-#include <math.h>
-#include <string.h>
-#include <sys/resource.h>
-#include <vector>
-
 #include "llama.cpp/llama.h"
 #include "llamafile/server/cleanup.h"
 #include "llamafile/server/fastjson.h"
 #include "llamafile/server/json.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/utils.h"
+#include <cmath>
+#include <cstring>
+#include <sys/resource.h>
+#include <vector>
+
+namespace lf {
+namespace server {
 
 struct EmbeddingParams
 {
@@ -332,3 +333,6 @@ Client::embedding()
     p = stpcpy(p, "\r\n");
     return send_response(headers, p, content);
 }
+
+} // namespace server
+} // namespace lf

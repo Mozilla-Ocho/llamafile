@@ -16,15 +16,19 @@
 // limitations under the License.
 
 #pragma once
+#include <ctime>
 #include <string>
-#include <time.h>
 #include <vector>
 
-struct Atom;
-struct Image;
 struct llama_context;
 struct llama_model;
 struct clip_ctx;
+
+namespace lf {
+namespace server {
+
+struct Atom;
+struct Image;
 
 struct Slot
 {
@@ -60,3 +64,6 @@ struct Slot
     void tokenize(std::vector<Atom>*, std::string_view, bool);
     void dump(std::string*);
 };
+
+} // namespace server
+} // namespace lf

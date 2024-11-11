@@ -19,7 +19,11 @@
 #include "image.h"
 #include <cstdlib>
 
-static const Atom atoms[] = {
+namespace lf {
+namespace server {
+namespace {
+
+const Atom atoms[] = {
     Atom(),
     Atom(-1),
     Atom(0),
@@ -101,9 +105,19 @@ test_atom_operator_eq()
                     exit(8);
 }
 
-int
-main()
+void
+atom_test()
 {
     test_atom_operator_lt();
     test_atom_operator_eq();
+}
+
+} // namespace
+} // namespace server
+} // namespace lf
+
+int
+main()
+{
+    lf::server::atom_test();
 }

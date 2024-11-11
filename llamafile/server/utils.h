@@ -21,8 +21,12 @@
 #include <__fwd/vector.h>
 #include <optional>
 
-class Atom;
 struct llama_model;
+
+namespace lf {
+namespace server {
+
+class Atom;
 
 extern const signed char kHexToInt[256];
 
@@ -37,3 +41,6 @@ atomize(const llama_model* model,
         std::vector<Atom>* result,
         std::string_view s,
         bool parse_special);
+
+} // namespace server
+} // namespace lf

@@ -31,6 +31,9 @@
 #include <cassert>
 #include <cosmo.h>
 
+namespace lf {
+namespace server {
+
 static int
 choose_ctx_size(llama_model* model)
 {
@@ -295,7 +298,10 @@ Slot::dump(std::string* result)
             *result +=
               llamafile_token_to_piece(ctx_, token, RENDER_SPECIAL_TOKENS);
         } else if (history_[i].is_image()) {
-            lf::convert_image_to_uri(result, history_[i].image().bytes());
+            convert_image_to_uri(result, history_[i].image().bytes());
         }
     }
 }
+
+} // namespace server
+} // namespace lf

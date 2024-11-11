@@ -20,10 +20,14 @@
 #include <set>
 #include <vector>
 
+struct llama_model;
+
+namespace lf {
+namespace server {
+
 class Atom;
 struct Slot;
 class SlotEntry;
-struct llama_model;
 
 struct Slots
 {
@@ -40,3 +44,6 @@ struct Slots
     Slot* take(const std::vector<Atom>&);
     void give(Slot*);
 };
+
+} // namespace server
+} // namespace lf

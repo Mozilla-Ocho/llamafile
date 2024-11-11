@@ -22,8 +22,12 @@
 
 #define WORKER(e) DLL_CONTAINER(Worker, elem_, e)
 
-struct Server;
 struct llama_model;
+
+namespace lf {
+namespace server {
+
+struct Server;
 
 struct Worker
 {
@@ -42,3 +46,6 @@ struct Worker
     void retire();
     void kill();
 };
+
+} // namespace server
+} // namespace lf

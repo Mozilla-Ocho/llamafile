@@ -23,10 +23,13 @@
 #include "llamafile/server/log.h"
 #include "llamafile/server/signals.h"
 #include "llamafile/server/utils.h"
-#include <string.h>
+#include <cstring>
 #include <sys/resource.h>
 #include <utility>
 #include <vector>
+
+namespace lf {
+namespace server {
 
 struct TokenizeParams
 {
@@ -171,3 +174,6 @@ Client::tokenize()
     p = stpcpy(p, "\r\n");
     return send_response(headers, p, content);
 }
+
+} // namespace server
+} // namespace lf

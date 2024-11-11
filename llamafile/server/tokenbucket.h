@@ -17,6 +17,9 @@
 
 #pragma once
 
+namespace lf {
+namespace server {
+
 void
 tokenbucket_init();
 
@@ -28,3 +31,6 @@ tokenbucket_acquire(unsigned);
 
 void
 tokenbucket_replenish();
+
+} // namespace server
+} // namespace lf

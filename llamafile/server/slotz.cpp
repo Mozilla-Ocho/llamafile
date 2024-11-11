@@ -22,6 +22,9 @@
 #include "utils.h"
 #include "worker.h"
 
+namespace lf {
+namespace server {
+
 bool
 Client::slotz()
 {
@@ -38,3 +41,6 @@ Client::slotz()
     p = stpcpy(p, "Content-Type: text/plain\r\n");
     return send_response(obuf_.p, p, dump);
 }
+
+} // namespace server
+} // namespace lf

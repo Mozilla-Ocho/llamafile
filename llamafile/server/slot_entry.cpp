@@ -16,9 +16,12 @@
 // limitations under the License.
 
 #include "slot_entry.h"
-#include "atom.h"
-#include "slot.h"
-#include <assert.h>
+#include "llamafile/server/atom.h"
+#include "llamafile/server/slot.h"
+#include <cassert>
+
+namespace lf {
+namespace server {
 
 SlotEntry::SlotEntry(Slot* slot) : slot_(slot), key_(nullptr)
 {
@@ -51,3 +54,6 @@ operator<(const SlotEntry& lhs, const SlotEntry& rhs)
 {
     return *lhs.key() < *rhs.key();
 }
+
+} // namespace server
+} // namespace lf

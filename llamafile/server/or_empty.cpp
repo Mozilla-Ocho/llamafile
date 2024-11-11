@@ -16,8 +16,10 @@
 // limitations under the License.
 
 #include "utils.h"
-
 #include <string_view>
+
+namespace lf {
+namespace server {
 
 std::string_view
 or_empty(std::optional<std::string_view> x)
@@ -26,3 +28,6 @@ or_empty(std::optional<std::string_view> x)
         return x.value();
     return {};
 }
+
+} // namespace server
+} // namespace lf

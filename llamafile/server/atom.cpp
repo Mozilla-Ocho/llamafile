@@ -19,6 +19,9 @@
 #include "image.h"
 #include <cassert>
 
+namespace lf {
+namespace server {
+
 /**
  * @fileoverview Context window content container.
  *
@@ -139,3 +142,6 @@ operator==(const Atom& lhs, const Atom& rhs)
         return lhs.image() == rhs.image();
     }
 }
+
+} // namespace server
+} // namespace lf

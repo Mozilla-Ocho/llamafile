@@ -17,8 +17,11 @@
 
 #include "log.h"
 #include "time.h"
+#include <cstring>
 #include <pthread.h>
-#include <string.h>
+
+namespace lf {
+namespace server {
 
 static thread_local char g_thread_name[128];
 
@@ -86,3 +89,6 @@ get_log_timestamp(void)
     s[25] = '0' + x / 1000 % 10;
     return s;
 }
+
+} // namespace server
+} // namespace lf

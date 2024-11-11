@@ -89,6 +89,7 @@ bool eval_image_embed(const llava_image_embed *image_embed) {
             g_history.push_back(IMAGE_PLACEHOLDER_TOKEN);
     }
     clear_ephemeral();
+    llama_synchronize(g_ctx);
     return true;
 }
 
