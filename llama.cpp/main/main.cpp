@@ -18,6 +18,7 @@
 #include <cosmo.h>
 
 #include "llamafile/version.h"
+#include "llamafile/chatbot.h"
 #include "llama.cpp/llama.h"
 #include "llama.cpp/string.h"
 #include "llama.cpp/common.h"
@@ -202,8 +203,7 @@ int main(int argc, char ** argv) {
          !llamafile_has(argv, "-p") &&
          !llamafile_has(argv, "-f") &&
          !llamafile_has(argv, "--random-prompt"))) {
-        int chatbot_main(int, char **);
-        return chatbot_main(argc, argv);
+        return lf::chatbot::main(argc, argv);
     }
 
     if (prog == EMBEDDING) {

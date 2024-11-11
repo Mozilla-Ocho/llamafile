@@ -19,7 +19,12 @@
 
 #include <vector>
 
-void chatbot_help(const std::vector<std::string> &args) {
+#include "llamafile/color.h"
+
+namespace lf {
+namespace chatbot {
+
+void on_help(const std::vector<std::string> &args) {
     if (args.size() == 1) {
         fprintf(stderr, "\
 " BOLD "available commands" RESET "\n\
@@ -145,3 +150,6 @@ command which deletes the most recent chat message instead.\n\
         fprintf(stderr, BRIGHT_RED "%s: unknown command" RESET "\n", args[1].c_str());
     }
 }
+
+} // namespace chatbot
+} // namespace lf

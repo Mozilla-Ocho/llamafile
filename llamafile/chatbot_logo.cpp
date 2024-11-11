@@ -17,9 +17,13 @@
 
 #include "chatbot.h"
 
-#include <stdio.h>
+#include <cstdio>
 
-#include "llamafile.h"
+#include "llamafile/color.h"
+#include "llamafile/llamafile.h"
+
+namespace lf {
+namespace chatbot {
 
 static void print_logo(const char16_t *s) {
     for (int i = 0; s[i]; ++i) {
@@ -42,7 +46,7 @@ static void print_logo(const char16_t *s) {
     }
 }
 
-void chatbot_logo(char **argv) {
+void logo(char **argv) {
     if (llamafile_has(argv, "--nologo"))
         return;
     if (llamafile_has(argv, "--ascii")) {
@@ -62,3 +66,6 @@ void chatbot_logo(char **argv) {
 ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝\n");
     }
 }
+
+} // namespace chatbot
+} // namespace lf
