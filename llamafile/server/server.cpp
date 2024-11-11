@@ -28,10 +28,9 @@
 
 #include "llamafile/crash.h"
 #include "llamafile/llamafile.h"
-
-#include "log.h"
-#include "server.h"
-#include "worker.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/server.h"
+#include "llamafile/server/worker.h"
 
 Server::Server(int fd, Slots* slots, llama_model* model)
   : fd(fd), slots_(slots), model_(model)

@@ -16,14 +16,12 @@
 // limitations under the License.
 
 #include "tokenbucket.h"
-
+#include "llamafile/llamafile.h"
+#include "llamafile/server/log.h"
 #include <assert.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdatomic.h>
-
-#include "llamafile/llamafile.h"
-#include "llamafile/server/log.h"
 
 union TokenBucket
 {

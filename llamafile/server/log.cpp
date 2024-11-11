@@ -16,11 +16,9 @@
 // limitations under the License.
 
 #include "log.h"
-
+#include "time.h"
 #include <pthread.h>
 #include <string.h>
-
-#include "time.h"
 
 static thread_local char g_thread_name[128];
 

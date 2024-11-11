@@ -17,23 +17,31 @@
 
 #pragma once
 #include <__fwd/string.h>
-#include <__fwd/string_view.h>
-#include <__fwd/vector.h>
-#include <optional>
 
-class Atom;
-struct llama_model;
+class Image;
 
-extern const signed char kHexToInt[256];
+class Atom
+{
+  public:
+    Atom() = default;
+    explicit Atom(int);
+    explicit Atom(Image*);
+    Atom(const Atom&);
+    Atom(Atom&&);
+    ~Atom();
+    int token() const;
+    bool empty() const;
+    int ctx_used() const;
+    bool is_token() const;
+    bool is_image() const;
+    const Image& image() const;
+
+  private:
+    uint64_t word_ = 0;
+};
 
 bool
-atob(std::string_view, bool);
+operator<(const Atom&, const Atom&);
 
-std::string_view
-or_empty(std::optional<std::string_view> x);
-
-void
-atomize(const llama_model* model,
-        std::vector<Atom>* result,
-        std::string_view s,
-        bool parse_special);
+bool
+operator==(const Atom&, const Atom&);

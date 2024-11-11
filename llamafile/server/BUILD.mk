@@ -12,17 +12,17 @@ LLAMAFILE_SERVER_ASSETS = $(wildcard llamafile/server/www/*)
 
 $(LLAMAFILE_SERVER_OBJS): private CCFLAGS += -g
 
-o/$(MODE)/llamafile/server/server.a:				\
+o/$(MODE)/llamafile/server/server.a:					\
 		$(filter-out %_test.o,$(LLAMAFILE_SERVER_OBJS))
 
-o/$(MODE)/llamafile/server/main:				\
-		o/$(MODE)/llamafile/server/main.o		\
-		o/$(MODE)/llamafile/server/main.1.asc.zip.o	\
-		o/$(MODE)/llamafile/server/server.a		\
-		o/$(MODE)/llama.cpp/llama.cpp.a			\
-		o/$(MODE)/llama.cpp/llava/llava.a		\
-		o/$(MODE)/double-conversion/double-conversion.a	\
-		o/$(MODE)/stb/stb.a				\
+o/$(MODE)/llamafile/server/main:					\
+		o/$(MODE)/llamafile/server/main.o			\
+		o/$(MODE)/llamafile/server/main.1.asc.zip.o		\
+		o/$(MODE)/llamafile/server/server.a			\
+		o/$(MODE)/llama.cpp/llama.cpp.a				\
+		o/$(MODE)/llama.cpp/llava/llava.a			\
+		o/$(MODE)/double-conversion/double-conversion.a		\
+		o/$(MODE)/stb/stb.a					\
 		$(LLAMAFILE_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)
 
 # turn /zip/llamafile/server/www/...
@@ -31,24 +31,37 @@ $(LLAMAFILE_SERVER_ASSETS:%=o/$(MODE)/%.zip.o): private ZIPOBJ_FLAGS += -C2
 
 $(LLAMAFILE_SERVER_OBJS): llamafile/server/BUILD.mk
 
-o/$(MODE)/llamafile/server/fastjson_test:			\
-		o/$(MODE)/llamafile/server/fastjson_test.o	\
-		o/$(MODE)/llamafile/server/fastjson.o		\
-		o/$(MODE)/double-conversion/double-conversion.a	\
+o/$(MODE)/llamafile/server/atom_test:					\
+		o/$(MODE)/llamafile/server/atom_test.o			\
+		o/$(MODE)/llamafile/server/atom.o			\
+		o/$(MODE)/llamafile/server/image.o			\
 
-o/$(MODE)/llamafile/server/json_test:				\
-		o/$(MODE)/llamafile/server/json_test.o		\
-		o/$(MODE)/llamafile/server/json.o		\
-		o/$(MODE)/llamafile/server/hextoint.o		\
-		o/$(MODE)/double-conversion/double-conversion.a	\
+o/$(MODE)/llamafile/server/image_test:					\
+		o/$(MODE)/llamafile/server/image_test.o			\
+		o/$(MODE)/llamafile/server/image.o			\
 
-o/$(MODE)/llamafile/server/tokenbucket_test:			\
-		o/$(MODE)/llamafile/server/tokenbucket_test.o	\
-		o/$(MODE)/llamafile/server/tokenbucket.o	\
-		o/$(MODE)/llamafile/server/log.o		\
-		o/$(MODE)/llama.cpp/llama.cpp.a			\
+o/$(MODE)/llamafile/server/fastjson_test:				\
+		o/$(MODE)/llamafile/server/fastjson_test.o		\
+		o/$(MODE)/llamafile/server/fastjson.o			\
+		o/$(MODE)/double-conversion/double-conversion.a		\
+
+o/$(MODE)/llamafile/server/json_test:					\
+		o/$(MODE)/llamafile/server/json_test.o			\
+		o/$(MODE)/llamafile/server/json.o			\
+		o/$(MODE)/llamafile/server/hextoint.o			\
+		o/$(MODE)/double-conversion/double-conversion.a		\
+
+o/$(MODE)/llamafile/server/tokenbucket_test:				\
+		o/$(MODE)/llamafile/server/tokenbucket_test.o		\
+		o/$(MODE)/llamafile/server/tokenbucket.o		\
+		o/$(MODE)/llamafile/server/log.o			\
+		o/$(MODE)/llama.cpp/llama.cpp.a				\
 
 .PHONY: o/$(MODE)/llamafile/server
-o/$(MODE)/llamafile/server:					\
-		o/$(MODE)/llamafile/server/main			\
-		o/$(MODE)/llamafile/server/json_test.runs	\
+o/$(MODE)/llamafile/server:						\
+		o/$(MODE)/llamafile/server/main				\
+		o/$(MODE)/llamafile/server/atom_test.runs		\
+		o/$(MODE)/llamafile/server/fastjson_test.runs		\
+		o/$(MODE)/llamafile/server/image_test.runs		\
+		o/$(MODE)/llamafile/server/json_test.runs		\
+		o/$(MODE)/llamafile/server/tokenbucket_test.runs	\

@@ -19,19 +19,20 @@
 #include <vector>
 
 struct Slot;
+struct Atom;
 
 class SlotEntry
 {
   public:
     explicit SlotEntry(Slot*);
-    explicit SlotEntry(const std::vector<int>*);
+    explicit SlotEntry(const std::vector<Atom>*);
     ~SlotEntry();
     Slot* slot() const;
-    const std::vector<int>* key() const;
+    const std::vector<Atom>* key() const;
 
   private:
     Slot* slot_;
-    const std::vector<int>* key_;
+    const std::vector<Atom>* key_;
 };
 
 bool

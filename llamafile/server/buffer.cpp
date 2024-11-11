@@ -16,7 +16,6 @@
 // limitations under the License.
 
 #include "buffer.h"
-
 #include <sys/mman.h>
 #include <unistd.h>
 

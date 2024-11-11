@@ -22,6 +22,7 @@ const stopButton = document.getElementById("stop-button");
 
 let abortController = null;
 let streamingMessageContent = [];
+let uploadedFiles = [];
 
 let chatHistory = [
   {
@@ -31,6 +32,10 @@ let chatHistory = [
               "detailed, and polite answers to the human's questions.")
   },
 ];
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
 
 function createMessageElement(content, role) {
   const messageDiv = document.createElement("div");
@@ -117,8 +122,16 @@ function stopMessage() {
   }
 }
 
+function fixUploads(str) {
+  str = uploadedFiles.reduce(
+    (text, [from, to]) => text.replaceAll(from, to),
+    str);
+  uploadedFiles.length = 0;
+  return str;
+}
+
 async function sendMessage() {
-  const message = chatInput.value.trim();
+  const message = fixUploads(chatInput.value.trim());
   if (!message) return;
 
   // disable input while processing
@@ -153,22 +166,22 @@ async function sendMessage() {
       }),
       signal: abortController.signal
     });
-
-    if (!response.ok)
-      throw new Error(`HTTP error! status: ${response.status}`);
-
-    // handle the stream
-    await handleChatStream(response);
-
-    // update chat history with response
-    const lastMessage = streamingMessageContent.join("");
-    chatHistory.push({ role: "assistant", content: lastMessage });
-
+    if (response.ok) {
+      await handleChatStream(response);
+      const lastMessage = streamingMessageContent.join("");
+      chatHistory.push({ role: "assistant", content: lastMessage });
+    } else {
+      console.error("sendMessage() failed due to server error", response);
+      chatMessages.appendChild(createMessageElement(
+        `Server replied with error code ${response.status} ${response.statusText}`,
+        "system"));
+      cleanupAfterMessage();
+    }
   } catch (error) {
     if (error.name !== "AbortError") {
-      console.error("Error:", error);
+      console.error("sendMessage() failed due to unexpected exception", error);
       const errorMessage = createMessageElement(
-        "Sorry, there was an error processing your request.",
+        "There was an error processing your request.",
         "system");
       chatMessages.appendChild(errorMessage);
     }
@@ -176,24 +189,88 @@ async function sendMessage() {
   }
 }
 
-// setup chat window
-chatMessages.innerHTML = "";
-for (let i = 0; i < chatHistory.length; i++) {
-  chatMessages.appendChild(createMessageElement(chatHistory[i].content,
-                                                chatHistory[i].role));
-  scrollToBottom();
+function onDragBegin(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  chatInput.classList.add('drag-over');
 }
 
-// setup events
-sendButton.addEventListener("click", sendMessage);
-stopButton.addEventListener("click", stopMessage);
-chatInput.addEventListener("input", onChatInput);
-chatInput.addEventListener("keydown", function(e) {
+function onDragEnd(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  chatInput.classList.remove('drag-over');
+}
+
+function onDrop(e) {
+  const files = e.dataTransfer.files;
+  [...files].forEach(onFile);
+}
+
+function onPaste(e) {
+  const items = e.clipboardData.items;
+  for (let item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      onFile(item.getAsFile());
+      return;
+    }
+  }
+}
+
+function onFile(file) {
+  if (!file.type.startsWith('image/')) {
+    console.warn('Only image files are supported');
+    return;
+  }
+  if (file.size > 1 * 1024 * 1024) {
+    console.warn('Image is larger than 1mb');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onloadend = function() {
+    const description = file.name;
+    const realDataUri = reader.result;
+    const fakeDataUri = 'data:,placeholder/' + generateId();
+    uploadedFiles.push([fakeDataUri, realDataUri]);
+    insertText(chatInput, `![${description}](${fakeDataUri})`);
+  };
+  reader.readAsDataURL(file);
+}
+
+function insertText(elem, text) {
+  const pos = elem.selectionStart;
+  elem.value = elem.value.slice(0, pos) + text + elem.value.slice(pos);
+  const newPos = pos + text.length;
+  elem.setSelectionRange(newPos, newPos);
+  elem.focus();
+  elem.dispatchEvent(new Event('input'));
+}
+
+function onKeyDown(e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
-});
+}
 
-// focus input
-chatInput.focus();
+function chatbot() {
+  chatMessages.innerHTML = "";
+  for (let i = 0; i < chatHistory.length; i++) {
+    chatMessages.appendChild(createMessageElement(chatHistory[i].content,
+                                                  chatHistory[i].role));
+    scrollToBottom();
+  }
+  sendButton.addEventListener("click", sendMessage);
+  stopButton.addEventListener("click", stopMessage);
+  chatInput.addEventListener("input", onChatInput);
+  chatInput.addEventListener("keydown", onKeyDown);
+  document.body.addEventListener('dragenter', onDragBegin, false);
+  document.body.addEventListener('dragover', onDragBegin, false);
+  document.body.addEventListener('dragleave', onDragEnd, false);
+  document.body.addEventListener('drop', onDragEnd, false);
+  document.body.addEventListener('drop', onDrop, false);
+  document.body.addEventListener('paste', onPaste);
+  chatInput.focus();
+}
+
+chatbot();

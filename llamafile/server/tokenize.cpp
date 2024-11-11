@@ -16,20 +16,17 @@
 // limitations under the License.
 
 #include "client.h"
-
+#include "llama.cpp/llama.h"
+#include "llamafile/server/cleanup.h"
+#include "llamafile/server/fastjson.h"
+#include "llamafile/server/json.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/signals.h"
+#include "llamafile/server/utils.h"
 #include <string.h>
 #include <sys/resource.h>
 #include <utility>
 #include <vector>
-
-#include "llama.cpp/llama.h"
-
-#include "cleanup.h"
-#include "fastjson.h"
-#include "json.h"
-#include "log.h"
-#include "signals.h"
-#include "utils.h"
 
 struct TokenizeParams
 {

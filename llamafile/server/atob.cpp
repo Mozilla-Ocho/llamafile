@@ -16,7 +16,6 @@
 // limitations under the License.
 
 #include "utils.h"
-
 #include <string_view>
 
 bool

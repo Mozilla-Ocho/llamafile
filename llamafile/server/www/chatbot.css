@@ -108,6 +108,11 @@ ul li:first-child {
   margin-right: auto;
 }
 
+.message img {
+  max-width: 100%;
+  height: auto;
+}
+
 .chat-input-container {
   padding: 1rem;
   border-top: 1px solid #e9ecef;
@@ -124,12 +129,17 @@ ul li:first-child {
   outline: none;
   resize: none;
   max-height: 200px;
-  min-height: 44px;
+  min-height: 50px;
   line-height: 1.5;
   font-family: inherit;
   overflow-y: auto;
   scrollbar-width: thin; /* Firefox */
   scrollbar-color: #cbd5e1 transparent; /* Firefox */
+}
+
+.chat-input.drag-over {
+  border-color: #0366d6;
+  background-color: #f6f8fa;
 }
 
 /* Chrome, Edge, and Safari */

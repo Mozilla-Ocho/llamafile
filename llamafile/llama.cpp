@@ -16,10 +16,48 @@
 // limitations under the License.
 
 #include "llama.h"
+#include "llama.cpp/llama.h"
+#include <cassert>
+#include <string>
+#include <vector>
 
 int llamafile_token_eot(llama_model *model) {
     llama_token eot = llama_token_eot(model);
     if (eot != -1)
         return eot;
     return llama_token_eos(model);
+}
+
+std::string llamafile_token_to_piece(const llama_context *ctx, llama_token token, bool special) {
+    std::string piece;
+    piece.resize(piece.capacity());
+    const int n_chars =
+        llama_token_to_piece(llama_get_model(ctx), token, &piece[0], piece.size(), 0, special);
+    if (n_chars < 0) {
+        piece.resize(-n_chars);
+        int check =
+            llama_token_to_piece(llama_get_model(ctx), token, &piece[0], piece.size(), 0, special);
+        unassert(check == -n_chars);
+    } else {
+        piece.resize(n_chars);
+    }
+    return piece;
+}
+
+std::vector<llama_token> llamafile_tokenize(const struct llama_model *model,
+                                            const std::string_view &text, bool add_special,
+                                            bool parse_special) {
+    int n_tokens = text.size() + 2 * add_special;
+    std::vector<llama_token> result(n_tokens);
+    n_tokens = llama_tokenize(model, text.data(), text.size(), result.data(), result.size(),
+                              add_special, parse_special);
+    if (n_tokens < 0) {
+        result.resize(-n_tokens);
+        int check = llama_tokenize(model, text.data(), text.size(), result.data(), result.size(),
+                                   add_special, parse_special);
+        unassert(check == -n_tokens);
+    } else {
+        result.resize(n_tokens);
+    }
+    return result;
 }

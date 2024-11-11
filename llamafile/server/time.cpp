@@ -23,8 +23,7 @@
 #include <unistd.h>
 
 #include "llamafile/crash.h"
-
-#include "log.h"
+#include "llamafile/server/log.h"
 
 //
 // lockless implementation of gmtime_r() and localtime_r()

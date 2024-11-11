@@ -2,6 +2,19 @@
 
 The `/v1/chat/completions` endpoint lets you build a chatbot.
 
+The client is responsible for maintaining the history of a conversation.
+The conversation is divided into messages, each having text content, and
+a role name that describes the speaker of that text. Each time a request
+is made to the API, the full conversation history is provided, and the
+server will generate content for the next message in its history, as the
+role of the assistant.
+
+This endpoint supports the following features:
+
+1. Automatic context window caching across requests
+2. Streaming responses to give you generated tokens in real time
+3. Image uploads via data: URIs
+
 ## Request URIs
 
 - `/v1/chat/completions` (OpenAI API compatible)
@@ -43,7 +56,9 @@ The `/v1/chat/completions` endpoint lets you build a chatbot.
   
   - `content`: `string`
     
-    The content field holds text the system, user, or assistant said.
+    The content field holds text the system, user, or assistant said. It
+    is recommended that this be treated as markdown. This field may
+    contain images which should be embedded as data: URIs.
   
   The completion endpoint will then generate at least one additional
   chat message. If the client wishes to request another completion, then
@@ -159,6 +174,54 @@ unsupported:
 - `top_logprobs`
 - `function_call`
 - `parallel_tool_calls`
+
+## Context Caching
+
+It may seem surprising that the entire conversation history should be
+uploaded each time a new message from the assistant is desired. This is
+fast because the server has a fixed number of slots which are used for
+caching context windows. When an HTTP client sends a chat completion
+request, a prefix search is made for a slot that best matches the
+supplied conversation history. Once a slot is chosen, unrelated content
+(possibly from another user's conversation) is deleted, the common
+prefix is preserved, and the remaining portions are prefilled. If all
+slots are in use, then the server handler waits for one to be free.
+
+## Image Uploads
+
+If a vision model was specified by passing the `--mmproj` flag, then
+each slot will additionally maintain a vision model context, which is
+used to encode embeddings for any data: URIs holding valid images.
+
+The data URI must conform to RFC2397. For example, a 1x1 transparent
+pixel could be encoded as:
+
+    data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==
+
+Images can be included by any role. Multiple images may be embedded
+within a single message content. The server will evaluate images in the
+same order as any surrounding text, e.g.
+
+```markdown
+![1x1.gif](data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==)
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==">
+```
+
+The supported image file formats are:
+
+- PNG
+- JPEG
+- GIF
+- BMP
+- TGA
+- HDR
+- PGM
+- PPM
+- PIC
+
+The declared mime type of the data URI must begin with `image/`. Its
+subtype is largely ignored, since the file type is inferred from the
+binary payload.
 
 ## See Also
 

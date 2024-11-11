@@ -21,10 +21,9 @@
 #include <ucontext.h>
 
 #include "llamafile/crash.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/server.h"
 #include "llamafile/threadlocal.h"
-
-#include "log.h"
-#include "server.h"
 
 static struct
 {

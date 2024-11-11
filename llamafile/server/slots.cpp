@@ -16,11 +16,11 @@
 // limitations under the License.
 
 #include "slots.h"
+#include "llamafile/server/atom.h"
 #include "llamafile/server/log.h"
+#include "llamafile/server/slot.h"
+#include "llamafile/server/slot_entry.h"
 #include "llamafile/vector.h"
-#include "log.h"
-#include "slot.h"
-#include "slot_entry.h"
 #include <assert.h>
 
 Slots::Slots(llama_model* model) : model_(model)
@@ -62,7 +62,7 @@ Slots::start(int count)
 }
 
 Slot*
-Slots::take(const std::vector<int>& prefix)
+Slots::take(const std::vector<Atom>& prefix)
 {
     pthread_mutex_lock(&lock_);
     for (;;) {

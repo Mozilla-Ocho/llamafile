@@ -16,28 +16,26 @@
 // limitations under the License.
 
 #include "client.h"
-
-#include <math.h>
-#include <string.h>
-#include <sys/resource.h>
-#include <vector>
-
 #include "llama.cpp/llama.h"
 #include "llama.cpp/sampling.h"
 #include "llamafile/llama.h"
 #include "llamafile/macros.h"
+#include "llamafile/server/atom.h"
+#include "llamafile/server/cleanup.h"
+#include "llamafile/server/fastjson.h"
+#include "llamafile/server/json.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/server.h"
+#include "llamafile/server/slot.h"
+#include "llamafile/server/slots.h"
+#include "llamafile/server/utils.h"
+#include "llamafile/server/worker.h"
 #include "llamafile/string.h"
 #include "llamafile/vector.h"
-
-#include "cleanup.h"
-#include "fastjson.h"
-#include "json.h"
-#include "log.h"
-#include "server.h"
-#include "slot.h"
-#include "slots.h"
-#include "utils.h"
-#include "worker.h"
+#include <math.h>
+#include <string.h>
+#include <sys/resource.h>
+#include <vector>
 
 struct V1ChatCompletionParams
 {
@@ -51,16 +49,16 @@ struct V1ChatCompletionParams
     std::string user;
     std::string model;
     std::vector<llama_chat_msg> messages;
-    std::vector<std::vector<int>> stop;
+    std::vector<std::vector<Atom>> stop;
     std::string grammar;
 
     void add_stop(llama_model* model, const std::string& text)
     {
-        stop.emplace_back(
-          llama_tokenize(model, text, DONT_ADD_SPECIAL, DONT_PARSE_SPECIAL));
+        stop.emplace_back();
+        atomize(model, &stop.back(), text, DONT_PARSE_SPECIAL);
     }
 
-    bool should_stop(const std::vector<int>& history)
+    bool should_stop(const std::vector<Atom>& history)
     {
         for (const auto& suffix : stop)
             if (lf::vector_ends_with(history, suffix))
@@ -72,7 +70,7 @@ struct V1ChatCompletionParams
 struct V1ChatCompletionState
 {
     std::string prompt;
-    std::vector<int> tokens;
+    std::vector<Atom> atoms;
     std::string piece;
 };
 
@@ -452,26 +450,18 @@ Client::v1_chat_completions()
     V1ChatCompletionResponse* response = new V1ChatCompletionResponse;
     defer_cleanup(cleanup_response, response);
 
+    // add bos token if it's needed
+    if (llama_should_add_bos_token(model_))
+        state->atoms.emplace_back(llama_token_bos(model_));
+
     // turn text into tokens
     state->prompt =
       llama_chat_apply_template(model_, "", params->messages, ADD_ASSISTANT);
-    state->tokens =
-      llama_tokenize(model_, state->prompt, DONT_ADD_SPECIAL, PARSE_SPECIAL);
-
-    // add bos token if it's needed
-    if (llama_should_add_bos_token(model_)) {
-        llama_token bos = llama_token_bos(model_);
-        if (state->tokens.empty() || state->tokens[0] != bos)
-            state->tokens.insert(state->tokens.begin(), bos);
-    }
+    atomize(model_, &state->atoms, state->prompt, PARSE_SPECIAL);
 
     // find appropriate slot
-    slot_ = worker_->server_->slots_->take(state->tokens);
+    slot_ = worker_->server_->slots_->take(state->atoms);
     defer_cleanup(cleanup_slot, this);
-
-    // sanity check
-    if (state->tokens.size() + 1 > slot_->n_ctx())
-        return send_error(400, "prompt too big for model context size");
 
     // init sampling
     llama_sampling_context* sampler = create_sampler(params);
@@ -480,9 +470,10 @@ Client::v1_chat_completions()
     defer_cleanup(cleanup_sampler, sampler);
 
     // prefill time
-    if (!slot_->prefill(state->tokens)) {
-        SLOG("slot prefill failed");
-        return send_error(500, "llama_decode prefill failed");
+    int prompt_tokens = 0;
+    if ((prompt_tokens = slot_->prefill(state->atoms)) < 0) {
+        SLOG("slot prefill failed: %s", Slot::describe_error(prompt_tokens));
+        return send_error(500, Slot::describe_error(prompt_tokens));
     }
 
     // setup response json
@@ -539,7 +530,7 @@ Client::v1_chat_completions()
             break;
         }
         state->piece =
-          llama_token_to_piece(slot_->ctx_, id, DONT_RENDER_SPECIAL_TOKENS);
+          llamafile_token_to_piece(slot_->ctx_, id, DONT_RENDER_SPECIAL_TOKENS);
         if (!state->piece.empty()) {
             if (params->stream) {
                 char* p = append_http_response_message(obuf_.p, 200);
@@ -571,9 +562,9 @@ Client::v1_chat_completions()
     } else {
         Json& usage = response->json["usage"];
         usage.setObject();
-        usage["prompt_tokens"].setLong(state->tokens.size());
+        usage["prompt_tokens"].setLong(prompt_tokens);
         usage["completion_tokens"].setLong(completion_tokens);
-        usage["total_tokens"].setLong(completion_tokens + state->tokens.size());
+        usage["total_tokens"].setLong(completion_tokens + prompt_tokens);
         choice["message"].setObject();
         choice["message"]["role"].setString("assistant");
         choice["message"]["content"].setString(std::move(response->content));

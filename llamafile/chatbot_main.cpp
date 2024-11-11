@@ -29,6 +29,7 @@
 #include "llama.cpp/server/server.h"
 #include "llamafile/color.h"
 #include "llamafile/compute.h"
+#include "llamafile/llama.h"
 #include "llamafile/string.h"
 
 namespace lf {
@@ -69,7 +70,7 @@ std::string describe_compute(void) {
 std::string token_to_piece(const struct llama_context *ctx, llama_token token, bool special) {
     if (token == IMAGE_PLACEHOLDER_TOKEN)
         return "⁑";
-    return llama_token_to_piece(ctx, token, special);
+    return llamafile_token_to_piece(ctx, token, special);
 }
 
 void on_server_listening(const char *host, int port) {

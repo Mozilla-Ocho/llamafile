@@ -16,7 +16,8 @@
 // limitations under the License.
 
 #pragma once
-#include "llama.cpp/llama.h"
+#include <__fwd/string_view.h>
+#include <__fwd/vector.h>
 
 // Many llama.cpp APIs take boolean parameters at the end. Please favor
 // passing these constants as arguments instead, for better readability
@@ -36,4 +37,10 @@
 #define RENDER_SPECIAL_TOKENS true
 #define DONT_RENDER_SPECIAL_TOKENS false
 
+struct llama_model;
+struct llama_context;
+
 int llamafile_token_eot(llama_model *);
+
+std::string llamafile_token_to_piece(const llama_context *, int, bool);
+std::vector<int> llamafile_tokenize(const llama_model *, const std::string_view &, bool, bool);

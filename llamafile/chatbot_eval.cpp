@@ -16,17 +16,17 @@
 // limitations under the License.
 
 #include "chatbot.h"
-
-#include <cassert>
-#include <string>
-#include <vector>
-
+#include "llama.cpp/base64.h"
 #include "llama.cpp/common.h"
 #include "llama.cpp/llama.h"
 #include "llama.cpp/llava/llava.h"
 #include "llamafile/datauri.h"
 #include "llamafile/image.h"
+#include "llamafile/llama.h"
 #include "llamafile/string.h"
+#include <cassert>
+#include <string>
+#include <vector>
 
 namespace lf {
 namespace chatbot {
@@ -60,7 +60,7 @@ bool eval_tokens(std::vector<llama_token> tokens) {
     return true;
 }
 
-bool eval_image_embed(const struct llava_image_embed *image_embed) {
+bool eval_image_embed(const llava_image_embed *image_embed) {
     int N = image_embed->n_image_pos;
     if (tokens_used() + N > llama_n_ctx(g_ctx))
         return out_of_context(N);
@@ -113,7 +113,7 @@ bool eval_token(int id) {
 }
 
 bool eval_plain_text(const std::string &str, bool add_special, bool parse_special) {
-    return eval_tokens(llama_tokenize(g_model, str, add_special, parse_special));
+    return eval_tokens(llamafile_tokenize(g_model, str, add_special, parse_special));
 }
 
 bool eval_string(std::string_view s, bool add_special, bool parse_special) {
@@ -122,22 +122,26 @@ bool eval_string(std::string_view s, bool add_special, bool parse_special) {
         size_t pos = s.find("data:", i);
         if (pos == std::string_view::npos)
             return eval_plain_text(std::string(s), add_special, parse_special);
+        i = pos + 5;
         DataUri uri;
         size_t end = uri.parse(s.substr(pos + 5));
-        if (end == std::string_view::npos) {
-            i = pos + 5;
+        if (end == std::string_view::npos)
+            continue;
+        if (!uri.mime.starts_with("image/"))
+            continue;
+        std::string image;
+        try {
+            image = uri.decode();
+        } catch (const base64_error &e) {
             continue;
         }
-        std::string image = uri.decode();
-        if (!is_image(image)) {
-            i = pos + 5;
+        if (!is_image(image))
             continue;
-        }
         if (!eval_plain_text(std::string(s.substr(0, pos)), add_special, parse_special))
             return false;
         if (!eval_image(image))
             return false;
-        s = s.substr(pos + 5 + end);
+        s = s.substr(i + end);
         i = 0;
     }
 }

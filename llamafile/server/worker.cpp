@@ -16,20 +16,17 @@
 // limitations under the License.
 
 #include "worker.h"
-
+#include "llamafile/llamafile.h"
+#include "llamafile/server/client.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/server.h"
+#include "llamafile/server/signals.h"
+#include "llamafile/server/tokenbucket.h"
+#include "llamafile/threadlocal.h"
+#include "llamafile/trust.h"
 #include <assert.h>
 #include <exception>
 #include <pthread.h>
-
-#include "llamafile/llamafile.h"
-#include "llamafile/threadlocal.h"
-#include "llamafile/trust.h"
-
-#include "client.h"
-#include "log.h"
-#include "server.h"
-#include "signals.h"
-#include "tokenbucket.h"
 
 Worker::Worker(Server* server, llama_model* model)
   : server_(server), client_(model)

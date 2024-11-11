@@ -16,24 +16,24 @@
 // limitations under the License.
 
 #pragma once
-#include <__fwd/string.h>
-#include <__fwd/string_view.h>
-#include <__fwd/vector.h>
-#include <optional>
+#include <string>
 
-class Atom;
-struct llama_model;
+class Image
+{
+  public:
+    ~Image();
+    Image(const Image&);
+    Image(const std::string_view&, int);
+    const std::string& bytes() const;
+    int ctx_used() const;
 
-extern const signed char kHexToInt[256];
+  private:
+    std::string bytes_;
+    int ctx_used_;
+};
 
 bool
-atob(std::string_view, bool);
+operator<(const Image&, const Image&);
 
-std::string_view
-or_empty(std::optional<std::string_view> x);
-
-void
-atomize(const llama_model* model,
-        std::vector<Atom>* result,
-        std::string_view s,
-        bool parse_special);
+bool
+operator==(const Image&, const Image&);

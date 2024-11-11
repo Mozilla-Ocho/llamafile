@@ -23,12 +23,11 @@
 #include <vector>
 
 #include "llama.cpp/llama.h"
-
-#include "cleanup.h"
-#include "fastjson.h"
-#include "json.h"
-#include "log.h"
-#include "utils.h"
+#include "llamafile/server/cleanup.h"
+#include "llamafile/server/fastjson.h"
+#include "llamafile/server/json.h"
+#include "llamafile/server/log.h"
+#include "llamafile/server/utils.h"
 
 struct EmbeddingParams
 {

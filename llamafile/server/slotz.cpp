@@ -32,7 +32,8 @@ Client::slotz()
     if (id >= worker_->server_->slots_->all_slots_.size())
         return send_error(404);
     Slot* slot = worker_->server_->slots_->all_slots_[id];
-    std::string dump = slot->dump();
+    std::string dump;
+    slot->dump(&dump);
     char* p = append_http_response_message(obuf_.p, 200);
     p = stpcpy(p, "Content-Type: text/plain\r\n");
     return send_response(obuf_.p, p, dump);

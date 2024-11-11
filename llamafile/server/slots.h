@@ -20,6 +20,7 @@
 #include <set>
 #include <vector>
 
+class Atom;
 struct Slot;
 class SlotEntry;
 struct llama_model;
@@ -32,9 +33,10 @@ struct Slots
     pthread_mutex_t lock_;
     pthread_cond_t cond_;
 
-    Slots(llama_model*);
+    explicit Slots(llama_model*);
     ~Slots();
     int start(int);
-    Slot* take(const std::vector<int>&);
+    void tokenize(std::vector<Atom>*, std::string_view, bool);
+    Slot* take(const std::vector<Atom>&);
     void give(Slot*);
 };

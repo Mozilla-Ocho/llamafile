@@ -20,23 +20,43 @@
 #include <time.h>
 #include <vector>
 
-struct llama_model;
+struct Atom;
+struct Image;
 struct llama_context;
+struct llama_model;
+struct clip_ctx;
 
 struct Slot
 {
+    enum
+    {
+        uninitialized = -4096,
+        out_of_context,
+        no_vision_model,
+        decode_token_failed,
+        decode_image_failed,
+        encode_image_failed,
+    };
+
+    static const char* describe_error(int);
+
     llama_model* model_;
+    clip_ctx* clip_ctx_ = nullptr;
     llama_context* ctx_ = nullptr;
     timespec last_used_ = timespec_zero;
-    std::vector<int> history_;
+    std::vector<Atom> history_;
     std::string system_fingerprint_;
 
-    Slot(llama_model*);
     ~Slot();
-    int n_ctx();
+    explicit Slot(llama_model*);
+    int ctx_size() const;
+    int ctx_used() const;
     bool start();
-    bool eval_token(int);
-    bool eval_tokens(std::vector<int>);
-    bool prefill(const std::vector<int>&);
-    std::string dump();
+    int eval_token(int);
+    int eval_image(const std::string_view&);
+    int eval_tokens(const std::vector<int>&);
+    int eval_atoms(const std::vector<Atom>&);
+    int prefill(const std::vector<Atom>&);
+    void tokenize(std::vector<Atom>*, std::string_view, bool);
+    void dump(std::string*);
 };

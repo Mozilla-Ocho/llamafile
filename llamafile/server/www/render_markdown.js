@@ -48,6 +48,7 @@ class RenderMarkdown extends Highlighter {
   static OLDCODE = 33;
   static BLOCKQUOTE = 34;
   static TICK_TICK_TICK = 35;
+  static EXCLAIM = 36;
 
   static STYLE_SPAN = 16;
   static STYLE_STRONG = 16;
@@ -100,6 +101,7 @@ class RenderMarkdown extends Highlighter {
     this.bqline = false;
     this.tick1 = 0;
     this.tick2 = 0;
+    this.is_image = false;
   }
 
   inside(style) {
@@ -270,7 +272,12 @@ class RenderMarkdown extends Highlighter {
         } else if (c == '~') {
           this.state = RenderMarkdown.TILDE;
           this.got();
+        } else if (c == '!') {
+          this.is_image = true;
+          this.state = RenderMarkdown.EXCLAIM;
+          this.got();
         } else if (c == '[') {
+          this.is_image = false;
           this.state = RenderMarkdown.LSB;
           this.got();
         } else if (c == '<') {
@@ -694,6 +701,15 @@ class RenderMarkdown extends Highlighter {
         this.state = RenderMarkdown.LAB;
         break;
 
+      case RenderMarkdown.EXCLAIM:
+        if (c == '[') {
+          this.state = RenderMarkdown.LSB;
+        } else {
+          this.append('!');
+          this.epsilon(RenderMarkdown.NORMAL);
+        }
+        break;
+
       case RenderMarkdown.LSB:
         if (c == ']') {
           this.state = RenderMarkdown.LSB_RSB;
@@ -723,9 +739,15 @@ class RenderMarkdown extends Highlighter {
 
       case RenderMarkdown.LSB_RSB_LPAREN:
         if (c == ')') {
-          let a = this.push("A", "");
-          a.innerText = this.text;
-          a.href = this.href;
+          if (this.is_image) {
+            let a = this.push("IMG", "");
+            a.alt = this.text;
+            a.src = this.href;
+          } else {
+            let a = this.push("A", "");
+            a.innerText = this.text;
+            a.href = this.href;
+          }
           this.pop();
           this.href = '';
           this.text = '';

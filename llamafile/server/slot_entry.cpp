@@ -16,6 +16,7 @@
 // limitations under the License.
 
 #include "slot_entry.h"
+#include "atom.h"
 #include "slot.h"
 #include <assert.h>
 
@@ -24,7 +25,7 @@ SlotEntry::SlotEntry(Slot* slot) : slot_(slot), key_(nullptr)
     unassert(slot);
 }
 
-SlotEntry::SlotEntry(const std::vector<int>* key) : slot_(nullptr), key_(key)
+SlotEntry::SlotEntry(const std::vector<Atom>* key) : slot_(nullptr), key_(key)
 {
     unassert(key);
 }
@@ -39,7 +40,7 @@ SlotEntry::slot() const
     return slot_;
 }
 
-const std::vector<int>*
+const std::vector<Atom>*
 SlotEntry::key() const
 {
     return key_ ? key_ : &slot_->history_;
