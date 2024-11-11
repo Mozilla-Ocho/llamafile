@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #pragma once
-#include <stddef.h>
+#include <cstddef>
 
 struct Buffer
 {

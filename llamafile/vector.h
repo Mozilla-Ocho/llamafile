@@ -16,8 +16,8 @@
 // limitations under the License.
 
 #pragma once
+#include <__fwd/vector.h>
 #include <algorithm>
-#include <vector>
 
 namespace lf {
 

@@ -18,6 +18,9 @@
 #include "datauri.h"
 #include "image.h"
 
+#include <string>
+#include <vector>
+
 namespace {
 
 void rfc2397_example1() {

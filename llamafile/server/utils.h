@@ -16,9 +16,9 @@
 // limitations under the License.
 
 #pragma once
+#include <__fwd/string.h>
+#include <__fwd/string_view.h>
 #include <optional>
-#include <string>
-#include <string_view>
 
 extern const signed char kHexToInt[256];
 

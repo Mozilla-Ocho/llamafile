@@ -17,6 +17,8 @@
 
 #include "utils.h"
 
+#include <string_view>
+
 std::string_view
 or_empty(std::optional<std::string_view> x)
 {

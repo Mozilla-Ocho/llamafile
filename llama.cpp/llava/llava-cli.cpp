@@ -14,6 +14,7 @@
 #include <vector>
 #include <unistd.h>
 #include <signal.h>
+#include <iostream>
 
 static bool eval_tokens(struct llama_context * ctx_llama, std::vector<llama_token> tokens, int n_batch, int * n_past) {
     int N = (int) tokens.size();

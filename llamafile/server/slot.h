@@ -18,7 +18,6 @@
 #pragma once
 #include <string>
 #include <time.h>
-#include <utility>
 #include <vector>
 
 struct llama_model;

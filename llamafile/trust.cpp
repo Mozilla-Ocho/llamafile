@@ -17,6 +17,8 @@
 
 #include "trust.h"
 
+#include <vector>
+
 std::vector<cidr> FLAG_trust;
 
 bool is_trusted_ip(unsigned ip) noexcept {

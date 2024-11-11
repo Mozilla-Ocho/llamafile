@@ -18,6 +18,7 @@
 #include "string.h"
 
 #include <fcntl.h>
+#include <string>
 #include <unistd.h>
 
 namespace lf {

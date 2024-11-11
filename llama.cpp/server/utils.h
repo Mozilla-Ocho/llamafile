@@ -9,6 +9,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <unordered_map>
+#include <iostream> // [jart]
 
 #include "llama.cpp/json.h"
 #include "llama.cpp/llava/clip.h"

@@ -17,8 +17,9 @@
 
 #include "trust.h"
 
+#include <cstring>
 #include <ctype.h>
-#include <string.h>
+#include <string>
 
 bool parse_cidr(const std::string_view &str, cidr *out_cidr) noexcept {
     long ip;

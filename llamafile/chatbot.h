@@ -16,8 +16,8 @@
 // limitations under the License.
 
 #pragma once
-#include <string>
-#include <vector>
+#include <__fwd/string.h>
+#include <__fwd/vector.h>
 
 #define RESET "\e[0m"
 #define BOLD "\e[1m"

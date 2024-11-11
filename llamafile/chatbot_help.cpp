@@ -17,6 +17,8 @@
 
 #include "chatbot.h"
 
+#include <vector>
+
 void chatbot_help(const std::vector<std::string> &args) {
     if (args.size() == 1) {
         fprintf(stderr, "\

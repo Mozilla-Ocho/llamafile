@@ -4,7 +4,7 @@
 
 #include "grammar-parser.h"
 
-#include <random>
+#include <__random/mersenne_twister_engine.h> // [jart]
 #include <string>
 #include <unordered_map>
 #include <vector>

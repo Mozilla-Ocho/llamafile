@@ -27,8 +27,10 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <time.h>
 #include <unistd.h>
+#include <vector>
 
 #include "llama.cpp/cores.h"
 #include "llama.cpp/llama.h"

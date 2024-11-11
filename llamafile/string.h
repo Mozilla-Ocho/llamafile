@@ -16,9 +16,10 @@
 // limitations under the License.
 
 #pragma once
-#include <string>
+#include <__fwd/string.h>
+#include <__fwd/string_view.h>
+#include <__fwd/vector.h>
 #include <time.h>
-#include <vector>
 
 namespace lf {
 

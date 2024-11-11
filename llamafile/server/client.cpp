@@ -21,10 +21,12 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
+#include <string>
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
+#include <vector>
 
 #include "llama.cpp/llama.h"
 #include "llamafile/flags.h"

@@ -19,7 +19,6 @@
 #include <atomic>
 #include <cosmo.h>
 #include <pthread.h>
-#include <string>
 
 struct Slots;
 struct llama_model;

@@ -17,11 +17,11 @@
 
 #include "string.h"
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <string>
-#include <time.h>
 
 namespace lf {
 

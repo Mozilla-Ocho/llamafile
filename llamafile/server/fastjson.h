@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #pragma once
-#include <string_view>
+#include <__fwd/string_view.h>
 
 char*
 encode_bool(char*, bool) noexcept;

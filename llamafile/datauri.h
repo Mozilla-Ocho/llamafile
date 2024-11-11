@@ -16,8 +16,8 @@
 // limitations under the License.
 
 #pragma once
-#include <string>
-#include <utility>
+#include <__fwd/string.h>
+#include <string_view>
 #include <vector>
 
 struct DataUri {

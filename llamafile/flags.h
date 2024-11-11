@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #pragma once
-#include <string>
-#include <vector>
+#include <__fwd/string.h>
+#include <__fwd/vector.h>
 
 extern std::vector<std::string> FLAG_headers;

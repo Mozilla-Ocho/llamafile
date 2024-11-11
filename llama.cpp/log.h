@@ -2,11 +2,12 @@
 #define LOG_NO_TIMESTAMPS
 #define LOG_NO_FILE_LINE_FUNCTION
 
-#include <chrono>
+// #include <chrono> // [jart]
 #include <cstring>
 #include <sstream>
-#include <iostream>
-#include <thread>
+// #include <iostream> // [jart]
+#include <__thread/id.h> // [jart]
+#include <__thread/thread.h> // [jart]
 #include <vector>
 #include <algorithm>
 #include "llamafile/log.h"

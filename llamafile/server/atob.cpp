@@ -17,6 +17,8 @@
 
 #include "utils.h"
 
+#include <string_view>
+
 bool
 atob(std::string_view val, bool dflt)
 {

@@ -20,9 +20,9 @@
 #include <cmath>
 #include <string>
 #include <vector>
-#include <random>
-#include <thread>
-#include <unordered_map>
+#include <__random/random_device.h> // [jart]
+#include <__random/mersenne_twister_engine.h> // [jart]
+// #include <unordered_map> // [jart]
 #include <tuple>
 #include <cosmo.h>
 
