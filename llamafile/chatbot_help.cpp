@@ -134,8 +134,8 @@ shares file from local hard drive with assistant. if this is a text file\n\
 then a markdown system prompt is generated and added to the conversation\n\
 history that gives the assistant readonly access to the file content and\n\
 metadata. files with nul characters in them are currently not supported.\n\
-image files (png/jpg/gif/bmp/hdr/psd/tga/pgm/ppm) may be uploaded if you\n\
-specified a clip vision model (eg. LLaVA) earlier with the --mmproj flag\n\
+image files (jpg/png/gif) may be uploaded if you specified a clip vision\n\
+model (e.g. LLaVA) earlier when running llamafile with the --mmproj flag\n\
 ");
     } else if (args[1] == "forget") {
         fprintf(stderr, "\

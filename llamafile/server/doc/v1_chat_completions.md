@@ -207,21 +207,11 @@ same order as any surrounding text, e.g.
 <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==">
 ```
 
-The supported image file formats are:
-
-- PNG
-- JPEG
-- GIF
-- BMP
-- TGA
-- HDR
-- PGM
-- PPM
-- PIC
-
 The declared mime type of the data URI must begin with `image/`. Its
 subtype is largely ignored, since the file type is inferred from the
 binary payload.
+
+The supported image file formats are JPEG, PNG, and GIF.
 
 ## See Also
 
