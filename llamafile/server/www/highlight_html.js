@@ -352,3 +352,4 @@ Highlighter.REGISTRY['html'] = HighlightHtml;
 Highlighter.REGISTRY['htm'] = HighlightHtml;
 Highlighter.REGISTRY['xhtml'] = HighlightHtml;
 Highlighter.REGISTRY['xml'] = HighlightHtml;
+Highlighter.REGISTRY['php'] = HighlightHtml;

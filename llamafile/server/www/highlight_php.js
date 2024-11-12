@@ -310,6 +310,3 @@ class HighlightPhp extends Highlighter {
     this.delta = 1;
   }
 }
-
-Highlighter.REGISTRY['php'] = HighlightPhp;
-Highlighter.REGISTRY['pl'] = HighlightPhp;
