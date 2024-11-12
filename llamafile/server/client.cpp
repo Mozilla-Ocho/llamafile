@@ -193,21 +193,6 @@ Client::read_request()
 bool
 Client::transport()
 {
-    if (msg_.version > 11) {
-        close_connection_ = true;
-        return send_error(505);
-    }
-
-    if (msg_.method == kHttpConnect) {
-        close_connection_ = true;
-        return send_error(501);
-    }
-
-    if (!has_at_most_this_element(kHttpExpect, "100-continue")) {
-        close_connection_ = true;
-        return send_error(417);
-    }
-
     effective_ip_ = client_ip_;
     effective_ip_trusted_ = client_ip_trusted_;
     if (FLAG_ip_header) {
@@ -236,6 +221,21 @@ Client::transport()
             SLOG("deprioritizing");
             worker_->deprioritize();
         }
+    }
+
+    if (msg_.version > 11) {
+        close_connection_ = true;
+        return send_error(505);
+    }
+
+    if (msg_.method == kHttpConnect) {
+        close_connection_ = true;
+        return send_error(501);
+    }
+
+    if (!has_at_most_this_element(kHttpExpect, "100-continue")) {
+        close_connection_ = true;
+        return send_error(417);
     }
 
     if (HasHeader(kHttpTransferEncoding))
@@ -614,6 +614,20 @@ Client::dispatch()
 bool
 Client::dispatcher()
 {
+    if (msg_.method == kHttpOptions) {
+        char* p = obuf_.p;
+        char* headers = p;
+        p = append_http_response_message(p, 204);
+        p = stpcpy(p, "Accept: */*\r\n");
+        p = stpcpy(p, "Accept-Charset: utf-8\r\n");
+        p = stpcpy(p, "Allow: GET, POST, OPTIONS\r\n");
+        for (const auto& h : FLAG_headers) {
+            p = (char*)mempcpy(p, h.data(), h.size());
+            p = stpcpy(p, "\r\n");
+        }
+        return send_response(headers, p, "");
+    }
+
     // get request-uri path
     std::string_view p1 = path();
     if (FLAG_verbose >= 2)
