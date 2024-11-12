@@ -128,7 +128,7 @@ bool eval_string(std::string_view s, bool add_special, bool parse_special) {
         size_t end = uri.parse(s.substr(pos + 5));
         if (end == std::string_view::npos)
             continue;
-        if (!uri.mime.starts_with("image/"))
+        if (!lf::startscasewith(uri.mime, "image/"))
             continue;
         std::string image;
         try {

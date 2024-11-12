@@ -16,20 +16,40 @@
 // limitations under the License.
 
 #include "string.h"
-
 #include <cctype>
 #include <cosmo.h>
 #include <cstdio>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace lf {
 
-std::string tolower(const std::string_view s) {
+std::string tolower(const std::string_view &s) {
     std::string b;
     for (char c : s)
         b += std::tolower(c);
     return b;
+}
+
+int strcasecmp(const std::string_view &a, const std::string_view &b) {
+    size_t n = std::min(a.size(), b.size());
+    for (size_t i = 0; i < n; ++i) {
+        unsigned char al = std::tolower(a[i] & 255);
+        unsigned char bl = std::tolower(b[i] & 255);
+        if (al != bl)
+            return (al > bl) - (al < bl);
+    }
+    return (a.size() > b.size()) - (a.size() < b.size());
+}
+
+bool startscasewith(const std::string_view &str, const std::string_view &prefix) {
+    if (prefix.size() > str.size())
+        return false;
+    for (size_t i = 0; i < prefix.size(); ++i)
+        if (std::tolower(str[i] & 255) != std::tolower(prefix[i] & 255))
+            return false;
+    return true;
 }
 
 void append_wchar(std::string *r, wchar_t c) {
@@ -68,7 +88,7 @@ std::string join(const std::vector<std::string> &vec, const std::string_view &de
     return result;
 }
 
-std::string basename(const std::string_view path) {
+std::string basename(const std::string_view &path) {
     size_t i, e;
     if ((e = path.size())) {
         while (e > 1 && path[e - 1] == '/')
@@ -90,7 +110,7 @@ std::string_view extname(const std::string_view &path) {
     return path;
 }
 
-std::string dirname(const std::string_view path) {
+std::string dirname(const std::string_view &path) {
     size_t e = path.size();
     if (e--) {
         for (; path[e] == '/'; e--)
@@ -107,7 +127,7 @@ std::string dirname(const std::string_view path) {
     return ".";
 }
 
-std::string resolve(const std::string_view lhs, const std::string_view rhs) {
+std::string resolve(const std::string_view &lhs, const std::string_view &rhs) {
     if (lhs.empty())
         return std::string(rhs);
     if (!rhs.empty() && rhs[0] == '/')
@@ -126,7 +146,7 @@ std::string resolve(const std::string_view lhs, const std::string_view rhs) {
 }
 
 // replaces multiple isspace() with one space and trims result
-std::string collapse(const std::string_view input) {
+std::string collapse(const std::string_view &input) {
     size_t start = 0;
     while (start < input.length() && std::isspace(input[start]))
         ++start;

@@ -16,8 +16,9 @@
 // limitations under the License.
 
 #include "datauri.h"
-
 #include "llama.cpp/base64.h"
+#include "llamafile/string.h"
+#include <cctype>
 
 // See RFC2045 (MIME)
 static const char kMimeToken[] = {
@@ -273,14 +274,14 @@ std::string DataUri::decode() {
 
 bool DataUri::has_param(std::string_view attribute) {
     for (const auto &param : params)
-        if (param.first == attribute)
+        if (!lf::strcasecmp(param.first, attribute))
             return true;
     return false;
 }
 
 std::string_view DataUri::get_param(std::string_view attribute) {
     for (const auto &param : params)
-        if (param.first == attribute)
+        if (!lf::strcasecmp(param.first, attribute))
             return param.second;
     return "";
 }

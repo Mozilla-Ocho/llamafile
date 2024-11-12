@@ -17,7 +17,7 @@
 
 #include "datauri.h"
 #include "image.h"
-
+#include "string.h"
 #include <string>
 #include <vector>
 
@@ -30,7 +30,7 @@ void rfc2397_example1() {
         exit(1);
     if (uri.mime != "text/plain")
         exit(2);
-    if (uri.get_param("charset") != "US-ASCII")
+    if (lf::strcasecmp(uri.get_param("charset"), "US-ASCII"))
         exit(3);
     if (uri.decode() != "A brief note")
         exit(4);

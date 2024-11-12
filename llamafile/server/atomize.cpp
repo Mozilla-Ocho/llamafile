@@ -22,6 +22,7 @@
 #include "llamafile/image.h"
 #include "llamafile/llama.h"
 #include "llamafile/server/image.h"
+#include "llamafile/string.h"
 #include <string>
 #include <vector>
 
@@ -58,7 +59,7 @@ atomize(const llama_model* model,
         size_t end = uri.parse(s.substr(i));
         if (end == std::string_view::npos)
             continue;
-        if (!uri.mime.starts_with("image/"))
+        if (!startscasewith(uri.mime, "image/"))
             continue;
         std::string image;
         try {

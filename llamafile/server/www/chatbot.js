@@ -217,19 +217,69 @@ function onPaste(e) {
   }
 }
 
-function onFile(file) {
-  if (!file.type.startsWith('image/')) {
+// fixes image data uri
+// - convert to jpg if it's not jpg/png/gif
+// - reduce quality and/or downscale if too big
+async function fixImageDataUri(dataUri, maxLength = 1024 * 1024) {
+  const mimeMatch = dataUri.match(/^data:([^;,]+)/);
+  if (!mimeMatch)
+    throw new Error('bad image data uri');
+  const mimeType = mimeMatch[1].toLowerCase();
+  const supported = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+  if (supported.includes(mimeType))
+    if (dataUri.length <= maxLength)
+      return dataUri;
+  const lossless = ['image/png', 'image/gif'];
+  const quality = lossless.includes(mimeType) ? 0.92 : 0.8;
+  function createScaledCanvas(img, scale) {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(img.width * scale);
+    canvas.height = Math.floor(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = 'white';  // in case of transparency
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = async () => {
+      let scale = 1.0;
+      let attempts = 0;
+      const maxAttempts = 5;
+      const initialCanvas = createScaledCanvas(img, scale);
+      let result = initialCanvas.toDataURL('image/jpeg', quality);
+      while (result.length > maxLength && attempts < maxAttempts) {
+        attempts++;
+        scale *= 0.7071;
+        const scaledCanvas = createScaledCanvas(img, scale);
+        result = scaledCanvas.toDataURL('image/jpeg', quality);
+        result.length = result.length;
+      }
+      if (result.length <= maxLength) {
+        resolve(result);
+      } else {
+        reject(new Error(`Could not reduce image to ${(maxLength/1024).toFixed(2)}kb after ${maxAttempts} attempts`));
+      }
+    };
+    img.onerror = () => {
+      reject(new Error('Failed to load image from data URI'));
+    };
+    img.src = dataUri;
+  });
+}
+
+async function onFile(file) {
+  if (!file.type.toLowerCase().startsWith('image/')) {
     console.warn('Only image files are supported');
     return;
   }
-  if (file.size > 1 * 1024 * 1024) {
-    console.warn('Image is larger than 1mb');
-    return;
-  }
   const reader = new FileReader();
-  reader.onloadend = function() {
+  reader.onloadend = async function() {
     const description = file.name;
-    const realDataUri = reader.result;
+    const realDataUri = await fixImageDataUri(reader.result);
     const fakeDataUri = 'data:,placeholder/' + generateId();
     uploadedFiles.push([fakeDataUri, realDataUri]);
     insertText(chatInput, `![${description}](${fakeDataUri})`);
