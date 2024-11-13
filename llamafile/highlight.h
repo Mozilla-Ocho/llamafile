@@ -561,6 +561,9 @@ class HighlightRuby : public Highlight {
     bool pending_heredoc_ = false;
     bool indented_heredoc_ = false;
     unsigned char nest_[16];
+    unsigned char levels_[16];
+    unsigned char openers_[16];
+    unsigned char closers_[16];
     std::string word_;
     std::string heredoc_;
 };

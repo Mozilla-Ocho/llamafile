@@ -175,8 +175,9 @@ class HighlightRuby extends Highlighter {
   static PERCENT_HASH_DOLLAR = 40;
   static PERCENT_HASH_DOLLAR_WORD = 41;
 
-  static EXPECT_VALUE = 0;
-  static EXPECT_OPERATOR = 1;
+  static EXPECT_EXPR = 0;
+  static EXPECT_VALUE = 1;
+  static EXPECT_OPERATOR = 2;
 
   static mirror(c) {
     switch (c) {
@@ -293,8 +294,11 @@ class HighlightRuby extends Highlighter {
     this.heredoc = '';
     this.word = '';
     this.nest = [];
+    this.levels = [];
+    this.openers = [];
+    this.closers = [];
     this.is_definition = false;
-    this.expect = HighlightRuby.EXPECT_VALUE;
+    this.expect = HighlightRuby.EXPECT_EXPR;
   }
 
   feed(input) {
@@ -311,23 +315,23 @@ class HighlightRuby extends Highlighter {
           this.is_definition = false;
         } else if (c == ':') {
           this.state = HighlightRuby.COLON;
-          this.expect = HighlightRuby.EXPECT_VALUE;
           this.is_definition = false;
         } else if (c == '@') {
           this.state = HighlightRuby.AT;
+          this.expect = HighlightRuby.EXPECT_VALUE;
           this.is_definition = false;
         } else if (c == '=') {
           this.state = HighlightRuby.EQUAL;
           this.expect = HighlightRuby.EXPECT_VALUE;
           this.is_definition = false;
-        } else if (c == '?' && this.expect == HighlightRuby.EXPECT_VALUE) {
+        } else if (c == '?') {
           this.state = HighlightRuby.QUESTION;
           this.is_definition = false;
         } else if (c == '$') {
           this.state = HighlightRuby.DOLLAR;
           this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.is_definition = false;
-        } else if (c == '%' && this.expect == HighlightRuby.EXPECT_VALUE) {
+        } else if (c == '%') {
           this.state = HighlightRuby.PERCENT;
           this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.q = 0;
@@ -352,11 +356,13 @@ class HighlightRuby extends Highlighter {
           this.push("span", "comment");
           this.append(c);
           this.state = HighlightRuby.COMMENT;
-          this.expect = HighlightRuby.EXPECT_VALUE;
-        } else if (c == '<' && this.expect == HighlightRuby.EXPECT_VALUE) {
+          this.expect = HighlightRuby.EXPECT_EXPR;
+        } else if (c == '<' && (this.expect == HighlightRuby.EXPECT_EXPR ||
+                                this.expect == HighlightRuby.EXPECT_VALUE)) {
           this.append(c);
           this.state = HighlightRuby.LT;
-        } else if (c == '/' && this.expect == HighlightRuby.EXPECT_VALUE) {
+        } else if (c == '/' && (this.expect == HighlightRuby.EXPECT_EXPR ||
+                                this.expect == HighlightRuby.EXPECT_VALUE)) {
           this.state = HighlightRuby.REGEX;
           this.push("span", "string");
           this.append(c);
@@ -364,15 +370,21 @@ class HighlightRuby extends Highlighter {
           this.expect = HighlightRuby.EXPECT_VALUE;
           this.append('{');
           this.nest.push(HighlightRuby.NORMAL);
+          this.levels.push(this.level);
+          this.openers.push(this.opener);
+          this.closers.push(this.closer);
           this.is_definition = false;
         } else if (c == '}' && this.nest.length) {
+          this.level = this.levels.pop();
+          this.opener = this.openers.pop();
+          this.closer = this.closers.pop();
           if ((this.state = this.nest.pop()) != HighlightRuby.NORMAL)
             this.push("span", "string");
           this.append('}');
           this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.is_definition = false;
         } else if (c == '\n') {
-          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.expect = HighlightRuby.EXPECT_EXPR;
           this.append(c);
           if (this.pending_heredoc) {
             this.push("span", "string");
@@ -380,16 +392,20 @@ class HighlightRuby extends Highlighter {
             this.state = HighlightRuby.HEREDOC_BOL;
             this.i = 0;
           }
-        } else if (c == ']') {
-          this.expect = HighlightRuby.EXPECT_OPERATOR;
-          this.append(']');
-          this.is_definition = false;
-        } else if (ispunct(c)) {
+        } else if (c == '[' || c == '(') {
           this.expect = HighlightRuby.EXPECT_VALUE;
+          this.append(c);
+          this.is_definition = false;
+        } else if (c == ']' || c == ')') {
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.append(c);
           this.is_definition = false;
         } else if (isdigit(c) || c == '.') {
           this.expect = HighlightRuby.EXPECT_OPERATOR;
+          this.append(c);
+          this.is_definition = false;
+        } else if (ispunct(c)) {
+          this.expect = HighlightRuby.EXPECT_VALUE;
           this.append(c);
           this.is_definition = false;
         } else if (isspace(c)) {
@@ -441,10 +457,13 @@ class HighlightRuby extends Highlighter {
             this.append(this.word);
             this.pop();
             this.expect = HighlightRuby.EXPECT_VALUE;
-            if (this.word == 'def') {
+            if (this.word == "def") {
               this.is_definition = true;
+            } else if (this.word == "class" || this.word == "module") {
+              this.expect = HighlightRuby.EXPECT_OPERATOR;
             }
-          } else if (RUBY_BUILTINS.has(this.word)) {
+          } else if (this.expect = HighlightRuby.EXPECT_EXPR &&
+                     RUBY_BUILTINS.has(this.word)) {
             this.push("span", "builtin");
             this.append(this.word);
             this.pop();
@@ -492,6 +511,9 @@ class HighlightRuby extends Highlighter {
           this.pop();
           this.expect = HighlightRuby.EXPECT_VALUE;
           this.nest.push(HighlightRuby.REGEX);
+          this.levels.push(this.level);
+          this.openers.push(this.opener);
+          this.closers.push(this.closer);
           this.state = HighlightRuby.NORMAL;
         } else if (c == '$') {
           this.state = HighlightRuby.REGEX_HASH_DOLLAR;
@@ -561,9 +583,15 @@ class HighlightRuby extends Highlighter {
           this.push("span", "lispkw");
           this.append(':');
           this.append(c);
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.state = HighlightRuby.COLON_WORD;
+        } else if (c == ':') {
+          this.append("::");
+          this.expect = HighlightRuby.EXPECT_VALUE;
+          this.state = HighlightRuby.NORMAL;
         } else {
           this.append(':');
+          this.expect = HighlightRuby.EXPECT_VALUE;
           this.epsilon(HighlightRuby.NORMAL);
         }
         break;
@@ -609,9 +637,11 @@ class HighlightRuby extends Highlighter {
           this.push("span", "string");
           this.append('%');
           this.append(c);
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.state = HighlightRuby.PERCENT_STRING;
         } else {
           this.append('%');
+          this.expect = HighlightRuby.EXPECT_VALUE;
           this.epsilon(HighlightRuby.NORMAL);
         }
         break;
@@ -625,11 +655,13 @@ class HighlightRuby extends Highlighter {
           this.append('%');
           this.append(this.q);
           this.append(c);
+          this.expect = HighlightRuby.EXPECT_OPERATOR;
           this.state = HighlightRuby.PERCENT_STRING;
         } else {
+          this.word += c;
           this.append('%');
-          this.append(this.q);
-          this.epsilon(HighlightRuby.NORMAL);
+          this.is_definition = false;
+          this.epsilon(HighlightRuby.WORD);
         }
         break;
 
@@ -642,6 +674,9 @@ class HighlightRuby extends Highlighter {
           this.pop();
           this.expect = HighlightRuby.EXPECT_VALUE;
           this.nest.push(HighlightRuby.PERCENT_STRING);
+          this.levels.push(this.level);
+          this.openers.push(this.opener);
+          this.closers.push(this.closer);
           this.state = HighlightRuby.NORMAL;
         } else if (c == '$') {
           this.state = HighlightRuby.PERCENT_HASH_DOLLAR;
@@ -685,7 +720,7 @@ class HighlightRuby extends Highlighter {
         if (c == this.opener && this.opener != this.closer) {
           this.append(c);
           ++this.level;
-        } else if (c == '#') {
+        } else if (c == '#' && this.closer != '#') {
           this.state = HighlightRuby.PERCENT_HASH;
         } else if (c == this.closer) {
           this.append(c);
@@ -772,6 +807,9 @@ class HighlightRuby extends Highlighter {
           this.pop();
           this.expect = HighlightRuby.EXPECT_VALUE;
           this.nest.push(HighlightRuby.DQUOTE);
+          this.levels.push(this.level);
+          this.openers.push(this.opener);
+          this.closers.push(this.closer);
           this.state = HighlightRuby.NORMAL;
         } else if (c == '$') {
           this.state = HighlightRuby.DQUOTE_HASH_DOLLAR;
@@ -917,6 +955,7 @@ class HighlightRuby extends Highlighter {
           this.state = HighlightRuby.QUESTION_BACKSLASH;
         } else if (isspace(c)) {
           this.append('?');
+          this.expect = HighlightRuby.EXPECT_VALUE;
           this.epsilon(HighlightRuby.NORMAL);
         } else {
           this.push('span', 'escape');

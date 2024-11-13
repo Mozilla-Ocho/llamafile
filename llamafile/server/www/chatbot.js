@@ -21,6 +21,7 @@ const sendButton = document.getElementById("send-button");
 const stopButton = document.getElementById("stop-button");
 
 let abortController = null;
+let disableAutoScroll = false;
 let streamingMessageContent = [];
 let uploadedFiles = [];
 
@@ -48,7 +49,8 @@ function createMessageElement(content, role) {
 }
 
 function scrollToBottom() {
-  chatInput.scrollIntoView({behavior: "instant"});
+  if (!disableAutoScroll)
+    document.getElementById("bottom").scrollIntoView({behavior: "instant"});
 }
 
 function onChatInput() {
@@ -57,12 +59,18 @@ function onChatInput() {
 }
 
 function cleanupAfterMessage() {
+  disableAutoScroll = false;
   chatMessages.scrollTop = chatMessages.scrollHeight;
   chatInput.disabled = false;
   sendButton.style.display = "inline-block";
   stopButton.style.display = "none";
   abortController = null;
   chatInput.focus();
+}
+
+function onWheel(e) {
+  if (e.deltaY < 0)
+    disableAutoScroll = true;
 }
 
 async function handleChatStream(response) {
@@ -314,12 +322,13 @@ function chatbot() {
   stopButton.addEventListener("click", stopMessage);
   chatInput.addEventListener("input", onChatInput);
   chatInput.addEventListener("keydown", onKeyDown);
-  document.body.addEventListener('dragenter', onDragBegin, false);
-  document.body.addEventListener('dragover', onDragBegin, false);
-  document.body.addEventListener('dragleave', onDragEnd, false);
-  document.body.addEventListener('drop', onDragEnd, false);
-  document.body.addEventListener('drop', onDrop, false);
-  document.body.addEventListener('paste', onPaste);
+  document.addEventListener('wheel', onWheel);
+  document.addEventListener('dragenter', onDragBegin);
+  document.addEventListener('dragover', onDragBegin);
+  document.addEventListener('dragleave', onDragEnd);
+  document.addEventListener('drop', onDragEnd);
+  document.addEventListener('drop', onDrop);
+  document.addEventListener('paste', onPaste);
   chatInput.focus();
 }
 

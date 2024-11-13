@@ -22,6 +22,7 @@
 
 enum {
     NORMAL,
+    NUMBER,
     WORD,
     EQUAL,
     EQUAL_WORD,
@@ -65,6 +66,7 @@ enum {
 };
 
 enum {
+    EXPECT_EXPR,
     EXPECT_VALUE,
     EXPECT_OPERATOR,
 };
@@ -214,23 +216,23 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 is_definition_ = false;
             } else if (c == ':') {
                 t_ = COLON;
-                expect_ = EXPECT_OPERATOR;
                 is_definition_ = false;
             } else if (c == '@') {
                 t_ = AT;
                 is_definition_ = false;
+                expect_ = EXPECT_OPERATOR;
             } else if (c == '=') {
                 t_ = EQUAL;
                 expect_ = EXPECT_VALUE;
                 is_definition_ = false;
-            } else if (c == '?' && expect_ == EXPECT_VALUE) {
+            } else if (c == '?') {
                 t_ = QUESTION;
                 is_definition_ = false;
             } else if (c == '$') {
                 t_ = DOLLAR;
                 expect_ = EXPECT_OPERATOR;
                 is_definition_ = false;
-            } else if (c == '%' && expect_ == EXPECT_VALUE) {
+            } else if (c == '%') {
                 t_ = PERCENT;
                 q_ = 0;
                 expect_ = EXPECT_OPERATOR;
@@ -252,30 +254,37 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 lf::append_wchar(r, c);
                 expect_ = EXPECT_OPERATOR;
             } else if (c == '#') {
-                expect_ = EXPECT_VALUE;
+                expect_ = EXPECT_EXPR;
                 *r += HI_COMMENT;
                 lf::append_wchar(r, c);
                 t_ = COMMENT;
-            } else if (c == '<' && expect_ == EXPECT_VALUE) {
+            } else if (c == '<' && (expect_ == EXPECT_EXPR || expect_ == EXPECT_VALUE)) {
                 lf::append_wchar(r, c);
                 t_ = LT;
-            } else if (c == '/' && expect_ == EXPECT_VALUE) {
+            } else if (c == '/' && (expect_ == EXPECT_EXPR || expect_ == EXPECT_VALUE)) {
                 t_ = REGEX;
                 *r += HI_STRING;
                 lf::append_wchar(r, c);
             } else if (c == '{' && nesti_ && nesti_ < sizeof(nest_)) {
                 expect_ = EXPECT_VALUE;
                 *r += '{';
+                levels_[nesti_] = level_;
+                closers_[nesti_] = closer_;
+                openers_[nesti_] = opener_;
                 nest_[nesti_++] = NORMAL;
                 is_definition_ = false;
             } else if (c == '}' && nesti_) {
-                if ((t_ = nest_[--nesti_]) != NORMAL)
+                --nesti_;
+                level_ = levels_[nesti_];
+                closer_ = closers_[nesti_];
+                opener_ = openers_[nesti_];
+                if ((t_ = nest_[nesti_]) != NORMAL)
                     *r += HI_STRING;
                 *r += '}';
                 expect_ = EXPECT_OPERATOR;
                 is_definition_ = false;
             } else if (c == '\n') {
-                expect_ = EXPECT_VALUE;
+                expect_ = EXPECT_EXPR;
                 lf::append_wchar(r, c);
                 if (pending_heredoc_) {
                     *r += HI_STRING;
@@ -283,16 +292,20 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                     t_ = HEREDOC_BOL;
                     i_ = 0;
                 }
+            } else if (c == '[' || c == '(') {
+                expect_ = EXPECT_VALUE;
+                lf::append_wchar(r, c);
+                is_definition_ = false;
             } else if (c == ']' || c == ')') {
+                expect_ = EXPECT_OPERATOR;
+                lf::append_wchar(r, c);
+                is_definition_ = false;
+            } else if (isdigit(c) || c == '.') {
                 expect_ = EXPECT_OPERATOR;
                 lf::append_wchar(r, c);
                 is_definition_ = false;
             } else if (ispunct(c)) {
                 expect_ = EXPECT_VALUE;
-                lf::append_wchar(r, c);
-                is_definition_ = false;
-            } else if (isdigit(c) || c == '.') {
-                expect_ = EXPECT_OPERATOR;
                 lf::append_wchar(r, c);
                 is_definition_ = false;
             } else if (isspace(c)) {
@@ -336,6 +349,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             }
             // fallthrough
 
+        Word:
         case WORD:
             if (isident(c)) {
                 lf::append_wchar(&word_, c);
@@ -347,8 +361,11 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                     expect_ = EXPECT_VALUE;
                     if (word_ == "def") {
                         is_definition_ = true;
+                    } else if (word_ == "class" || word_ == "module") {
+                        expect_ = EXPECT_OPERATOR;
                     }
-                } else if (is_keyword_ruby_builtin(word_.data(), word_.size())) {
+                } else if (expect_ == EXPECT_EXPR &&
+                           is_keyword_ruby_builtin(word_.data(), word_.size())) {
                     *r += HI_BUILTIN;
                     *r += word_;
                     *r += HI_RESET;
@@ -398,6 +415,9 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 *r += '{';
                 *r += HI_RESET;
                 expect_ = EXPECT_VALUE;
+                levels_[nesti_] = level_;
+                closers_[nesti_] = closer_;
+                openers_[nesti_] = opener_;
                 nest_[nesti_++] = REGEX;
                 t_ = NORMAL;
             } else if (c == '$') {
@@ -471,9 +491,15 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 *r += HI_LISPKW;
                 *r += ':';
                 lf::append_wchar(r, c);
+                expect_ = EXPECT_OPERATOR;
                 t_ = COLON_WORD;
+            } else if (c == ':') {
+                *r += "::";
+                expect_ = EXPECT_VALUE;
+                t_ = NORMAL;
             } else {
                 *r += ':';
+                expect_ = EXPECT_VALUE;
                 t_ = NORMAL;
                 goto Normal;
             }
@@ -523,9 +549,11 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 *r += HI_STRING;
                 *r += '%';
                 lf::append_wchar(r, c);
+                expect_ = EXPECT_OPERATOR;
                 t_ = PERCENT_STRING;
             } else {
                 *r += '%';
+                expect_ = EXPECT_VALUE;
                 t_ = NORMAL;
                 goto Normal;
             }
@@ -538,14 +566,16 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 closer_ = mirror(c);
                 *r += HI_STRING;
                 *r += '%';
-                *r += q_;
+                lf::append_wchar(r, q_);
                 lf::append_wchar(r, c);
+                expect_ = EXPECT_OPERATOR;
                 t_ = PERCENT_STRING;
             } else {
                 *r += '%';
-                *r += q_;
-                t_ = NORMAL;
-                goto Normal;
+                is_definition_ = false;
+                lf::append_wchar(&word_, q_);
+                t_ = WORD;
+                goto Word;
             }
             break;
 
@@ -557,6 +587,9 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 *r += '{';
                 *r += HI_RESET;
                 expect_ = EXPECT_VALUE;
+                levels_[nesti_] = level_;
+                closers_[nesti_] = closer_;
+                openers_[nesti_] = opener_;
                 nest_[nesti_++] = PERCENT_STRING;
                 t_ = NORMAL;
             } else if (c == '$') {
@@ -605,7 +638,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
             if (c == opener_ && opener_ != closer_) {
                 lf::append_wchar(r, c);
                 ++level_;
-            } else if (c == '#') {
+            } else if (c == '#' && closer_ != '#') {
                 t_ = PERCENT_HASH;
             } else if (c == closer_) {
                 lf::append_wchar(r, c);
@@ -695,6 +728,9 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 *r += '{';
                 *r += HI_RESET;
                 expect_ = EXPECT_VALUE;
+                levels_[nesti_] = level_;
+                closers_[nesti_] = closer_;
+                openers_[nesti_] = opener_;
                 nest_[nesti_++] = DQUOTE;
                 t_ = NORMAL;
             } else if (c == '$') {
@@ -847,6 +883,7 @@ void HighlightRuby::feed(std::string *r, std::string_view input) {
                 t_ = QUESTION_BACKSLASH;
             } else if (isspace(c)) {
                 *r += '?';
+                expect_ = EXPECT_VALUE;
                 t_ = NORMAL;
                 goto Normal;
             } else {

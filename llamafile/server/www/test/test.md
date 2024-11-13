@@ -169,49 +169,216 @@ demonstrates basic input/output operations and error handling.
 ## Rubby
 
 ```ruby
-# comment
-42
-"String with #{ :interpolation }"
-/regex$/
-$/
-[?😀, ?\ , ?', ?(] ?'a':'b'
-"%d %d %d"%[1,2,3]
-% 5 #
+# This is a single-line comment
 
-/
-$$#$/
-/omix
+bone
+c = p / r
+puts puts
+%q#hi#
+module RDoc::Parser::RubyTools
 
-puts <<HERE<<<<THERE
-foo 42
-HERE
-bla 43
-THERE
+Bundler.ui.info <<-EOS.gsub(/^ {8}/, "")
+--- ERROR REPORT TEMPLATE -------------------------------------------------------
+# Error Report
+EOS
 
-puts "This is #{<<HERE.strip} evil"
-incredibly
-HERE
+=begin ho
+This is a
+multi-line comment
+=end yo
 
-def `
-  `hello` / /regex/
+bone
+
+# String literals
+single_quoted = 'Hello, Ruby!'
+double_quoted = "Hello, Ruby!"
+
+# String interpolation (only works with double quotes)
+name = "Alice"
+greeting = "Hello, #{name}!"
+
+# Heredoc syntax
+long_text = <<-EOT
+  This is a long piece of text.
+  It can span multiple lines.
+  Indentation is preserved.
+EOT
+
+# Flexible quoting
+ha = %
+ha = %q
+flexible_quote = %q{This is a single-quoted string}
+another_flexible = %Q{This is a double-quoted string with #{name}}
+
+# String methods
+upcase_string = "hello".upcase
+downcase_string = "WORLD".downcase
+capitalize_string = "ruby".capitalize
+
+# String concatenation
+concat_string = "Hello " + "World"
+concat_with_shovel = "Hello " << "Ruby"
+
+# Symbols (immutable strings, often used as hash keys)
+symbol = :my_symbol
+
+def is_prime?(num)
+  return false if num <= 1
+  (2..Math.sqrt(num)).each do |i|
+    return false if num % i == 0
+  end
+  true
 end
 
-"hi #$" there" a
-"hi #$abc there" a
-"hi #{hi} there" a
-/hi #$" there/ a
-/hi #$abc there/ a
-/hi #{hi} there/ a
-_=;"#$q"
+count = 0
+num = 2
+num = ?h
+dog = :!hi
 
-# Examples:
-%q(Don't worry)            # => "Don't worry"
-%Q(Today is #{Date.today}) # => "Today is 2024-11-08"
-%r{^/path/to/\w+}          # => /^\/path\/to\/\w+/
-%s(my_symbol)              # => :my_symbol
-%w(foo bar baz)            # => ["foo", "bar", "baz"]
-%W(foo #{1+1} baz)         # => ["foo", "2", "baz"]
-%x(ls -l)                  # Executes `ls -l` and returns output
-%i(foo bar baz)            # => [:foo, :bar, :baz]
-%I(foo#{1+1} bar baz)      # => [:foo2, :bar, :baz]
+while count < 10
+  if is_prime?(num)
+    puts num
+    count += 1
+  end
+  num += 1
+end
+
+puts /hi/
+dog /hi/
+
+exit
+dog = $ h $$ h $@ h $! h $/ h $_ h $= e @ e $\ e $` e $< e $> e $' e
+dog = @hi
+dog = @@hi
+dog = $hi ${hi}
+dog = "h\"i"
+dog = 'h\'i'
+dog = `hi\`hi`
+
+print <<'woffle end'
+Hello, world!
+woffle end
+
+print <<''
+Hello, world!
+
+print <<END;
+Hello, world!
+END
+
+print <<ez
+Hello, world!
+ez
+
+print <<"end"
+Hello, world!
+end
+
+print <<`CODE`
+Hello, world!
+CODE
+
+print <<END1, <<END2;
+First heredoc
+END1
+Second heredoc
+END2
+
+	print <<-EOF
+	hello
+	there
+	EOF
+
+	print <<-'EOF'
+	hello
+	there
+	EOF
+
+print "hi"
+
+require 'hi'
+
+print $# hi
+
+if @yaml_config
+  require 'yaml'
+  cfg = YAML.load_file(HERE + @yaml_config)[:generate_module]
+  @path_src     = cfg[:defaults][:path_src]   if nil?
+  @path_inc     = cfg[:defaults][:path_inc]   if @path_inc.nil?
+  @path_tst     = cfg[:defaults][:path_tst]   if @path_tst.nil?
+  @update_svn   = cfg[:defaults][:update_svn] if @update_svn.nil?
+  @extra_inc    = cfg[:includes]
+  @boilerplates = cfg[:boilerplates]
+else
+  @boilerplates = {}
+end
+
+ugh %q(ugh (hi) ugh) ugh
+ugh %q!ugh hi ugh! ugh
+ugh %q#ugh hi ugh# ugh
+ugh %q<ugh hi ugh> ugh
+ugh %/augh hi ugh/ ugh
+
+/hi/i
+
+if line =~ /^((?:\s*TEST_\/CASE\s*\(.*?\)\s*)*)\s*void\s+((?:#{@options[:test_prefix]}).*)\s*\(\s*(.*)\s*\)/i
+  arguments = $1
+  name = $2
+  call = $3
+  args = nil
+  if (@options[:use_param_tests] and !arguments.empty?)
+    args = []
+    arguments.scan(/\s*TEST_CASE\s*\((.*)\)\s*$/) {|a| args << a[0]}
+  end
+  tests_and_line_numbers << { :test => name, :args => args, :call => call, :line_number => 0 }
+end
+
+    mk << %{
+SHELL = /bin/sh
+
+# V=0 quiet, V=1 verbose.  other values don't work.
+V = 0
+Q1 = $(V:1=)
+Q = $(Q1:0=@)
+ECHO1 = $(V:1=@ #{CONFIG['NULLCMD']})
+ECHO = $(ECHO1:0=@ echo)
+NULLCMD = #{CONFIG['NULLCMD']}
+
+#### Start of system configuration section. ####
+#{"top_srcdir = " + $top_srcdir.sub(%r"\A#{Regexp.quote($topdir)}/", "$(topdir)/") if $extmk}
+srcdir = #{srcdir.gsub(/\$\((srcdir)\)|\$\{(srcdir)\}/) {mkintpath(CONFIG[$1||$2]).unspace}}
+topdir = #{mkintpath(topdir = $extmk ? CONFIG["topdir"] : $topdir).unspace}
+hdrdir = #{(hdrdir = CONFIG["hdrdir"]) == topdir ? "$(topdir)" : mkintpath(hdrdir).unspace}
+arch_hdrdir = #{$arch_hdrdir.quote}
+PATH_SEPARATOR = #{CONFIG['PATH_SEPARATOR']}
+VPATH = #{vpath.join(CONFIG['PATH_SEPARATOR'])}
+}
+
+class SimpleScanner < Scanner # :nodoc:
+  def scan
+    stag_reg = (stags == DEFAULT_STAGS) ? /(.*?)(<%[%=#]?|\z)/m : /(.*?)(#{stags.join('|')}|\z)/m
+    etag_reg = (etags == DEFAULT_ETAGS) ? /(.*?)(%%?>|\z)/m : /(.*?)(#{etags.join('|')}|\z)/m
+    scanner = StringScanner.new(@src)
+    while ! scanner.eos?
+      scanner.scan(@stag ? etag_reg : stag_reg)
+      yield(scanner[1])
+      yield(scanner[2])
+    end
+  end
+end
+
+  ARGV.reject! do |arg|
+    case(arg)
+      when '-cexception'
+        options[:plugins] = [:cexception]; true
+      when /\.*\.ya?ml/
+
+        options = UnityTestRunnerGenerator.grab_config(arg); true
+      when /\.*\.h/
+        options[:includes] <<arg; true
+      when /--(\w+)=\"?(.*)\"?/
+        options[$1.to_sym] = $2; true
+      else false
+    end
+  end
 ```

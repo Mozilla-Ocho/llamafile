@@ -89,6 +89,12 @@ void *server_thread(void *arg) {
     exit(server_cli(sargs->argc, sargs->argv));
 }
 
+const char *tip() {
+    if (g_params.verbosity)
+        return "";
+    return " (use the --verbose flag for further details)";
+}
+
 int main(int argc, char **argv) {
 
     // print logo
@@ -122,16 +128,15 @@ int main(int argc, char **argv) {
     print_ephemeral("loading model...");
     llama_model_params model_params = llama_model_params_from_gpt_params(g_params);
     g_model = llama_load_model_from_file(g_params.model.c_str(), model_params);
+    clear_ephemeral();
     if (g_model == NULL) {
-        clear_ephemeral();
-        fprintf(stderr, "%s: failed to load model\n", g_params.model.c_str());
+        fprintf(stderr, "%s: failed to load model%s\n", g_params.model.c_str(), tip());
         exit(2);
     }
     if (g_params.n_ctx <= 0 || g_params.n_ctx > llama_n_ctx_train(g_model))
         g_params.n_ctx = llama_n_ctx_train(g_model);
     if (g_params.n_ctx < g_params.n_batch)
         g_params.n_batch = g_params.n_ctx;
-    clear_ephemeral();
 
     bool want_server = !llamafile_has(argv, "--chat");
     if (want_server) {
@@ -164,7 +169,7 @@ int main(int argc, char **argv) {
     g_ctx = llama_new_context_with_model(g_model, ctx_params);
     clear_ephemeral();
     if (!g_ctx) {
-        fprintf(stderr, "error: failed to initialize context\n");
+        fprintf(stderr, "error: failed to initialize context%s\n", tip());
         exit(3);
     }
 
@@ -176,7 +181,7 @@ int main(int argc, char **argv) {
         g_clip = clip_model_load(FLAG_mmproj, g_params.verbosity);
         clear_ephemeral();
         if (!g_clip) {
-            fprintf(stderr, "%s: failed to initialize clip image model\n", FLAG_mmproj);
+            fprintf(stderr, "%s: failed to initialize clip image model%s\n", FLAG_mmproj, tip());
             exit(4);
         }
     }
