@@ -356,8 +356,22 @@ void ggml_abort(const char * file, int line, const char * fmt, ...) {
 
 GGML_CALL bool ggml_cuda_link(const struct ggml_backend_api *backend_api) {
     g_backend = backend_api;
-    if (!FLAG_log_disable)
+
+    if (!FLAG_log_disable) {
+        int kernelVersion = 0;
+        cudaDriverGetVersion(&kernelVersion);
+        fprintf(stderr, "%s: CUDA kernel version %d.%d\n", __func__,
+                kernelVersion / 1000, (kernelVersion % 1000) / 10);
+
+        int runtimeVersion = 0;
+        cudaRuntimeGetVersion(&runtimeVersion);
+        fprintf(stderr, "%s: CUDA runtime version is %d.%d%s\n", __func__,
+                runtimeVersion / 1000, (runtimeVersion % 1000) / 10,
+                runtimeVersion > kernelVersion ? " (!!!)" : "");
+
         fprintf(stderr, "%s: welcome to " GGML_CUDA_NAME " SDK with " BLAS_NAME "\n", __func__);
+    }
+
 #ifdef __HIP_PLATFORM_AMD__
     // cargo culting workaround below
 #ifndef GGML_USE_TINYBLAS
