@@ -462,7 +462,7 @@ class HighlightRuby extends Highlighter {
             } else if (this.word == "class" || this.word == "module") {
               this.expect = HighlightRuby.EXPECT_OPERATOR;
             }
-          } else if (this.expect = HighlightRuby.EXPECT_EXPR &&
+          } else if (this.expect == HighlightRuby.EXPECT_EXPR &&
                      RUBY_BUILTINS.has(this.word)) {
             this.push("span", "builtin");
             this.append(this.word);
