@@ -108,7 +108,7 @@ main(int argc, char* argv[])
     // install security
     if (!FLAG_unsecure) {
         if (pledge(0, 0)) {
-            SLOG("warning: this OS doesn't support pledge() security\n");
+            SLOG("warning: this OS doesn't support pledge() security");
         } else if (pledge("stdio anet", 0)) {
             perror("pledge");
             exit(1);
