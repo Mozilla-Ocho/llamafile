@@ -146,6 +146,7 @@ async function sendMessage() {
   chatInput.value = "";
   chatInput.disabled = true;
   onChatInput();
+  disableAutoScroll = false;
   sendButton.style.display = "none";
   stopButton.style.display = "inline-block";
   stopButton.focus();
