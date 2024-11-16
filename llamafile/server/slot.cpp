@@ -57,6 +57,22 @@ generate_system_fingerprint(const llama_context_params* cparams)
     return b;
 }
 
+// having multiple images in the context window is janky right now, so
+// let's erase old images from the chat history until we find out more
+static std::vector<Atom>
+remove_old_image_atoms(const std::vector<Atom>& atoms)
+{
+    int last_image_idx = -1;
+    for (int i = 0; i < atoms.size(); ++i)
+        if (atoms[i].is_image())
+            last_image_idx = i;
+    std::vector<Atom> result;
+    for (int i = 0; i < atoms.size(); i++)
+        if (!atoms[i].is_image() || i == last_image_idx)
+            result.emplace_back(atoms[i]);
+    return result;
+}
+
 const char*
 Slot::describe_error(int err)
 {
@@ -245,10 +261,11 @@ Slot::eval_atoms(const std::vector<Atom>& atoms)
 }
 
 int
-Slot::prefill(const std::vector<Atom>& atoms)
+Slot::prefill(const std::vector<Atom>& atoms_)
 {
     if (!ctx_)
         return uninitialized;
+    std::vector<Atom> atoms = remove_old_image_atoms(atoms_);
     int used_tokens = ctx_used();
     int reuse_atoms = 0;
     int reuse_tokens = 0;
@@ -269,10 +286,10 @@ Slot::prefill(const std::vector<Atom>& atoms)
             history_.resize(reuse_atoms);
         } else {
             SLOG("failed to remove tokens from KV cache");
-            llama_kv_cache_clear(ctx_);
             reuse_atoms = 0;
             reuse_tokens = 0;
             erase_tokens = used_tokens;
+            llama_kv_cache_clear(ctx_);
             history_.clear();
         }
     }

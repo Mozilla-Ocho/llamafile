@@ -39,7 +39,7 @@ struct Slots
 
     // first elements are most recently used
     // last elements are least recently used
-    Dll* free_slots_;
+    Dll* free_slots_ = nullptr;
 
     explicit Slots(llama_model*);
     ~Slots();
