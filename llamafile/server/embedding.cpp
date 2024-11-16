@@ -27,6 +27,8 @@
 #include <sys/resource.h>
 #include <vector>
 
+using jt::Json;
+
 namespace lf {
 namespace server {
 

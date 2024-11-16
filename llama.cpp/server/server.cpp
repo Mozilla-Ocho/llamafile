@@ -2593,6 +2593,15 @@ static void server_params_parse(int argc, char **argv, server_params &sparams,
         {
             FLAG_nologo = true;
         }
+        else if (arg == "--no-display-prompt" || //
+                 arg == "--silent-prompt")
+        {
+            FLAG_no_display_prompt = true;
+        }
+        else if (arg == "--display-prompt")
+        {
+            FLAG_no_display_prompt = false;
+        }
         else if (arg == "--trap")
         {
             FLAG_trap = true;

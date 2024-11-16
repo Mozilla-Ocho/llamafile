@@ -80,6 +80,7 @@ Slot::describe_error(int err)
 
 Slot::Slot(llama_model* model) : model_(model)
 {
+    dll_init(&elem_);
 }
 
 Slot::~Slot()
@@ -175,7 +176,6 @@ Slot::eval_tokens(const std::vector<int>& tokens)
             history_.emplace_back(toks[i + j]);
         used += n_eval;
     }
-    last_used_ = timespec_real();
     return N;
 }
 
@@ -216,7 +216,6 @@ Slot::eval_image(const std::string_view& bytes)
     }
     llava_image_embed_free(image_embed);
     history_.emplace_back(new Image(bytes, N));
-    last_used_ = timespec_real();
     return N;
 }
 

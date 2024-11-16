@@ -16,29 +16,34 @@
 // limitations under the License.
 
 #pragma once
+#include <memory>
 #include <pthread.h>
-#include <set>
 #include <vector>
 
 struct llama_model;
+struct Dll;
 
 namespace lf {
 namespace server {
 
 class Atom;
-struct Slot;
 class SlotEntry;
+struct Slot;
 
 struct Slots
 {
     llama_model* model_;
-    std::multiset<SlotEntry> slots_;
-    std::vector<Slot*> all_slots_;
-    pthread_mutex_t lock_;
     pthread_cond_t cond_;
+    pthread_mutex_t lock_;
+    std::vector<std::unique_ptr<Slot>> slots_;
+
+    // first elements are most recently used
+    // last elements are least recently used
+    Dll* free_slots_;
 
     explicit Slots(llama_model*);
     ~Slots();
+    size_t size();
     int start(int);
     void tokenize(std::vector<Atom>*, std::string_view, bool);
     Slot* take(const std::vector<Atom>&);

@@ -28,17 +28,20 @@ namespace server {
 
 Slots::Slots(llama_model* model) : model_(model)
 {
-    pthread_mutex_init(&lock_, 0);
     pthread_cond_init(&cond_, 0);
+    pthread_mutex_init(&lock_, 0);
 }
 
 Slots::~Slots()
 {
-    for (const auto& e : slots_)
-        if (e.slot())
-            delete e.slot();
-    pthread_cond_destroy(&cond_);
     pthread_mutex_destroy(&lock_);
+    pthread_cond_destroy(&cond_);
+}
+
+size_t
+Slots::size()
+{
+    return slots_.size();
 }
 
 int
@@ -50,8 +53,8 @@ Slots::start(int count)
         Slot* slot = new Slot(model_);
         if (slot->start()) {
             ++made;
-            slots_.emplace(slot);
-            all_slots_.push_back(slot);
+            slots_.emplace_back(slot);
+            dll_make_last(&free_slots_, &slot->elem_);
         } else {
             delete slot;
         }
@@ -71,41 +74,22 @@ Slots::take(const std::vector<Atom>& prefix)
     for (;;) {
 
         // find slot with longest matching prefix
-        SlotEntry search_key{ &prefix };
-        auto i = slots_.upper_bound(search_key);
-
-        // handle special case
-        if (i == slots_.end() && i != slots_.begin()) {
-            --i;
-            Slot* slot = i->slot();
-            unassert(slot);
-            slots_.erase(i);
-            pthread_mutex_unlock(&lock_);
-            return slot;
-        }
-
-        // avoid slots with non-matching suffix
-        // they probably belong to another client
-        if (i != slots_.begin()) {
-            --i;
-            Slot* slot = i->slot();
-            unassert(slot);
-            int cpl = vector_common_prefix_length(slot->history_, prefix);
-            if (cpl == slot->history_.size()) {
-                slots_.erase(i);
-                pthread_mutex_unlock(&lock_);
-                return slot;
+        // favoring least recently used if multiple ones
+        int best_cpl = 0;
+        Dll* best_slot = nullptr;
+        for (Dll* e = dll_first(free_slots_); e; e = dll_next(free_slots_, e)) {
+            int cpl = vector_common_prefix_length(SLOT(e)->history_, prefix);
+            if (cpl >= best_cpl) {
+                best_cpl = cpl;
+                best_slot = e;
             }
-            ++i;
         }
 
-        // otherwise return result of search
-        if (i != slots_.end()) {
-            Slot* slot = i->slot();
-            unassert(slot);
-            slots_.erase(i);
+        // return borrowed pointer to best slot
+        if (best_slot) {
+            dll_remove(&free_slots_, best_slot);
             pthread_mutex_unlock(&lock_);
-            return slot;
+            return SLOT(best_slot);
         }
 
         // all slots are being used
@@ -120,7 +104,7 @@ Slots::give(Slot* slot)
     SLOG("relinquishing slot");
     unassert(slot);
     pthread_mutex_lock(&lock_);
-    slots_.emplace(slot);
+    dll_make_first(&free_slots_, &slot->elem_);
     pthread_cond_signal(&cond_);
     pthread_mutex_unlock(&lock_);
 }

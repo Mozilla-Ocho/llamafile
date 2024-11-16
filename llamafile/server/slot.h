@@ -16,9 +16,11 @@
 // limitations under the License.
 
 #pragma once
-#include <ctime>
+#include <cosmo.h>
 #include <string>
 #include <vector>
+
+#define SLOT(e) DLL_CONTAINER(Slot, elem_, e)
 
 struct llama_context;
 struct llama_model;
@@ -44,10 +46,10 @@ struct Slot
 
     static const char* describe_error(int);
 
+    Dll elem_;
     llama_model* model_;
     clip_ctx* clip_ctx_ = nullptr;
     llama_context* ctx_ = nullptr;
-    timespec last_used_ = timespec_zero;
     std::vector<Atom> history_;
     std::string system_fingerprint_;
 

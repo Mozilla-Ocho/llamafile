@@ -276,6 +276,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         // TODO: this is temporary, in the future the sampling state will be moved fully to llama_sampling_context.
         params.seed = std::stoul(argv[i]);
         sparams.seed = std::stoul(argv[i]);
+        FLAG_seed = sparams.seed; // [jart]
         return true;
     }
     if (arg == "-t" || arg == "--threads") {
@@ -490,6 +491,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     if (arg == "--top-p") {
         CHECK_ARG
         sparams.top_p = std::stof(argv[i]);
+        FLAG_top_p = sparams.top_p; // [jart]
         return true;
     }
     if (arg == "--min-p") {
@@ -497,10 +499,12 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         sparams.min_p = std::stof(argv[i]);
         return true;
     }
-    if (arg == "--temp") {
+    if (arg == "--temp" || //
+        arg == "--temperature") { // [jart]
         CHECK_ARG
         sparams.temp = std::stof(argv[i]);
         sparams.temp = std::max(sparams.temp, 0.0f);
+        FLAG_temperature = sparams.temp; // [jart]
         return true;
     }
     if (arg == "--tfs") {
@@ -527,11 +531,13 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
     if (arg == "--frequency-penalty") {
         CHECK_ARG
         sparams.penalty_freq = std::stof(argv[i]);
+        FLAG_frequency_penalty = sparams.penalty_freq; // [jart]
         return true;
     }
     if (arg == "--presence-penalty") {
         CHECK_ARG
         sparams.penalty_present = std::stof(argv[i]);
+        FLAG_presence_penalty = sparams.penalty_present; // [jart]
         return true;
     }
     if (arg == "--dynatemp-range") {
@@ -903,8 +909,15 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         params.verbose_prompt = true;
         return true;
     }
-    if (arg == "--no-display-prompt" || arg == "--silent-prompt") {
+    if (arg == "--no-display-prompt" || //
+        arg == "--silent-prompt") { // [jart]
         params.display_prompt = false;
+        FLAG_no_display_prompt = true; // [jart]
+        return true;
+    }
+    if (arg == "--display-prompt") { // [jart]
+        params.display_prompt = true;
+        FLAG_no_display_prompt = false;
         return true;
     }
     if (arg == "-r" || arg == "--reverse-prompt") {

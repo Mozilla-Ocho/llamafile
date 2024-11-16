@@ -16,12 +16,12 @@
 // limitations under the License.
 
 #include "json.h"
-#include <stdckdint.h>
 
 #include <cctype>
 #include <climits>
 #include <cstdint>
 #include <cstdlib>
+#include <stdckdint.h>
 
 #include "double-conversion/double-to-string.h"
 #include "double-conversion/string-to-double.h"
@@ -74,6 +74,8 @@
        ? (((((wc) - 0x10000) >> 10) + 0xD800) | \
           (unsigned)((((wc) - 0x10000) & 1023) + 0xDC00) << 16) \
        : 0xFFFD)
+
+namespace jt {
 
 static const char kJsonStr[256] = {
     1,  1,  1,  1,  1,  1,  1,  1, // 0000 ascii (0)
@@ -241,6 +243,20 @@ Json::Json(unsigned long long value)
         type_ = Double;
         double_value = value;
     }
+}
+
+Json::Json(const char* value)
+{
+    if (value) {
+        type_ = String;
+        new (&string_value) std::string(value);
+    } else {
+        type_ = Null;
+    }
+}
+
+Json::Json(const JTJSON_STRING_VIEW& value) : type_(String), string_value(value)
+{
 }
 
 Json::~Json()
@@ -540,7 +556,7 @@ Json::setString(std::string&& value)
 }
 
 void
-Json::setString(const JSON_STRING_VIEW_& value)
+Json::setString(const JTJSON_STRING_VIEW& value)
 {
     clear();
     type_ = String;
@@ -690,7 +706,7 @@ Json::marshal(std::string& b, bool pretty, int indent) const
 }
 
 void
-Json::stringify(std::string& b, const JSON_STRING_VIEW_& s)
+Json::stringify(std::string& b, const JTJSON_STRING_VIEW& s)
 {
     b += '"';
     serialize(b, s);
@@ -698,7 +714,7 @@ Json::stringify(std::string& b, const JSON_STRING_VIEW_& s)
 }
 
 void
-Json::serialize(std::string& sb, const JSON_STRING_VIEW_& s)
+Json::serialize(std::string& sb, const JTJSON_STRING_VIEW& s)
 {
     size_t i, j, m;
     wint_t x, a, b;
@@ -1213,7 +1229,7 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
 }
 
 std::pair<Json::Status, Json>
-Json::parse(const JSON_STRING_VIEW_& s)
+Json::parse(const JTJSON_STRING_VIEW& s)
 {
     Json::Status s2;
     std::pair<Json::Status, Json> res;
@@ -1302,3 +1318,5 @@ Json::StatusToString(Json::Status status)
             abort();
     }
 }
+
+} // namespace jt

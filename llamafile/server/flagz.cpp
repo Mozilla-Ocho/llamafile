@@ -16,30 +16,33 @@
 // limitations under the License.
 
 #include "client.h"
-#include "server.h"
-#include "slot.h"
-#include "slots.h"
-#include "utils.h"
-#include "worker.h"
+#include "llama.cpp/llama.h"
+#include "llamafile/llamafile.h"
+#include "llamafile/server/json.h"
 
 namespace lf {
 namespace server {
 
 bool
-Client::slotz()
+Client::flagz()
 {
-    std::string s = std::string(or_empty(param("add_special")));
-    int id = atoi(s.c_str());
-    if (id < 0)
-        return send_error(400);
-    if (id >= worker_->server_->slots_->size())
-        return send_error(404);
-    Slot* slot = worker_->server_->slots_->slots_[id].get();
-    std::string dump;
-    slot->dump(&dump);
+    jt::Json json;
+    json["prompt"] = FLAG_prompt;
+    json["no_display_prompt"] = FLAG_no_display_prompt;
+    json["nologo"] = FLAG_nologo;
+    json["temperature"] = FLAG_temperature;
+    json["presence_penalty"] = FLAG_presence_penalty;
+    json["frequency_penalty"] = FLAG_frequency_penalty;
+    if (FLAG_seed == LLAMA_DEFAULT_SEED) {
+        json["seed"] = nullptr;
+    } else {
+        json["seed"] = FLAG_seed;
+    }
+    dump_ = json.toStringPretty();
+    dump_ += '\n';
     char* p = append_http_response_message(obuf_.p, 200);
-    p = stpcpy(p, "Content-Type: text/plain\r\n");
-    return send_response(obuf_.p, p, dump);
+    p = stpcpy(p, "Content-Type: application/json\r\n");
+    return send_response(obuf_.p, p, dump_);
 }
 
 } // namespace server

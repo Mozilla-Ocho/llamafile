@@ -28,6 +28,8 @@
 #include <utility>
 #include <vector>
 
+using jt::Json;
+
 namespace lf {
 namespace server {
 

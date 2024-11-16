@@ -66,6 +66,7 @@ struct Client
     char* params_memory_ = nullptr;
     std::string_view payload_;
     std::string resolved_;
+    std::string dump_;
     Cleanup* cleanups_;
     Buffer ibuf_;
     Buffer obuf_;
@@ -112,6 +113,7 @@ struct Client
     bool get_v1_chat_completions_params(V1ChatCompletionParams*) __wur;
 
     bool slotz() __wur;
+    bool flagz() __wur;
 };
 
 } // namespace server

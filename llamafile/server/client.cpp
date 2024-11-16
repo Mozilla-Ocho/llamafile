@@ -654,6 +654,8 @@ Client::dispatcher()
         return v1_chat_completions();
     if (p1 == "slotz")
         return slotz();
+    if (p1 == "flagz")
+        return flagz();
 
     // serve static endpoints
     int infd;

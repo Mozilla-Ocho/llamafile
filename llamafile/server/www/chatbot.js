@@ -15,6 +15,20 @@
 const API_ENDPOINT = "/v1/chat/completions";
 const API_KEY = "your-api-key-here";
 
+const DEFAULT_SYSTEM_PROMPT =
+      "A chat between a curious human and an artificial " +
+      "intelligence assistant. The assistant gives helpful, " +
+      "detailed, and polite answers to the human's questions.";
+
+const DEFAULT_FLAGZ = {
+  "prompt": null,
+  "no_display_prompt": false,
+  "frequency_penalty": 0,
+  "presence_penalty": 0,
+  "temperature": 0.8,
+  "seed": null
+};
+
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
@@ -24,15 +38,8 @@ let abortController = null;
 let disableAutoScroll = false;
 let streamingMessageContent = [];
 let uploadedFiles = [];
-
-let chatHistory = [
-  {
-    role: "system",
-    content: ("A chat between a curious human and an artificial " +
-              "intelligence assistant. The assistant gives helpful, " +
-              "detailed, and polite answers to the human's questions.")
-  },
-];
+let chatHistory = [];
+let flagz = null;
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -189,10 +196,9 @@ async function sendMessage() {
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error("sendMessage() failed due to unexpected exception", error);
-      const errorMessage = createMessageElement(
+      chatMessages.appendChild(createMessageElement(
         "There was an error processing your request.",
-        "system");
-      chatMessages.appendChild(errorMessage);
+        "system"));
     }
     cleanupAfterMessage();
   }
@@ -201,13 +207,13 @@ async function sendMessage() {
 function onDragBegin(e) {
   e.preventDefault();
   e.stopPropagation();
-  chatInput.classList.add('drag-over');
+  chatInput.classList.add("drag-over");
 }
 
 function onDragEnd(e) {
   e.preventDefault();
   e.stopPropagation();
-  chatInput.classList.remove('drag-over');
+  chatInput.classList.remove("drag-over");
 }
 
 function onDrop(e) {
@@ -218,7 +224,7 @@ function onDrop(e) {
 function onPaste(e) {
   const items = e.clipboardData.items;
   for (let item of items) {
-    if (item.type.startsWith('image/')) {
+    if (item.type.startsWith("image/")) {
       e.preventDefault();
       onFile(item.getAsFile());
       return;
@@ -232,22 +238,22 @@ function onPaste(e) {
 async function fixImageDataUri(dataUri, maxLength = 1024 * 1024) {
   const mimeMatch = dataUri.match(/^data:([^;,]+)/);
   if (!mimeMatch)
-    throw new Error('bad image data uri');
+    throw new Error("bad image data uri");
   const mimeType = mimeMatch[1].toLowerCase();
-  const supported = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+  const supported = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
   if (supported.includes(mimeType))
     if (dataUri.length <= maxLength)
       return dataUri;
-  const lossless = ['image/png', 'image/gif'];
+  const lossless = ["image/png", "image/gif"];
   const quality = lossless.includes(mimeType) ? 0.92 : 0.8;
   function createScaledCanvas(img, scale) {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = Math.floor(img.width * scale);
     canvas.height = Math.floor(img.height * scale);
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.fillStyle = 'white';  // in case of transparency
+    ctx.imageSmoothingQuality = "high";
+    ctx.fillStyle = "white";  // in case of transparency
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     return canvas;
@@ -259,12 +265,12 @@ async function fixImageDataUri(dataUri, maxLength = 1024 * 1024) {
       let attempts = 0;
       const maxAttempts = 5;
       const initialCanvas = createScaledCanvas(img, scale);
-      let result = initialCanvas.toDataURL('image/jpeg', quality);
+      let result = initialCanvas.toDataURL("image/jpeg", quality);
       while (result.length > maxLength && attempts < maxAttempts) {
         attempts++;
         scale *= 0.7071;
         const scaledCanvas = createScaledCanvas(img, scale);
-        result = scaledCanvas.toDataURL('image/jpeg', quality);
+        result = scaledCanvas.toDataURL("image/jpeg", quality);
         result.length = result.length;
       }
       if (result.length <= maxLength) {
@@ -302,7 +308,7 @@ function insertText(elem, text) {
   const newPos = pos + text.length;
   elem.setSelectionRange(newPos, newPos);
   elem.focus();
-  elem.dispatchEvent(new Event('input'));
+  elem.dispatchEvent(new Event("input"));
 }
 
 function onKeyDown(e) {
@@ -312,24 +318,56 @@ function onKeyDown(e) {
   }
 }
 
-function chatbot() {
+async function fetchFlagz() {
+  try {
+    const response = await fetch("/flagz");
+    return await response.json();
+  } catch (error) {
+    console.error("Could not fetch /flagz so using defaults", error);
+    return DEFAULT_FLAGZ;
+  }
+}
+
+function getSystemPrompt() {
+  let defaultPrompt = flagz.prompt;
+  if (!defaultPrompt)
+    defaultPrompt = DEFAULT_SYSTEM_PROMPT;
+  let promptsText = localStorage.getItem("v1.prompts");
+  if (!promptsText)
+    return defaultPrompt;
+  let prompts = JSON.parse(promptsText);
+  let prompt = prompts[defaultPrompt];
+  if (!prompt)
+    return defaultPrompt;
+  return prompt;
+}
+
+function startChat(history) {
+  chatHistory = history;
   chatMessages.innerHTML = "";
   for (let i = 0; i < chatHistory.length; i++) {
+    if (flagz.no_display_prompt && chatHistory[i].role == "system")
+      continue;
     chatMessages.appendChild(createMessageElement(chatHistory[i].content,
                                                   chatHistory[i].role));
-    scrollToBottom();
   }
+  scrollToBottom();
+}
+
+async function chatbot() {
+  flagz = await fetchFlagz();
+  startChat([{ role: "system", content: getSystemPrompt() }]);
   sendButton.addEventListener("click", sendMessage);
   stopButton.addEventListener("click", stopMessage);
   chatInput.addEventListener("input", onChatInput);
   chatInput.addEventListener("keydown", onKeyDown);
-  document.addEventListener('wheel', onWheel);
-  document.addEventListener('dragenter', onDragBegin);
-  document.addEventListener('dragover', onDragBegin);
-  document.addEventListener('dragleave', onDragEnd);
-  document.addEventListener('drop', onDragEnd);
-  document.addEventListener('drop', onDrop);
-  document.addEventListener('paste', onPaste);
+  document.addEventListener("wheel", onWheel);
+  document.addEventListener("dragenter", onDragBegin);
+  document.addEventListener("dragover", onDragBegin);
+  document.addEventListener("dragleave", onDragEnd);
+  document.addEventListener("drop", onDragEnd);
+  document.addEventListener("drop", onDrop);
+  document.addEventListener("paste", onPaste);
   chatInput.focus();
 }
 

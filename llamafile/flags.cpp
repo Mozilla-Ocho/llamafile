@@ -43,6 +43,7 @@ bool FLAG_iq = false;
 bool FLAG_log_disable = false;
 bool FLAG_mlock = false;
 bool FLAG_mmap = true;
+bool FLAG_no_display_prompt = false;
 bool FLAG_nocompile = false;
 bool FLAG_nologo = false;
 bool FLAG_precise = false;
@@ -59,7 +60,10 @@ const char *FLAG_prompt = nullptr;
 const char *FLAG_url_prefix = "";
 const char *FLAG_www_root = "/zip/www";
 double FLAG_token_rate = 1;
-float FLAG_temp = 0.8;
+float FLAG_frequency_penalty = 0;
+float FLAG_presence_penalty = 0;
+float FLAG_temperature = .8;
+float FLAG_top_p = .95;
 int FLAG_batch = 2048;
 int FLAG_ctx_size = 8192;
 int FLAG_flash_attn = false;
@@ -69,7 +73,6 @@ int FLAG_http_obuf_size = 1024 * 1024;
 int FLAG_keepalive = 5;
 int FLAG_main_gpu = 0;
 int FLAG_n_gpu_layers = -1;
-int FLAG_seed = LLAMA_DEFAULT_SEED;
 int FLAG_slots = 1;
 int FLAG_split_mode = LLAMA_SPLIT_MODE_LAYER;
 int FLAG_threads = MIN(cpu_get_num_math(), 20);
@@ -80,6 +83,7 @@ int FLAG_ubatch = 512;
 int FLAG_verbose = 0;
 int FLAG_warmup = true;
 int FLAG_workers;
+unsigned FLAG_seed = LLAMA_DEFAULT_SEED;
 
 std::vector<std::string> FLAG_headers;
 
@@ -150,6 +154,17 @@ void llamafile_get_flags(int argc, char **argv) {
 
         if (!strcmp(flag, "--nologo")) {
             FLAG_nologo = true;
+            continue;
+        }
+
+        if (!strcmp(flag, "--no-display-prompt") || //
+            !strcmp(flag, "--silent-prompt")) {
+            FLAG_no_display_prompt = true;
+            continue;
+        }
+
+        if (!strcmp(flag, "--display-prompt")) {
+            FLAG_no_display_prompt = false;
             continue;
         }
 
@@ -279,6 +294,45 @@ void llamafile_get_flags(int argc, char **argv) {
         }
 
         //////////////////////////////////////////////////////////////////////
+        // sampling flags
+
+        if (!strcmp(flag, "--seed")) {
+            if (i == argc)
+                missing("--seed");
+            FLAG_seed = strtol(argv[i++], 0, 0);
+            continue;
+        }
+
+        if (!strcmp(flag, "--temp") || //
+            !strcmp(flag, "--temperature")) {
+            if (i == argc)
+                missing("--temp");
+            FLAG_temperature = atof(argv[i++]);
+            continue;
+        }
+
+        if (!strcmp(flag, "--top-p")) {
+            if (i == argc)
+                missing("--top-p");
+            FLAG_top_p = atof(argv[i++]);
+            continue;
+        }
+
+        if (!strcmp(flag, "--frequency-penalty")) {
+            if (i == argc)
+                missing("--frequency-penalty");
+            FLAG_frequency_penalty = atof(argv[i++]);
+            continue;
+        }
+
+        if (!strcmp(flag, "--presence-penalty")) {
+            if (i == argc)
+                missing("--presence-penalty");
+            FLAG_presence_penalty = atof(argv[i++]);
+            continue;
+        }
+
+        //////////////////////////////////////////////////////////////////////
         // model flags
 
         if (!strcmp(flag, "-c") || !strcmp(flag, "--ctx-size")) {
@@ -316,20 +370,6 @@ void llamafile_get_flags(int argc, char **argv) {
             if (i == argc)
                 missing("--file");
             FLAG_file = argv[i++];
-            continue;
-        }
-
-        if (!strcmp(flag, "--seed")) {
-            if (i == argc)
-                missing("--seed");
-            FLAG_seed = atoi(argv[i++]);
-            continue;
-        }
-
-        if (!strcmp(flag, "--temp")) {
-            if (i == argc)
-                missing("--temp");
-            FLAG_temp = atof(argv[i++]);
             continue;
         }
 
