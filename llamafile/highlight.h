@@ -210,6 +210,25 @@ class HighlightC : public Highlight {
     is_keyword_f *is_constant_;
 };
 
+class HighlightD : public Highlight {
+  public:
+    HighlightD();
+    ~HighlightD() override;
+    void feed(std::string *result, std::string_view input) override;
+    void flush(std::string *result) override;
+
+  private:
+    int c_ = 0;
+    int u_ = 0;
+    int t_ = 0;
+    int depth_ = 0;
+    unsigned char opener_ = 0;
+    unsigned char closer_ = 0;
+    std::string heredoc_;
+    std::string heredoc2_;
+    std::string word_;
+};
+
 class HighlightJava : public Highlight {
   public:
     HighlightJava();

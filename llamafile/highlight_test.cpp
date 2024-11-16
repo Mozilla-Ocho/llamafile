@@ -25,7 +25,7 @@
 
 #define LENGTH 10
 #define ITERATIONS 200000
-#define CHARSET " aQq123{}[]!@#$%^*().\"'`\\/\n-_=&;:<>,"
+#define CHARSET " raQq123{}[]!@#$%^*().\"'`\\/\n-_=&;:<>,"
 
 const char *const kLanguages[] = {
     "ada", //
@@ -144,6 +144,10 @@ bool is_color_reset(const std::string &input) {
 int main(int argc, char *argv[]) {
     for (int l = 0; l < ARRAYLEN(kLanguages); ++l) {
         Highlight *h = Highlight::create(kLanguages[l]);
+        if (!h) {
+            fprintf(stderr, "Highlight::create(%`'s) failed\n", kLanguages[l]);
+            exit(1);
+        }
         for (int i = 0; i < ITERATIONS; ++i) {
             std::string sauce = generate_random_string(LENGTH);
             std::string colorized;

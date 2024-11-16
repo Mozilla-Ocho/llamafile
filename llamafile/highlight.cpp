@@ -17,219 +17,198 @@
 
 #include "highlight.h"
 
+struct HighlightEntry {
+    char *name;
+    Highlight *(*ctor)(void);
+};
+
+extern "C" Highlight *highlight_create_ada_(void) {
+    return new HighlightAda;
+}
+
+extern "C" Highlight *highlight_create_asm_(void) {
+    return new HighlightAsm;
+}
+
+extern "C" Highlight *highlight_create_basic_(void) {
+    return new HighlightBasic;
+}
+
+extern "C" Highlight *highlight_create_bnf_(void) {
+    return new HighlightBnf;
+}
+
+extern "C" Highlight *highlight_create_c_(void) {
+    return new HighlightC(is_keyword_c, //
+                          is_keyword_c_type, //
+                          is_keyword_c_builtin, //
+                          is_keyword_c_constant);
+}
+
+extern "C" Highlight *highlight_create_cxx_(void) {
+    return new HighlightC(is_keyword_cxx, //
+                          is_keyword_c_type, //
+                          is_keyword_c_builtin, //
+                          is_keyword_c_constant);
+}
+
+extern "C" Highlight *highlight_create_cmake_(void) {
+    return new HighlightCmake;
+}
+
+extern "C" Highlight *highlight_create_cobol_(void) {
+    return new HighlightCobol;
+}
+
+extern "C" Highlight *highlight_create_csharp_(void) {
+    return new HighlightCsharp;
+}
+
+extern "C" Highlight *highlight_create_css_(void) {
+    return new HighlightCss;
+}
+
+extern "C" Highlight *highlight_create_d_(void) {
+    return new HighlightD;
+}
+
+extern "C" Highlight *highlight_create_forth_(void) {
+    return new HighlightForth;
+}
+
+extern "C" Highlight *highlight_create_fortran_(void) {
+    return new HighlightFortran;
+}
+
+extern "C" Highlight *highlight_create_go_(void) {
+    return new HighlightGo;
+}
+
+extern "C" Highlight *highlight_create_haskell_(void) {
+    return new HighlightHaskell;
+}
+
+extern "C" Highlight *highlight_create_html_(void) {
+    return new HighlightHtml;
+}
+
+extern "C" Highlight *highlight_create_java_(void) {
+    return new HighlightJava;
+}
+
+extern "C" Highlight *highlight_create_js_(void) {
+    return new HighlightJs;
+}
+
+extern "C" Highlight *highlight_create_julia_(void) {
+    return new HighlightJulia;
+}
+
+extern "C" Highlight *highlight_create_kotlin_(void) {
+    return new HighlightKotlin;
+}
+
+extern "C" Highlight *highlight_create_ld_(void) {
+    return new HighlightLd;
+}
+
+extern "C" Highlight *highlight_create_lisp_(void) {
+    return new HighlightLisp;
+}
+
+extern "C" Highlight *highlight_create_lua_(void) {
+    return new HighlightLua;
+}
+
+extern "C" Highlight *highlight_create_m4_(void) {
+    return new HighlightM4;
+}
+
+extern "C" Highlight *highlight_create_make_(void) {
+    return new HighlightMake;
+}
+
+extern "C" Highlight *highlight_create_markdown_(void) {
+    return new HighlightMarkdown;
+}
+
+extern "C" Highlight *highlight_create_matlab_(void) {
+    return new HighlightMatlab;
+}
+
+extern "C" Highlight *highlight_create_ocaml_(void) {
+    return new HighlightOcaml;
+}
+
+extern "C" Highlight *highlight_create_pascal_(void) {
+    return new HighlightPascal;
+}
+
+extern "C" Highlight *highlight_create_perl_(void) {
+    return new HighlightPerl;
+}
+
+extern "C" Highlight *highlight_create_php_(void) {
+    return new HighlightPhp;
+}
+
+extern "C" Highlight *highlight_create_python_(void) {
+    return new HighlightPython;
+}
+
+extern "C" Highlight *highlight_create_r_(void) {
+    return new HighlightR;
+}
+
+extern "C" Highlight *highlight_create_ruby_(void) {
+    return new HighlightRuby;
+}
+
+extern "C" Highlight *highlight_create_rust_(void) {
+    return new HighlightRust;
+}
+
+extern "C" Highlight *highlight_create_scala_(void) {
+    return new HighlightScala;
+}
+
+extern "C" Highlight *highlight_create_shell_(void) {
+    return new HighlightShell;
+}
+
+extern "C" Highlight *highlight_create_sql_(void) {
+    return new HighlightSql;
+}
+
+extern "C" Highlight *highlight_create_swift_(void) {
+    return new HighlightSwift;
+}
+
+extern "C" Highlight *highlight_create_tcl_(void) {
+    return new HighlightTcl;
+}
+
+extern "C" Highlight *highlight_create_tex_(void) {
+    return new HighlightTex;
+}
+
+extern "C" Highlight *highlight_create_txt_(void) {
+    return new HighlightTxt;
+}
+
+extern "C" Highlight *highlight_create_typescript_(void) {
+    return new HighlightTypescript;
+}
+
+extern "C" Highlight *highlight_create_zig_(void) {
+    return new HighlightZig;
+}
+
+extern "C" const HighlightEntry *highlight_lookup_(const char *str, size_t len);
+
 Highlight *Highlight::create(const std::string_view &lang) {
-
-    if (lang == "txt")
-        return new HighlightTxt;
-
-    if (lang == "md" || //
-        lang == "markdown")
-        return new HighlightMarkdown;
-
-    if (lang == "c" || //
-        lang == "h" || //
-        lang == "m")
-        return new HighlightC(is_keyword_c, //
-                              is_keyword_c_type, //
-                              is_keyword_c_builtin, //
-                              is_keyword_c_constant);
-
-    if (lang == "c++" || //
-        lang == "cxx" || //
-        lang == "cpp" || //
-        lang == "hpp" || //
-        lang == "cc" || //
-        lang == "cu")
-        return new HighlightC(is_keyword_cxx, //
-                              is_keyword_c_type, //
-                              is_keyword_c_builtin, //
-                              is_keyword_c_constant);
-
-    if (lang == "s" || //
-        lang == "asm" || //
-        lang == "nasm" || //
-        lang == "yasm" || //
-        lang == "fasm" || //
-        lang == "assembly" || //
-        lang == "assembler")
-        return new HighlightAsm;
-
-    if (lang == "ld" || //
-        lang == "lds" || //
-        lang == "ld-script")
-        return new HighlightLd;
-
-    if (lang == "js" || //
-        lang == "json" || //
-        lang == "javascript")
-        return new HighlightJs;
-
-    if (lang == "ts" || //
-        lang == "typescript")
-        return new HighlightTypescript;
-
-    if (lang == "java")
-        return new HighlightJava;
-
-    if (lang == "py" || //
-        lang == "python")
-        return new HighlightPython;
-
-    if (lang == "rs" || //
-        lang == "rust")
-        return new HighlightRust;
-
-    if (lang == "f" || //
-        lang == "fortran")
-        return new HighlightFortran;
-
-    if (lang == "cob" || //
-        lang == "cbl" || //
-        lang == "cobol")
-        return new HighlightCobol;
-
-    if (lang == "pas" || //
-        lang == "pascal" || //
-        lang == "delphi")
-        return new HighlightPascal;
-
-    if (lang == "go")
-        return new HighlightGo;
-
-    if (lang == "sql")
-        return new HighlightSql;
-
-    if (lang == "css")
-        return new HighlightCss;
-
-    if (lang == "html" || //
-        lang == "htm" || //
-        lang == "xhtml" || //
-        lang == "xml")
-        return new HighlightHtml;
-
-    if (lang == "php")
-        return new HighlightHtml; // sic
-
-    if (lang == "php!")
-        return new HighlightPhp;
-
-    if (lang == "csharp" || //
-        lang == "cs" || //
-        lang == "c#")
-        return new HighlightCsharp;
-
-    if (lang == "kt" || //
-        lang == "kts" || //
-        lang == "kotlin")
-        return new HighlightKotlin;
-
-    if (lang == "sc" || //
-        lang == "sbt" || //
-        lang == "scala")
-        return new HighlightScala;
-
-    if (lang == "lua")
-        return new HighlightLua;
-
-    if (lang == "lisp" || //
-        lang == "el" || //
-        lang == "elisp" || //
-        lang == "cl" || //
-        lang == "clisp" || //
-        lang == "scheme" || //
-        lang == "racket" || //
-        lang == "clojure")
-        return new HighlightLisp;
-
-    if (lang == "ada" || //
-        lang == "adb")
-        return new HighlightAda;
-
-    if (lang == "haskell" || //
-        lang == "hs")
-        return new HighlightHaskell;
-
-    if (lang == "perl" || //
-        lang == "pl")
-        return new HighlightPerl;
-
-    if (lang == "shell" || //
-        lang == "bash" || //
-        lang == "sh" || //
-        lang == "ksh")
-        return new HighlightShell;
-
-    if (lang == "swift")
-        return new HighlightSwift;
-
-    if (lang == "d")
-        return new HighlightC(is_keyword_d, nullptr, nullptr, is_keyword_d_constant);
-
-    if (lang == "r")
-        return new HighlightR;
-
-    if (lang == "zig")
-        return new HighlightZig;
-
-    if (lang == "tcl")
-        return new HighlightTcl;
-
-    if (lang == "m4" || //
-        lang == "ac")
-        return new HighlightM4;
-
-    if (lang == "ruby" || //
-        lang == "rb")
-        return new HighlightRuby;
-
-    if (lang == "tex" || //
-        lang == "latex")
-        return new HighlightTex;
-
-    if (lang == "fs" || //
-        lang == "4th" || //
-        lang == "frt" || //
-        lang == "fth" || //
-        lang == "forth")
-        return new HighlightForth;
-
-    if (lang == "mk" || //
-        lang == "make" || //
-        lang == "gmake" || //
-        lang == "makefile" || //
-        lang == "gmakefile")
-        return new HighlightMake;
-
-    if (lang == "vb" || //
-        lang == "vba" || //
-        lang == "vbs" || //
-        lang == "bas" || //
-        lang == "basic" || //
-        lang == "vb.net" || //
-        lang == "qbasic" || //
-        lang == "freebasic")
-        return new HighlightBasic;
-
-    if (lang == "matlab")
-        return new HighlightMatlab;
-
-    if (lang == "jl" || //
-        lang == "julia")
-        return new HighlightJulia;
-
-    if (lang == "ml" || //
-        lang == "mli" || //
-        lang == "ocaml")
-        return new HighlightOcaml;
-
-    if (lang == "cmake")
-        return new HighlightCmake;
-
-    if (lang == "bnf" || //
-        lang == "abnf" || //
-        lang == "grammar")
-        return new HighlightBnf;
-
+    const HighlightEntry *slot;
+    if ((slot = highlight_lookup_(lang.data(), lang.size())))
+        return slot->ctor();
     return nullptr;
 }

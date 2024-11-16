@@ -382,3 +382,37 @@ end
     end
   end
 ```
+
+# D
+
+```d
+// d stands for dead, for
+// what is dead may never die
+// but rises again, harder and stronger
+/* com /* com */ plain
+/+ com /+ com +/ com +/ plain
+/+/++/+/ plain
+/+/++/++/ plain
+/+//++/++/ plain
+/+//++/+++/ plain
+"str\"str" plain
+`str"\str` plain
+r"str\str" plain
+q"/str/warn/" plain
+q"<str>warn>" plain
+q"(str"(str)"str)" plain
+q"[str"[str]"str]" plain
+q"eos
+hello
+eos" plain
+q"eos!warn
+warn
+eos" plain
+q"eos
+warn
+eos
+warn
+eos" plain
+x"dead beef" plain
+x"dead warn" plain
+```

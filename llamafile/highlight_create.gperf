@@ -1,0 +1,175 @@
+%{
+#include <string.h>
+#include <libc/str/tab.h>
+#define GPERF_DOWNCASE
+struct Highlight;
+struct Highlight *highlight_create_ada_(void);
+struct Highlight *highlight_create_asm_(void);
+struct Highlight *highlight_create_basic_(void);
+struct Highlight *highlight_create_bnf_(void);
+struct Highlight *highlight_create_c_(void);
+struct Highlight *highlight_create_cmake_(void);
+struct Highlight *highlight_create_cobol_(void);
+struct Highlight *highlight_create_csharp_(void);
+struct Highlight *highlight_create_css_(void);
+struct Highlight *highlight_create_cxx_(void);
+struct Highlight *highlight_create_d_(void);
+struct Highlight *highlight_create_forth_(void);
+struct Highlight *highlight_create_fortran_(void);
+struct Highlight *highlight_create_go_(void);
+struct Highlight *highlight_create_haskell_(void);
+struct Highlight *highlight_create_html_(void);
+struct Highlight *highlight_create_java_(void);
+struct Highlight *highlight_create_js_(void);
+struct Highlight *highlight_create_julia_(void);
+struct Highlight *highlight_create_kotlin_(void);
+struct Highlight *highlight_create_ld_(void);
+struct Highlight *highlight_create_lisp_(void);
+struct Highlight *highlight_create_lua_(void);
+struct Highlight *highlight_create_m4_(void);
+struct Highlight *highlight_create_make_(void);
+struct Highlight *highlight_create_markdown_(void);
+struct Highlight *highlight_create_matlab_(void);
+struct Highlight *highlight_create_ocaml_(void);
+struct Highlight *highlight_create_pascal_(void);
+struct Highlight *highlight_create_perl_(void);
+struct Highlight *highlight_create_php_(void);
+struct Highlight *highlight_create_python_(void);
+struct Highlight *highlight_create_r_(void);
+struct Highlight *highlight_create_ruby_(void);
+struct Highlight *highlight_create_rust_(void);
+struct Highlight *highlight_create_scala_(void);
+struct Highlight *highlight_create_shell_(void);
+struct Highlight *highlight_create_sql_(void);
+struct Highlight *highlight_create_swift_(void);
+struct Highlight *highlight_create_tcl_(void);
+struct Highlight *highlight_create_tex_(void);
+struct Highlight *highlight_create_txt_(void);
+struct Highlight *highlight_create_typescript_(void);
+struct Highlight *highlight_create_zig_(void);
+%}
+%compare-strncmp
+%ignore-case
+%language=ANSI-C
+%readonly-tables
+%struct-type
+%define lookup-function-name highlight_lookup_
+struct HighlightEntry { char *name; struct Highlight* (*ctor)(void); };
+%%
+txt, highlight_create_txt_
+md, highlight_create_markdown_
+markdown, highlight_create_markdown_
+c, highlight_create_c_
+h, highlight_create_c_
+m, highlight_create_c_
+c++, highlight_create_cxx_
+cxx, highlight_create_cxx_
+cpp, highlight_create_cxx_
+hpp, highlight_create_cxx_
+cc, highlight_create_cxx_
+cu, highlight_create_cxx_
+s, highlight_create_asm_
+asm, highlight_create_asm_
+nasm, highlight_create_asm_
+yasm, highlight_create_asm_
+fasm, highlight_create_asm_
+assembly, highlight_create_asm_
+assembler, highlight_create_asm_
+ld, highlight_create_ld_
+lds, highlight_create_ld_
+ld-script, highlight_create_ld_
+js, highlight_create_js_
+json, highlight_create_js_
+javascript, highlight_create_js_
+ts, highlight_create_typescript_
+typescript, highlight_create_typescript_
+java, highlight_create_java_
+py, highlight_create_python_
+python, highlight_create_python_
+rs, highlight_create_rust_
+rust, highlight_create_rust_
+f, highlight_create_fortran_
+fortran, highlight_create_fortran_
+cob, highlight_create_cobol_
+cbl, highlight_create_cobol_
+cobol, highlight_create_cobol_
+pas, highlight_create_pascal_
+pascal, highlight_create_pascal_
+delphi, highlight_create_pascal_
+go, highlight_create_go_
+sql, highlight_create_sql_
+css, highlight_create_css_
+html, highlight_create_html_
+htm, highlight_create_html_
+xhtml, highlight_create_html_
+xml, highlight_create_html_
+php, highlight_create_html_
+php!, highlight_create_php_
+csharp, highlight_create_csharp_
+cs, highlight_create_csharp_
+c#, highlight_create_csharp_
+kt, highlight_create_kotlin_
+kts, highlight_create_kotlin_
+kotlin, highlight_create_kotlin_
+sc, highlight_create_scala_
+sbt, highlight_create_scala_
+scala, highlight_create_scala_
+lua, highlight_create_lua_
+lisp, highlight_create_lisp_
+el, highlight_create_lisp_
+elisp, highlight_create_lisp_
+cl, highlight_create_lisp_
+clisp, highlight_create_lisp_
+scheme, highlight_create_lisp_
+racket, highlight_create_lisp_
+clojure, highlight_create_lisp_
+ada, highlight_create_ada_
+adb, highlight_create_ada_
+hs, highlight_create_haskell_
+haskell, highlight_create_haskell_
+pl, highlight_create_perl_
+perl, highlight_create_perl_
+shell, highlight_create_shell_
+bash, highlight_create_shell_
+sh, highlight_create_shell_
+ksh, highlight_create_shell_
+swift, highlight_create_swift_
+d, highlight_create_d_
+r, highlight_create_r_
+zig, highlight_create_zig_
+tcl, highlight_create_tcl_
+m4, highlight_create_m4_
+ac, highlight_create_m4_
+rb, highlight_create_ruby_
+ruby, highlight_create_ruby_
+tex, highlight_create_tex_
+latex, highlight_create_tex_
+fs, highlight_create_forth_
+4th, highlight_create_forth_
+frt, highlight_create_forth_
+fth, highlight_create_forth_
+forth, highlight_create_forth_
+mk, highlight_create_make_
+make, highlight_create_make_
+gmake, highlight_create_make_
+makefile, highlight_create_make_
+gmakefile, highlight_create_make_
+vb, highlight_create_basic_
+vba, highlight_create_basic_
+vbs, highlight_create_basic_
+bas, highlight_create_basic_
+basic, highlight_create_basic_
+vb.net, highlight_create_basic_
+qbasic, highlight_create_basic_
+freebasic, highlight_create_basic_
+matlab, highlight_create_matlab_
+jl, highlight_create_julia_
+julia, highlight_create_julia_
+ml, highlight_create_ocaml_
+mli, highlight_create_ocaml_
+ocaml, highlight_create_ocaml_
+cmake, highlight_create_cmake_
+bnf, highlight_create_bnf_
+abnf, highlight_create_bnf_
+gbnf, highlight_create_bnf_
+grammar, highlight_create_bnf_
