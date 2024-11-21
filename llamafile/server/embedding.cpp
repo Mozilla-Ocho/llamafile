@@ -110,17 +110,18 @@ Client::get_embedding_params(EmbeddingParams* params)
         } else if (IsMimeType(HeaderData(kHttpContentType),
                               HeaderLength(kHttpContentType),
                               "application/json")) {
-            std::pair<Json::Status, Json> json = Json::parse(payload_);
+            std::pair<Json::Status, Json> json =
+              Json::parse(std::string(payload_));
             if (json.first != Json::success)
                 return send_error(400, Json::StatusToString(json.first));
             if (!json.second.isObject())
                 return send_error(400, "JSON body must be an object");
             if (json.second["content"].isString())
-                params->content = std::move(json.second["content"].getString());
+                params->content = json.second["content"].getString();
             else if (json.second["prompt"].isString())
-                params->content = std::move(json.second["prompt"].getString());
+                params->content = json.second["prompt"].getString();
             else if (json.second["input"].isString())
-                params->content = std::move(json.second["input"].getString());
+                params->content = json.second["input"].getString();
             else
                 return send_error(400, "JSON missing content/prompt/input key");
             params->prompt = params->content;
@@ -129,7 +130,7 @@ Client::get_embedding_params(EmbeddingParams* params)
             if (json.second["parse_special"].isBool())
                 params->parse_special = json.second["parse_special"].getBool();
             if (json.second["model"].isString())
-                params->model = std::move(json.second["model"].getString());
+                params->model = json.second["model"].getString();
         } else {
             return send_error(501, "Content Type Not Implemented");
         }

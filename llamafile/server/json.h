@@ -20,12 +20,6 @@
 #include <string>
 #include <vector>
 
-#if __cplusplus >= 201703L
-#define JTJSON_STRING_VIEW std::string_view
-#else
-#define JTJSON_STRING_VIEW std::string
-#endif
-
 namespace jt {
 
 class Json
@@ -95,13 +89,14 @@ class Json
 
   public:
     static const char* StatusToString(Status);
-    static std::pair<Status, Json> parse(const JTJSON_STRING_VIEW&);
+    static std::pair<Status, Json> parse(const std::string&);
 
     Json(const Json&);
     Json(Json&&) noexcept;
+    Json(unsigned long);
     Json(unsigned long long);
     Json(const char*);
-    Json(const JTJSON_STRING_VIEW&);
+    Json(const std::string&);
     ~Json();
 
     Json(const std::nullptr_t = nullptr) : type_(Null)
@@ -121,6 +116,10 @@ class Json
     }
 
     Json(unsigned value) : type_(Long), long_value(value)
+    {
+    }
+
+    Json(long value) : type_(Long), long_value(value)
     {
     }
 
@@ -195,14 +194,8 @@ class Json
     std::vector<Json>& getArray();
     std::map<std::string, Json>& getObject();
 
-    void setNull();
-    void setBool(bool);
-    void setFloat(float);
-    void setDouble(double);
-    void setLong(long long);
-    void setString(const char*);
-    void setString(std::string&&);
-    void setString(const JTJSON_STRING_VIEW&);
+    bool contains(const std::string&) const;
+
     void setArray();
     void setObject();
 
@@ -223,8 +216,8 @@ class Json
   private:
     void clear();
     void marshal(std::string&, bool, int) const;
-    static void stringify(std::string&, const JTJSON_STRING_VIEW&);
-    static void serialize(std::string&, const JTJSON_STRING_VIEW&);
+    static void stringify(std::string&, const std::string&);
+    static void serialize(std::string&, const std::string&);
     static Status parse(Json&, const char*&, const char*, int, int);
 };
 

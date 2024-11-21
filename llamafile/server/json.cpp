@@ -17,6 +17,7 @@
 
 #include "json.h"
 
+#include <cassert>
 #include <cctype>
 #include <climits>
 #include <cstdint>
@@ -196,7 +197,7 @@ Bsr(int x)
 static double
 StringToDouble(const char* s, size_t n, int* out_processed)
 {
-    if (n == -1ull)
+    if (n == (size_t)-1)
         n = strlen(s);
     int processed;
     double res = kJsonToDouble.StringToDouble(s, n, &processed);
@@ -230,8 +231,19 @@ static char*
 LongToString(char* p, long long x)
 {
     if (x < 0)
-        *p++ = '-', x = -(unsigned long long)x;
+        *p++ = '-', x = 0 - (unsigned long long)x;
     return UlongToString(p, x);
+}
+
+Json::Json(unsigned long value)
+{
+    if (value <= LLONG_MAX) {
+        type_ = Long;
+        long_value = value;
+    } else {
+        type_ = Double;
+        double_value = value;
+    }
 }
 
 Json::Json(unsigned long long value)
@@ -255,13 +267,14 @@ Json::Json(const char* value)
     }
 }
 
-Json::Json(const JTJSON_STRING_VIEW& value) : type_(String), string_value(value)
+Json::Json(const std::string& value) : type_(String), string_value(value)
 {
 }
 
 Json::~Json()
 {
-    clear();
+    if (type_ >= String)
+        clear();
 }
 
 void
@@ -318,7 +331,8 @@ Json&
 Json::operator=(const Json& other)
 {
     if (this != &other) {
-        clear();
+        if (type_ >= String)
+            clear();
         type_ = other.type_;
         switch (type_) {
             case Null:
@@ -389,7 +403,8 @@ Json&
 Json::operator=(Json&& other) noexcept
 {
     if (this != &other) {
-        clear();
+        if (type_ >= String)
+            clear();
         type_ = other.type_;
         switch (type_) {
             case Null:
@@ -429,10 +444,6 @@ double
 Json::getNumber() const
 {
     switch (type_) {
-        case Null:
-            return 0;
-        case Bool:
-            return bool_value;
         case Long:
             return long_value;
         case Float:
@@ -447,126 +458,89 @@ Json::getNumber() const
 long long
 Json::getLong() const
 {
-    if (!isLong())
-        abort();
-    return long_value;
+    switch (type_) {
+        case Long:
+            return long_value;
+        default:
+            abort();
+    }
 }
 
 bool
 Json::getBool() const
 {
-    if (!isBool())
-        abort();
-    return bool_value;
+    switch (type_) {
+        case Bool:
+            return bool_value;
+        default:
+            abort();
+    }
 }
 
 float
 Json::getFloat() const
 {
-    if (!isFloat())
-        abort();
-    return float_value;
+    switch (type_) {
+        case Float:
+            return float_value;
+        case Double:
+            return double_value;
+        default:
+            abort();
+    }
 }
 
 double
 Json::getDouble() const
 {
-    if (!isDouble())
-        abort();
-    return double_value;
+    switch (type_) {
+        case Float:
+            return float_value;
+        case Double:
+            return double_value;
+        default:
+            abort();
+    }
 }
 
 std::string&
 Json::getString()
 {
-    if (!isString())
-        abort();
-    return string_value;
+    switch (type_) {
+        case String:
+            return string_value;
+        default:
+            abort();
+    }
 }
 
 std::vector<Json>&
 Json::getArray()
 {
-    if (!isArray())
-        abort();
-    return array_value;
+    switch (type_) {
+        case Array:
+            return array_value;
+        default:
+            abort();
+    }
 }
 
 std::map<std::string, Json>&
 Json::getObject()
 {
-    if (!isObject())
-        abort();
-    return object_value;
-}
-
-void
-Json::setNull()
-{
-    clear();
-    type_ = Null;
-}
-
-void
-Json::setBool(bool value)
-{
-    clear();
-    type_ = Bool;
-    bool_value = value;
-}
-
-void
-Json::setFloat(float value)
-{
-    clear();
-    type_ = Float;
-    float_value = value;
-}
-
-void
-Json::setDouble(double value)
-{
-    clear();
-    type_ = Double;
-    double_value = value;
-}
-
-void
-Json::setLong(long long value)
-{
-    clear();
-    type_ = Long;
-    long_value = value;
-}
-
-void
-Json::setString(const char* value)
-{
-    clear();
-    type_ = String;
-    new (&string_value) std::string(value);
-}
-
-void
-Json::setString(std::string&& value)
-{
-    clear();
-    type_ = String;
-    new (&string_value) std::string(std::move(value));
-}
-
-void
-Json::setString(const JTJSON_STRING_VIEW& value)
-{
-    clear();
-    type_ = String;
-    new (&string_value) std::string(value);
+    switch (type_) {
+        case Object:
+            return object_value;
+        default:
+            abort();
+    }
 }
 
 void
 Json::setArray()
 {
-    clear();
+    if (type_ >= String)
+        clear();
     type_ = Array;
     new (&array_value) std::vector<Json>();
 }
@@ -574,18 +548,25 @@ Json::setArray()
 void
 Json::setObject()
 {
-    clear();
+    if (type_ >= String)
+        clear();
     type_ = Object;
     new (&object_value) std::map<std::string, Json>();
+}
+
+bool
+Json::contains(const std::string& key) const
+{
+    if (!isObject())
+        return false;
+    return object_value.find(key) != object_value.end();
 }
 
 Json&
 Json::operator[](size_t index)
 {
-    if (type_ != Array) {
-        clear();
+    if (!isArray())
         setArray();
-    }
     if (index >= array_value.size()) {
         array_value.resize(index + 1);
     }
@@ -595,10 +576,8 @@ Json::operator[](size_t index)
 Json&
 Json::operator[](const std::string& key)
 {
-    if (type_ != Object) {
-        clear();
+    if (!isObject())
         setObject();
-    }
     return object_value[key];
 }
 
@@ -706,7 +685,7 @@ Json::marshal(std::string& b, bool pretty, int indent) const
 }
 
 void
-Json::stringify(std::string& b, const JTJSON_STRING_VIEW& s)
+Json::stringify(std::string& b, const std::string& s)
 {
     b += '"';
     serialize(b, s);
@@ -714,7 +693,7 @@ Json::stringify(std::string& b, const JTJSON_STRING_VIEW& s)
 }
 
 void
-Json::serialize(std::string& sb, const JTJSON_STRING_VIEW& s)
+Json::serialize(std::string& sb, const std::string& s)
 {
     size_t i, j, m;
     wint_t x, a, b;
@@ -822,7 +801,6 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                 if (context & (KEY | COLON | COMMA))
                     goto OnColonCommaKey;
                 if (p + 3 <= e && READ32LE(p - 1) == READ32LE("null")) {
-                    json.setNull();
                     p += 3;
                     return success;
                 } else {
@@ -833,7 +811,8 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                 if (context & (KEY | COLON | COMMA))
                     goto OnColonCommaKey;
                 if (p + 4 <= e && READ32LE(p) == READ32LE("alse")) {
-                    json.setBool(true);
+                    json.type_ = Bool;
+                    json.bool_value = false;
                     p += 4;
                     return success;
                 } else {
@@ -844,7 +823,8 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                 if (context & (KEY | COLON | COMMA))
                     goto OnColonCommaKey;
                 if (p + 3 <= e && READ32LE(p - 1) == READ32LE("true")) {
-                    json.setBool(true);
+                    json.type_ = Bool;
+                    json.bool_value = true;
                     p += 3;
                     return success;
                 } else {
@@ -886,7 +866,8 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         return unexpected_octal;
                     }
                 }
-                json.setLong(0);
+                json.type_ = Long;
+                json.long_value = 0;
                 return success;
 
             case '1':
@@ -917,11 +898,13 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         break;
                     }
                 }
-                json.setLong(x);
+                json.type_ = Long;
+                json.long_value = x;
                 return success;
 
             UseDubble: // number
-                json.setDouble(StringToDouble(a, e - a, &c));
+                json.type_ = Double;
+                json.double_value = StringToDouble(a, e - a, &c);
                 if (c <= 0)
                     return bad_double;
                 if (a + c < e && (a[c] == 'e' || a[c] == 'E'))
@@ -940,7 +923,7 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         return success;
                     if (status != success)
                         return status;
-                    json.getArray().emplace_back(std::move(value));
+                    json.array_value.emplace_back(std::move(value));
                     context = ARRAY | COMMA;
                 }
             }
@@ -974,8 +957,10 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                         return object_missing_value;
                     if (status != success)
                         return status;
-                    json[key.getString()] = std::move(value);
+                    json.object_value.emplace(std::move(key.string_value),
+                                              std::move(value));
                     context = KEY | COMMA | OBJECT;
+                    key.clear();
                 }
             }
 
@@ -993,7 +978,8 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
                             break;
 
                         case DQUOTE:
-                            json.setString(std::move(b));
+                            json.type_ = String;
+                            new (&json.string_value) std::string(std::move(b));
                             return success;
 
                         case BACKSLASH:
@@ -1229,7 +1215,7 @@ Json::parse(Json& json, const char*& p, const char* e, int context, int depth)
 }
 
 std::pair<Json::Status, Json>
-Json::parse(const JTJSON_STRING_VIEW& s)
+Json::parse(const std::string& s)
 {
     Json::Status s2;
     std::pair<Json::Status, Json> res;
@@ -1237,7 +1223,8 @@ Json::parse(const JTJSON_STRING_VIEW& s)
     const char* e = s.data() + s.size();
     res.first = parse(res.second, p, e, 0, DEPTH);
     if (res.first == Json::success) {
-        s2 = parse(res.second, p, e, 0, DEPTH);
+        Json j2;
+        s2 = parse(j2, p, e, 0, DEPTH);
         if (s2 != absent_value)
             res.first = trailing_content;
     }

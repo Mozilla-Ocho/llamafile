@@ -63,7 +63,8 @@ Client::get_tokenize_params(TokenizeParams* params)
         } else if (IsMimeType(HeaderData(kHttpContentType),
                               HeaderLength(kHttpContentType),
                               "application/json")) {
-            std::pair<Json::Status, Json> json = Json::parse(payload_);
+            std::pair<Json::Status, Json> json =
+              Json::parse(std::string(payload_));
             if (json.first != Json::success)
                 return send_error(400, Json::StatusToString(json.first));
             if (!json.second.isObject())
