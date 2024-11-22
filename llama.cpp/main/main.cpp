@@ -38,7 +38,7 @@ static bool is_interacting  = false;
 static bool need_insert_eot = false;
 
 extern "C" int nsync_futex_wake_(int *, int, char);
-extern "C" int nsync_futex_wait_(int *, int, char, const struct timespec *);
+extern "C" int nsync_futex_wait_(int *, int, char, int, const struct timespec *);
 
 static bool file_exists(const std::string & path) {
     std::ifstream f(path.c_str());
@@ -100,7 +100,7 @@ static int is_killed;
 
 static void *safe_sigint_handler(void *arg) {
     while (!is_killed)
-        nsync_futex_wait_(&is_killed, 0, 0, 0);
+        nsync_futex_wait_(&is_killed, 0, 0, 0, 0);
     console::cleanup();
     printf("\n");
     llama_print_timings(*g_ctx);
