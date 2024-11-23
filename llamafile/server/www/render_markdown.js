@@ -223,11 +223,18 @@ class RenderMarkdown extends Highlighter {
       const c = input[i];
       if (c == '\r')
         continue;
+      if (c == '\u0000')
+        c = '\ufffd';
       switch (this.state) {
 
       case RenderMarkdown.NORMAL:
-        if (this.bol && this.spaces == 4 && this.newlines >= 2 &&
-            isgraph(c) && c != '`' && !this.style.length) {
+        if (this.bol &&
+            this.spaces >= 4 &&
+            this.newlines >= 2 &&
+            isgraph(c) &&
+            c != '`' &&
+            (!this.style.length ||
+             this.spaces >= this.style[this.style.length - 1][1] + 4)) {
           this.dedent = this.spaces;
           this.spaces = 0;
           this.bol = false;
@@ -290,7 +297,7 @@ class RenderMarkdown extends Highlighter {
           ++this.spaces;
           this.append(c);
         } else if (c == '\t') {
-          this.spaces = (this.spaces + 3) & -4;
+          this.spaces = (this.spaces + 4) & -4;
           this.append(c);
         } else {
           this.got();
@@ -306,7 +313,7 @@ class RenderMarkdown extends Highlighter {
         } else if (c == ' ') {
           ++this.spaces;
         } else if (c == '\t') {
-          this.spaces = (this.spaces + 3) & -4;
+          this.spaces = (this.spaces + 4) & -4;
         } else {
           if (this.newlines >= 2) {
             if (this.style.length &&
@@ -410,6 +417,10 @@ class RenderMarkdown extends Highlighter {
       case RenderMarkdown.BACKSLASH:
         if (ispunct(c)) {
           this.append(c);
+          this.state = RenderMarkdown.NORMAL;
+        } else if (c == '\n') {
+          this.push("BR", "");
+          this.pop();
           this.state = RenderMarkdown.NORMAL;
         } else {
           this.append('\\');
@@ -639,7 +650,7 @@ class RenderMarkdown extends Highlighter {
             if (this.spaces <= this.dedent)
               break;
           } else if (c == '\t') {
-            this.spaces = (this.spaces + 3) & -4;
+            this.spaces = (this.spaces + 4) & -4;
             if (this.spaces <= this.dedent)
               break;
           } else {
@@ -773,7 +784,7 @@ class RenderMarkdown extends Highlighter {
             if (this.spaces <= this.dedent)
               break;
           } else if (c == '\t') {
-            this.spaces = (this.spaces + 3) & -4;
+            this.spaces = (this.spaces + 4) & -4;
             if (this.spaces <= this.dedent)
               break;
           } else {

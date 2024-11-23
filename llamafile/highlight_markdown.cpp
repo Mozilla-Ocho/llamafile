@@ -68,6 +68,8 @@ void HighlightMarkdown::feed(std::string *r, std::string_view input) {
         }
         if (c == 0xFEFF)
             continue; // utf-8 bom
+        if (!c)
+            c = 0xfffd; // replacement character
         switch (t_) {
 
         Normal:

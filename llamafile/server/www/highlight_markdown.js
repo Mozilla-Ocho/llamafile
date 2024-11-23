@@ -42,6 +42,8 @@ class HighlightMarkdown extends Highlighter {
     for (let i = 0; i < input.length; i += this.delta) {
       this.delta = 1;
       let c = input[i];
+      if (c == '\u0000')
+        c = '\ufffd';
       switch (this.state) {
 
       case HighlightMarkdown.NORMAL:

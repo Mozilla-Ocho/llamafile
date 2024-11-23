@@ -166,6 +166,106 @@ This program is a simple example of how to use variables, input/output
 operations, conditional statements, and loops in FORTRAN66. It
 demonstrates basic input/output operations and error handling.
 
+## Code
+
+~~~
+I can't believe it's not butter!
+~~~
+
+## Tabs
+
+Tabs can make code blocks.
+
+	code block
+
+Tabs round up to 4 when mixed with spaces.
+
+  	code block
+
+- list item
+
+		code block under li
+
+## Emphasis
+
+***strong emph***  
+***strong** in emph*  
+***emph* in strong**  
+**in strong *emph***  
+*in emph **strong***
+
+The following patterns are less widely supported, but the intent is
+clear and they are useful (especially in contexts like bibliography
+entries):
+
+*emph *with emph* in it*  
+**strong **with strong** in it**
+
+Many implementations have also restricted intraword emphasis to
+the `*` forms, to avoid unwanted emphasis in words containing
+internal underscores.  (It is best practice to put these in code
+spans, but users often do not.)
+
+internal emphasis: foo*bar*baz  
+no emphasis: foo_bar_baz
+
+## Backslash escapes
+
+Any ASCII punctuation character may be backslash-escaped:
+
+\!\"\#\$\%\&\'\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~
+
+```````````````````````````````` example
+<p>!&quot;#$%&amp;'()*+,-./:;&lt;=&gt;?@[\]^_`{|}~</p>
+````````````````````````````````
+
+Backslashes before other characters are treated as literal
+backslashes:
+
+\→\A\a\ \3\φ\«
+
+```````````````````````````````` example
+<p>\→\A\a\ \3\φ\«</p>
+````````````````````````````````
+
+Escaped characters are treated as regular characters and do
+not have their usual Markdown meanings:
+
+\*not emphasized\*  
+\<br/> not a tag  
+\[not a link](/foo)  
+\`not code\`  
+1\. not a list  
+\* not a list  
+\# not a heading  
+\[foo]: /url "not a reference"  
+\&ouml; not a character entity
+
+```````````````````````````````` example
+<p>*not emphasized*
+&lt;br/&gt; not a tag
+[not a link](/foo)
+`not code`
+1. not a list
+* not a list
+# not a heading
+[foo]: /url &quot;not a reference&quot;
+&amp;ouml; not a character entity</p>
+````````````````````````````````
+
+A backslash at the end of the line is a [hard line break]:
+
+foo\
+bar
+
+```````````````````````````````` example
+foo\
+bar
+.
+<p>foo<br />
+bar</p>
+````````````````````````````````
+
 ## Rubby
 
 ```ruby
