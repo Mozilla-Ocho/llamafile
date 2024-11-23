@@ -963,7 +963,7 @@ int main(int argc, char ** argv) {
         __builtin_unreachable();
     }
 
-    LoadZipArgs(&argc, &argv);
+    argc = cosmo_args("/zip/.args", &argv);
 
     if (!llamafile_has(argv, "--cli") &&
         (llamafile_has(argv, "--server") ||

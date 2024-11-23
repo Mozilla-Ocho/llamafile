@@ -37,9 +37,6 @@ static std::vector<llama_token> * g_output_tokens;
 static bool is_interacting  = false;
 static bool need_insert_eot = false;
 
-extern "C" int nsync_futex_wake_(int *, int, char);
-extern "C" int nsync_futex_wait_(int *, int, char, int, const struct timespec *);
-
 static bool file_exists(const std::string & path) {
     std::ifstream f(path.c_str());
     return f.good();
@@ -100,7 +97,7 @@ static int is_killed;
 
 static void *safe_sigint_handler(void *arg) {
     while (!is_killed)
-        nsync_futex_wait_(&is_killed, 0, 0, 0, 0);
+        cosmo_futex_wait(&is_killed, 0, 0, 0, 0);
     console::cleanup();
     printf("\n");
     llama_print_timings(*g_ctx);
@@ -125,7 +122,7 @@ static void sigint_handler(int signo) {
             is_interacting = true;
         } else {
             is_killed = true;
-            nsync_futex_wake_(&is_killed, 1, 0);
+            cosmo_futex_wake(&is_killed, 1, 0);
             for (;;) {
             }
         }
@@ -191,7 +188,7 @@ int main(int argc, char ** argv) {
 
     llamafile_check_cpu();
     ShowCrashReports();
-    LoadZipArgs(&argc, &argv);
+    argc = cosmo_args("/zip/.args", &argv);
 
     enum Program prog = determine_program(argv);
 

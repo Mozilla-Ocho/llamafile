@@ -150,7 +150,7 @@ int main(int argc, char ** argv) {
 
     llamafile_check_cpu();
     ShowCrashReports();
-    LoadZipArgs(&argc, &argv);
+    argc = cosmo_args("/zip/.args", &argv);
     launch_sigint_thread();
 
     if (!llamafile_has(argv, "--cli") &&

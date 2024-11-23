@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
     FLAG_log_disable = true;
 
-    LoadZipArgs(&argc, &argv);
+    argc = cosmo_args("/zip/.args", &argv);
     llamafile_get_flags(argc, argv);
 
     llama_model_params mparams = {

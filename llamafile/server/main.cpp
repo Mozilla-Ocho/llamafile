@@ -56,7 +56,7 @@ main(int argc, char* argv[])
     }
 
     // get config
-    LoadZipArgs(&argc, &argv);
+    argc = cosmo_args("/zip/.args", &argv);
     llamafile_get_flags(argc, argv);
 
     // initialize subsystems
