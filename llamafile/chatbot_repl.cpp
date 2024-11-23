@@ -98,21 +98,26 @@ bool out_of_context(int extra) {
 void repl() {
 
     // setup conversation
-    if (llama_should_add_bos_token(g_model))
+    if (llama_should_add_bos_token(g_model)) {
+        print_ephemeral("loading bos token...");
         eval_token(llama_token_bos(g_model));
+    }
     record_undo();
 
     // setup system prompt
-    std::vector<llama_chat_msg> chat = {{"system", g_params.prompt}};
-    std::string msg =
-        llama_chat_apply_template(g_model, g_params.chat_template, chat, DONT_ADD_ASSISTANT);
-    if (!eval_string(msg, DONT_ADD_SPECIAL, PARSE_SPECIAL))
-        exit(6);
-    llama_synchronize(g_ctx);
-    g_system_prompt_tokens = tokens_used();
-    clear_ephemeral();
-    if (g_params.display_prompt)
-        printf("%s\n", g_params.special ? msg.c_str() : g_params.prompt.c_str());
+    if (!g_params.prompt.empty()) {
+        print_ephemeral("loading system prompt...");
+        std::vector<llama_chat_msg> chat = {{"system", g_params.prompt}};
+        std::string msg =
+            llama_chat_apply_template(g_model, g_params.chat_template, chat, DONT_ADD_ASSISTANT);
+        if (!eval_string(msg, DONT_ADD_SPECIAL, PARSE_SPECIAL))
+            exit(6);
+        llama_synchronize(g_ctx);
+        g_system_prompt_tokens = tokens_used();
+        clear_ephemeral();
+        if (g_params.display_prompt)
+            printf("%s\n", g_params.special ? msg.c_str() : g_params.prompt.c_str());
+    }
 
     // perform important setup
     HighlightMarkdown highlighter;
