@@ -33,6 +33,7 @@ std::string format(const char *, ...) __attribute__((format(printf, 1, 2)));
 std::string iso8601(struct timespec);
 std::string join(const std::vector<std::string> &, const std::string_view &);
 std::string resolve(const std::string_view &, const std::string_view &);
+std::string stripext(const std::string &);
 std::string tolower(const std::string_view &);
 std::string_view extname(const std::string_view &);
 void append_wchar(std::string *, wchar_t);

@@ -102,6 +102,14 @@ std::string basename(const std::string_view &path) {
     }
 }
 
+std::string stripext(const std::string &path) {
+    size_t i = path.size();
+    while (i--)
+        if (path[i] == '.')
+            return path.substr(0, i);
+    return path;
+}
+
 std::string_view extname(const std::string_view &path) {
     size_t i = path.size();
     while (i--)

@@ -21,6 +21,7 @@ const DEFAULT_SYSTEM_PROMPT =
       "detailed, and polite answers to the human's questions.";
 
 const DEFAULT_FLAGZ = {
+  "model": null,
   "prompt": null,
   "no_display_prompt": false,
   "frequency_penalty": 0,
@@ -342,6 +343,12 @@ function getSystemPrompt() {
   return prompt;
 }
 
+function updateModelInfo() {
+  if (flagz.model) {
+    document.getElementById("model").textContent = flagz.model;
+  }
+}
+
 function startChat(history) {
   chatHistory = history;
   chatMessages.innerHTML = "";
@@ -356,6 +363,7 @@ function startChat(history) {
 
 async function chatbot() {
   flagz = await fetchFlagz();
+  updateModelInfo();
   startChat([{ role: "system", content: getSystemPrompt() }]);
   sendButton.addEventListener("click", sendMessage);
   stopButton.addEventListener("click", stopMessage);

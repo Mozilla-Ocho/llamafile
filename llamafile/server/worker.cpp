@@ -24,6 +24,7 @@
 #include "llamafile/server/tokenbucket.h"
 #include "llamafile/threadlocal.h"
 #include "llamafile/trust.h"
+#include <cosmo.h>
 #include <cassert>
 #include <exception>
 #include <pthread.h>
@@ -109,7 +110,11 @@ void
 Worker::handle()
 {
     if ((client_.fd_ = server_->accept(&client_.client_ip_)) == -1) {
-        SLOG("accept returned %m");
+        if (IsWindows() && errno == ENOTSOCK) {
+            // Server::shutdown() calls close() on the listening socket
+        } else {
+            SLOG("accept returned %m");
+        }
         return;
     }
 

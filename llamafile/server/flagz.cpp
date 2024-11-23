@@ -18,6 +18,7 @@
 #include "client.h"
 #include "llama.cpp/llama.h"
 #include "llamafile/llamafile.h"
+#include "llamafile/string.h"
 #include "llamafile/server/json.h"
 
 namespace lf {
@@ -27,6 +28,7 @@ bool
 Client::flagz()
 {
     jt::Json json;
+    json["model"] = stripext(basename(FLAG_model));
     json["prompt"] = FLAG_prompt;
     json["no_display_prompt"] = FLAG_no_display_prompt;
     json["nologo"] = FLAG_nologo;
