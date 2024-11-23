@@ -129,8 +129,9 @@ void repl() {
     }
 
     // perform important setup
-    HighlightMarkdown highlighter;
-    ColorBleeder bleeder(&highlighter);
+    HighlightTxt txt;
+    HighlightMarkdown markdown;
+    ColorBleeder bleeder(is_base_model() ? (Highlight *)&txt : (Highlight *)&markdown);
     llama_sampling_context *sampler = llama_sampling_init(g_params.sparams);
     signal(SIGINT, on_sigint);
 
