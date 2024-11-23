@@ -650,6 +650,8 @@ Client::dispatcher()
         return embedding();
     if (p1 == "v1/embeddings")
         return embedding();
+    if (p1 == "v1/completions")
+        return v1_completions();
     if (p1 == "v1/chat/completions")
         return v1_chat_completions();
     if (p1 == "slotz")

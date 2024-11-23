@@ -44,6 +44,7 @@ struct Slot;
 struct Worker;
 struct TokenizeParams;
 struct EmbeddingParams;
+struct V1CompletionParams;
 struct V1ChatCompletionParams;
 
 struct Client
@@ -108,6 +109,9 @@ struct Client
 
     bool embedding() __wur;
     bool get_embedding_params(EmbeddingParams*) __wur;
+
+    bool v1_completions() __wur;
+    bool get_v1_completions_params(V1CompletionParams*) __wur;
 
     bool v1_chat_completions() __wur;
     bool get_v1_chat_completions_params(V1ChatCompletionParams*) __wur;

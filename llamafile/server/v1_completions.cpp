@@ -42,8 +42,9 @@ using jt::Json;
 namespace lf {
 namespace server {
 
-struct V1ChatCompletionParams
+struct V1CompletionParams
 {
+    bool echo = false;
     bool stream = false;
     long max_tokens = -1;
     long seed = _rand64();
@@ -53,9 +54,8 @@ struct V1ChatCompletionParams
     double frequency_penalty = 0;
     std::string user;
     std::string model;
-    std::vector<llama_chat_msg> messages;
+    std::string prompt;
     std::vector<std::vector<Atom>> stop;
-    std::string grammar;
 
     void add_stop(llama_model* model, const std::string& text)
     {
@@ -65,21 +65,20 @@ struct V1ChatCompletionParams
 
     bool should_stop(const std::vector<Atom>& history)
     {
-        for (const auto& suffix : stop)
-            if (vector_ends_with(history, suffix))
+        for (const auto& s : stop)
+            if (vector_ends_with(history, s))
                 return true;
         return false;
     }
 };
 
-struct V1ChatCompletionState
+struct V1CompletionState
 {
-    std::string prompt;
     std::vector<Atom> atoms;
     std::string piece;
 };
 
-struct V1ChatCompletionResponse
+struct V1CompletionResponse
 {
     std::string content;
     Json json;
@@ -88,19 +87,19 @@ struct V1ChatCompletionResponse
 static void
 cleanup_params(void* arg)
 {
-    delete (V1ChatCompletionParams*)arg;
+    delete (V1CompletionParams*)arg;
 }
 
 static void
 cleanup_state(void* arg)
 {
-    delete (V1ChatCompletionState*)arg;
+    delete (V1CompletionState*)arg;
 }
 
 static void
 cleanup_response(void* arg)
 {
-    delete (V1ChatCompletionResponse*)arg;
+    delete (V1CompletionResponse*)arg;
 }
 
 static void
@@ -130,7 +129,7 @@ is_legal_role(const std::string_view& role)
 static std::string
 generate_id()
 {
-    std::string b = "chatcmpl-";
+    std::string b = "cmpl-";
     for (int i = 0; i < 2; ++i) {
         uint64_t w = _rand64();
         for (int j = 0; j < 64 / 5; ++j) {
@@ -142,7 +141,7 @@ generate_id()
 }
 
 static llama_sampling_context*
-create_sampler(const V1ChatCompletionParams* params)
+create_sampler(const V1CompletionParams* params)
 {
     llama_sampling_params sparams;
     sparams.temp = params->temperature;
@@ -150,7 +149,6 @@ create_sampler(const V1ChatCompletionParams* params)
     sparams.penalty_freq = params->frequency_penalty;
     sparams.penalty_present = params->presence_penalty;
     sparams.seed = params->seed;
-    sparams.grammar = params->grammar;
     return llama_sampling_init(sparams);
 }
 
@@ -164,7 +162,7 @@ make_event(const Json& json)
 }
 
 bool
-Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
+Client::get_v1_completions_params(V1CompletionParams* params)
 {
     // must be json post request
     if (msg_.method != kHttpPost)
@@ -185,25 +183,9 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
     if (!json.isObject())
         return send_error(400, "JSON body must be an object");
 
-    // fields openai documents that we don't support yet
-    if (json.contains("tools"))
-        return send_error(400, "OpenAI tools field not supported yet");
-    if (json.contains("audio"))
-        return send_error(400, "OpenAI audio field not supported yet");
-    if (json.contains("logprobs"))
-        return send_error(400, "OpenAI logprobs field not supported yet");
-    if (json.contains("functions"))
-        return send_error(400, "OpenAI functions field not supported yet");
-    if (json.contains("modalities"))
-        return send_error(400, "OpenAI modalities field not supported yet");
-    if (json.contains("tool_choice"))
-        return send_error(400, "OpenAI tool_choice field not supported yet");
-    if (json.contains("top_logprobs"))
-        return send_error(400, "OpenAI top_logprobs field not supported yet");
-    if (json.contains("function_call"))
-        return send_error(400, "OpenAI function_call field not supported yet");
-    if (json.contains("parallel_tool_calls"))
-        return send_error(400, "parallel_tool_calls field not supported yet");
+    // fields openai documents that we don't support
+    if (json.contains("suffix"))
+        return send_error(400, "OpenAI suffix field not supported");
 
     // model: string
     Json& model = json["model"];
@@ -211,24 +193,10 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
         return send_error(400, "JSON missing model string");
     params->model = model.getString();
 
-    // messages: array<object<role:string, content:string>>
-    if (!json["messages"].isArray())
-        return send_error(400, "JSON missing messages array");
-    std::vector<Json>& messages = json["messages"].getArray();
-    if (messages.empty())
-        return send_error(400, "JSON messages array is empty");
-    for (Json& message : messages) {
-        if (!message.isObject())
-            return send_error(400, "messages array must hold objects");
-        if (!message["role"].isString())
-            return send_error(400, "message must have string role");
-        if (!is_legal_role(message["role"].getString()))
-            return send_error(400, "message role not system user assistant");
-        if (!message["content"].isString())
-            return send_error(400, "message must have string content");
-        params->messages.emplace_back(message["role"].getString(),
-                                      message["content"].getString());
-    }
+    // prompt: string
+    if (!json["prompt"].isString())
+        return send_error(400, "JSON missing prompt string");
+    params->prompt = json["prompt"].getString();
 
     // n: integer|null
     //
@@ -242,6 +210,31 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
             return send_error(400, "n field must be integer");
         if (n.getLong() != 1)
             return send_error(400, "n field must be 1 if specified");
+    }
+
+    // best_of: integer|null
+    //
+    // Generates best_of completions server-side and returns the "best"
+    // (the one with the highest log probability per token). Results
+    // cannot be streamed. When used with n, best_of controls the number
+    // of candidate completions and n specifies how many to return –
+    // best_of must be greater than n.
+    Json& best_of = json["best_of"];
+    if (!best_of.isNull()) {
+        if (!best_of.isLong())
+            return send_error(400, "best_of field must be integer");
+        if (best_of.getLong() != 1)
+            return send_error(400, "best_of field must be 1 if specified");
+    }
+
+    // echo: bool|null
+    //
+    // Echo back the prompt in addition to the completion.
+    Json& echo = json["echo"];
+    if (!echo.isNull()) {
+        if (!echo.isBool())
+            return send_error(400, "echo field must be boolean");
+        params->echo = echo.getBool();
     }
 
     // stream: bool|null
@@ -382,76 +375,22 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
         }
     }
 
-    // response_format: "auto"
-    // response_format: { "type": "json_object" }
-    // response_format: { "type": "json_schema", "json_schema": {...} }
-    //
-    // An object specifying the format that the model must output.
-    //
-    // Setting to { "type": "json_schema", "json_schema": {...} }
-    // enables Structured Outputs which ensures the model will match
-    // your supplied JSON schema. Learn more in the Structured Outputs
-    // guide.
-    //
-    // Setting to { "type": "json_object" } enables JSON mode, which
-    // ensures the message the model generates is valid JSON.
-    //
-    // When using JSON mode, you must also instruct the model to produce
-    // JSON yourself via a system or user message. Without this, the
-    // model may generate an unending stream of whitespace until the
-    // generation reaches the token limit, resulting in a long-running
-    // and seemingly "stuck" request. Also note that the message content
-    // may be partially cut off if finish_reason = "length", which
-    // indicates the generation exceeded max_tokens or the conversation
-    // exceeded the max context length.
-    Json& response_format = json["response_format"];
-    if (!response_format.isNull()) {
-        if (response_format.isString()) {
-            if (response_format.getString() != "auto")
-                return send_error(400, "response_format not supported");
-        } else if (response_format.isObject()) {
-            Json& type = response_format.getObject()["type"];
-            if (!type.isString())
-                return send_error(400, "response_format.type must be string");
-            if (type.getString() == "json_object") {
-                params->grammar =
-                  json_schema_string_to_grammar("{\"type\": \"object\"}");
-            } else if (type.getString() == "json_schema") {
-                Json& json_schema = response_format.getObject()["json_schema"];
-                if (!json_schema.isObject())
-                    return send_error(
-                      400, "response_format.json_schema must be object");
-                try {
-                    params->grammar =
-                      json_schema_string_to_grammar(json_schema.toString());
-                } catch (const std::exception& e) {
-                    SLOG("error: couldn't compile json schema: %s", e.what());
-                    return send_error(400, "bad json schema");
-                }
-            } else {
-                return send_error(400, "response_format.type unsupported");
-            }
-        } else {
-            return send_error(400, "response_format must be string or object");
-        }
-    }
-
     return true;
 }
 
 bool
-Client::v1_chat_completions()
+Client::v1_completions()
 {
     // get parameters
-    auto params = new V1ChatCompletionParams;
+    auto params = new V1CompletionParams;
     defer_cleanup(cleanup_params, params);
-    if (!get_v1_chat_completions_params(params))
+    if (!get_v1_completions_params(params))
         return false;
 
     // create state and response objects
-    V1ChatCompletionState* state = new V1ChatCompletionState;
+    V1CompletionState* state = new V1CompletionState;
     defer_cleanup(cleanup_state, state);
-    V1ChatCompletionResponse* response = new V1ChatCompletionResponse;
+    V1CompletionResponse* response = new V1CompletionResponse;
     defer_cleanup(cleanup_response, response);
 
     // add bos token if it's needed
@@ -459,9 +398,7 @@ Client::v1_chat_completions()
         state->atoms.emplace_back(llama_token_bos(model_));
 
     // turn text into tokens
-    state->prompt =
-      llama_chat_apply_template(model_, "", params->messages, ADD_ASSISTANT);
-    atomize(model_, &state->atoms, state->prompt, PARSE_SPECIAL);
+    atomize(model_, &state->atoms, params->prompt, PARSE_SPECIAL);
 
     // find appropriate slot
     slot_ = worker_->server_->slots_->take(state->atoms);
@@ -482,7 +419,7 @@ Client::v1_chat_completions()
 
     // setup response json
     response->json["id"] = generate_id();
-    response->json["object"] = "chat.completion";
+    response->json["object"] = "text_completion";
     response->json["model"] = params->model;
     response->json["system_fingerprint"] = slot_->system_fingerprint_;
     Json& choice = response->json["choices"][0];
@@ -515,7 +452,7 @@ Client::v1_chat_completions()
             break;
         }
         llama_token id = llama_sampling_sample(sampler, slot_->ctx_, NULL);
-        llama_sampling_accept(sampler, slot_->ctx_, id, APPLY_GRAMMAR);
+        llama_sampling_accept(sampler, slot_->ctx_, id, DONT_APPLY_GRAMMAR);
         ++completion_tokens;
         if (!slot_->eval_token(id)) {
             SLOG("ran out of context window");
@@ -535,10 +472,9 @@ Client::v1_chat_completions()
         if (!state->piece.empty()) {
             if (params->stream) {
                 char* p = append_http_response_message(obuf_.p, 200);
-                choice["delta"]["content"] = state->piece;
+                choice["text"] = state->piece;
                 response->json["created"] = timespec_real().tv_sec;
                 response->content = make_event(response->json);
-                choice.getObject().erase("delta");
                 if (!send_response_chunk(response->content))
                     return false;
             } else {
@@ -551,10 +487,9 @@ Client::v1_chat_completions()
     // finalize response
     cleanup_slot(this);
     if (params->stream) {
-        choice["delta"]["content"] = "";
+        choice["text"] = "";
         response->json["created"] = timespec_real().tv_sec;
         response->content = make_event(response->json);
-        choice.getObject().erase("delta");
         if (!send_response_chunk(response->content))
             return false;
         if (!send_response_chunk("data: [DONE]\n\n"))
@@ -565,8 +500,7 @@ Client::v1_chat_completions()
         usage["prompt_tokens"] = prompt_tokens;
         usage["completion_tokens"] = completion_tokens;
         usage["total_tokens"] = completion_tokens + prompt_tokens;
-        choice["message"]["role"] = "assistant";
-        choice["message"]["content"] = std::move(response->content);
+        choice["text"] = std::move(response->content);
         response->json["created"] = timespec_real().tv_sec;
         char* p = append_http_response_message(obuf_.p, 200);
         p = stpcpy(p, "Content-Type: application/json\r\n");
