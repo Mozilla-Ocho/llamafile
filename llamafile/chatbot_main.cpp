@@ -95,6 +95,17 @@ const char *tip() {
     return " (use the --verbose flag for further details)";
 }
 
+bool is_base_model() {
+
+    // check if user explicitly passed --chat-template flag
+    if (!g_params.chat_template.empty())
+        return false;
+
+    // check if gguf metadata has chat template. this should always be
+    // present for "instruct" models, and never specified on base ones
+    return llama_model_meta_val_str(g_model, "tokenizer.chat_template", 0, 0) == -1;
+}
+
 int main(int argc, char **argv) {
 
     // print logo
@@ -107,9 +118,7 @@ int main(int argc, char **argv) {
     // override defaults for some flags
     g_params.n_batch = 256; // for better progress indication
     g_params.sparams.temp = 0; // don't believe in randomness by default
-    g_params.prompt = "A chat between a curious human and an artificial intelligence assistant. "
-                      "The assistant gives helpful, detailed, and polite answers to the "
-                      "human's questions.";
+    g_params.prompt = DEFAULT_SYSTEM_PROMPT;
 
     // parse flags (sadly initializes gpu support as side-effect)
     print_ephemeral("loading backend...");
@@ -158,6 +167,8 @@ int main(int argc, char **argv) {
         printf(BOLD "software" UNBOLD ": llamafile " LLAMAFILE_VERSION_STRING "\n" //
                BOLD "model" UNBOLD ":    %s\n",
                basename(g_params.model).c_str());
+        if (is_base_model())
+            printf(BOLD "mode" UNBOLD ":     RAW TEXT COMPLETION (base model)\n");
         printf(BOLD "compute" UNBOLD ":  %s\n", describe_compute().c_str());
         if (want_server)
             printf(BOLD "server" UNBOLD ":   %s\n", g_listen_url.c_str());

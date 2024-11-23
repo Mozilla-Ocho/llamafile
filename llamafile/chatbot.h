@@ -21,6 +21,11 @@
 #include <__fwd/vector.h>
 #include <signal.h>
 
+#define DEFAULT_SYSTEM_PROMPT \
+    "A chat between a curious human and an artificial intelligence assistant. " \
+    "The assistant gives helpful, detailed, and polite answers to the " \
+    "human's questions."
+
 struct bestlineCompletions;
 struct clip_ctx;
 struct gpt_params;
@@ -58,6 +63,7 @@ bool eval_string(std::string_view, bool, bool);
 bool eval_token(int);
 bool eval_tokens(std::vector<int>);
 bool handle_command(const char *);
+bool is_base_model();
 bool out_of_context(int);
 char *on_hint(const char *, const char **, const char **);
 const char *get_role_color(enum Role);

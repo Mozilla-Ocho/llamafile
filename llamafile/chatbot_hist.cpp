@@ -219,6 +219,10 @@ void rewind(int pos) {
 }
 
 void on_manual(const std::vector<std::string> &args) {
+    if (is_base_model()) {
+        err("error: /manual mode not supported on base models");
+        return;
+    }
     if (args.size() == 1) {
         g_manual_mode = !g_manual_mode;
     } else if (args.size() == 2 && (args[1] == "on" || args[1] == "off")) {

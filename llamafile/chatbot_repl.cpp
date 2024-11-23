@@ -104,12 +104,21 @@ void repl() {
     }
     record_undo();
 
+    // make base models have no system prompt by default
+    if (is_base_model() && g_params.prompt == DEFAULT_SYSTEM_PROMPT)
+        g_params.prompt = "";
+
     // setup system prompt
     if (!g_params.prompt.empty()) {
         print_ephemeral("loading system prompt...");
-        std::vector<llama_chat_msg> chat = {{"system", g_params.prompt}};
-        std::string msg =
-            llama_chat_apply_template(g_model, g_params.chat_template, chat, DONT_ADD_ASSISTANT);
+        std::string msg;
+        if (is_base_model()) {
+            msg = g_params.prompt;
+        } else {
+            std::vector<llama_chat_msg> chat = {{"system", g_params.prompt}};
+            msg = llama_chat_apply_template(g_model, g_params.chat_template, chat,
+                                            DONT_ADD_ASSISTANT);
+        }
         if (!eval_string(msg, DONT_ADD_SPECIAL, PARSE_SPECIAL))
             exit(6);
         llama_synchronize(g_ctx);
@@ -135,12 +144,13 @@ void repl() {
         write(1, get_role_color(g_role), strlen(get_role_color(g_role)));
         char *line = bestlineWithHistory(">>> ", "llamafile");
         write(1, UNFOREGROUND, strlen(UNFOREGROUND));
+        g_last_printed_char = '\n';
         if (!line) {
             if (g_got_sigint)
                 ensure_newline();
             break;
         }
-        if (is_empty(line)) {
+        if (!is_base_model() && is_empty(line)) {
             if (g_manual_mode) {
                 g_role = cycle_role(g_role);
                 write(1, "\033[F", 3);
@@ -155,9 +165,13 @@ void repl() {
         }
         bool add_assi = !g_manual_mode;
         int tokens_used_before = tokens_used();
-        std::vector<llama_chat_msg> chat = {{get_role_name(g_role), line}};
-        std::string msg =
-            llama_chat_apply_template(g_model, g_params.chat_template, chat, add_assi);
+        std::string msg;
+        if (is_base_model()) {
+            msg = line;
+        } else {
+            std::vector<llama_chat_msg> chat = {{get_role_name(g_role), line}};
+            msg = llama_chat_apply_template(g_model, g_params.chat_template, chat, add_assi);
+        }
         if (!eval_string(msg, DONT_ADD_SPECIAL, PARSE_SPECIAL)) {
             rewind(tokens_used_before);
             continue;

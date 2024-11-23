@@ -27,8 +27,13 @@ namespace chatbot {
 static const char *on_hint_impl(const char *line) {
     if (!*line && g_manual_mode)
         return get_role_name(g_role);
-    if (!*line && !g_manual_mode && !g_said_something)
-        return "say something (or type /help for help)";
+    if (!*line && !g_manual_mode && !g_said_something) {
+        if (is_base_model()) {
+            return "type text to be completed (or /help for help)";
+        } else {
+            return "say something (or type /help for help)";
+        }
+    }
     static const char *const kHints[] = {
         "/clear", //
         "/context", //
