@@ -1,0 +1,6 @@
+```
+./make -j8
+ ./make o//llama.cpp/embedr/embedr
+ ./o/llama.cpp/embedr/embedr --version
+ ./o/llama.cpp/embedr/embedr
+```
