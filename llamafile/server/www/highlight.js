@@ -46,7 +46,7 @@ class HighlightDom extends Highlight {
   feed(s) {
     for (let i = 0; i < s.length; ++i) {
       this.text += s[i];
-      if (isspace(s[i])) {
+      if (isspace(s[i]) || this.text.length > 50) {
         this.flushText();
       }
     }

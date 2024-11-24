@@ -33,6 +33,7 @@ Client::flagz()
     json["no_display_prompt"] = FLAG_no_display_prompt;
     json["nologo"] = FLAG_nologo;
     json["temperature"] = FLAG_temperature;
+    json["top_p"] = FLAG_top_p;
     json["presence_penalty"] = FLAG_presence_penalty;
     json["frequency_penalty"] = FLAG_frequency_penalty;
     if (FLAG_seed == LLAMA_DEFAULT_SEED) {

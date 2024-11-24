@@ -27,6 +27,7 @@ const DEFAULT_FLAGZ = {
   "frequency_penalty": 0,
   "presence_penalty": 0,
   "temperature": 0.8,
+  "top_p": 0.95,
   "seed": null
 };
 
@@ -34,6 +35,9 @@ const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
 const stopButton = document.getElementById("stop-button");
+const settingsButton = document.getElementById("settings-button");
+const settingsModal = document.getElementById("settings-modal");
+const closeSettings = document.getElementById("close-settings");
 
 let abortController = null;
 let disableAutoScroll = false;
@@ -168,6 +172,7 @@ async function sendMessage() {
   // update chat history
   chatHistory.push({ role: "user", content: message });
 
+  const settings = loadSettings();
   try {
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
@@ -178,7 +183,10 @@ async function sendMessage() {
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: chatHistory,
-        temperature: 0.0,
+        temperature: settings.temperature,
+        top_p: settings.top_p,
+        presence_penalty: settings.presence_penalty,
+        frequency_penalty: settings.frequency_penalty,
         stream: true
       }),
       signal: abortController.signal
@@ -361,9 +369,93 @@ function startChat(history) {
   scrollToBottom();
 }
 
+function loadSettings() {
+  const stored = localStorage.getItem('v1.modelSettings');
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  return {
+    temperature: flagz.temperature,
+    top_p: flagz.top_p,
+    presence_penalty: flagz.presence_penalty,
+    frequency_penalty: flagz.frequency_penalty,
+  };
+}
+
+function saveSettings(settings) {
+  localStorage.setItem('v1.modelSettings', JSON.stringify(settings));
+}
+
+function formatDoubleWithPlus(x) {
+  return (x >= 0 ? "+" : "") + x.toFixed(2);
+}
+
+function updateSettingsDisplay(settings) {
+  document.getElementById("temp-value").textContent = settings.temperature ? settings.temperature.toFixed(2) : "0.00 (deterministic)";
+  document.getElementById("top-p-value").textContent = settings.top_p.toFixed(2);
+  document.getElementById("presence-value").textContent = formatDoubleWithPlus(settings.presence_penalty);
+  document.getElementById("frequency-value").textContent = formatDoubleWithPlus(settings.frequency_penalty);
+  document.getElementById("temperature").value = settings.temperature;
+  document.getElementById("top-p").value = settings.top_p;
+  document.getElementById("presence-penalty").value = settings.presence_penalty;
+  document.getElementById("frequency-penalty").value = settings.frequency_penalty;
+
+  // Handle top-p disabling - using a more reliable selector
+  const topPSettingItem = document.querySelector('.setting-item:has(#top-p)');
+  if (settings.temperature === 0) {
+    topPSettingItem.classList.add('disabled');
+  } else {
+    topPSettingItem.classList.remove('disabled');
+  }
+
+  // Update top-p description with percentage
+  const topPDescription = topPSettingItem.querySelector('.setting-description');
+  if (settings.top_p >= 1) {
+    topPDescription.textContent = "Disabled. All tokens will be considered by the sampler.";
+  } else if (settings.top_p > .5) {
+    const percentage = Math.round((1 - settings.top_p) * 100);
+    topPDescription.textContent = `The bottom ${percentage}% tokens will be ignored by the sampler.`;
+  } else {
+    const percentage = Math.round(settings.top_p * 100);
+    topPDescription.textContent = `Only the top ${percentage}% tokens will be considered by the sampler.`;
+  }
+}
+
+function setupSettings() {    
+  settingsButton.addEventListener("click", () => {
+    settingsModal.style.display = "flex";
+    updateSettingsDisplay(loadSettings());
+  });
+  closeSettings.addEventListener("click", () => {
+    settingsModal.style.display = "none";
+  });
+  ["temperature", "top-p", "presence-penalty", "frequency-penalty"].forEach(id => {
+    const element = document.getElementById(id);
+    element.addEventListener("input", (e) => {
+      const settings = loadSettings();
+      const value = parseFloat(e.target.value);
+      const key = id.replace(/-/g, '_');
+      settings[key] = value;
+      saveSettings(settings);
+      updateSettingsDisplay(settings);
+    });
+  });
+  settingsModal.addEventListener("mousedown", (e) => {
+    if (e.target === settingsModal) {
+      settingsModal.style.display = "none";
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      settingsModal.style.display = "none";
+    }
+  });
+}
+
 async function chatbot() {
   flagz = await fetchFlagz();
   updateModelInfo();
+  setupSettings();
   startChat([{ role: "system", content: getSystemPrompt() }]);
   sendButton.addEventListener("click", sendMessage);
   stopButton.addEventListener("click", stopMessage);
