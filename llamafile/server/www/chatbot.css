@@ -263,6 +263,20 @@ ul li:first-child {
   display: block;
 }
 
+.redo-button {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.redo-button:hover {
+  color: #000;
+}
+
 .settings-button {
   padding: 0.75rem 1rem;
   background: #6c757d;

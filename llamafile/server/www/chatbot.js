@@ -38,6 +38,7 @@ const stopButton = document.getElementById("stop-button");
 const settingsButton = document.getElementById("settings-button");
 const settingsModal = document.getElementById("settings-modal");
 const closeSettings = document.getElementById("close-settings");
+const redoButton = document.getElementById('redo-button');
 
 let abortController = null;
 let disableAutoScroll = false;
@@ -71,13 +72,16 @@ function onChatInput() {
 }
 
 function cleanupAfterMessage() {
-  disableAutoScroll = false;
   chatMessages.scrollTop = chatMessages.scrollHeight;
   chatInput.disabled = false;
   sendButton.style.display = "inline-block";
   stopButton.style.display = "none";
   abortController = null;
-  chatInput.focus();
+  if (!disableAutoScroll) {
+    scrollToBottom();
+    chatInput.focus();
+  }
+  disableAutoScroll = false;
 }
 
 function onWheel(e) {
@@ -146,7 +150,6 @@ function fixUploads(str) {
   str = uploadedFiles.reduce(
     (text, [from, to]) => text.replaceAll(from, to),
     str);
-  uploadedFiles.length = 0;
   return str;
 }
 
@@ -452,6 +455,26 @@ function setupSettings() {
   });
 }
 
+function removeLastDirectChild(element) {
+  if (element.lastElementChild) {
+    element.removeChild(element.lastElementChild);
+  }
+}
+
+function onRedo() {
+  if (!chatHistory.length)
+    return;
+  removeLastDirectChild(chatMessages);
+  let msg = chatHistory.pop();
+  if (msg.role === "assistant") {
+    removeLastDirectChild(chatMessages);
+    msg = chatHistory.pop();
+  }
+  chatInput.value = msg.content;
+  chatInput.focus();
+  chatInput.dispatchEvent(new Event("input")); // adjust textarea height
+}
+
 async function chatbot() {
   flagz = await fetchFlagz();
   updateModelInfo();
@@ -459,6 +482,7 @@ async function chatbot() {
   startChat([{ role: "system", content: getSystemPrompt() }]);
   sendButton.addEventListener("click", sendMessage);
   stopButton.addEventListener("click", stopMessage);
+  redoButton.addEventListener("click", onRedo);
   chatInput.addEventListener("input", onChatInput);
   chatInput.addEventListener("keydown", onKeyDown);
   document.addEventListener("wheel", onWheel);
