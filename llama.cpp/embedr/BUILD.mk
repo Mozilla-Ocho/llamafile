@@ -22,6 +22,9 @@ o/$(MODE)/llama.cpp/embedr/sqlite3.a: o/$(MODE)/llama.cpp/embedr/sqlite3.o
 o/$(MODE)/llama.cpp/embedr/sqlite-vec.o: llama.cpp/embedr/sqlite-vec.c
 o/$(MODE)/llama.cpp/embedr/sqlite-vec.a: o/$(MODE)/llama.cpp/embedr/sqlite-vec.o
 
+o/$(MODE)/llama.cpp/embedr/sqlite-csv.o: llama.cpp/embedr/sqlite-csv.c
+o/$(MODE)/llama.cpp/embedr/sqlite-csv.a: o/$(MODE)/llama.cpp/embedr/sqlite-csv.o
+
 o/$(MODE)/llama.cpp/embedr/sqlite-lembed.o: llama.cpp/embedr/sqlite-lembed.c
 o/$(MODE)/llama.cpp/embedr/sqlite-lembed.a: o/$(MODE)/llama.cpp/embedr/sqlite-lembed.o o/$(MODE)/llama.cpp/llama.cpp.a
 
@@ -38,6 +41,7 @@ o/$(MODE)/llama.cpp/embedr/embedr:					\
 		o/$(MODE)/llama.cpp/embedr/embedr.1.asc.zip.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a \
 		o/$(MODE)/llama.cpp/embedr/sqlite3.a \
+		o/$(MODE)/llama.cpp/embedr/sqlite-csv.a \
 		o/$(MODE)/llama.cpp/embedr/sqlite-vec.a \
 		o/$(MODE)/llama.cpp/embedr/sqlite-lembed.a
 

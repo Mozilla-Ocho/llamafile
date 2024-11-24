@@ -5,6 +5,7 @@
 #include "llama.cpp/embedr/sqlite3.h"
 #include "llama.cpp/embedr/sqlite-vec.h"
 #include "llama.cpp/embedr/sqlite-lembed.h"
+#include "llama.cpp/embedr/sqlite-csv.h"
 #include "llama.cpp/embedr/shell.h"
 #include "string.h"
 int main(int argc, char ** argv) {
@@ -13,12 +14,20 @@ int main(int argc, char ** argv) {
     sqlite3_stmt* stmt;
     rc = sqlite3_auto_extension((void (*)())sqlite3_vec_init);
     rc = sqlite3_auto_extension((void (*)())sqlite3_lembed_init);
+    rc = sqlite3_auto_extension((void (*)())sqlite3_csv_init);
+    FLAGS_READY = 1;
+
+    printf(
+        "llamafile-embed %s, SQLite %s, sqlite-vec=%s, sqlite-lembed=%s\n",
+        LLAMAFILE_VERSION_STRING,
+        sqlite3_version,
+        SQLITE_VEC_VERSION,
+        SQLITE_LEMBED_VERSION
+      );
 
     if(argc > 1 &&  (strcmp(argv[1], "sh") == 0)) {
       return mn(argc-1, argv+1);
     }
-    printf("%d\n", argc);
-    printf("llamafile-embed %s, SQLite %s, sqlite-vec=%s, %d\n", LLAMAFILE_VERSION_STRING, sqlite3_version, SQLITE_VEC_VERSION, LLAMA_FTYPE_MOSTLY_Q4_1);
 
     rc = sqlite3_open(":memory:", &db);
     if(rc != SQLITE_OK) {

@@ -32587,7 +32587,6 @@ int SQLITE_CDECL wmain(int argc, wchar_t **wargv){
 #else
   ShellState data;
 #endif
-  printf("Fuck\n");
   const char *zInitFile = 0;
   int i;
   int rc = 0;
