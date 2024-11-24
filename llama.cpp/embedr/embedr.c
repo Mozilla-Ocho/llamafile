@@ -4,6 +4,7 @@
 #include "llamafile/version.h"
 #include "llama.cpp/embedr/sqlite3.h"
 #include "llama.cpp/embedr/sqlite-vec.h"
+#include "llama.cpp/embedr/sqlite-lembed.h"
 #include "llama.cpp/embedr/shell.h"
 #include "string.h"
 int main(int argc, char ** argv) {
@@ -11,9 +12,10 @@ int main(int argc, char ** argv) {
     sqlite3* db;
     sqlite3_stmt* stmt;
     rc = sqlite3_auto_extension((void (*)())sqlite3_vec_init);
+    rc = sqlite3_auto_extension((void (*)())sqlite3_lembed_init);
 
     if(argc > 1 &&  (strcmp(argv[1], "sh") == 0)) {
-      return mn(argc, argv);
+      return mn(argc-1, argv+1);
     }
     printf("%d\n", argc);
     printf("llamafile-embed %s, SQLite %s, sqlite-vec=%s, %d\n", LLAMAFILE_VERSION_STRING, sqlite3_version, SQLITE_VEC_VERSION, LLAMA_FTYPE_MOSTLY_Q4_1);
@@ -24,9 +26,9 @@ int main(int argc, char ** argv) {
       return 1;
     }
 
-    rc = sqlite3_prepare_v2(db, "select vec_version()", -1, &stmt, NULL);
+    rc = sqlite3_prepare_v2(db, "select sqlite_version(), vec_version(), lembed_version()", -1, &stmt, NULL);
     if(rc != SQLITE_OK) {
-      printf("a\n");
+      printf("a %s\n", sqlite3_errmsg(db));
       return 1;
     }
     rc = sqlite3_step(stmt);
@@ -35,7 +37,7 @@ int main(int argc, char ** argv) {
       sqlite3_finalize(stmt);
       return 1;
     }
-    printf("x=%s\n", sqlite3_column_text(stmt, 0));
+    printf("%s %s %s\n", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
 
     sqlite3_finalize(stmt);
 
