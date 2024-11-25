@@ -6,6 +6,7 @@
 #include "llama.cpp/embedr/sqlite-vec.h"
 #include "llama.cpp/embedr/sqlite-lembed.h"
 #include "llama.cpp/embedr/sqlite-csv.h"
+#include "llama.cpp/embedr/sqlite-lines.h"
 #include "llama.cpp/embedr/shell.h"
 #include <string.h>
 
@@ -29,6 +30,7 @@ int embedr_sqlite3_init(sqlite3 * db) {
   rc = sqlite3_vec_init(db, NULL, NULL); assert(rc == SQLITE_OK);
   rc = sqlite3_lembed_init(db, NULL, NULL); assert(rc == SQLITE_OK);
   rc = sqlite3_csv_init(db, NULL, NULL); assert(rc == SQLITE_OK);
+  rc = sqlite3_lines_init(db, NULL, NULL); assert(rc == SQLITE_OK);
 
   if(!EMBEDR_MODEL) {
     return SQLITE_OK;
@@ -45,22 +47,6 @@ int embedr_sqlite3_init(sqlite3 * db) {
   assert(rc == SQLITE_OK);
 
   return rc;
-}
-
-int register_model(sqlite3 * db, char * modelPath) {
-  int rc;
-  sqlite3_stmt * stmt;
-  rc = sqlite3_prepare_v2(db, "insert into temp.lembed_models(model) values (?) ", -1, &stmt, NULL);
-  if(rc != SQLITE_OK) {
-    return rc;
-  }
-  sqlite3_bind_text(stmt, 1, modelPath, strlen(modelPath), SQLITE_STATIC);
-  sqlite3_step(stmt);
-  rc = sqlite3_finalize(stmt);
-  if(rc != SQLITE_DONE) {
-    return rc;
-  }
-  return SQLITE_OK;
 }
 
 int table_exists(sqlite3 * db, const char * table) {
