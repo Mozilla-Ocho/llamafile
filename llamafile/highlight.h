@@ -175,6 +175,7 @@ class ColorBleeder : public Highlight {
 
   private:
     void relay(std::string *r, const std::string &s);
+    void restore(std::string *r);
     unsigned char t_ = 0;
     unsigned char x_ = 0;
     unsigned char n_ = 0;

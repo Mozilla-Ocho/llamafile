@@ -49,6 +49,35 @@ ColorBleeder::ColorBleeder(Highlight *h) : h_(h) {
 ColorBleeder::~ColorBleeder() {
 }
 
+void ColorBleeder::restore(std::string *r) {
+    bool got_some = false;
+    if (!intensity_ && !inverted_ && !foreground_ && !background_)
+        return;
+    *r += "\033[";
+    if (intensity_) {
+        *r += std::to_string(intensity_);
+        got_some = true;
+    }
+    if (inverted_) {
+        if (got_some)
+            *r += ';';
+        *r += '7';
+        got_some = true;
+    }
+    if (foreground_) {
+        if (got_some)
+            *r += ';';
+        *r += std::to_string(foreground_);
+        got_some = true;
+    }
+    if (background_) {
+        if (got_some)
+            *r += ';';
+        *r += std::to_string(background_);
+    }
+    *r += 'm';
+}
+
 void ColorBleeder::relay(std::string *r, const std::string &s) {
     for (char c : s) {
         *r += c;
@@ -61,32 +90,7 @@ void ColorBleeder::relay(std::string *r, const std::string &s) {
                 t_ = ESC;
                 break;
             case '\n':
-                if (intensity_ || inverted_ || foreground_ || background_) {
-                    bool got_some = false;
-                    *r += "\033[";
-                    if (intensity_) {
-                        *r += std::to_string(intensity_);
-                        got_some = true;
-                    }
-                    if (inverted_) {
-                        if (got_some)
-                            *r += ';';
-                        *r += '7';
-                        got_some = true;
-                    }
-                    if (foreground_) {
-                        if (got_some)
-                            *r += ';';
-                        *r += std::to_string(foreground_);
-                        got_some = true;
-                    }
-                    if (background_) {
-                        if (got_some)
-                            *r += ';';
-                        *r += std::to_string(background_);
-                    }
-                    *r += 'm';
-                }
+                restore(r);
                 break;
             }
             break;
@@ -114,6 +118,7 @@ void ColorBleeder::relay(std::string *r, const std::string &s) {
                     x_ = 0;
                 }
             } else if (c == 'm') {
+                bool vt100dirty = false;
                 if (n_ < sizeof(sgr_codes_)) {
                     sgr_codes_[n_++] = x_;
                     x_ = 0;
@@ -129,21 +134,29 @@ void ColorBleeder::relay(std::string *r, const std::string &s) {
                         intensity_ = g;
                     } else if (g == 22) {
                         intensity_ = 0;
+                        vt100dirty = true;
                     } else if (g == 7) {
                         inverted_ = 1;
                     } else if (g == 27) {
                         inverted_ = 0;
+                        vt100dirty = true;
                     } else if ((30 <= g && g <= 37) || //
                                (90 <= g && g <= 97)) {
                         foreground_ = g;
                     } else if (g == 39) {
                         foreground_ = 0;
+                        vt100dirty = true;
                     } else if ((40 <= g && g <= 47) || //
                                (100 <= g && g <= 107)) {
                         background_ = g;
                     } else if (g == 49) {
                         background_ = 0;
+                        vt100dirty = true;
                     }
+                }
+                if (vt100dirty) {
+                    *r += HI_RESET;
+                    restore(r);
                 }
                 t_ = NORMAL;
             } else {
