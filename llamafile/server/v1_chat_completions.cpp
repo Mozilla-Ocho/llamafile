@@ -287,6 +287,8 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
         if (!top_p.isNumber())
             return send_error(400, "top_p must be number");
         params->top_p = top_p.getNumber();
+        if (!(0 <= params->top_p && params->top_p <= 1))
+            return send_error(400, "top_p must be between 0 and 1");
     }
 
     // temperature: number|null

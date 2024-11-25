@@ -144,7 +144,7 @@ void repl() {
         bestlineSetCompletionCallback(on_completion);
         write(1, get_role_color(g_role), strlen(get_role_color(g_role)));
         char *line = bestlineWithHistory(">>> ", "llamafile");
-        write(1, UNFOREGROUND, strlen(UNFOREGROUND));
+        write(1, RESET, strlen(RESET));
         g_last_printed_char = '\n';
         if (!line) {
             if (g_got_sigint)
