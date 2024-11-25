@@ -25607,6 +25607,8 @@ static void open_db(ShellState *p, int openFlags){
     sqlite3_create_function(p->db, "edit", 2, SQLITE_UTF8, 0,
                             editFunc, 0, 0);
 #endif
+  extern int embedr_sqlite3_init(sqlite3 *);
+  embedr_sqlite3_init(p->db);
 
     if( p->openMode==SHELL_OPEN_ZIPFILE ){
       char *zSql = sqlite3_mprintf(

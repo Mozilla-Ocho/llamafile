@@ -4,3 +4,10 @@
  ./o/llama.cpp/embedr/embedr --version
  ./o/llama.cpp/embedr/embedr
 ```
+
+
+```
+EMBEDR_MODEL_PATH=$PWD/models/mxbai-embed-xsmall-v1-f16.gguf ./o/llama.cpp/embedr/embedr backfill tmp.smol.db nyt_headlines headline
+
+./o/llama.cpp/embedr/embedr backfill tmp.smol.db nyt_headlines headline
+```
