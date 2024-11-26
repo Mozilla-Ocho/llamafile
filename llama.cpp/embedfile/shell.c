@@ -178,11 +178,21 @@ typedef unsigned char u8;
 
 #else
 
-# define shell_read_history(X)
-# define shell_write_history(X)
+#include "llamafile/bestline.h"
+# define shell_add_history(X) bestlineHistoryAdd(X)
+# define shell_read_history(X) bestlineHistoryLoad(X)
+# define shell_write_history(X) bestlineHistorySave(X)
 # define shell_stifle_history(X)
+# define shell_readline(X) bestline(X)
 
-# define SHELL_USE_LOCAL_GETLINE 1
+//#else
+//
+//# define shell_read_history(X)
+//# define shell_write_history(X)
+//# define shell_stifle_history(X)
+//
+//# define SHELL_USE_LOCAL_GETLINE 1
+//#endif
 #endif
 
 #ifndef deliberate_fall_through
