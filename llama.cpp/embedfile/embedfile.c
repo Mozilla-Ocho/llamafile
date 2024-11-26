@@ -2,13 +2,13 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "llama.cpp/llama.h"
 #include "llamafile/version.h"
-#include "llama.cpp/embedr/embedr.h"
-#include "llama.cpp/embedr/sqlite3.h"
-#include "llama.cpp/embedr/sqlite-vec.h"
-#include "llama.cpp/embedr/sqlite-lembed.h"
-#include "llama.cpp/embedr/sqlite-csv.h"
-#include "llama.cpp/embedr/sqlite-lines.h"
-#include "llama.cpp/embedr/shell.h"
+#include "llama.cpp/embedfile/embedfile.h"
+#include "llama.cpp/embedfile/sqlite3.h"
+#include "llama.cpp/embedfile/sqlite-vec.h"
+#include "llama.cpp/embedfile/sqlite-lembed.h"
+#include "llama.cpp/embedfile/sqlite-csv.h"
+#include "llama.cpp/embedfile/sqlite-lines.h"
+#include "llama.cpp/embedfile/shell.h"
 #include <string.h>
 
 #include <stdlib.h>
@@ -23,22 +23,22 @@ int64_t time_ms(void) {
     return (int64_t)ts.tv_sec*1000 + (int64_t)ts.tv_nsec/1000000;
 }
 
-char * EMBEDR_MODEL = NULL;
+char * EMBEDFILE_MODEL = NULL;
 
-void embedr_version(sqlite3_context * context, int argc, sqlite3_value **value) {
-  sqlite3_result_text(context, EMBEDR_VERSION, -1, SQLITE_STATIC);
+void embedfile_version(sqlite3_context * context, int argc, sqlite3_value **value) {
+  sqlite3_result_text(context, EMBEDFILE_VERSION, -1, SQLITE_STATIC);
 }
 
-int embedr_sqlite3_init(sqlite3 * db) {
+int embedfile_sqlite3_init(sqlite3 * db) {
   int rc;
 
   rc = sqlite3_vec_init(db, NULL, NULL); assert(rc == SQLITE_OK);
   rc = sqlite3_lembed_init(db, NULL, NULL); assert(rc == SQLITE_OK);
   rc = sqlite3_csv_init(db, NULL, NULL); assert(rc == SQLITE_OK);
   rc = sqlite3_lines_init(db, NULL, NULL); assert(rc == SQLITE_OK);
-  rc = sqlite3_create_function_v2(db, "embedr_version",0, SQLITE_DETERMINISTIC | SQLITE_UTF8, NULL, embedr_version, NULL, NULL, NULL); assert(rc == SQLITE_OK);
+  rc = sqlite3_create_function_v2(db, "embedfile_version",0, SQLITE_DETERMINISTIC | SQLITE_UTF8, NULL, embedfile_version, NULL, NULL, NULL); assert(rc == SQLITE_OK);
 
-  if(!EMBEDR_MODEL) {
+  if(!EMBEDFILE_MODEL) {
     return SQLITE_OK;
   }
   sqlite3_stmt * stmt;
@@ -47,7 +47,7 @@ int embedr_sqlite3_init(sqlite3 * db) {
     assert(rc == SQLITE_OK);
     return rc;
   }
-  sqlite3_bind_text(stmt, 1, EMBEDR_MODEL, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 1, EMBEDFILE_MODEL, -1, SQLITE_STATIC);
   sqlite3_step(stmt);
   rc = sqlite3_finalize(stmt);
   assert(rc == SQLITE_OK);
@@ -122,7 +122,7 @@ int cmd_index(char * filename, char * target_column) {
   rc = sqlite3_exec(db, "PRAGMA page_size=16384;", NULL, NULL, NULL);
   assert(rc == SQLITE_OK);
 
-  rc = embedr_sqlite3_init(db);
+  rc = embedfile_sqlite3_init(db);
   assert(rc == SQLITE_OK);
 
   if(sqlite3_strlike("%.csv", filename, 0) == 0) {
@@ -238,7 +238,7 @@ int cmd_backfill(char * dbPath, char * table, char * column) {
     return rc;
   }
 
-  rc = embedr_sqlite3_init(db);
+  rc = embedfile_sqlite3_init(db);
   assert(rc == SQLITE_OK);
 
   rc = sqlite3_exec(db, "BEGIN;", NULL, NULL, NULL);
@@ -353,7 +353,7 @@ int cmd_embed(char * source) {
   rc = sqlite3_open(":memory:", &db);
   assert(rc == SQLITE_OK);
 
-  rc = embedr_sqlite3_init(db);
+  rc = embedfile_sqlite3_init(db);
   assert(rc == SQLITE_OK);
 
   rc = sqlite3_prepare_v2(db, "select vec_to_json(lembed(?))", -1, &stmt, NULL);
@@ -390,12 +390,12 @@ int main(int argc, char ** argv) {
       char * arg = argv[i];
       if(sqlite3_stricmp(arg, "--model") == 0 || sqlite3_stricmp(arg, "-m") == 0) {
         assert(++i <= argc);
-        EMBEDR_MODEL = argv[i];
+        EMBEDFILE_MODEL = argv[i];
       }
       else if(sqlite3_stricmp(arg, "--version") == 0 || sqlite3_stricmp(arg, "-v") == 0) {
         fprintf(stderr,
-          "embedr %s, llamafile %s, SQLite %s, sqlite-vec=%s, sqlite-lembed=%s\n",
-          EMBEDR_VERSION,
+          "embedfile %s, llamafile %s, SQLite %s, sqlite-vec=%s, sqlite-lembed=%s\n",
+          EMBEDFILE_VERSION,
           LLAMAFILE_VERSION_STRING,
           sqlite3_version,
           SQLITE_VEC_VERSION,

@@ -1,13 +1,13 @@
 ```
 ./make -j8
- ./make o//llama.cpp/embedr/embedr
- ./o/llama.cpp/embedr/embedr --version
- ./o/llama.cpp/embedr/embedr
+ ./make o//llama.cpp/embedfile/embedfile
+ ./o/llama.cpp/embedfile/embedfile --version
+ ./o/llama.cpp/embedfile/embedfile
 ```
 
 
 ```
-EMBEDR_MODEL_PATH=$PWD/models/mxbai-embed-xsmall-v1-f16.gguf ./o/llama.cpp/embedr/embedr backfill tmp.smol.db nyt_headlines headline
+EMBEDFILE_MODEL_PATH=$PWD/models/mxbai-embed-xsmall-v1-f16.gguf ./o/llama.cpp/embedfile/embedfile backfill tmp.smol.db nyt_headlines headline
 
-./o/llama.cpp/embedr/embedr backfill tmp.smol.db nyt_headlines headline
+./o/llama.cpp/embedfile/embedfile backfill tmp.smol.db nyt_headlines headline
 ```
