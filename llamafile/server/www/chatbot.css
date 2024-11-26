@@ -37,6 +37,9 @@ p {
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
   border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .chat-header h1 {
@@ -427,6 +430,140 @@ ul li:first-child {
   border-radius: 50%;
   background: #666;
   cursor: pointer;
+}
+
+/* Completions Interface */
+.completions-container {
+  max-width: 960px;
+  margin: 2rem auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 4rem);
+}
+
+.completions-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+#completions-input {
+  flex: 1;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: none;
+}
+
+.completions-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.complete-button {
+  padding: 0.75rem 1.5rem;
+  background: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.complete-button:hover {
+  background: #0b5ed7;
+}
+
+.mode-dropdown {
+  display: none;
+}
+
+.mode-trigger {
+  display: none;
+}
+
+.mode-menu {
+  display: none;
+}
+
+.mode-item {
+  display: none;
+}
+
+.mode-switch {
+  display: none;
+}
+
+.menu-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.menu-trigger {
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.menu-trigger:hover {
+  color: #000;
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: none;
+  z-index: 1000;
+  min-width: 180px;
+}
+
+.menu.show {
+  display: block;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.menu-item:hover {
+  background: #f8f9fa;
+}
+
+.menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f0f0f0;
+  color: #666;
+}
+
+.menu-item.disabled:hover {
+  background: #f0f0f0;
 }
 
 @media print {

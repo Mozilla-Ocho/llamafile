@@ -38,6 +38,7 @@
 
 bool FLAGS_READY = false;
 bool FLAG_ascii = false;
+bool FLAG_completion_mode = false;
 bool FLAG_fast = false;
 bool FLAG_iq = false;
 bool FLAG_log_disable = false;
@@ -51,6 +52,7 @@ bool FLAG_recompile = false;
 bool FLAG_tinyblas = false;
 bool FLAG_trace = false;
 bool FLAG_unsecure = false;
+const char *FLAG_chat_template = "";
 const char *FLAG_file = nullptr;
 const char *FLAG_ip_header = nullptr;
 const char *FLAG_listen = "127.0.0.1:8080";
@@ -123,6 +125,11 @@ static wontreturn void unknown(const char *flag) {
     exit(1);
 }
 
+static bool is_valid_chat_template(const char *tmpl) {
+    llama_chat_message chat[] = {{"user", "test"}};
+    return llama_chat_apply_template(nullptr, tmpl, chat, 1, true, nullptr, 0) >= 0;
+}
+
 void llamafile_get_flags(int argc, char **argv) {
     bool program_supports_gpu = FLAG_gpu != LLAMAFILE_GPU_DISABLE;
     for (int i = 1; i < argc;) {
@@ -154,6 +161,16 @@ void llamafile_get_flags(int argc, char **argv) {
 
         if (!strcmp(flag, "--nologo")) {
             FLAG_nologo = true;
+            continue;
+        }
+
+        if (!strcmp(flag, "--chatbot-mode")) {
+            FLAG_completion_mode = false;
+            continue;
+        }
+
+        if (!strcmp(flag, "--completion-mode")) {
+            FLAG_completion_mode = true;
             continue;
         }
 
@@ -342,6 +359,15 @@ void llamafile_get_flags(int argc, char **argv) {
             FLAG_ctx_size = strtol(argv[i++], &ep, 10);
             if (*ep == 'k')
                 FLAG_ctx_size *= 1024;
+            continue;
+        }
+
+        if (!strcmp(flag, "--chat-template")) {
+            if (i == argc)
+                missing("--chat-template");
+            if (!is_valid_chat_template(argv[i]))
+                bad("--chat-template");
+            FLAG_chat_template = argv[i++];
             continue;
         }
 

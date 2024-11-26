@@ -6,12 +6,18 @@
 <link rel="stylesheet" href="chatbot.css">
 <link rel="stylesheet" href="highlight.css">
 
-<div class="chat-container">
+<div class="chat-container" id="chat-interface">
   <div class="chat-header">
     <h1>
       <img src="chatbot.png" alt="[llamafile]" title="llamafile" width="64" height="64">
       <span id="model">llamafile</span>
     </h1>
+    <div class="menu-dropdown">
+      <button class="menu-trigger">▼</button>
+      <div class="menu">
+        <button class="menu-item" id="chat-mode-switch">Switch to Completions Mode</button>
+      </div>
+    </div>
   </div>
   <div class="chat-messages" id="chat-messages">
     <div class="message system">
@@ -24,6 +30,29 @@
     <button class="stop-button" id="stop-button" style="display:none">Stop</button>
     <button class="settings-button" id="settings-button" title="Settings">⚙️</button>
     <button class="redo-button" id="redo-button" title="Redo last message">↺</button>
+  </div>
+</div>
+
+<div class="completions-container" id="completions-interface" style="display:none">
+  <div class="chat-header">
+    <h1>
+      <img src="chatbot.png" alt="[llamafile]" title="llamafile" width="64" height="64">
+      <span id="model-completions">llamafile</span>
+    </h1>
+    <div class="menu-dropdown">
+      <button class="menu-trigger">▼</button>
+      <div class="menu">
+        <button class="menu-item" id="completions-mode-switch">Switch to Chat Mode</button>
+      </div>
+    </div>
+  </div>
+  <div class="completions-content">
+    <textarea id="completions-input" placeholder="Enter your text here..."></textarea>
+    <div class="completions-controls">
+      <button class="complete-button" id="complete-button">Complete</button>
+      <button class="stop-button" id="completions-stop-button" style="display:none">Stop</button>
+      <button class="settings-button" id="completions-settings-button" title="Settings">⚙️</button>
+    </div>
   </div>
 </div>
 

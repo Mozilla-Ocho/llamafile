@@ -8,6 +8,7 @@ extern "C" {
 
 extern bool FLAGS_READY;
 extern bool FLAG_ascii;
+extern bool FLAG_completion_mode;
 extern bool FLAG_fast;
 extern bool FLAG_iq;
 extern bool FLAG_log_disable;
@@ -22,6 +23,7 @@ extern bool FLAG_tinyblas;
 extern bool FLAG_trace;
 extern bool FLAG_trap;
 extern bool FLAG_unsecure;
+extern const char *FLAG_chat_template;
 extern const char *FLAG_file;
 extern const char *FLAG_ip_header;
 extern const char *FLAG_listen;

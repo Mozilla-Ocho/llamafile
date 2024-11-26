@@ -462,7 +462,8 @@ Client::v1_chat_completions()
 
     // turn text into tokens
     state->prompt =
-      llama_chat_apply_template(model_, "", params->messages, ADD_ASSISTANT);
+      llama_chat_apply_template(
+        model_, FLAG_chat_template, params->messages, ADD_ASSISTANT);
     atomize(model_, &state->atoms, state->prompt, PARSE_SPECIAL);
 
     // find appropriate slot

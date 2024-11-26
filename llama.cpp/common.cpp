@@ -1213,6 +1213,7 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
             return true;
         }
         params.chat_template = argv[i];
+        FLAG_chat_template = argv[i]; // [jart]
         return true;
     }
     if (arg == "--slot-prompt-similarity" || arg == "-sps") {

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const API_ENDPOINT = "/v1/chat/completions";
 const API_KEY = "your-api-key-here";
 
 const DEFAULT_SYSTEM_PROMPT =
@@ -28,7 +27,9 @@ const DEFAULT_FLAGZ = {
   "presence_penalty": 0,
   "temperature": 0.8,
   "top_p": 0.95,
-  "seed": null
+  "seed": null,
+  "is_base_model": true,
+  "completion_mode": false,
 };
 
 const chatMessages = document.getElementById("chat-messages");
@@ -39,10 +40,17 @@ const settingsButton = document.getElementById("settings-button");
 const settingsModal = document.getElementById("settings-modal");
 const closeSettings = document.getElementById("close-settings");
 const redoButton = document.getElementById('redo-button');
+const chatInterface = document.getElementById("chat-interface");
+const completionsInterface = document.getElementById("completions-interface");
+const completionsInput = document.getElementById("completions-input");
+const completeButton = document.getElementById("complete-button");
+const completionsSettingsButton = document.getElementById("completions-settings-button");
+const completionsStopButton = document.getElementById("completions-stop-button");
 
 let abortController = null;
 let disableAutoScroll = false;
 let streamingMessageContent = [];
+let originalLength = 0;
 let uploadedFiles = [];
 let chatHistory = [];
 let flagz = null;
@@ -112,8 +120,8 @@ async function handleChatStream(response) {
         const line = lines[i].trim();
         if (line.startsWith("data: ")) {
           const data = line.slice(6);
-          if (data === "[DONE]") continue;
-
+          if (data === "[DONE]")
+            continue;
           try {
             const parsed = JSON.parse(data);
             const content = parsed.choices[0]?.delta?.content || "";
@@ -177,14 +185,14 @@ async function sendMessage() {
 
   const settings = loadSettings();
   try {
-    const response = await fetch(API_ENDPOINT, {
+    const response = await fetch("/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: flagz.model || "gpt-3.5-turbo",
         messages: chatHistory,
         temperature: settings.temperature,
         top_p: settings.top_p,
@@ -356,7 +364,10 @@ function getSystemPrompt() {
 
 function updateModelInfo() {
   if (flagz.model) {
-    document.getElementById("model").textContent = flagz.model;
+    const modelName = flagz.model;
+    document.title = `${modelName} - llamafile`;
+    document.getElementById("model").textContent = modelName;
+    document.getElementById("model-completions").textContent = modelName;
   }
 }
 
@@ -455,6 +466,114 @@ function setupSettings() {
   });
 }
 
+function setupCompletions() {
+  completeButton.addEventListener("click", sendCompletion);
+  completionsStopButton.addEventListener("click", stopCompletion);
+  completionsSettingsButton.addEventListener("click", () => {
+    settingsModal.style.display = "flex";
+    updateSettingsDisplay(loadSettings());
+  });
+  completionsInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      sendCompletion();
+    }
+  });
+}
+
+function stopCompletion() {
+  if (abortController) {
+    abortController.abort();
+    cleanupAfterCompletion();
+  }
+}
+
+function cleanupAfterCompletion() {
+  completeButton.style.display = "inline-block";
+  completionsStopButton.style.display = "none";
+  completeButton.disabled = false;
+  abortController = null;
+
+  // select newly added text and restore focus
+  const textArea = completionsInput;
+  textArea.focus();
+  textArea.selectionStart = originalLength || 0;
+  textArea.selectionEnd = textArea.value.length;
+}
+
+async function sendCompletion() {
+  const text = completionsInput.value;
+  completeButton.style.display = "none";
+  completionsStopButton.style.display = "inline-block";
+  completeButton.disabled = true;
+  abortController = new AbortController();
+  originalLength = text.length;
+  completionsStopButton.focus();
+  const settings = loadSettings();
+  try {
+    const response = await fetch("/v1/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: flagz.model || "gpt-3.5-turbo",
+        prompt: text,
+        temperature: settings.temperature,
+        top_p: settings.top_p,
+        presence_penalty: settings.presence_penalty,
+        frequency_penalty: settings.frequency_penalty,
+        stream: true
+      }),
+      signal: abortController.signal
+    });
+    if (response.ok) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done)
+            break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]")
+                continue;
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices[0]?.text || "";
+                completionsInput.value += content;
+                completionsInput.scrollTop = completionsInput.scrollHeight;
+              } catch (e) {
+                console.error("Error parsing JSON:", e);
+              }
+            }
+          }
+          buffer = lines[lines.length - 1];
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Error reading stream:", error);
+        }
+      }
+    } else {
+      console.error("Completion failed:", response.statusText);
+    }
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      console.error("Completion error:", error);
+    }
+  } finally {
+    cleanupAfterCompletion();
+  }
+}
+
 function removeLastDirectChild(element) {
   if (element.lastElementChild) {
     element.removeChild(element.lastElementChild);
@@ -475,11 +594,72 @@ function onRedo() {
   chatInput.dispatchEvent(new Event("input")); // adjust textarea height
 }
 
+function setupMenu() {
+  const triggers = document.querySelectorAll('.menu-trigger');
+  const menus = document.querySelectorAll('.menu');
+  const chatModeSwitch = document.getElementById('chat-mode-switch');
+  const completionsModeSwitch = document.getElementById('completions-mode-switch');
+  if (flagz.is_base_model) {
+    completionsModeSwitch.classList.add('disabled');
+    completionsModeSwitch.title = "Chatbot mode isn't possible because this is a base model that hasn't had instruction fine tuning; try passing --chat-template chatml or llama2 if this is really an instruct model.";
+    completionsModeSwitch.disabled = true;
+  }
+  triggers.forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = trigger.nextElementSibling;
+      menus.forEach(m => {
+        if (m !== menu)
+          m.classList.remove('show');
+      });
+      menu.classList.toggle('show');
+    });
+  });
+  document.addEventListener('click', () => {
+    menus.forEach(menu => menu.classList.remove('show'));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape')
+      menus.forEach(menu => menu.classList.remove('show'));
+  });
+  chatModeSwitch.addEventListener('click', () => {
+    flagz.completion_mode = true;
+    setupCompletionsMode();
+    menus.forEach(menu => menu.classList.remove('show'));
+  });
+  completionsModeSwitch.addEventListener('click', () => {
+    if (!flagz.is_base_model) {
+      flagz.completion_mode = false;
+      setupChatCompletionsMode();
+      menus.forEach(menu => menu.classList.remove('show'));
+    }
+  });
+}
+
+function setupChatCompletionsMode() {
+  chatInterface.style.display = "flex";
+  completionsInterface.style.display = "none";
+  startChat([{ role: "system", content: getSystemPrompt() }]);
+  chatInput.focus();
+}
+
+function setupCompletionsMode() {
+  chatInterface.style.display = "none";
+  completionsInterface.style.display = "flex";
+  completionsInput.focus();
+}
+
 async function chatbot() {
   flagz = await fetchFlagz();
   updateModelInfo();
   setupSettings();
-  startChat([{ role: "system", content: getSystemPrompt() }]);
+  setupCompletions();
+  setupMenu();
+  if (flagz.is_base_model || flagz.completion_mode) {
+    setupCompletionsMode();
+  } else {
+    setupChatCompletionsMode();
+  }
   sendButton.addEventListener("click", sendMessage);
   stopButton.addEventListener("click", stopMessage);
   redoButton.addEventListener("click", onRedo);
@@ -492,7 +672,6 @@ async function chatbot() {
   document.addEventListener("drop", onDragEnd);
   document.addEventListener("drop", onDrop);
   document.addEventListener("paste", onPaste);
-  chatInput.focus();
 }
 
 chatbot();

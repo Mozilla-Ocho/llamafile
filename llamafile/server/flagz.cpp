@@ -24,6 +24,17 @@
 namespace lf {
 namespace server {
 
+static bool is_base_model(llama_model *model) {
+
+    // check if user explicitly passed --chat-template flag
+    if (*FLAG_chat_template)
+        return false;
+
+    // check if gguf metadata has chat template. this should always be
+    // present for "instruct" models, and never specified on base ones
+    return llama_model_meta_val_str(model, "tokenizer.chat_template", 0, 0) == -1;
+}
+
 bool
 Client::flagz()
 {
@@ -32,6 +43,8 @@ Client::flagz()
     json["prompt"] = FLAG_prompt;
     json["no_display_prompt"] = FLAG_no_display_prompt;
     json["nologo"] = FLAG_nologo;
+    json["completion_mode"] = FLAG_completion_mode;
+    json["is_base_model"] = is_base_model(model_);
     json["temperature"] = FLAG_temperature;
     json["top_p"] = FLAG_top_p;
     json["presence_penalty"] = FLAG_presence_penalty;
