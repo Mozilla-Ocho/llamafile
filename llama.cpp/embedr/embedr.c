@@ -2,6 +2,7 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "llama.cpp/llama.h"
 #include "llamafile/version.h"
+#include "llama.cpp/embedr/embedr.h"
 #include "llama.cpp/embedr/sqlite3.h"
 #include "llama.cpp/embedr/sqlite-vec.h"
 #include "llama.cpp/embedr/sqlite-lembed.h"
@@ -24,6 +25,10 @@ int64_t time_ms(void) {
 
 char * EMBEDR_MODEL = NULL;
 
+void embedr_version(sqlite3_context * context, int argc, sqlite3_value **value) {
+  sqlite3_result_text(context, EMBEDR_VERSION, -1, SQLITE_STATIC);
+}
+
 int embedr_sqlite3_init(sqlite3 * db) {
   int rc;
 
@@ -31,6 +36,7 @@ int embedr_sqlite3_init(sqlite3 * db) {
   rc = sqlite3_lembed_init(db, NULL, NULL); assert(rc == SQLITE_OK);
   rc = sqlite3_csv_init(db, NULL, NULL); assert(rc == SQLITE_OK);
   rc = sqlite3_lines_init(db, NULL, NULL); assert(rc == SQLITE_OK);
+  rc = sqlite3_create_function_v2(db, "embedr_version",0, SQLITE_DETERMINISTIC | SQLITE_UTF8, NULL, embedr_version, NULL, NULL, NULL); assert(rc == SQLITE_OK);
 
   if(!EMBEDR_MODEL) {
     return SQLITE_OK;
@@ -85,6 +91,142 @@ void print_progress_bar(long long nEmbed, long long nTotal, long long elapsed_ms
            rate);
 
     fflush(stdout);
+}
+
+int default_model_dimensions(sqlite3 * db, int64_t * dimensions) {
+  int rc;
+  sqlite3_stmt * stmt;
+  rc = sqlite3_prepare_v2(db, "select dimensions from lembed_models where name = ?", -1, &stmt, NULL);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_bind_text(stmt, 1, "default", -1, SQLITE_STATIC);
+
+  rc = sqlite3_step(stmt);
+  assert(rc == SQLITE_ROW);
+  *dimensions = sqlite3_column_int64(stmt, 0);
+  sqlite3_finalize(stmt);
+
+  return SQLITE_OK;
+}
+
+int cmd_index(char * filename, char * target_column) {
+  int rc;
+  sqlite3* db = NULL;
+  sqlite3_stmt* stmt = NULL;
+  char * zDbPath = sqlite3_mprintf("%s.db", filename);
+  assert(zDbPath);
+
+  rc = sqlite3_open(zDbPath, &db);
+  assert(rc == SQLITE_OK);
+
+  rc = sqlite3_exec(db, "PRAGMA page_size=16384;", NULL, NULL, NULL);
+  assert(rc == SQLITE_OK);
+
+  rc = embedr_sqlite3_init(db);
+  assert(rc == SQLITE_OK);
+
+  if(sqlite3_strlike("%.csv", filename, 0) == 0) {
+    const char * zSql;
+
+    rc = sqlite3_exec(db, "BEGIN;", NULL, NULL, NULL);
+    assert(rc == SQLITE_OK);
+
+    zSql = sqlite3_mprintf(
+      "CREATE VIRTUAL TABLE temp.source USING csv(filename=\"%w\", header=yes)",
+      filename
+    );
+    assert(zSql);
+    rc = sqlite3_prepare_v2(db, zSql, -1, &stmt, NULL);
+    assert(rc == SQLITE_OK);
+    rc = sqlite3_step(stmt);
+    assert(rc == SQLITE_DONE);
+    sqlite3_finalize(stmt);
+
+    int64_t dimensions;
+    rc = default_model_dimensions(db, &dimensions);
+
+    rc = sqlite3_exec(db, "CREATE TABLE source AS SELECT * FROM temp.source;", NULL, NULL, NULL);
+    assert(rc == SQLITE_OK);
+
+    zSql = sqlite3_mprintf(
+      "CREATE VIRTUAL TABLE vec_source USING vec0(embedding float[%lld])",
+      dimensions
+    );
+    assert(zSql);
+    rc = sqlite3_prepare_v2(db, zSql, -1, &stmt, NULL);
+    assert(rc == SQLITE_OK);
+    rc = sqlite3_step(stmt);
+    assert(rc == SQLITE_DONE);
+    sqlite3_finalize(stmt);
+
+      int64_t nTotal;
+    {
+      sqlite3_stmt * stmt;
+      rc = sqlite3_prepare_v2(db, "SELECT count(*) FROM source", -1, &stmt, NULL);
+      assert(rc == SQLITE_OK);
+      rc = sqlite3_step(stmt);
+      assert(rc == SQLITE_ROW);
+      nTotal = sqlite3_column_int64(stmt, 0);
+      sqlite3_finalize(stmt);
+    }
+
+    int64_t nRemaining = nTotal;
+
+
+    zSql = sqlite3_mprintf(
+      " \
+        WITH chunk AS ( \
+          SELECT \
+            source.rowid, \
+            lembed(source.\"%w\") AS embedding \
+          FROM source \
+          WHERE source.rowid NOT IN (select rowid from vec_source) \
+          LIMIT 256 \
+        ) \
+        INSERT INTO vec_source(rowid, embedding) \
+        SELECT rowid, embedding FROM chunk \
+        RETURNING rowid; \
+      ",
+      target_column
+    );
+    assert(zSql);
+
+    rc = sqlite3_prepare_v2(db, zSql, -1, &stmt, NULL);
+    assert(rc == SQLITE_OK);
+
+    int64_t nEmbed = 0;
+    int64_t t0 = time_ms();
+
+    while(1){
+      sqlite3_reset(stmt);
+
+      int nChunkEmbed = 0;
+      while(1) {
+        rc = sqlite3_step(stmt);
+        if(rc == SQLITE_DONE) {
+          break;
+        }
+        assert(rc == SQLITE_ROW);
+        nChunkEmbed++;
+      }
+      if(nChunkEmbed == 0) {
+        break;
+      }
+      nEmbed += nChunkEmbed;
+      nRemaining -= nChunkEmbed;
+      print_progress_bar(nEmbed, nTotal, time_ms() - t0);
+    }
+  }
+  else {
+    printf("Unknown filetype\n");
+  }
+
+  rc = sqlite3_exec(db, "COMMIT;", NULL, NULL, NULL);
+  assert(rc == SQLITE_OK);
+
+  sqlite3_free(zDbPath);
+  sqlite3_close(db);
+  return SQLITE_OK;
 }
 
 int cmd_backfill(char * dbPath, char * table, char * column) {
@@ -252,7 +394,8 @@ int main(int argc, char ** argv) {
       }
       else if(sqlite3_stricmp(arg, "--version") == 0 || sqlite3_stricmp(arg, "-v") == 0) {
         fprintf(stderr,
-          "llamafile-embed %s, SQLite %s, sqlite-vec=%s, sqlite-lembed=%s\n",
+          "embedr %s, llamafile %s, SQLite %s, sqlite-vec=%s, sqlite-lembed=%s\n",
+          EMBEDR_VERSION,
           LLAMAFILE_VERSION_STRING,
           sqlite3_version,
           SQLITE_VEC_VERSION,
@@ -268,11 +411,17 @@ int main(int argc, char ** argv) {
         return cmd_embed(argv[i+1]);
       }
       else if(sqlite3_stricmp(arg, "backfill") == 0) {
-        assert(i + 5 == argc);
+        assert(i + 4 == argc);
         char * dbpath = argv[i+1];
         char * table = argv[i+2];
         char * column = argv[i+3];
         return cmd_backfill(dbpath, table, column);
+      }
+      else if(sqlite3_stricmp(arg, "index") == 0) {
+        assert(i + 3 == argc);
+        char * path = argv[i+1];
+        char * column = argv[i+2];
+        return cmd_index(path, column);
       }
       else {
         printf("Unknown arg %s\n", arg);

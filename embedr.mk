@@ -1,5 +1,11 @@
-dist/mxbai-embed-xsmall-v1-f16.embedr: ./o/llama.cpp/embedr/embedr
+dist/mxbai-embed-xsmall-v1-f16.embedr: ./o/llama.cpp/embedr/embedr embedr.mk
 	cp $< $@
+	echo "-m\nmxbai-embed-xsmall-v1-f16.gguf\n..." > .args
+	./o/llamafile/zipalign -j0 \
+		$@ \
+		models/mxbai-embed-xsmall-v1-f16.gguf \
+		.args
+	rm .args
 
 dist/snowflake-arctic-embed-m-v1.5-f16.embedr: ./o/llama.cpp/embedr/embedr embedr.mk
 	cp $< $@
