@@ -13,6 +13,9 @@ $(MODELS_DIR): $(prefix)
 
 EMBEDFILE=./o/llama.cpp/embedfile/embedfile
 
+dist/embedfile: $(EMBEDFILE)
+	cp $< $@
+
 MODEL_MXBAI=mxbai-embed-xsmall-v1-f16
 MODEL_SNOWFLAKE=snowflake-arctic-embed-m-v1.5-f16
 MODEL_NOMIC=nomic-embed-text-v1.5.f16
@@ -64,4 +67,5 @@ all: \
 	dist/$(MODEL_MXBAI).embedfile \
 	dist/$(MODEL_SNOWFLAKE).embedfile \
 	dist/$(MODEL_NOMIC).embedfile \
-	dist/$(MODEL_ALLMINI).embedfile
+	dist/$(MODEL_ALLMINI).embedfile \
+	dist/embedfile
