@@ -36,6 +36,9 @@ o/$(MODE)/llama.cpp/embedfile/shell.a: o/$(MODE)/llama.cpp/embedfile/shell.o
 
 #o/$(MODE)/llama.cpp/embedfile/embedfile.a: $(LLAMA_CPP_EMBEDFILE_OBJS)
 
+o/$(MODE)/llama.cpp/embedfile/shell.o: private CFLAGS += \
+	-DSQLITE_ENABLE_STMT_SCANSTATUS
+
 o/$(MODE)/llama.cpp/embedfile/sqlite3.o: private CFLAGS += \
 -DSQLITE_ENABLE_FTS5 \
 -DSQLITE_ENABLE_RTREE \
@@ -51,7 +54,9 @@ o/$(MODE)/llama.cpp/embedfile/sqlite3.o: private CFLAGS += \
 -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
 -DSQLITE_HAVE_ZLIB \
 -DSQLITE_INTROSPECTION_PRAGMAS \
--DSQLITE_ENABLE_UNKNOWN_SQL_FUNCTION
+-DSQLITE_ENABLE_UNKNOWN_SQL_FUNCTION \
+-DSQLITE_ENABLE_STMT_SCANSTATUS \
+-DSQLITE_DQS=0
 
 o/$(MODE)/llama.cpp/embedfile/embedfile:					\
 		o/$(MODE)/llama.cpp/embedfile/shell.a \
