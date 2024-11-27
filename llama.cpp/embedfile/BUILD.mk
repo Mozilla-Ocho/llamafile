@@ -36,7 +36,22 @@ o/$(MODE)/llama.cpp/embedfile/shell.a: o/$(MODE)/llama.cpp/embedfile/shell.o
 
 #o/$(MODE)/llama.cpp/embedfile/embedfile.a: $(LLAMA_CPP_EMBEDFILE_OBJS)
 
-#o/$(MODE)/llama.cpp/embedfile/sqlite3.o: private COPTS += -O3
+o/$(MODE)/llama.cpp/embedfile/sqlite3.o: private CFLAGS += \
+-DSQLITE_ENABLE_FTS5 \
+-DSQLITE_ENABLE_RTREE \
+-DSQLITE_SOUNDEX \
+-DSQLITE_ENABLE_GEOPOLY \
+-DSQLITE_ENABLE_MATH_FUNCTIONS \
+-USQLITE_ENABLE_FTS3 \
+-DSQLITE_ENABLE_FTS5 \
+-DSQLITE_ENABLE_DBSTAT_VTAB \
+-DSQLITE_ENABLE_DBPAGE_VTAB \
+-DSQLITE_ENABLE_STMTVTAB \
+-DSQLITE_ENABLE_BYTECODE_VTAB \
+-DSQLITE_ENABLE_EXPLAIN_COMMENTS \
+-DSQLITE_HAVE_ZLIB \
+-DSQLITE_INTROSPECTION_PRAGMAS \
+-DSQLITE_ENABLE_UNKNOWN_SQL_FUNCTION
 
 o/$(MODE)/llama.cpp/embedfile/embedfile:					\
 		o/$(MODE)/llama.cpp/embedfile/shell.a \
