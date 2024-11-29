@@ -1,0 +1,16 @@
+DESCRIPTION
+
+  mbedtls is a tls library created by arm limited
+
+ORIGIN
+
+  https://github.com/jart/cosmopolitan/tree/master/third_party/mbedtls
+  2024-11-28
+
+LICENSE
+
+  Apache 2.0
+
+LOCAL CHANGES
+
+  - jart's x86-64 performance enhancements (see cosmopolitan)

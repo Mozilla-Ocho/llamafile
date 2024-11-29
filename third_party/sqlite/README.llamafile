@@ -1,0 +1,15 @@
+DESCRIPTION
+
+  SQLite is the world's most popular database
+
+ORIGIN
+
+  https://www.sqlite.org/2024/sqlite-amalgamation-3470100.zip
+
+LICENSE
+
+  Public domain or MIT
+
+LOCAL CHANGES
+
+  - Renamed <zlib.h> to <third_party/zlib/zlib.h>
