@@ -123,7 +123,7 @@ typedef sqlite3_int64 i64;
 typedef sqlite3_uint64 u64;
 typedef unsigned char u8;
 #if SQLITE_USER_AUTHENTICATION
-# include "sqlite3userauth.h"
+# includez "sqlite3userauth.h"
 #endif
 #include <ctype.h>
 #include <stdarg.h>
@@ -169,7 +169,7 @@ typedef unsigned char u8;
 
 #elif HAVE_LINENOISE
 
-# include "linenoise.h"
+# includez "linenoise.h"
 # define shell_add_history(X) linenoiseHistoryAdd(X)
 # define shell_read_history(X) linenoiseHistoryLoad(X)
 # define shell_write_history(X) linenoiseHistorySave(X)
@@ -1710,7 +1710,7 @@ static void shellAddSchemaName(
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include "windows.h"
+#includez "windows.h"
 
 /*
 ** We need several support functions from the SQLite core.
@@ -7996,10 +7996,10 @@ SQLITE_EXTENSION_INIT1
 #  include <utime.h>
 #  include <sys/time.h>
 #else
-#  include "windows.h"
+#  includez "windows.h"
 #  include <io.h>
 #  include <direct.h>
-/* #  include "test_windirent.h" */
+/* #  includez "test_windirent.h" */
 #  define dirent DIRENT
 #  ifndef chmod
 #    define chmod _chmod
@@ -8945,7 +8945,7 @@ int sqlite3_fileio_init(
  * redefined SQLite API calls as the above extension code does.
  * Just pull in this .c to accomplish this. As a beneficial side
  * effect, this extension becomes a single translation unit. */
-#  include "test_windirent.c"
+#  includez "test_windirent.c"
 #endif
 
 /************************* End ../ext/misc/fileio.c ********************/

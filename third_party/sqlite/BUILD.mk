@@ -3,6 +3,13 @@
 
 PKGS += THIRD_PARTY_SQLITE
 
+THIRD_PARTY_SQLITE_SRCS =					\
+	third_party/sqlite/sqlite3.c				\
+	third_party/sqlite/shell.c				\
+
+THIRD_PARTY_SQLITE_HDRS =					\
+	third_party/sqlite/sqlite3.h				\
+
 o/$(MODE)/third_party/sqlite/sqlite.a:				\
 		o/$(MODE)/third_party/sqlite/sqlite3.o		\
 

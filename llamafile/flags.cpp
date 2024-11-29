@@ -53,6 +53,7 @@ bool FLAG_tinyblas = false;
 bool FLAG_trace = false;
 bool FLAG_unsecure = false;
 const char *FLAG_chat_template = "";
+const char *FLAG_db = nullptr;
 const char *FLAG_file = nullptr;
 const char *FLAG_ip_header = nullptr;
 const char *FLAG_listen = "127.0.0.1:8080";
@@ -182,6 +183,13 @@ void llamafile_get_flags(int argc, char **argv) {
 
         if (!strcmp(flag, "--display-prompt")) {
             FLAG_no_display_prompt = false;
+            continue;
+        }
+
+        if (!strcmp(flag, "--db")) {
+            if (i == argc)
+                missing("--db");
+            FLAG_db = argv[i++];
             continue;
         }
 

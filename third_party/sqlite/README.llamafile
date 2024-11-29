@@ -13,3 +13,4 @@ LICENSE
 LOCAL CHANGES
 
   - Renamed <zlib.h> to <third_party/zlib/zlib.h>
+  - Mangled some quoted includes to not confuse mkdeps
