@@ -1,0 +1,63 @@
+DESCRIPTION
+
+  Mbed TLS is a crypto library built by ARM that's been released
+  under a more permissive license than alternatives like OpenSSL
+  and is useful for interoperating with systems that require TLS
+
+SOURCE
+
+  https://github.com/ARMmbed/mbedtls/archive/refs/tags/v2.26.0.tar.gz
+
+LICENSE
+
+  Apache 2.o
+
+LOCAL CHANGES
+
+  - Support ECANCELED (similar to EINTR) needed by pthread_cancel()
+
+  - Strengthened server against DOS by removing expensive protections
+    for old Internet Explorer against Lucky Thirteen timing attacks.
+
+  - Reduce build+test latency from 15 seconds to 5 seconds.
+
+  - Features have been added that enable this library to produce SSL
+    certificates that can be used by Google Chrome. This required we
+    add featurces for editing Subject Alternative Names and Extended
+    Key Usage X.509 extension fields since upstream mbedtls can only
+    do that currently for Netscape Navigator.
+
+  - Local changes needed to be made to test_suite_ssl.datax due to it
+    not taking into consideration disabled features like DTLS.
+
+  - Local changes needed to be made to test_suite_x509parse.datax due
+    to the features we added for subject alternative name parsing.
+
+  - We've slimmed things down to meet our own specific local needs.
+    For example, we don't need the PSA code since we don't target ARM
+    hardware. We also don't need algorithms like camellia, blowfish,
+    ripemd, arc4, ecjpake, etc. We want security code that's simple,
+    readable, and easy to maintain. For example, the formally verified
+    eliptic curve diffie-helman code was 38 files and most of it was
+    dead code which could be consolidated into one < 1 kLOC file.
+
+  - The only breaking API change that's been made is to redefine int
+    arrays of things like long lists of ciphersuites to be uint8_t or
+    uint16_t instead when appropriate.
+
+  - Exported test code so it (a) doesn't have python as a build time
+    dependency, (b) doesn't print to stdout on success, (c) bundles
+    its dependencies inside a zip container so the tests are able to
+    run hermetically if the binary is scp'd to some machine, and (d)
+    doesn't have large amounts of duplicated generated code.
+
+  - Fix mbedtls_mpi_sub_abs() to not call malloc/free/memcpy since
+    it's called 11,124 times during as SSL handshake.
+
+  - Make P-256 and P-384 modulus goes 5x faster.
+
+  - Make chacha20 26% faster.
+
+  - Make base64 100x faster.
+
+  - Make gcm faster.

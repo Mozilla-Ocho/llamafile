@@ -44,6 +44,11 @@ o/$(MODE)/llamafile/tokenize:				\
 		o/$(MODE)/llamafile/tokenize.o		\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
 
+o/$(MODE)/llamafile/curl:					\
+		o/$(MODE)/llamafile/curl.o			\
+		o/$(MODE)/llama.cpp/llama.cpp.a			\
+		o/$(MODE)/third_party/mbedtls/mbedtls.a		\
+
 .PHONY: o/$(MODE)/llamafile
 o/$(MODE)/llamafile:						\
 		$(LLAMAFILE_OBJS)				\
