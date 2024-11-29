@@ -33,12 +33,12 @@ o/$(MODE)/whisper.cpp/main:				\
 		o/$(MODE)/whisper.cpp/main.1.asc.zip.o	\
 		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
-		o/$(MODE)/stb/stb.a			\
+		o/$(MODE)/third_party/stb/stb.a		\
 
 o/$(MODE)/whisper.cpp/stream:				\
 		o/$(MODE)/whisper.cpp/whisper.cpp.a	\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
-		o/$(MODE)/stb/stb.a			\
+		o/$(MODE)/third_party/stb/stb.a		\
 
 o/$(MODE)/whisper.cpp/mic2txt:				\
 		o/$(MODE)/whisper.cpp/whisper.cpp.a	\

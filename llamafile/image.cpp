@@ -25,8 +25,8 @@
 #include "llama.cpp/base64.h"
 #include "llamafile/macros.h"
 #include "llamafile/xterm.h"
-#include "stb/stb_image.h"
-#include "stb/stb_image_resize2.h"
+#include "third_party/stb/stb_image.h"
+#include "third_party/stb/stb_image_resize2.h"
 
 namespace lf {
 

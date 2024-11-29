@@ -15,15 +15,15 @@
 
 // #define STB_IMAGE_IMPLEMENTATION
 // #define STB_IMAGE_STATIC
-#include "stb/stb_image.h"
+#include "third_party/stb/stb_image.h"
 
 // #define STB_IMAGE_WRITE_IMPLEMENTATION
 // #define STB_IMAGE_WRITE_STATIC
-#include "stb/stb_image_write.h"
+#include "third_party/stb/stb_image_write.h"
 
 // #define STB_IMAGE_RESIZE_IMPLEMENTATION
 // #define STB_IMAGE_RESIZE_STATIC
-#include "stb/stb_image_resize2.h"
+#include "third_party/stb/stb_image_resize2.h"
 
 #include "llamafile/llamafile.h"
 #include "llamafile/debug.h"

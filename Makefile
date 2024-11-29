@@ -11,12 +11,11 @@ MAKEFLAGS += --no-builtin-rules
 include build/config.mk
 include build/rules.mk
 
+include third_party/BUILD.mk
 include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
 include stable-diffusion.cpp/BUILD.mk
 include whisper.cpp/BUILD.mk
-include double-conversion/BUILD.mk
-include stb/BUILD.mk
 
 # the root package is `o//` by default
 # building a package also builds its sub-packages
@@ -25,7 +24,7 @@ o/$(MODE)/:	o/$(MODE)/llamafile					\
 		o/$(MODE)/llama.cpp					\
 		o/$(MODE)/stable-diffusion.cpp				\
 		o/$(MODE)/whisper.cpp					\
-		o/$(MODE)/stb						\
+		o/$(MODE)/third_party					\
 		o/$(MODE)/depend.test
 
 # for installing to `make PREFIX=/usr/local`

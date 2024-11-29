@@ -24,8 +24,8 @@
 #include <cstdlib>
 #include <stdckdint.h>
 
-#include "double-conversion/double-to-string.h"
-#include "double-conversion/string-to-double.h"
+#include "third_party/double-conversion/double-to-string.h"
+#include "third_party/double-conversion/string-to-double.h"
 
 #define KEY 1
 #define COMMA 2

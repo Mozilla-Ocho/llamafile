@@ -25,7 +25,7 @@
 #include "llama.cpp/ggml.h"
 #include "stable-diffusion.h"
 
-#include "stb/stb_image_resize2.h"
+#include "third_party/stb/stb_image_resize2.h"
 
 bool ends_with(const std::string& str, const std::string& ending) {
     if (str.length() >= ending.length()) {

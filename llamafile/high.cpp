@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "highlight.h"
+#include "llamafile/highlight/highlight.h"
 #include "string.h"
 #include <fcntl.h>
 #include <stdio.h>

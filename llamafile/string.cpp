@@ -52,17 +52,6 @@ bool startscasewith(const std::string_view &str, const std::string_view &prefix)
     return true;
 }
 
-void append_wchar(std::string *r, wchar_t c) {
-    if (isascii(c)) {
-        *r += c;
-    } else {
-        char s[8];
-        uint64_t w = tpenc(c);
-        WRITE64LE(s, w);
-        *r += s;
-    }
-}
-
 std::string format(const char *fmt, ...) {
     va_list ap, ap2;
     va_start(ap, fmt);

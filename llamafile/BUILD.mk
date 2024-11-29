@@ -9,16 +9,13 @@ LLAMAFILE_INCS = $(filter %.inc,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_C = $(filter %.c,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_CU = $(filter %.cu,$(LLAMAFILE_FILES))
 LLAMAFILE_SRCS_CPP = $(filter %.cpp,$(LLAMAFILE_FILES))
-LLAMAFILE_SRCS_GPERF = $(filter %.gperf,$(LLAMAFILE_FILES))
-LLAMAFILE_SRCS_GPERF_C = $(LLAMAFILE_SRCS_GPERF:%.gperf=o/$(MODE)/%.c)
-LLAMAFILE_SRCS = $(LLAMAFILE_SRCS_C) $(LLAMAFILE_SRCS_CPP) $(LLAMAFILE_SRCS_CU) $(LLAMAFILE_SRCS_GPERF)
+LLAMAFILE_SRCS = $(LLAMAFILE_SRCS_C) $(LLAMAFILE_SRCS_CPP) $(LLAMAFILE_SRCS_CU)
 LLAMAFILE_DOCS = $(filter %.1,$(LLAMAFILE_FILES))
 
 LLAMAFILE_OBJS :=					\
 	$(LLAMAFILE_SRCS_C:%.c=o/$(MODE)/%.o)		\
 	$(LLAMAFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.o)	\
 	$(LLAMAFILE_FILES:%=o/$(MODE)/%.zip.o)		\
-	$(LLAMAFILE_SRCS_GPERF_C:%.c=%.o)		\
 
 $(LLAMAFILE_OBJS): private CCFLAGS += -g
 
@@ -26,6 +23,7 @@ $(LLAMAFILE_OBJS): private CCFLAGS += -g
 # therefore we want to avoid it going inside the .a file
 LLAMAFILE_OBJS := $(filter-out o/$(MODE)/llamafile/zipalign.o,$(LLAMAFILE_OBJS))
 
+include llamafile/highlight/BUILD.mk
 include llamafile/server/BUILD.mk
 
 o/$(MODE)/llamafile/zipalign:				\
@@ -57,9 +55,6 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/addnl			\
 		o/$(MODE)/llamafile/high			\
 		o/$(MODE)/llamafile/datauri_test.runs		\
-		o/$(MODE)/llamafile/highlight_c_test.runs	\
-		o/$(MODE)/llamafile/highlight_python_test.runs	\
-		o/$(MODE)/llamafile/highlight_test.runs		\
 		o/$(MODE)/llamafile/parse_cidr_test.runs	\
 		o/$(MODE)/llamafile/pool_cancel_test.runs	\
 		o/$(MODE)/llamafile/pool_test.runs		\
@@ -170,34 +165,15 @@ o/$(MODE)/llamafile/pool_test:				\
 		o/$(MODE)/llamafile/crash.o		\
 		o/$(MODE)/llamafile/pool.o		\
 
-o/$(MODE)/llamafile/highlight_test:			\
-		o/$(MODE)/llamafile/highlight_test.o	\
-		o/$(MODE)/llama.cpp/llama.cpp.a		\
-
-o/$(MODE)/llamafile/highlight_c_test:				\
-		o/$(MODE)/llamafile/highlight_c_test.o		\
-		o/$(MODE)/llamafile/highlight_c.o		\
-		o/$(MODE)/llamafile/is_keyword_c.o		\
-		o/$(MODE)/llamafile/is_keyword_c_constant.o	\
-		o/$(MODE)/llamafile/is_keyword_c_type.o		\
-		o/$(MODE)/llamafile/is_keyword_c_pod.o		\
-		o/$(MODE)/llamafile/is_keyword_cpp.o		\
-
-o/$(MODE)/llamafile/highlight_python_test:				\
-		o/$(MODE)/llamafile/highlight_python_test.o		\
-		o/$(MODE)/llamafile/highlight_python.o			\
-		o/$(MODE)/llamafile/is_keyword_python.o			\
-		o/$(MODE)/llamafile/is_keyword_python_builtin.o		\
-		o/$(MODE)/llamafile/is_keyword_python_constant.o	\
-
 o/$(MODE)/llamafile/datauri_test:			\
 		o/$(MODE)/llamafile/datauri_test.o	\
 		o/$(MODE)/llama.cpp/llama.cpp.a		\
-		o/$(MODE)/stb/stb.a			\
+		o/$(MODE)/third_party/stb/stb.a		\
 
-o/$(MODE)/llamafile/high:				\
-		o/$(MODE)/llamafile/high.o		\
-		o/$(MODE)/llama.cpp/llama.cpp.a		\
+o/$(MODE)/llamafile/high:					\
+		o/$(MODE)/llamafile/high.o			\
+		o/$(MODE)/llamafile/highlight/highlight.a	\
+		o/$(MODE)/llama.cpp/llama.cpp.a			\
 
 o/$(MODE)/llamafile/hex2xterm:				\
 		o/$(MODE)/llamafile/hex2xterm.o		\
@@ -257,5 +233,4 @@ o/$(MODE)/llamafile/pick_a_warp_kernel.o: private CFLAGS += -fopenmp
 
 .PHONY: o/$(MODE)/llamafile/check
 o/$(MODE)/llamafile/check:				\
-		$(LLAMAFILE_SRCS_GPERF_C)		\
 		o/$(MODE)/llamafile/tinyblas_test.runs

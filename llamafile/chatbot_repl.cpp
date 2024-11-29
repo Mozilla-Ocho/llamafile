@@ -26,7 +26,7 @@
 #include "llama.cpp/llama.h"
 #include "llamafile/bestline.h"
 #include "llamafile/color.h"
-#include "llamafile/highlight.h"
+#include "llamafile/highlight/highlight.h"
 #include "llamafile/llama.h"
 
 namespace lf {

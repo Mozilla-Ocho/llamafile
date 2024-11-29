@@ -16,8 +16,8 @@
 // limitations under the License.
 
 #include "fastjson.h"
-#include "double-conversion/double-to-string.h"
-#include "double-conversion/utils.h"
+#include "third_party/double-conversion/double-to-string.h"
+#include "third_party/double-conversion/utils.h"
 #include <cosmo.h>
 #include <net/http/escape.h>
 #include <string>

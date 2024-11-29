@@ -16,7 +16,7 @@ o/$(MODE)/llama.cpp/llava/llava-quantize:				\
 		o/$(MODE)/llama.cpp/llava/llava-quantize.1.asc.zip.o	\
 		o/$(MODE)/llama.cpp/llava/llava.a			\
 		o/$(MODE)/llama.cpp/llama.cpp.a				\
-		o/$(MODE)/stb/stb.a
+		o/$(MODE)/third_party/stb/stb.a
 
 $(LLAMA_CPP_LLAVA_OBJS): llama.cpp/llava/BUILD.mk
 

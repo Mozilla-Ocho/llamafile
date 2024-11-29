@@ -30,7 +30,7 @@ o/$(MODE)/stable-diffusion.cpp/main:					\
 		o/$(MODE)/stable-diffusion.cpp/main.o			\
 		o/$(MODE)/stable-diffusion.cpp/stable-diffusion.cpp.a	\
 		o/$(MODE)/llama.cpp/llama.cpp.a				\
-		o/$(MODE)/stb/stb.a
+		o/$(MODE)/third_party/stb/stb.a
 
 $(STABLE_DIFFUSION_CPP_OBJS): stable-diffusion.cpp/BUILD.mk
 

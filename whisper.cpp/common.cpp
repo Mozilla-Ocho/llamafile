@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "stb/stb_vorbis.h"
+#include "third_party/stb/stb_vorbis.h"
 #include "miniaudio.h"
 
 void high_pass_filter(std::vector<float> & data, float cutoff, float sample_rate) {

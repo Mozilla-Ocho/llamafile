@@ -13,7 +13,7 @@
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/string.h"
 
-#include "stb/stb_image.h"
+#include "third_party/stb/stb_image.h"
 
 #include <cassert>
 #include <cmath>

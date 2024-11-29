@@ -5,7 +5,7 @@
 #include "llama.cpp/llama.h"
 #include "llama.cpp/grammar-parser.h"
 #include "llama.cpp/llava/llava.h"
-#include "stb/stb_image.h"
+#include "third_party/stb/stb_image.h"
 #include "utils.h"
 #include "oai.h"
 #include "llamafile/micros.h"
