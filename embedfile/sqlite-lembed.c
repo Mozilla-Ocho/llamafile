@@ -6,7 +6,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "sqlite3.h"
+#include "third_party/sqlite/sqlite3.h"
 //#include "sqlite3ext.h"
 //SQLITE_EXTENSION_INIT1
 

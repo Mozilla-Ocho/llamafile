@@ -19,7 +19,7 @@
 //#include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT1
 #else
-#include "sqlite3.h"
+#include "third_party/sqlite/sqlite3.h"
 #endif
 
 #ifndef UINT32_TYPE

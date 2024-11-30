@@ -11,7 +11,7 @@ $(MODELS_DIR): $(prefix)
 
 .PHONY: models all
 
-EMBEDFILE=./o/llama.cpp/embedfile/embedfile
+EMBEDFILE=./o/embedfile/embedfile
 
 dist/embedfile: $(EMBEDFILE)
 	cp $< $@

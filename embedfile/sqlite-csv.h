@@ -2,7 +2,7 @@
 #define SQLITE_CSV_H
 
 //#include "sqlite3ext.h"
-#include "sqlite3.h"
+#include "third_party/sqlite/sqlite3.h"
 
 #ifdef __cplusplus
 extern "C" {

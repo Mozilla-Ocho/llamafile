@@ -1,4 +1,4 @@
-#include "sqlite3.h"
+#include "third_party/sqlite/sqlite3.h"
 //#include "sqlite3ext.h"
 
 #define SQLITE_LINES_VERSION "TODO"

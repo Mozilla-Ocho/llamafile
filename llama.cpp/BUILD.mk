@@ -26,7 +26,7 @@ include llama.cpp/server/BUILD.mk
 include llama.cpp/main/BUILD.mk
 include llama.cpp/imatrix/BUILD.mk
 include llama.cpp/quantize/BUILD.mk
-include llama.cpp/embedfile/BUILD.mk
+include embedfile/BUILD.mk
 include llama.cpp/perplexity/BUILD.mk
 include llama.cpp/llama-bench/BUILD.mk
 
@@ -90,7 +90,7 @@ $(LLAMA_CPP_OBJS): llama.cpp/BUILD.mk
 o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/main		\
 		o/$(MODE)/llama.cpp/llava		\
-		o/$(MODE)/llama.cpp/embedfile	 \
+		o/$(MODE)/embedfile	 \
 		o/$(MODE)/llama.cpp/server		\
 		o/$(MODE)/llama.cpp/imatrix		\
 		o/$(MODE)/llama.cpp/quantize		\

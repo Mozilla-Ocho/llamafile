@@ -2,13 +2,13 @@
 // vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #include "llama.cpp/llama.h"
 #include "llamafile/version.h"
-#include "llama.cpp/embedfile/embedfile.h"
-#include "llama.cpp/embedfile/sqlite3.h"
-#include "llama.cpp/embedfile/sqlite-vec.h"
-#include "llama.cpp/embedfile/sqlite-lembed.h"
-#include "llama.cpp/embedfile/sqlite-csv.h"
-#include "llama.cpp/embedfile/sqlite-lines.h"
-#include "llama.cpp/embedfile/shell.h"
+#include "embedfile/embedfile.h"
+#include "third_party/sqlite/sqlite3.h"
+#include "embedfile/sqlite-vec.h"
+#include "embedfile/sqlite-lembed.h"
+#include "embedfile/sqlite-csv.h"
+#include "embedfile/sqlite-lines.h"
+#include "embedfile/shell.h"
 #include <string.h>
 
 #include <stdlib.h>

@@ -1,6 +1,6 @@
 //#include "sqlite3ext.h"
 #include "sqlite-lines.h"
-#include "sqlite3.h"
+#include "third_party/sqlite/sqlite3.h"
 ///SQLITE_EXTENSION_INIT1
 
 #include <ctype.h>

@@ -118,7 +118,7 @@ typedef unsigned short int u16;
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-#include "sqlite3.h"
+#include "third_party/sqlite/sqlite3.h"
 typedef sqlite3_int64 i64;
 typedef sqlite3_uint64 u64;
 typedef unsigned char u8;

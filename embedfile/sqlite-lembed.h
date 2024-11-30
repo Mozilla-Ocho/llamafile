@@ -2,7 +2,7 @@
 #define SQLITE_LEMBED_H
 
 //#include "sqlite3ext.h"
-#include "sqlite3.h"
+#include "third_party/sqlite/sqlite3.h"
 #include "llama.cpp/llama.h"
 
 #define SQLITE_LEMBED_VERSION "v0.0.1-alpha.8"
