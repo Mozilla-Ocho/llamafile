@@ -15,34 +15,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <__fwd/string.h>
-#include <__fwd/string_view.h>
-#include <__fwd/vector.h>
-#include <optional>
-#include <sys/uio.h>
-
-struct llama_model;
+#include "llamafile/server/log.h"
+#include "utils.h"
+#include <cerrno>
+#include <string_view>
 
 namespace lf {
 namespace server {
 
-class Atom;
-
 ssize_t
-safe_writev(int, const iovec*, int);
-
-bool
-atob(std::string_view, bool);
-
-std::string_view
-or_empty(std::optional<std::string_view> x);
-
-void
-atomize(const llama_model* model,
-        std::vector<Atom>* result,
-        std::string_view s,
-        bool parse_special);
+safe_writev(int fd, const iovec* iov, int iovcnt)
+{
+    for (int i = 0; i < iovcnt; ++i) {
+        bool has_binary = false;
+        size_t n = iov[i].iov_len;
+        unsigned char* p = (unsigned char*)iov[i].iov_base;
+        for (size_t j = 0; j < n; ++j) {
+            has_binary |= p[j] < 7;
+        }
+        if (has_binary) {
+            SLOG("safe_writev() detected binary server is compromised");
+            errno = EINVAL;
+            return -1;
+        }
+    }
+    return writev(fd, iov, iovcnt);
+}
 
 } // namespace server
 } // namespace lf
