@@ -23,6 +23,7 @@ o/$(MODE)/llamafile/server/main:						\
 		o/$(MODE)/llama.cpp/llava/llava.a				\
 		o/$(MODE)/third_party/double-conversion/double-conversion.a	\
 		o/$(MODE)/third_party/stb/stb.a					\
+		o/$(MODE)/third_party/sqlite/sqlite3.a				\
 		$(LLAMAFILE_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)			\
 
 # turn /zip/llamafile/server/www/...
@@ -45,12 +46,6 @@ o/$(MODE)/llamafile/server/fastjson_test:					\
 		o/$(MODE)/llamafile/server/fastjson.o				\
 		o/$(MODE)/double-conversion/double-conversion.a			\
 
-o/$(MODE)/llamafile/server/json_test:						\
-		o/$(MODE)/llamafile/server/json_test.o				\
-		o/$(MODE)/llamafile/server/json.o				\
-		o/$(MODE)/llamafile/server/hextoint.o				\
-		o/$(MODE)/double-conversion/double-conversion.a			\
-
 o/$(MODE)/llamafile/server/tokenbucket_test:					\
 		o/$(MODE)/llamafile/server/tokenbucket_test.o			\
 		o/$(MODE)/llamafile/server/tokenbucket.o			\
@@ -63,5 +58,4 @@ o/$(MODE)/llamafile/server:							\
 		o/$(MODE)/llamafile/server/atom_test.runs			\
 		o/$(MODE)/llamafile/server/fastjson_test.runs			\
 		o/$(MODE)/llamafile/server/image_test.runs			\
-		o/$(MODE)/llamafile/server/json_test.runs			\
 		o/$(MODE)/llamafile/server/tokenbucket_test.runs		\

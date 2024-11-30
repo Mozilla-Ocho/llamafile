@@ -18,7 +18,6 @@
 #include "utils.h"
 
 namespace lf {
-namespace server {
 
 alignas(signed char) const signed char kHexToInt[256] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x00
@@ -39,5 +38,4 @@ alignas(signed char) const signed char kHexToInt[256] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xf0
 };
 
-} // namespace server
 } // namespace lf

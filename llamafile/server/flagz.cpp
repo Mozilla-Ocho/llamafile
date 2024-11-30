@@ -17,22 +17,24 @@
 
 #include "client.h"
 #include "llama.cpp/llama.h"
+#include "llamafile/json.h"
 #include "llamafile/llamafile.h"
 #include "llamafile/string.h"
-#include "llamafile/server/json.h"
 
 namespace lf {
 namespace server {
 
-static bool is_base_model(llama_model *model) {
-
+static bool
+is_base_model(llama_model* model)
+{
     // check if user explicitly passed --chat-template flag
     if (*FLAG_chat_template)
         return false;
 
     // check if gguf metadata has chat template. this should always be
     // present for "instruct" models, and never specified on base ones
-    return llama_model_meta_val_str(model, "tokenizer.chat_template", 0, 0) == -1;
+    return llama_model_meta_val_str(model, "tokenizer.chat_template", 0, 0) ==
+           -1;
 }
 
 bool

@@ -15,7 +15,7 @@ CREATE TABLE messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     chat_id INTEGER,
     role TEXT,
-    message TEXT,
+    content TEXT,
     temperature REAL,
     top_p REAL,
     presence_penalty REAL,

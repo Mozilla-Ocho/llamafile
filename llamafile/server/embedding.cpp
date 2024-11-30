@@ -17,9 +17,9 @@
 
 #include "client.h"
 #include "llama.cpp/llama.h"
+#include "llamafile/json.h"
 #include "llamafile/server/cleanup.h"
 #include "llamafile/server/fastjson.h"
-#include "llamafile/server/json.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/utils.h"
 #include <cmath>

@@ -48,6 +48,19 @@
 namespace lf {
 namespace server {
 
+static int64_t
+atoi(std::string_view s)
+{
+    int64_t n = 0;
+    for (char c : s) {
+        if (c < '0' || c > '9')
+            return -1;
+        n *= 10;
+        n += c - '0';
+    }
+    return n;
+}
+
 static void
 on_http_cancel(Client* client)
 {
@@ -658,6 +671,24 @@ Client::dispatcher()
         return slotz();
     if (p1 == "flagz")
         return flagz();
+
+    if (p1 == "db/chats" || p1 == "db/chats/")
+        return db_chats();
+    if (p1.starts_with("db/chat/")) {
+        int64_t id = atoi(p1.substr(strlen("db/chat/")));
+        if (id != -1)
+            return db_chat(id);
+    }
+    if (p1.starts_with("db/messages/")) {
+        int64_t id = atoi(p1.substr(strlen("db/messages/")));
+        if (id != -1)
+            return db_messages(id);
+    }
+    if (p1.starts_with("db/message/")) {
+        int64_t id = atoi(p1.substr(strlen("db/message/")));
+        if (id != -1)
+            return db_messages(id);
+    }
 
     // serve static endpoints
     int infd;

@@ -118,6 +118,10 @@ struct Client
 
     bool slotz() __wur;
     bool flagz() __wur;
+    bool db_chat(int64_t) __wur;
+    bool db_chats() __wur;
+    bool db_message(int64_t) __wur;
+    bool db_messages(int64_t) __wur;
 };
 
 } // namespace server

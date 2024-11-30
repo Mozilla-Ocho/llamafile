@@ -10,7 +10,7 @@ THIRD_PARTY_SQLITE_SRCS =					\
 THIRD_PARTY_SQLITE_HDRS =					\
 	third_party/sqlite/sqlite3.h				\
 
-o/$(MODE)/third_party/sqlite/sqlite.a:				\
+o/$(MODE)/third_party/sqlite/sqlite3.a:				\
 		o/$(MODE)/third_party/sqlite/sqlite3.o		\
 
 o/$(MODE)/third_party/sqlite/shell:				\
@@ -60,4 +60,4 @@ o/$(MODE)/third_party/sqlite/sqlite3.o:				\
 .PHONY: o/$(MODE)/third_party/sqlite
 o/$(MODE)/third_party/sqlite:					\
 		o/$(MODE)/third_party/sqlite/shell		\
-		o/$(MODE)/third_party/sqlite/sqlite.a		\
+		o/$(MODE)/third_party/sqlite/sqlite3.a		\

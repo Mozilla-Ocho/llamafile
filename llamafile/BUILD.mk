@@ -63,6 +63,7 @@ o/$(MODE)/llamafile:						\
 		o/$(MODE)/llamafile/parse_cidr_test.runs	\
 		o/$(MODE)/llamafile/pool_cancel_test.runs	\
 		o/$(MODE)/llamafile/pool_test.runs		\
+		o/$(MODE)/llamafile/json_test.runs		\
 		o/$(MODE)/llamafile/thread_test.runs		\
 		o/$(MODE)/llamafile/vmathf_test.runs		\
 
@@ -155,6 +156,12 @@ o/$(MODE)/llamafile/tinyblas_cpu_sgemm_arm82.o:		\
 
 ################################################################################
 # testing
+
+o/$(MODE)/llamafile/json_test:						\
+		o/$(MODE)/llamafile/json_test.o				\
+		o/$(MODE)/llamafile/json.o				\
+		o/$(MODE)/llamafile/hextoint.o				\
+		o/$(MODE)/double-conversion/double-conversion.a		\
 
 o/$(MODE)/llamafile/vmathf_test:			\
 		o/$(MODE)/llamafile/vmathf_test.o	\

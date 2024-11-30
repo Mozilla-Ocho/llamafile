@@ -17,9 +17,9 @@
 
 #include "client.h"
 #include "llama.cpp/llama.h"
+#include "llamafile/json.h"
 #include "llamafile/server/cleanup.h"
 #include "llamafile/server/fastjson.h"
-#include "llamafile/server/json.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/signals.h"
 #include "llamafile/server/utils.h"
@@ -63,20 +63,19 @@ Client::get_tokenize_params(TokenizeParams* params)
         } else if (IsMimeType(HeaderData(kHttpContentType),
                               HeaderLength(kHttpContentType),
                               "application/json")) {
-            std::pair<Json::Status, Json> json =
-              Json::parse(std::string(payload_));
-            if (json.first != Json::success)
-                return send_error(400, Json::StatusToString(json.first));
-            if (!json.second.isObject())
+            auto [status, json] = Json::parse(std::string(payload_));
+            if (status != Json::success)
+                return send_error(400, Json::StatusToString(status));
+            if (!json.isObject())
                 return send_error(400, "JSON body must be an object");
-            if (!json.second["prompt"].isString())
+            if (!json["prompt"].isString())
                 return send_error(400, "JSON missing \"prompt\" key");
-            params->content = std::move(json.second["prompt"].getString());
+            params->content = std::move(json["prompt"].getString());
             params->prompt = params->content;
-            if (json.second["add_special"].isBool())
-                params->add_special = json.second["add_special"].getBool();
-            if (json.second["parse_special"].isBool())
-                params->parse_special = json.second["parse_special"].getBool();
+            if (json["add_special"].isBool())
+                params->add_special = json["add_special"].getBool();
+            if (json["parse_special"].isBool())
+                params->parse_special = json["parse_special"].getBool();
         } else {
             return send_error(501, "Content Type Not Implemented");
         }
@@ -100,10 +99,6 @@ Client::tokenize()
     defer_cleanup(cleanup_tokenize_params, params);
     if (!get_tokenize_params(params))
         return false;
-
-    // get optional parameters
-    bool add_special = atob(or_empty(param("add_special")), true);
-    bool parse_special = atob(or_empty(param("parse_special")), false);
 
     // setup statistics
     rusage rustart = {};
@@ -130,10 +125,10 @@ Client::tokenize()
     char* p = obuf_.p;
     p = stpcpy(p, "{\n");
     p = stpcpy(p, "  \"add_special\": ");
-    p = encode_bool(p, add_special);
+    p = encode_bool(p, params->add_special);
     p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"parse_special\": ");
-    p = encode_bool(p, parse_special);
+    p = encode_bool(p, params->parse_special);
     p = stpcpy(p, ",\n");
     p = stpcpy(p, "  \"tokens\": [");
     for (int i = 0; i < count; ++i) {

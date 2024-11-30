@@ -18,12 +18,12 @@
 #include "client.h"
 #include "llama.cpp/llama.h"
 #include "llama.cpp/sampling.h"
+#include "llamafile/json.h"
 #include "llamafile/llama.h"
 #include "llamafile/macros.h"
 #include "llamafile/server/atom.h"
 #include "llamafile/server/cleanup.h"
 #include "llamafile/server/fastjson.h"
-#include "llamafile/server/json.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/server.h"
 #include "llamafile/server/slot.h"
@@ -461,9 +461,8 @@ Client::v1_chat_completions()
         state->atoms.emplace_back(llama_token_bos(model_));
 
     // turn text into tokens
-    state->prompt =
-      llama_chat_apply_template(
-        model_, FLAG_chat_template, params->messages, ADD_ASSISTANT);
+    state->prompt = llama_chat_apply_template(
+      model_, FLAG_chat_template, params->messages, ADD_ASSISTANT);
     atomize(model_, &state->atoms, state->prompt, PARSE_SPECIAL);
 
     // find appropriate slot

@@ -16,13 +16,25 @@
 // limitations under the License.
 
 #pragma once
-#include "third_party/sqlite/sqlite3.h"
+#include "json.h"
+#include <__fwd/string.h>
 
-namespace llamafile {
+struct sqlite3;
+
+namespace lf {
 namespace db {
 
-sqlite3* open(const char*);
-void close(sqlite3*);
+sqlite3 *open();
+void close(sqlite3 *);
+int64_t add_chat(sqlite3 *, const std::string &, const std::string &);
+int64_t add_message(sqlite3 *, int64_t, const std::string &, const std::string &, double, double,
+                    double, double);
+bool update_title(sqlite3 *, int64_t, const std::string &);
+bool delete_message(sqlite3 *, int64_t);
+jt::Json get_chat(sqlite3 *, int64_t);
+jt::Json get_chats(sqlite3 *);
+jt::Json get_message(sqlite3 *, int64_t);
+jt::Json get_messages(sqlite3 *, int64_t);
 
 } // namespace db
-} // namespace llamafile
+} // namespace lf
