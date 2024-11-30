@@ -25,6 +25,7 @@ extern bool FLAG_trap;
 extern bool FLAG_unsecure;
 extern const char *FLAG_chat_template;
 extern const char *FLAG_db;
+extern const char *FLAG_db_startup_sql;
 extern const char *FLAG_file;
 extern const char *FLAG_ip_header;
 extern const char *FLAG_listen;

@@ -86,14 +86,9 @@ static sqlite3 *open_impl() {
         return nullptr;
     }
     char *errmsg = nullptr;
-    if (sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errmsg) != SQLITE_OK) {
-        fprintf(stderr, "%s: failed to set journal mode to wal: %s\n", path.c_str(), errmsg);
-        sqlite3_free(errmsg);
-        sqlite3_close(db);
-        return nullptr;
-    }
-    if (sqlite3_exec(db, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, &errmsg) != SQLITE_OK) {
-        fprintf(stderr, "%s: failed to set synchronous to normal: %s\n", path.c_str(), errmsg);
+    if (sqlite3_exec(db, FLAG_db_startup_sql, nullptr, nullptr, &errmsg) != SQLITE_OK) {
+        fprintf(stderr, "%s: failed to execute startup SQL (%s) because: %s", path.c_str(),
+                FLAG_db_startup_sql, errmsg);
         sqlite3_free(errmsg);
         sqlite3_close(db);
         return nullptr;

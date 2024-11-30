@@ -1,4 +1,4 @@
-.Dd August 17, 2024
+.Dd November 30, 2024
 .Dt LLAMAFILER 1
 .Os Mozilla Ocho
 .Sh NAME
@@ -30,6 +30,11 @@ recommended that you run multiple instances of llamafiler behind a
 reverse proxy such as NGINX or Redbean.
 .It Fl mm Ar FNAME , Fl Fl mmproj Ar FNAME
 Path of vision model weights.
+.It Fl Fl db Ar FILE
+Specifies path of sqlite3 database.
+.Pp
+The default is
+.Pa ~/.llamafile/llamafile.sqlite3
 .It Fl l Ar HOSTPORT , Fl Fl listen Ar HOSTPORT
 Specifies the local [HOST:]PORT on which the HTTP server should listen.
 By default this is 0.0.0.0:8080 which means llamafiler will bind to port
@@ -55,8 +60,10 @@ Please note that
 has a strong influence on how many slots can be created.
 .It Fl p Ar TEXT , Fl Fl prompt Ar TEXT
 Specifies system prompt. This value is passed along to the web frontend.
-.It Fl Fl no-display-prompt Ar TEXT
+.It Fl Fl no-display-prompt
 Hide system prompt from web user interface.
+.It Fl Fl nologo
+Hide llamafile logo icon from web ui.
 .It Fl Fl url-prefix Ar URLPREFIX
 Specifies a URL prefix (subdirectory) under which the HTTP server will
 make the API accessible, e.g. /lamafiler. Useful when running llamafiler
@@ -130,6 +137,39 @@ supported by the host operating system. The default keepalive is 5.
 Size of HTTP output buffer size, in bytes. Default is 1048576.
 .It Fl Fl http-ibuf-size Ar N
 Size of HTTP input buffer size, in bytes. Default is 1048576.
+.It Fl Fl chat-template Ar NAME
+Specifies or overrides chat template for model.
+.Pp
+Normally the GGUF metadata tokenizer.chat_template will specify this
+value for instruct models. This flag may be used to either override the
+chat template, or specify one when the GGUF metadata field is absent,
+which effectively forces the web ui to enable chatbot mode.
+.Pp
+Supported chat template names are: chatml, llama2, llama3, mistral
+(alias for llama2), phi3, zephyr, monarch, gemma, gemma2 (alias for
+gemma), orion, openchat, vicuna, vicuna-orca, deepseek, command-r,
+chatglm3, chatglm4, minicpm, deepseek2, or exaone3.
+.Pp
+It is also possible to pass the jinja2 template itself to this argument.
+Since llamafiler doesn't currently support jinja2, a heuristic will be
+used to guess which of the above templates the template represents.
+.It Fl Fl completion-mode
+Forces web ui to operate in completion mode, rather than chat mode.
+Normally the web ui chooses its mode based on the GGUF metadata. Base
+models normally don't define tokenizer.chat_template whereas instruct
+models do. If it's a base model, then the web ui will automatically use
+completion mode only, without needing to specify this flag. This flag is
+useful in cases where a prompt template is defined by the gguf, but it
+is desirable for the chat interface to be disabled.
+.It Fl Fl db-startup-sql
+Specifies SQL code that should be executed whenever connecting to the
+SQLite database. The default is the following code, which enables the
+write-ahead log.
+.Bd -literal -offset indent
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+.Ed
+.El
 .Sh EXAMPLE
 Here's an example of how you might start this server:
 .Pp

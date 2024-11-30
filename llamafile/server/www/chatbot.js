@@ -22,6 +22,7 @@ const DEFAULT_SYSTEM_PROMPT =
 const DEFAULT_FLAGZ = {
   "model": null,
   "prompt": null,
+  "nologo": false,
   "no_display_prompt": false,
   "frequency_penalty": 0,
   "presence_penalty": 0,
@@ -368,6 +369,9 @@ function updateModelInfo() {
     document.title = `${modelName} - llamafile`;
     document.getElementById("model").textContent = modelName;
     document.getElementById("model-completions").textContent = modelName;
+  }
+  if (!flagz.nologo) {
+    document.getElementById("logo").style.display = "inline-block";
   }
 }
 
