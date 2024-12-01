@@ -2,6 +2,8 @@
 #ifndef SHELL_H
 #define SHELL_H
 
+#include "third_party/sqlite/sqlite3.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
