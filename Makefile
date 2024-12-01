@@ -16,6 +16,7 @@ include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
 include stable-diffusion.cpp/BUILD.mk
 include whisper.cpp/BUILD.mk
+include jamfile/BUILD.mk
 
 # the root package is `o//` by default
 # building a package also builds its sub-packages

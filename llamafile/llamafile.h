@@ -65,6 +65,7 @@ extern int FLAG_workers;
 extern unsigned FLAG_seed;
 
 struct llamafile;
+struct llamafile *llamafile_open_xxx(const char *, const char *);
 struct llamafile *llamafile_open_gguf(const char *, const char *);
 void llamafile_close(struct llamafile *);
 long llamafile_read(struct llamafile *, void *, size_t);

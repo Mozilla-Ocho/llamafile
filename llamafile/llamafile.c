@@ -304,6 +304,30 @@ struct llamafile *llamafile_open_gguf(const char *fname, const char *mode) {
     return llamafile_open_zip(fname, 0, mode);
 }
 
+struct llamafile *llamafile_open_xxx(const char *fname, const char *mode) {
+    // support filenames like `foo.zip@xxx`
+    const char *p;
+    if ((p = strchr(fname, '@'))) {
+        return llamafile_open_zip(gc(strndup(fname, p - fname)), p + 1, mode);
+    }
+
+    // open from file or from our own executable if it doesn't exist
+    struct llamafile *file;
+    if (!(file = llamafile_open_file(fname, mode))) {
+        if (errno == ENOENT) {
+            if (!(file = llamafile_open_zip(GetProgramExecutableName(), fname, mode))) {
+                errno = ENOENT;
+                return 0;
+            }
+            return file;
+        } else {
+            return 0;
+        }
+    }
+    // TODO otherwise assume user opened a .zip or .llamafile?
+    return file;
+}
+
 FILE *llamafile_fp(struct llamafile *file) {
     return file->fp;
 }

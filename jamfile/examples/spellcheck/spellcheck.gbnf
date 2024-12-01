@@ -1,0 +1,4 @@
+root ::= good | list
+good ::= "ok"
+list ::= item ( "\n" item )*
+item ::= "- `" [-_0-9A-Za-z]+ "` should be `" [-_0-9A-Za-z]+ "`"
