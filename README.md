@@ -275,7 +275,7 @@ enable you to work around Windows' 4GB executable file size limit.
 For Windows users, here's an example for the Mistral LLM:
 
 ```sh
-curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.8.11/llamafile-0.8.11
+curl -L -o llamafile.exe https://github.com/Mozilla-Ocho/llamafile/releases/download/0.8.17/llamafile-0.8.17
 curl -L -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
 ./llamafile.exe -m mistral.gguf
 ```
