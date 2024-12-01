@@ -188,6 +188,13 @@ void llamafile_get_flags(int argc, char **argv) {
             continue;
         }
 
+        if (!strcmp(flag, "--prompt") || !strcmp(flag, "--system-prompt")) {
+            if (i == argc)
+                missing("--prompt");
+            FLAG_prompt = argv[i++];
+            continue;
+        }
+
         if (!strcmp(flag, "--db")) {
             if (i == argc)
                 missing("--db");

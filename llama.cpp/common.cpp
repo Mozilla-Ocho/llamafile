@@ -311,9 +311,10 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         }
         return true;
     }
-    if (arg == "-p" || arg == "--prompt") {
+    if (arg == "-p" || arg == "--prompt" || arg == "--system-prompt") {
         CHECK_ARG
         params.prompt = argv[i];
+        FLAG_prompt = argv[i]; // [jart]
         return true;
     }
     if (arg == "-e" || arg == "--escape") {
