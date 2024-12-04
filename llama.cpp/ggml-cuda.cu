@@ -359,15 +359,30 @@ GGML_CALL bool ggml_cuda_link(const struct ggml_backend_api *backend_api) {
 
     if (!FLAG_log_disable) {
         int kernelVersion = 0;
+#ifdef __HIP_PLATFORM_AMD__
+        hipDriverGetVersion(&kernelVersion);
+        fprintf(stderr, "%s: HIP driver version %d.%d.%d\n", __func__,
+                kernelVersion / 10000000, (kernelVersion / 100000) % 100,
+                kernelVersion % 100000); 
+#else
         cudaDriverGetVersion(&kernelVersion);
         fprintf(stderr, "%s: CUDA kernel version %d.%d\n", __func__,
                 kernelVersion / 1000, (kernelVersion % 1000) / 10);
+#endif
 
         int runtimeVersion = 0;
+#ifdef __HIP_PLATFORM_AMD__
+        hipRuntimeGetVersion(&runtimeVersion);
+        fprintf(stderr, "%s: HIP runtime version is %d.%d.%d%s\n", __func__,
+                runtimeVersion / 10000000, (runtimeVersion / 100000) % 100,
+                runtimeVersion % 100000,
+                runtimeVersion > kernelVersion ? " (!!!)" : "");
+#else
         cudaRuntimeGetVersion(&runtimeVersion);
         fprintf(stderr, "%s: CUDA runtime version is %d.%d%s\n", __func__,
                 runtimeVersion / 1000, (runtimeVersion % 1000) / 10,
                 runtimeVersion > kernelVersion ? " (!!!)" : "");
+#endif
 
         fprintf(stderr, "%s: welcome to " GGML_CUDA_NAME " SDK with " BLAS_NAME "\n", __func__);
     }
