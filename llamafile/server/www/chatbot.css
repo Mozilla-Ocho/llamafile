@@ -482,6 +482,20 @@ ul li:first-child {
   background: #0b5ed7;
 }
 
+.upload-button {
+  padding-left: .5rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.upload-button:hover {
+  color: #0d6efd;
+}
+
 .mode-dropdown {
   display: none;
 }
