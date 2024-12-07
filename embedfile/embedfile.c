@@ -108,6 +108,10 @@ int default_model_dimensions(sqlite3 *db, int64_t *dimensions) {
     sqlite3_bind_text(stmt, 1, "default", -1, SQLITE_STATIC);
 
     rc = sqlite3_step(stmt);
+    if(rc == SQLITE_DONE) {
+      return SQLITE_EMPTY;
+    }
+
     assert(rc == SQLITE_ROW);
     *dimensions = sqlite3_column_int64(stmt, 0);
     sqlite3_finalize(stmt);
@@ -285,6 +289,20 @@ int monitor_stmt(sqlite3_stmt *stmt, int64_t total) {
 
     return sqlite3_finalize(stmt);
 }
+#define CHECK_SQLITE_NOT_OK(rc, db) \
+    do { \
+        if ((rc) != SQLITE_OK) { \
+            fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db)); \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+#define CHECK_SQLITE_NOT_DONE(rc, db) \
+    do { \
+        if ((rc) != SQLITE_DONE) { \
+            fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db)); \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
 
 int cmd_import(int argc, char *argv[]) {
     char *embedColumn = NULL;
@@ -444,6 +462,10 @@ int cmd_import(int argc, char *argv[]) {
     if (!table_exists(db, "vec_items")) {
         int64_t dimensions;
         rc = default_model_dimensions(db, &dimensions);
+        if(rc == SQLITE_EMPTY) {
+          fprintf(stderr, "ERROR: No embeddings model registed with embedfile yet. Try with the `--model path/to/model.gguf` flag.");
+          return 1;
+        }
         assert(rc == SQLITE_OK);
 
         zSql =
@@ -471,9 +493,9 @@ int cmd_import(int argc, char *argv[]) {
     assert(zSql);
     rc = sqlite3_prepare_v2(db, zSql, -1, &stmt, NULL);
     sqlite3_free((void *)zSql);
-    assert(rc == SQLITE_OK);
+    CHECK_SQLITE_NOT_OK(rc, db);
     rc = sqlite3_step(stmt);
-    assert(rc == SQLITE_DONE);
+    CHECK_SQLITE_NOT_DONE(rc, db);
     sqlite3_finalize(stmt);
 
     zSql = sqlite3_mprintf("SELECT COUNT(*) from temp.source;", embedColumn);
@@ -538,6 +560,7 @@ int main(int argc, char **argv) {
                     SQLITE_VEC_VERSION, SQLITE_LEMBED_VERSION);
             return 0;
         } else if (sqlite3_stricmp(arg, "--help") == 0 || sqlite3_stricmp(arg, "-h") == 0) {
+            llamafile_help("/zip/embedfile/embedfile.1.asc");
             fprintf(stderr,
                     "embedfile %s, llamafile %s, SQLite %s, sqlite-vec=%s, sqlite-lembed=%s\n",
                     EMBEDFILE_VERSION, LLAMAFILE_VERSION_STRING, sqlite3_version,
