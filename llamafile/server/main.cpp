@@ -107,6 +107,12 @@ main(int argc, char* argv[])
 
     // install security
     if (!FLAG_unsecure) {
+        const char* promises;
+        if (FLAG_www_root) {
+            promises = "stdio anet rpath";
+        } else {
+            promises = "stdio anet";
+        }
         if (pledge(0, 0)) {
             SLOG("warning: this OS doesn't support pledge() security");
         } else if (pledge("stdio anet", 0)) {

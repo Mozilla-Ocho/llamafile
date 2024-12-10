@@ -382,7 +382,6 @@ Client::append_http_response_message(char* p, int code, const char* reason)
 bool
 Client::send_response(char* p0, char* p, std::string_view content)
 {
-    cleanup();
     pthread_testcancel();
     should_send_error_if_canceled_ = false;
 
