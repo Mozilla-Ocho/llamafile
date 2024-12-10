@@ -24,8 +24,9 @@
 #include "llamafile/server/tokenbucket.h"
 #include "llamafile/threadlocal.h"
 #include "llamafile/trust.h"
-#include <cosmo.h>
+#include <atomic>
 #include <cassert>
+#include <cosmo.h>
 #include <exception>
 #include <pthread.h>
 
@@ -135,6 +136,28 @@ Worker::handle()
 void
 Worker::run()
 {
+    if (!FLAG_unsecure) {
+        static std::atomic<bool> once;
+        if (llamafile_has_gpu()) {
+            if (!once.exchange(true))
+                SLOG("warning: gpu mode disables pledge security");
+        } else {
+            const char* promises;
+            if (FLAG_www_root && !startswith(FLAG_www_root, "/zip/")) {
+                promises = "stdio anet rpath";
+            } else {
+                promises = "stdio anet";
+            }
+            if (pledge(0, 0)) {
+                if (!once.exchange(true))
+                    SLOG("warning: this OS doesn't support pledge() security");
+            } else if (pledge(promises, 0)) {
+                perror("pledge");
+                exit(1);
+            }
+        }
+    }
+
     server_->lock();
     dll_make_first(&server_->idle_workers, &elem_);
     server_->worker_count.fetch_add(1, std::memory_order_acq_rel);

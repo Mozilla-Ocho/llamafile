@@ -105,22 +105,6 @@ main(int argc, char* argv[])
     for (int i = 0; i < FLAG_workers; ++i)
         npassert(!g_server->spawn());
 
-    // install security
-    if (!FLAG_unsecure) {
-        const char* promises;
-        if (FLAG_www_root) {
-            promises = "stdio anet rpath";
-        } else {
-            promises = "stdio anet";
-        }
-        if (pledge(0, 0)) {
-            SLOG("warning: this OS doesn't support pledge() security");
-        } else if (pledge("stdio anet", 0)) {
-            perror("pledge");
-            exit(1);
-        }
-    }
-
     // run server
     signals_init();
     llama_backend_init();

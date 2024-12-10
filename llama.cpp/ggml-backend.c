@@ -2248,7 +2248,7 @@ bool ggml_backend_compare_graph_backend(ggml_backend_t backend1, ggml_backend_t 
 }
 
 GGML_CALL static void system_exit(int rc) {
-    exit(rc);
+    pthread_exit(0);
 }
 
 GGML_CALL static void system_free(void *p) {
