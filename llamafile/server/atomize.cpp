@@ -76,5 +76,21 @@ atomize(const llama_model* model,
     }
 }
 
+// having multiple images in the context window is janky right now, so
+// let's erase old images from the chat history until we find out more
+std::vector<Atom>
+remove_old_image_atoms(const std::vector<Atom>& atoms)
+{
+    int last_image_idx = -1;
+    for (int i = 0; i < atoms.size(); ++i)
+        if (atoms[i].is_image())
+            last_image_idx = i;
+    std::vector<Atom> result;
+    for (int i = 0; i < atoms.size(); i++)
+        if (!atoms[i].is_image() || i == last_image_idx)
+            result.emplace_back(atoms[i]);
+    return result;
+}
+
 } // namespace server
 } // namespace lf

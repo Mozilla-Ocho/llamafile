@@ -32,6 +32,7 @@
 #include "llamafile/server/worker.h"
 #include "llamafile/string.h"
 #include "llamafile/vector.h"
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <sys/resource.h>
@@ -163,6 +164,33 @@ make_event(const Json& json)
     return s;
 }
 
+static int
+has_images(const std::vector<Atom>& atoms)
+{
+    for (const Atom& atom : atoms)
+        if (atom.is_image())
+            return true;
+    return false;
+}
+
+static int
+count_tokens(const std::vector<Atom>& atoms)
+{
+    int n = 0;
+    for (const Atom& atom : atoms)
+        n += atom.ctx_used();
+    return n;
+}
+
+static int
+count_bytes(const std::vector<llama_chat_msg>& messages)
+{
+    int n = 0;
+    for (const llama_chat_msg& message : messages)
+        n += message.content.size();
+    return n;
+}
+
 bool
 Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
 {
@@ -226,6 +254,8 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
             return send_error(400, "message role not system user assistant");
         if (!message["content"].isString())
             return send_error(400, "message must have string content");
+        if (message["content"].getString().empty())
+            return send_error(400, "message must not have empty content");
         params->messages.emplace_back(message["role"].getString(),
                                       message["content"].getString());
     }
@@ -456,18 +486,71 @@ Client::v1_chat_completions()
     V1ChatCompletionResponse* response = new V1ChatCompletionResponse;
     defer_cleanup(cleanup_response, response);
 
-    // add bos token if it's needed
-    if (llama_should_add_bos_token(model_))
-        state->atoms.emplace_back(llama_token_bos(model_));
+    // turn prompt into atom array that'll fit in context window
+    for (;;) {
+        // add bos token if it's needed
+        if (llama_should_add_bos_token(model_))
+            state->atoms.emplace_back(llama_token_bos(model_));
 
-    // turn text into tokens
-    state->prompt = llama_chat_apply_template(
-      model_, FLAG_chat_template, params->messages, ADD_ASSISTANT);
-    atomize(model_, &state->atoms, state->prompt, PARSE_SPECIAL);
+        // turn text into tokens
+        state->prompt = llama_chat_apply_template(
+          model_, FLAG_chat_template, params->messages, ADD_ASSISTANT);
+        atomize(model_, &state->atoms, state->prompt, PARSE_SPECIAL);
 
-    // find appropriate slot
-    slot_ = worker_->server_->slots_->take(state->atoms);
-    defer_cleanup(cleanup_slot, this);
+        // we don't support multiple images yet
+        state->atoms = remove_old_image_atoms(state->atoms);
+
+        // acquire best slot
+        if (!slot_) {
+            slot_ = worker_->server_->slots_->take(state->atoms);
+            defer_cleanup(cleanup_slot, this);
+        }
+
+        // check if image uploading is supported
+        if (!slot_->clip_ctx_ && has_images(state->atoms))
+            return send_error(400, "no_vision_model");
+
+        // check if we have enough context
+        int space = slot_->ctx_size();
+        int avail = space - space * FLAG_reserve_tokens;
+        int need = count_tokens(state->atoms);
+        unassert(avail > 0);
+        if (need <= avail)
+            break;
+
+        // calling atomize() again will append
+        state->atoms.clear();
+
+        // forget old messages to clear up space in context window
+        //
+        // to avoid calling tokenize quadratically, we use a crude byte
+        // count heuristic to determine how many messages to drop. this
+        // is needed since the client sends the whole history each time
+        unassert(!params->messages.empty());
+        int keep_msgs = params->messages[0].role == "system";
+        int max_forget_msgs = (int)params->messages.size() - (keep_msgs + 1);
+        if (max_forget_msgs <= 0) {
+            SLOG("ran out of chat messages to forget");
+            return send_error(400, "out_of_context_due_to_long_message");
+        }
+        int bytes = count_bytes(params->messages);
+        double percent_to_remember = (double)avail / need;
+        int bytes_to_delete = bytes * (1 - percent_to_remember);
+        auto first = params->messages.begin();
+        if (keep_msgs)
+            ++first;
+        auto last = first;
+        int bytes_deleted = 0;
+        int forgotten_msgs = 0;
+        do {
+            bytes_deleted += last->content.size();
+            ++forgotten_msgs;
+            ++last;
+        } while (bytes_deleted < bytes_to_delete &&
+                 forgotten_msgs < max_forget_msgs);
+        params->messages.erase(first, last);
+        SLOG("forgot %d old messages", forgotten_msgs);
+    }
 
     // init sampling
     llama_sampling_context* sampler = create_sampler(params);
@@ -517,7 +600,12 @@ Client::v1_chat_completions()
 
     if (prompt_tokens < 0) {
         SLOG("slot prefill failed: %s", Slot::describe_error(prompt_tokens));
-        return send_error(500, Slot::describe_error(prompt_tokens));
+        if (!params->stream) {
+            return send_error(500, Slot::describe_error(prompt_tokens));
+        } else {
+            close_connection_ = true;
+            return false;
+        }
     }
 
     // initialize response
@@ -541,7 +629,7 @@ Client::v1_chat_completions()
         llama_token id = llama_sampling_sample(sampler, slot_->ctx_, NULL);
         llama_sampling_accept(sampler, slot_->ctx_, id, APPLY_GRAMMAR);
         ++completion_tokens;
-        if (!slot_->eval_token(id)) {
+        if (slot_->eval_token(id) < 0) {
             SLOG("ran out of context window");
             break;
         }

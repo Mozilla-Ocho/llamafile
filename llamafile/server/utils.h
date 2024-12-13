@@ -44,5 +44,8 @@ atomize(const llama_model* model,
         std::string_view s,
         bool parse_special);
 
+std::vector<Atom>
+remove_old_image_atoms(const std::vector<Atom>&);
+
 } // namespace server
 } // namespace lf

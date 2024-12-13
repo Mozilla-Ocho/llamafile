@@ -67,6 +67,7 @@ const char *FLAG_www_root = "/zip/www";
 double FLAG_token_rate = 1;
 float FLAG_frequency_penalty = 0;
 float FLAG_presence_penalty = 0;
+float FLAG_reserve_tokens = .15;
 float FLAG_temperature = .8;
 float FLAG_top_p = .95;
 int FLAG_batch = 256;
@@ -460,6 +461,24 @@ void llamafile_get_flags(int argc, char **argv) {
 
         if (!strcmp(flag, "--no-warmup")) {
             FLAG_warmup = false;
+            continue;
+        }
+
+        if (!strcmp(flag, "--reserve-tokens")) {
+            if (i == argc)
+                missing("--reserve-tokens");
+            const char *s = argv[i++];
+            if (strchr(s, '.')) {
+                float f = atof(s);
+                if (!(0 < f && f <= 1))
+                    error("--reserve-tokens FLOAT must be on the interval (0,1]");
+                FLAG_reserve_tokens = f;
+            } else {
+                int n = atoi(s);
+                if (!(1 <= n && n <= 100))
+                    error("--reserve-tokens INT must be between 1 and 100");
+                FLAG_reserve_tokens = n / 100.;
+            }
             continue;
         }
 

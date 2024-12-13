@@ -169,6 +169,12 @@ write-ahead log.
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
 .Ed
+.It Fl Fl reserve-tokens
+Percent of context window to reserve for predicted tokens. When the
+server runs out of context window, old chat messages will be forgotten
+until this percent of the context is empty. The default is 15%. If this
+is specified as a floating point number, e.g. 0.15, then it'll be
+multiplied by 100 to get the percent.
 .El
 .Sh EXAMPLE
 Here's an example of how you might start this server:

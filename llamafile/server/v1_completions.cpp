@@ -402,6 +402,9 @@ Client::v1_completions()
     // turn text into tokens
     atomize(model_, &state->atoms, params->prompt, PARSE_SPECIAL);
 
+    // we don't support multiple images yet
+    state->atoms = remove_old_image_atoms(state->atoms);
+
     // find appropriate slot
     slot_ = worker_->server_->slots_->take(state->atoms);
     defer_cleanup(cleanup_slot, this);
@@ -456,7 +459,7 @@ Client::v1_completions()
         llama_token id = llama_sampling_sample(sampler, slot_->ctx_, NULL);
         llama_sampling_accept(sampler, slot_->ctx_, id, DONT_APPLY_GRAMMAR);
         ++completion_tokens;
-        if (!slot_->eval_token(id)) {
+        if (slot_->eval_token(id) < 0) {
             SLOG("ran out of context window");
             break;
         }

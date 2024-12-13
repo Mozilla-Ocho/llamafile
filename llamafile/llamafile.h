@@ -49,6 +49,7 @@ extern int FLAG_http_obuf_size;
 extern int FLAG_keepalive;
 extern int FLAG_main_gpu;
 extern int FLAG_n_gpu_layers;
+extern float FLAG_reserve_tokens;
 extern int FLAG_slots;
 extern int FLAG_split_mode;
 extern int FLAG_threads;

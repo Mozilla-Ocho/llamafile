@@ -57,22 +57,6 @@ generate_system_fingerprint(const llama_context_params* cparams)
     return b;
 }
 
-// having multiple images in the context window is janky right now, so
-// let's erase old images from the chat history until we find out more
-static std::vector<Atom>
-remove_old_image_atoms(const std::vector<Atom>& atoms)
-{
-    int last_image_idx = -1;
-    for (int i = 0; i < atoms.size(); ++i)
-        if (atoms[i].is_image())
-            last_image_idx = i;
-    std::vector<Atom> result;
-    for (int i = 0; i < atoms.size(); i++)
-        if (!atoms[i].is_image() || i == last_image_idx)
-            result.emplace_back(atoms[i]);
-    return result;
-}
-
 const char*
 Slot::describe_error(int err)
 {
@@ -255,11 +239,14 @@ Slot::eval_atoms(const std::vector<Atom>& atoms,
             if (atom.is_token()) {
                 total_work += 1;
             } else if (atom.is_image()) {
-                llava_image_embed* image_embed = llava_image_embed_make_with_bytes(
-                clip_ctx_,
-                FLAG_threads_batch,
-                (const unsigned char*)atom.image().bytes().data(),
-                atom.image().bytes().size());
+                if (!clip_ctx_)
+                    return no_vision_model;
+                llava_image_embed* image_embed =
+                  llava_image_embed_make_with_bytes(
+                    clip_ctx_,
+                    FLAG_threads_batch,
+                    (const unsigned char*)atom.image().bytes().data(),
+                    atom.image().bytes().size());
                 if (image_embed) {
                     total_work += image_embed->n_image_pos;
                     llava_image_embed_free(image_embed);
@@ -299,11 +286,10 @@ Slot::eval_atoms(const std::vector<Atom>& atoms,
 }
 
 int
-Slot::prefill(const std::vector<Atom>& atoms_, const ProgressCallback& progress)
+Slot::prefill(const std::vector<Atom>& atoms, const ProgressCallback& progress)
 {
     if (!ctx_)
         return uninitialized;
-    std::vector<Atom> atoms = remove_old_image_atoms(atoms_);
     int used_tokens = ctx_used();
     int reuse_atoms = 0;
     int reuse_tokens = 0;
