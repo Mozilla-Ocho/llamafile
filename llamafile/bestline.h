@@ -42,6 +42,7 @@ void bestlineMaskModeEnable(void);
 void bestlineUserIO(int (*)(int, void *, int), int (*)(int, const void *, int),
                     int (*)(int, int, int));
 
+int bestlineCharacterWidth(int);
 char bestlineIsSeparator(unsigned);
 char bestlineNotSeparator(unsigned);
 char bestlineIsXeparator(unsigned);
