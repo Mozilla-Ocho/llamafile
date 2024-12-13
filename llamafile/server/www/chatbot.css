@@ -267,21 +267,23 @@ ul li:first-child {
 }
 
 .redo-button {
+  padding: 0.5rem .5rem;
+  background: #6c757d;
+  color: white;
   padding: 8px;
-  background: transparent;
   border: none;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 20px;
-  color: #666;
   transition: color 0.2s;
 }
 
 .redo-button:hover {
-  color: #000;
+  background: #5c636a;
 }
 
 .settings-button {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem .5rem;
   background: #6c757d;
   color: white;
   border: none;
@@ -483,17 +485,21 @@ ul li:first-child {
 }
 
 .upload-button {
-  padding-left: .5rem;
-  background: transparent;
+  padding: 0.5rem .5rem;
+  background: #6c757d;
+  color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 1rem;
   transition: color 0.2s;
 }
 
+.upload-button img {
+  vertical-align: middle;
+}
+
 .upload-button:hover {
-  color: #0d6efd;
+  background: #5c636a;
 }
 
 .mode-dropdown {

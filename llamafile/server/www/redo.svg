@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Circular arrow path -->
+  <path 
+    d="M18.4 10.6C17.5 8.2 15 6.5 12 6.5c-4.1 0-7.5 3.4-7.5 7.5s3.4 7.5 7.5 7.5c2.3 0 4.4-1.1 5.8-2.8"
+    fill="none"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+  <!-- Arrow head -->
+  <path 
+    d="M19.5 5.5v5h-5"
+    fill="none"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
