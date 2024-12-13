@@ -675,3 +675,8 @@ ul li:first-child {
   width: 0;
   transition: width 0.2s ease-out;
 }
+
+.ooc {
+  vertical-align: middle;
+  margin-left: 0.2rem;
+}

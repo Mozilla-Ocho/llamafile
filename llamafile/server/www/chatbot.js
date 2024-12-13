@@ -132,6 +132,7 @@ async function handleChatStream(response) {
           try {
             const parsed = JSON.parse(data);
             const content = parsed.choices[0]?.delta?.content || "";
+            const finishReason = parsed.choices[0]?.finish_reason;
 
             // handle prefill progress
             if (parsed.x_prefill_progress !== undefined) {
@@ -153,6 +154,18 @@ async function handleChatStream(response) {
               streamingMessageContent.push(content);
               high.feed(content);
               scrollToBottom();
+            }
+
+            // we don't supply max_tokens, so "length" can
+            // only mean that we ran out of context window
+            if (finishReason === "length" && hdom) {
+              let img = hdom.push("IMG", "ooc");
+              img.src = "ooc.svg";
+              img.alt = "🚫";
+              img.title = "Message truncated due to running out of context window. Consider tuning --ctx-size and/or --reserve-tokens";
+              img.width = 16;
+              img.height = 16;
+              hdom.pop();
             }
           } catch (e) {
             console.error("Error parsing JSON:", e);
