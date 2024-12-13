@@ -167,7 +167,8 @@ Slot::eval_token(int token)
 }
 
 int
-Slot::eval_tokens(const std::vector<int>& tokens)
+Slot::eval_tokens(const std::vector<int>& tokens,
+                  const ProgressCallback& progress)
 {
     if (!ctx_)
         return uninitialized;
@@ -177,7 +178,8 @@ Slot::eval_tokens(const std::vector<int>& tokens)
     int used = ctx_used();
     if (used + N > ctx_size())
         return out_of_context;
-    std::vector<int> toks(tokens); // TODO(jart): is copying really needed?
+    std::vector<int> toks(tokens);
+    int processed = 0;
     for (int i = 0; i < N; i += FLAG_batch) {
         int n_eval = N - i;
         if (n_eval > FLAG_batch)
@@ -191,12 +193,16 @@ Slot::eval_tokens(const std::vector<int>& tokens)
         for (int j = 0; j < n_eval; ++j)
             history_.emplace_back(toks[i + j]);
         used += n_eval;
+        processed += n_eval;
+        if (progress)
+            progress(processed, N);
     }
     return N;
 }
 
 int
-Slot::eval_image(const std::string_view& bytes)
+Slot::eval_image(const std::string_view& bytes,
+                 const ProgressCallback& progress)
 {
     if (!ctx_)
         return uninitialized;
@@ -215,6 +221,7 @@ Slot::eval_image(const std::string_view& bytes)
         llava_image_embed_free(image_embed);
         return out_of_context;
     }
+    int processed = 0;
     int n_embd = llama_n_embd(llama_get_model(ctx_));
     for (int i = 0; i < N; i += FLAG_batch) {
         int n_eval = N - i;
@@ -229,6 +236,9 @@ Slot::eval_image(const std::string_view& bytes)
             return decode_image_failed;
         }
         used += n_eval;
+        processed += n_eval;
+        if (progress)
+            progress(processed, N);
     }
     llava_image_embed_free(image_embed);
     history_.emplace_back(new Image(bytes, N));
@@ -236,8 +246,34 @@ Slot::eval_image(const std::string_view& bytes)
 }
 
 int
-Slot::eval_atoms(const std::vector<Atom>& atoms)
+Slot::eval_atoms(const std::vector<Atom>& atoms,
+                 const ProgressCallback& progress)
 {
+    int total_work = 0;
+    if (progress) {
+        for (const Atom& atom : atoms) {
+            if (atom.is_token()) {
+                total_work += 1;
+            } else if (atom.is_image()) {
+                llava_image_embed* image_embed = llava_image_embed_make_with_bytes(
+                clip_ctx_,
+                FLAG_threads_batch,
+                (const unsigned char*)atom.image().bytes().data(),
+                atom.image().bytes().size());
+                if (image_embed) {
+                    total_work += image_embed->n_image_pos;
+                    llava_image_embed_free(image_embed);
+                }
+            }
+        }
+        if (total_work > FLAG_batch)
+            progress(0, total_work);
+    }
+    int processed = 0;
+    auto wrap_progress = [&](int curr, int subtotal) {
+        if (progress)
+            progress(processed + curr, total_work);
+    };
     int rc;
     int token_count = 0;
     std::vector<int> tokens;
@@ -245,23 +281,25 @@ Slot::eval_atoms(const std::vector<Atom>& atoms)
         if (atom.is_token()) {
             tokens.emplace_back(atom.token());
         } else if (atom.is_image()) {
-            if ((rc = eval_tokens(tokens)) < 0)
+            if ((rc = eval_tokens(tokens, wrap_progress)) < 0)
                 return rc;
             token_count += rc;
+            processed += rc;
             tokens.clear();
-            if ((rc = eval_image(atom.image().bytes())) < 0)
+            if ((rc = eval_image(atom.image().bytes(), wrap_progress)) < 0)
                 return rc;
             token_count += rc;
+            processed += rc;
         }
     }
-    if ((rc = eval_tokens(tokens)) < 0)
+    if ((rc = eval_tokens(tokens, wrap_progress)) < 0)
         return rc;
     token_count += rc;
     return token_count;
 }
 
 int
-Slot::prefill(const std::vector<Atom>& atoms_)
+Slot::prefill(const std::vector<Atom>& atoms_, const ProgressCallback& progress)
 {
     if (!ctx_)
         return uninitialized;
@@ -295,7 +333,7 @@ Slot::prefill(const std::vector<Atom>& atoms_)
     }
     std::vector<Atom> new_atoms(atoms.begin() + reuse_atoms, atoms.end());
     int rc;
-    if ((rc = eval_atoms(new_atoms)) < 0)
+    if ((rc = eval_atoms(new_atoms, progress)) < 0)
         return rc;
     int token_count = reuse_tokens + rc;
     SLOG("prefilled %zu tokens (after removing %zu and reusing %zu)",

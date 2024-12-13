@@ -475,17 +475,11 @@ Client::v1_chat_completions()
         return send_error(500, "failed to create sampler");
     defer_cleanup(cleanup_sampler, sampler);
 
-    // prefill time
-    int prompt_tokens = 0;
-    if ((prompt_tokens = slot_->prefill(state->atoms)) < 0) {
-        SLOG("slot prefill failed: %s", Slot::describe_error(prompt_tokens));
-        return send_error(500, Slot::describe_error(prompt_tokens));
-    }
-
     // setup response json
     response->json["id"] = generate_id();
     response->json["object"] = "chat.completion";
     response->json["model"] = params->model;
+    response->json["x_prefill_progress"] = nullptr;
     response->json["system_fingerprint"] = slot_->system_fingerprint_;
     Json& choice = response->json["choices"][0];
     choice["index"] = 0;
@@ -500,7 +494,35 @@ Client::v1_chat_completions()
             return false;
         choice["delta"]["role"] = "assistant";
         choice["delta"]["content"] = "";
-        response->json["created"] = timespec_real().tv_sec;
+    }
+
+    // prefill time
+    int prompt_tokens = 0;
+    if (params->stream) {
+        auto progress_callback = [&](int processed, int total) {
+            if (processed < total) {
+                response->json["x_prefill_progress"] =
+                  static_cast<float>(processed) / total;
+                response->json["created"] = timespec_real().tv_sec;
+                response->content = make_event(response->json);
+                if (!send_response_chunk(response->content)) {
+                    return; // Note: Can't properly handle error in callback
+                }
+            }
+        };
+        prompt_tokens = slot_->prefill(state->atoms, progress_callback);
+    } else {
+        prompt_tokens = slot_->prefill(state->atoms);
+    }
+
+    if (prompt_tokens < 0) {
+        SLOG("slot prefill failed: %s", Slot::describe_error(prompt_tokens));
+        return send_error(500, Slot::describe_error(prompt_tokens));
+    }
+
+    // initialize response
+    if (params->stream) {
+        response->json.getObject().erase("x_prefill_progress");
         response->content = make_event(response->json);
         choice.getObject().erase("delta");
         if (!send_response_chunk(response->content))

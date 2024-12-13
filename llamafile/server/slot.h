@@ -17,6 +17,7 @@
 
 #pragma once
 #include <cosmo.h>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -28,6 +29,8 @@ struct clip_ctx;
 
 namespace lf {
 namespace server {
+
+using ProgressCallback = std::function<void(int processed, int total)>;
 
 struct Atom;
 struct Image;
@@ -59,10 +62,10 @@ struct Slot
     int ctx_used() const;
     bool start();
     int eval_token(int);
-    int eval_image(const std::string_view&);
-    int eval_tokens(const std::vector<int>&);
-    int eval_atoms(const std::vector<Atom>&);
-    int prefill(const std::vector<Atom>&);
+    int eval_tokens(const std::vector<int>&, const ProgressCallback& = nullptr);
+    int eval_image(const std::string_view&, const ProgressCallback& = nullptr);
+    int eval_atoms(const std::vector<Atom>&, const ProgressCallback& = nullptr);
+    int prefill(const std::vector<Atom>&, const ProgressCallback& = nullptr);
     void tokenize(std::vector<Atom>*, std::string_view, bool);
     void dump(std::string*);
 };

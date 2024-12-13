@@ -104,11 +104,13 @@ async function handleChatStream(response) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let currentMessageElement = createMessageElement("", "assistant");
-  chatMessages.appendChild(currentMessageElement);
-  let hdom = new HighlightDom(currentMessageElement);
-  const high = new RenderMarkdown(hdom);
+  let currentMessageElement = null;
+  let messageAppended = false;
+  let hdom = null;
+  let high = null;
   streamingMessageContent = [];
+  const prefillStatus = document.getElementById('prefill-status');
+  const progressBar = prefillStatus.querySelector('.progress-bar');
 
   try {
     while (true) {
@@ -123,14 +125,35 @@ async function handleChatStream(response) {
         const line = lines[i].trim();
         if (line.startsWith("data: ")) {
           const data = line.slice(6);
-          if (data === "[DONE]")
+          if (data === "[DONE]") {
+            prefillStatus.style.display = "none";
             continue;
+          }
           try {
             const parsed = JSON.parse(data);
             const content = parsed.choices[0]?.delta?.content || "";
-            streamingMessageContent.push(content);
-            high.feed(content);
-            scrollToBottom();
+
+            // handle prefill progress
+            if (parsed.x_prefill_progress !== undefined) {
+              prefillStatus.style.display = "flex";
+              progressBar.style.width = `${parsed.x_prefill_progress * 100}%`;
+            } else {
+              prefillStatus.style.display = "none";
+            }
+
+            if (content && !messageAppended) {
+              currentMessageElement = createMessageElement("", "assistant");
+              chatMessages.appendChild(currentMessageElement);
+              hdom = new HighlightDom(currentMessageElement);
+              high = new RenderMarkdown(hdom);
+              messageAppended = true;
+            }
+
+            if (messageAppended && content) {
+              streamingMessageContent.push(content);
+              high.feed(content);
+              scrollToBottom();
+            }
           } catch (e) {
             console.error("Error parsing JSON:", e);
           }
@@ -145,7 +168,10 @@ async function handleChatStream(response) {
       console.error("Error reading stream:", error);
     }
   } finally {
-    high.flush();
+    if (messageAppended) {
+      high.flush();
+    }
+    prefillStatus.style.display = "none";
     cleanupAfterMessage();
   }
 }
@@ -166,7 +192,8 @@ function fixUploads(str) {
 
 async function sendMessage() {
   const message = fixUploads(chatInput.value.trim());
-  if (!message) return;
+  if (!message)
+    return;
 
   // disable input while processing
   chatInput.value = "";
@@ -327,13 +354,30 @@ async function onFile(file) {
     };
     reader.readAsText(file);
   } else {
-    console.warn('Only image and text files are supported');
+    alert('Only image and text files are supported');
     return;
   }
 }
 
+function checkSurroundingNewlines(text, pos) {
+  const beforeCaret = text.slice(0, pos);
+  const afterCaret = text.slice(pos);
+  const precedingNewlines = beforeCaret.match(/\n*$/)[0].length;
+  const followingNewlines = afterCaret.match(/^\n*/)[0].length;
+  return { precedingNewlines, followingNewlines };
+}
+
 function insertText(elem, text) {
   const pos = elem.selectionStart;
+  const isCodeBlock = text.includes('```');
+
+  if (isCodeBlock) {
+    const { precedingNewlines, followingNewlines } = checkSurroundingNewlines(elem.value, pos);
+    const needsLeadingNewlines = pos > 0 && precedingNewlines < 2 ? '\n'.repeat(2 - precedingNewlines) : '';
+    const needsTrailingNewlines = pos < elem.value.length && followingNewlines < 2 ? '\n'.repeat(2 - followingNewlines) : '';
+    text = needsLeadingNewlines + text + needsTrailingNewlines;
+  }
+
   elem.value = elem.value.slice(0, pos) + text + elem.value.slice(pos);
   const newPos = pos + text.length;
   elem.setSelectionRange(newPos, newPos);
@@ -448,7 +492,7 @@ function updateSettingsDisplay(settings) {
   }
 }
 
-function setupSettings() {    
+function setupSettings() {
   settingsButton.addEventListener("click", () => {
     settingsModal.style.display = "flex";
     updateSettingsDisplay(loadSettings());
@@ -662,6 +706,17 @@ function setupCompletionsMode() {
   completionsInput.focus();
 }
 
+function onUploadButtonClick() {
+  fileUpload.click();
+}
+
+function onFileUploadChange(e) {
+  if (e.target.files[0]) {
+    onFile(e.target.files[0]);
+    e.target.value = '';
+  }
+}
+
 async function chatbot() {
   flagz = await fetchFlagz();
   updateModelInfo();
@@ -685,17 +740,8 @@ async function chatbot() {
   document.addEventListener("drop", onDragEnd);
   document.addEventListener("drop", onDrop);
   document.addEventListener("paste", onPaste);
-
-  uploadButton.addEventListener("click", () => {
-    fileUpload.click();
-  });
-
-  fileUpload.addEventListener("change", (e) => {
-    if (e.target.files[0]) {
-      onFile(e.target.files[0]);
-      e.target.value = '';
-    }
-  });
+  uploadButton.addEventListener("click", onUploadButtonClick);
+  fileUpload.addEventListener("change", onFileUploadChange);
 }
 
 chatbot();

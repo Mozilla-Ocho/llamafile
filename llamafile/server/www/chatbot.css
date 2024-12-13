@@ -55,6 +55,7 @@ p {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
+  position: relative;
 }
 
 ol,
@@ -223,6 +224,7 @@ ul li:first-child {
   border-radius: 4px;
   overflow-x: auto;
   position: relative;
+  white-space: pre-wrap;
 }
 
 .message blockquote {
@@ -628,4 +630,48 @@ ul li:first-child {
   .message.user {
     border: 1px solid #999;
   }
+}
+
+.prefill-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #eee;
+}
+
+.prefill-progress .progress-bar {
+  height: 100%;
+  background: #0d6efd;
+  width: 0;
+  transition: width 0.2s ease-out;
+}
+
+#prefill-status {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.prefill-progress {
+  flex: 1;
+  height: 4px;
+  background: #eee;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.prefill-progress .progress-bar {
+  height: 100%;
+  background: #0d6efd;
+  width: 0;
+  transition: width 0.2s ease-out;
 }
