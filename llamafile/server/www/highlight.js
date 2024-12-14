@@ -40,6 +40,7 @@ class HighlightDom extends Highlight {
     super();
     this.currentElement = containerElement;
     this.containerElement = containerElement;
+    this.lastElement = containerElement;
     this.text = '';
   }
 
@@ -59,6 +60,7 @@ class HighlightDom extends Highlight {
       elem.className = className;
     this.currentElement.appendChild(elem);
     this.currentElement = elem;
+    this.lastElement = elem;
     return elem;
   }
 
@@ -80,6 +82,7 @@ class HighlightDom extends Highlight {
   flushText() {
     if (this.text) {
       this.currentElement.appendChild(document.createTextNode(this.text));
+      this.lastElement = this.currentElement;
       this.text = '';
     }
   }

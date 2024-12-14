@@ -92,5 +92,14 @@ remove_old_image_atoms(const std::vector<Atom>& atoms)
     return result;
 }
 
+int
+count_tokens(const std::vector<Atom>& atoms)
+{
+    int n = 0;
+    for (const Atom& atom : atoms)
+        n += atom.ctx_used();
+    return n;
+}
+
 } // namespace server
 } // namespace lf

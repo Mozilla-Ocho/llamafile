@@ -56,6 +56,22 @@ Atom::Atom(const Atom& other)
     word_ = 2ull << 56 | (uintptr_t)image;
 }
 
+Atom&
+Atom::operator=(const Atom& other)
+{
+    if (this != &other) {
+        if (is_image())
+            delete (Image*)(word_ & 0x00ffffffffffffff);
+        if (!other.is_image()) {
+            word_ = other.word_;
+        } else {
+            Image* image = new Image(other.image());
+            word_ = 2ull << 56 | (uintptr_t)image;
+        }
+    }
+    return *this;
+}
+
 Atom::~Atom()
 {
     if (is_image())

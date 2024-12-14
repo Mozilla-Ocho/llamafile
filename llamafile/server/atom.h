@@ -31,6 +31,7 @@ class Atom
     Atom(const Atom&);
     Atom(Atom&&);
     ~Atom();
+    Atom& operator=(const Atom&);
     int token() const;
     bool empty() const;
     int ctx_used() const;

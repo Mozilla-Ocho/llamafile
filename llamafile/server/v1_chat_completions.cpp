@@ -174,15 +174,6 @@ has_images(const std::vector<Atom>& atoms)
 }
 
 static int
-count_tokens(const std::vector<Atom>& atoms)
-{
-    int n = 0;
-    for (const Atom& atom : atoms)
-        n += atom.ctx_used();
-    return n;
-}
-
-static int
 count_bytes(const std::vector<llama_chat_msg>& messages)
 {
     int n = 0;
@@ -548,8 +539,10 @@ Client::v1_chat_completions()
             ++last;
         } while (bytes_deleted < bytes_to_delete &&
                  forgotten_msgs < max_forget_msgs);
+        SLOG("forgot %d / %zu old messages",
+             forgotten_msgs,
+             params->messages.size());
         params->messages.erase(first, last);
-        SLOG("forgot %d old messages", forgotten_msgs);
     }
 
     // init sampling

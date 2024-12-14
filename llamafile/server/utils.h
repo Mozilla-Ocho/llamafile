@@ -47,5 +47,8 @@ atomize(const llama_model* model,
 std::vector<Atom>
 remove_old_image_atoms(const std::vector<Atom>&);
 
+int
+count_tokens(const std::vector<Atom>&);
+
 } // namespace server
 } // namespace lf

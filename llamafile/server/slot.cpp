@@ -25,6 +25,7 @@
 #include "llamafile/server/atom.h"
 #include "llamafile/server/image.h"
 #include "llamafile/server/log.h"
+#include "llamafile/server/utils.h"
 #include "llamafile/vector.h"
 #include "llamafile/version.h"
 #include <algorithm>
@@ -290,43 +291,135 @@ Slot::prefill(const std::vector<Atom>& atoms, const ProgressCallback& progress)
 {
     if (!ctx_)
         return uninitialized;
-    int used_tokens = ctx_used();
-    int reuse_atoms = 0;
-    int reuse_tokens = 0;
-    int erase_tokens = 0;
+
+    // handle special case of empty prefill
+    if (atoms.empty()) {
+        llama_kv_cache_clear(ctx_);
+        history_.clear();
+        return 0;
+    }
+
+    // when a prefill request comes in, chances are the system prompt
+    // will already be loaded and the unique user request in atoms is
+    // going to have something different that follows. in such a case
+    // we'll rapidly delete the latter portion from the KV cache, and
+    // then we won't need the cost of prefilling the earlier portion.
+    //
+    //     "hello world how are you" <-- atoms
+    //     "hello world i love you!" <-- history
+    //     "hello world "            <-- keep
+    //                 "how are you" <-- evaluated
+    //
+    // when context runs out the completions interface or user client
+    // might delete content in the middle, in which case we can shift
+    // content backwards based on the matching suffix.
+    //
+    //     "sysprompt msg2 msg3 msg4" <-- atoms
+    //      └──┬────┘ └──────┬┘
+    //         │             │
+    //      ┌──┴────┐      ┌─┴─────┐
+    //     "sysprompt msg1 msg2 msg3" <-- history
+    //     "sysprompt "               <-- keep
+    //               "msg1 "          <-- discard
+    //                    "msg2 msg3" <-- relocate
+    //     "sysprompt      msg2 msg3" <-- llama_kv_cache_seq_rm
+    //     "sysprompt msg2 msg3"      <-- llama_kv_cache_seq_add
+    //                         "msg4" <-- evaluated
+    //
+    int keep = 0;
     int n = std::min(atoms.size(), history_.size());
-    for (int i = 0; i < n && atoms[i] == history_[i]; ++i) {
-        reuse_tokens += history_[i].ctx_used();
-        reuse_atoms += 1;
-    }
-    // xxx: ensure we prefill at least one token (prevents badness)
-    if (reuse_tokens >= 1) {
-        reuse_atoms -= 1;
-        reuse_tokens -= history_[reuse_atoms].ctx_used();
-    }
-    if (used_tokens > reuse_tokens) {
-        erase_tokens = used_tokens - reuse_tokens;
-        if (llama_kv_cache_seq_rm(ctx_, 0, reuse_tokens, -1)) {
-            history_.resize(reuse_atoms);
-        } else {
-            SLOG("failed to remove tokens from KV cache");
-            reuse_atoms = 0;
-            reuse_tokens = 0;
-            erase_tokens = used_tokens;
-            llama_kv_cache_clear(ctx_);
-            history_.clear();
+    for (int i = 0; i < n && atoms[i] == history_[i]; ++i)
+        ++keep;
+    int relocate_p0 = -1;
+    int relocate_p1 = -1;
+    int skipped = keep;
+    for (int i = keep + 1; i < history_.size(); ++i) {
+        if (history_.size() - i > atoms.size() - keep)
+            continue;
+        if (std::equal(history_.begin() + i, //
+                       history_.end(),
+                       atoms.begin() + keep)) {
+            relocate_p0 = i;
+            relocate_p1 = history_.size();
+            skipped += history_.size() - i;
+            break;
         }
     }
-    std::vector<Atom> new_atoms(atoms.begin() + reuse_atoms, atoms.end());
+
+    // xxx: ensure we eval at least one token
+    //      this prevents an observed badness
+    if (skipped == atoms.size()) {
+        if (relocate_p0 != -1) {
+            --relocate_p1;
+        } else {
+            --keep;
+        }
+        --skipped;
+    }
+
+    // now count tokens
+    int keep_tokens = 0;
+    int history_tokens = ctx_used();
+    for (int i = 0; i < keep; ++i)
+        keep_tokens += history_[i].ctx_used();
+    int relocate_p0_tokens = -1;
+    int relocate_p1_tokens = -1;
+    if (relocate_p0 != -1) {
+        relocate_p0_tokens = 0;
+        for (int i = 0; i < relocate_p0; ++i)
+            relocate_p0_tokens += history_[i].ctx_used();
+        relocate_p1_tokens = 0;
+        for (int i = 0; i < relocate_p1; ++i)
+            relocate_p1_tokens += history_[i].ctx_used();
+    }
+    int skipped_tokens = 0;
+    for (int i = 0; i < skipped; ++i)
+        skipped_tokens += atoms[i].ctx_used();
+
+    // discard tokens from kv cache
+    int discarded_tokens;
+    int relocated_tokens = 0;
+    if (llama_kv_cache_seq_rm(ctx_, 0, keep_tokens, relocate_p0_tokens)) {
+        if (relocate_p0 == -1) {
+            discarded_tokens = history_tokens - keep_tokens;
+            history_.resize(keep);
+        } else {
+            discarded_tokens = (history_tokens - relocate_p1_tokens) +
+                               (relocate_p0_tokens - keep_tokens);
+            relocated_tokens = relocate_p1_tokens - relocate_p0_tokens;
+            history_.resize(relocate_p1);
+            history_.erase(history_.begin() + keep,
+                           history_.begin() + relocate_p0);
+            // memmove relocated tokens in kv cache
+            llama_kv_cache_seq_add(ctx_,
+                                   0,
+                                   relocate_p0_tokens,
+                                   relocate_p1_tokens,
+                                   -(relocate_p0_tokens - keep_tokens));
+        }
+    } else {
+        // models like Mamba can't be partially erased
+        SLOG("failed to remove tokens from KV cache");
+        discarded_tokens = history_tokens;
+        llama_kv_cache_clear(ctx_);
+        history_.clear();
+        skipped = 0;
+    }
+
+    // evaluate tokens
+    std::vector<Atom> new_atoms(atoms.begin() + skipped, atoms.end());
     int rc;
     if ((rc = eval_atoms(new_atoms, progress)) < 0)
         return rc;
-    int token_count = reuse_tokens + rc;
-    SLOG("prefilled %zu tokens (after removing %zu and reusing %zu)",
-         token_count,
-         erase_tokens,
-         reuse_tokens);
-    return token_count;
+    int total_tokens = keep_tokens + relocated_tokens + rc;
+    SLOG("prefilled %d tokens (after keeping %d, discarding %d, "
+         "relocating %d, and evaluating %d)",
+         total_tokens,
+         keep_tokens,
+         discarded_tokens,
+         relocated_tokens,
+         count_tokens(new_atoms));
+    return total_tokens;
 }
 
 void

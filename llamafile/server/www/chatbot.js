@@ -106,6 +106,7 @@ async function handleChatStream(response) {
   let buffer = "";
   let currentMessageElement = null;
   let messageAppended = false;
+  let finishReason = null;
   let hdom = null;
   let high = null;
   streamingMessageContent = [];
@@ -132,7 +133,7 @@ async function handleChatStream(response) {
           try {
             const parsed = JSON.parse(data);
             const content = parsed.choices[0]?.delta?.content || "";
-            const finishReason = parsed.choices[0]?.finish_reason;
+            finishReason = parsed.choices[0]?.finish_reason;
 
             // handle prefill progress
             if (parsed.x_prefill_progress !== undefined) {
@@ -155,18 +156,6 @@ async function handleChatStream(response) {
               high.feed(content);
               scrollToBottom();
             }
-
-            // we don't supply max_tokens, so "length" can
-            // only mean that we ran out of context window
-            if (finishReason === "length" && hdom) {
-              let img = hdom.push("IMG", "ooc");
-              img.src = "ooc.svg";
-              img.alt = "🚫";
-              img.title = "Message truncated due to running out of context window. Consider tuning --ctx-size and/or --reserve-tokens";
-              img.width = 16;
-              img.height = 16;
-              hdom.pop();
-            }
           } catch (e) {
             console.error("Error parsing JSON:", e);
           }
@@ -183,6 +172,18 @@ async function handleChatStream(response) {
   } finally {
     if (messageAppended) {
       high.flush();
+      // we don't supply max_tokens, so "length" can
+      // only mean that we ran out of context window
+      if (finishReason === "length") {
+        let img = document.createElement("IMG");
+        img.className = "ooc";
+        img.src = "ooc.svg";
+        img.alt = "🚫";
+        img.title = "Message truncated due to running out of context window. Consider tuning --ctx-size and/or --reserve-tokens";
+        img.width = 16;
+        img.height = 16;
+        hdom.lastElement.appendChild(img);
+      }
     }
     prefillStatus.style.display = "none";
     cleanupAfterMessage();
@@ -248,7 +249,8 @@ async function sendMessage() {
     if (response.ok) {
       await handleChatStream(response);
       const lastMessage = streamingMessageContent.join("");
-      chatHistory.push({ role: "assistant", content: lastMessage });
+      if (lastMessage)
+        chatHistory.push({ role: "assistant", content: lastMessage });
     } else {
       console.error("sendMessage() failed due to server error", response);
       chatMessages.appendChild(createMessageElement(
