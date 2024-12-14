@@ -17,6 +17,7 @@
 
 #pragma once
 #include <cosmo.h>
+#include <ctime>
 #include <functional>
 #include <string>
 #include <vector>
@@ -49,7 +50,9 @@ struct Slot
 
     static const char* describe_error(int);
 
+    int id_;
     Dll elem_;
+    time_t last_used_;
     llama_model* model_;
     clip_ctx* clip_ctx_ = nullptr;
     llama_context* ctx_ = nullptr;
@@ -57,7 +60,7 @@ struct Slot
     std::string system_fingerprint_;
 
     ~Slot();
-    explicit Slot(llama_model*);
+    Slot(int, llama_model*);
     int ctx_size() const;
     int ctx_used() const;
     bool start();

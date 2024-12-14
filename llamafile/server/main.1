@@ -35,6 +35,26 @@ Specifies path of sqlite3 database.
 .Pp
 The default is
 .Pa ~/.llamafile/llamafile.sqlite3
+.It Fl ngl Ar N , Fl Fl gpu-layers Ar N , Fl Fl n-gpu-layers Ar N
+Specifies number of layers to offload to GPU.
+.Pp
+This flag must be passed in order to use GPU on systems with NVIDIA or
+AMD GPUs. If you're confident that you have enough VRAM, then you can
+pass
+.Fl ngl Ar 999
+to enable full offloading, since this number is automatically downtuned
+to however many number of layers the model has. If VRAM is limited, then
+the
+.Fl Fl verbose
+flag may be passed to learn how many layers the model has, e.g. 35,
+which can then be down-tuned until the out of memory error goes away.
+.Pp
+On Apple Silicon systems with Metal, GPU offloading is enabled by
+default. Since these GPUs use unified memory, they're treated as having
+a single layer; therefore, using values higher than 1 will be treated as
+1. You can pass
+.Fl ngl Ar 0
+to disable GPU offloading and run in CPU mode on Apple Metal systems.
 .It Fl l Ar HOSTPORT , Fl Fl listen Ar HOSTPORT
 Specifies the local [HOST:]PORT on which the HTTP server should listen.
 By default this is 0.0.0.0:8080 which means llamafiler will bind to port
@@ -58,6 +78,16 @@ resources, and control how much completion parallelism can happen.
 Please note that
 .Fl Fl ctx-size
 has a strong influence on how many slots can be created.
+.It Fl Fl decay-delay Ar INT
+Number of seconds a context window slot needs to be inactive before the
+system starts to strongly consider giving it to other clients. The
+default is 300 which is five minutes.
+.It Fl Fl decay-growth Ar FLOAT
+Sets slot decay growth factor. Context window slots are assigned in a
+least recently used fashion, based on the formula
+.EQ
+age + e sup {growth * (age - delay)}
+.EN
 .It Fl p Ar TEXT , Fl Fl prompt Ar TEXT , Fl Fl system-prompt Ar TEXT
 Specifies system prompt. This value is passed along to the web frontend.
 .It Fl Fl no-display-prompt
@@ -69,6 +99,11 @@ Specifies a URL prefix (subdirectory) under which the HTTP server will
 make the API accessible, e.g. /lamafiler. Useful when running llamafiler
 behind a reverse proxy such as NGINX or Redbean. By default, this is set
 to / (root).
+.It Fl Fl verbose
+Enable logging of diagnostic information. This flag is useful for
+learning more about the model and hardware. It can also be helpful for
+troubleshooting errors. We currently recommend that this flag be avoided
+in production since the llama.cpp logger may disrupt thread cancelation.
 .It Fl w Ar N , Fl Fl workers Ar N
 Number of HTTP client handling threads.
 .It Fl Fl trust Ar CIDR
@@ -161,7 +196,7 @@ models do. If it's a base model, then the web ui will automatically use
 completion mode only, without needing to specify this flag. This flag is
 useful in cases where a prompt template is defined by the gguf, but it
 is desirable for the chat interface to be disabled.
-.It Fl Fl db-startup-sql
+.It Fl Fl db-startup-sql Ar CODE
 Specifies SQL code that should be executed whenever connecting to the
 SQLite database. The default is the following code, which enables the
 write-ahead log.
@@ -169,14 +204,14 @@ write-ahead log.
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
 .Ed
-.It Fl Fl reserve-tokens
+.It Fl Fl reserve-tokens Ar N
 Percent of context window to reserve for predicted tokens. When the
 server runs out of context window, old chat messages will be forgotten
 until this percent of the context is empty. The default is 15%. If this
 is specified as a floating point number, e.g. 0.15, then it'll be
 multiplied by 100 to get the percent.
 .El
-.Sh EXAMPLE
+.Sh EXAMPLES
 Here's an example of how you might start this server:
 .Pp
 .Dl "llamafiler -m all-MiniLM-L6-v2.F32.gguf"

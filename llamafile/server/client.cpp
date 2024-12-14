@@ -228,6 +228,18 @@ Client::transport()
         }
     }
 
+    if (effective_ip_ != client_ip_) {
+        char name[17];
+        snprintf(name,
+                 sizeof(name),
+                 "%hhu.%hhu.%hhu.%hhu",
+                 effective_ip_ >> 24,
+                 effective_ip_ >> 16,
+                 effective_ip_ >> 8,
+                 effective_ip_);
+        set_thread_name(name);
+    }
+
     if (get_header("X-Priority") == "batch") {
         worker_->deprioritize();
     } else if (!effective_ip_trusted_) {
@@ -661,9 +673,10 @@ Client::dispatcher()
     }
 
     // get request-uri path
+    char method[9] = { 0 };
     std::string_view p1 = path();
-    if (FLAG_verbose >= 2)
-        SLOG("request path %.*s", (int)p1.size(), p1.data());
+    WRITE64LE(method, msg_.method);
+    SLOG("%s %.*s", method, (int)p1.size(), p1.data());
     if (!p1.starts_with(FLAG_url_prefix)) {
         SLOG("path prefix mismatch");
         return send_error(404);
@@ -779,7 +792,8 @@ Client::dispatcher()
             return false;
         }
     }
-    SLOG("served %s", resolved_.c_str());
+    if (FLAG_verbose >= 1)
+        SLOG("served %s", resolved_.c_str());
     cleanup();
     return true;
 }

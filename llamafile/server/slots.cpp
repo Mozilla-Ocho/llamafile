@@ -16,12 +16,17 @@
 // limitations under the License.
 
 #include "slots.h"
+#include "llamafile/llamafile.h"
+#include "llamafile/macros.h"
 #include "llamafile/server/atom.h"
 #include "llamafile/server/log.h"
 #include "llamafile/server/slot.h"
 #include "llamafile/server/slot_entry.h"
 #include "llamafile/vector.h"
+#include <algorithm>
 #include <cassert>
+#include <climits>
+#include <cmath>
 
 namespace lf {
 namespace server {
@@ -50,7 +55,7 @@ Slots::start(int count)
     int made = 0;
     pthread_mutex_lock(&lock_);
     for (int i = 0; i < count; ++i) {
-        Slot* slot = new Slot(model_);
+        Slot* slot = new Slot(i, model_);
         if (slot->start()) {
             ++made;
             slots_.emplace_back(slot);
@@ -68,19 +73,52 @@ Slots::start(int count)
 }
 
 Slot*
-Slots::take(const std::vector<Atom>& prefix)
+Slots::take(const std::vector<Atom>& atoms)
 {
     pthread_mutex_lock(&lock_);
     for (;;) {
 
-        // find slot with longest matching prefix
-        // favoring least recently used if multiple ones
-        int best_cpl = 0;
+        // find best slot
+        // iteration order favors lru
+        time_t now = time(0);
         Dll* best_slot = nullptr;
+        double best_score = INT_MIN;
         for (Dll* e = dll_first(free_slots_); e; e = dll_next(free_slots_, e)) {
-            int cpl = vector_common_prefix_length(SLOT(e)->history_, prefix);
-            if (cpl >= best_cpl) {
-                best_cpl = cpl;
+
+            // least recently used is good
+            int age = now - SLOT(e)->last_used_;
+            double decay =
+              age + exp(FLAG_decay_growth * (age - FLAG_decay_delay));
+
+            // common prefix length is good
+            int cpl = vector_common_prefix_length(SLOT(e)->history_, atoms);
+
+            // common suffix length is good
+            int csl = 0;
+            int size = SLOT(e)->history_.size();
+            for (int i = cpl + 1; i < size; ++i) {
+                if (size - i > atoms.size() - cpl)
+                    continue;
+                if (std::equal(SLOT(e)->history_.begin() + i,
+                               SLOT(e)->history_.end(),
+                               atoms.begin() + cpl)) {
+                    csl = size - i;
+                    break;
+                }
+            }
+
+            // discarded atoms is bad
+            int discard;
+            if (csl) {
+                discard = 0;
+            } else {
+                discard = size - cpl;
+            }
+
+            // tally up score to determine best
+            double score = cpl + csl + decay - discard;
+            if (score >= best_score) {
+                best_score = score;
                 best_slot = e;
             }
         }
@@ -89,6 +127,9 @@ Slots::take(const std::vector<Atom>& prefix)
         if (best_slot) {
             dll_remove(&free_slots_, best_slot);
             pthread_mutex_unlock(&lock_);
+            SLOG("acquired slot #%d with score %d",
+                 SLOT(best_slot)->id_,
+                 (int)MIN(INT_MAX, best_score));
             return SLOT(best_slot);
         }
 
@@ -101,8 +142,9 @@ Slots::take(const std::vector<Atom>& prefix)
 void
 Slots::give(Slot* slot)
 {
-    SLOG("relinquishing slot");
     unassert(slot);
+    SLOG("relinquishing slot #%d", slot->id_);
+    slot->last_used_ = time(0);
     pthread_mutex_lock(&lock_);
     dll_make_first(&free_slots_, &slot->elem_);
     pthread_cond_signal(&cond_);

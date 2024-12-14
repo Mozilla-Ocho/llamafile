@@ -65,6 +65,7 @@ const char *FLAG_prompt = nullptr;
 const char *FLAG_url_prefix = "";
 const char *FLAG_www_root = "/zip/www";
 double FLAG_token_rate = 1;
+float FLAG_decay_growth = .01;
 float FLAG_frequency_penalty = 0;
 float FLAG_presence_penalty = 0;
 float FLAG_reserve_tokens = .15;
@@ -72,6 +73,7 @@ float FLAG_temperature = .8;
 float FLAG_top_p = .95;
 int FLAG_batch = 256;
 int FLAG_ctx_size = 8192;
+int FLAG_decay_delay = 60 * 5;
 int FLAG_flash_attn = false;
 int FLAG_gpu = 0;
 int FLAG_http_ibuf_size = 5 * 1024 * 1024;
@@ -396,13 +398,6 @@ void llamafile_get_flags(int argc, char **argv) {
             continue;
         }
 
-        if (!strcmp(flag, "-s") || !strcmp(flag, "--slots")) {
-            if (i == argc)
-                missing("--slots");
-            FLAG_slots = atoi(argv[i++]);
-            continue;
-        }
-
         if (!strcmp(flag, "-m") || !strcmp(flag, "--model")) {
             if (i == argc)
                 missing("--model");
@@ -479,6 +474,36 @@ void llamafile_get_flags(int argc, char **argv) {
                     error("--reserve-tokens INT must be between 1 and 100");
                 FLAG_reserve_tokens = n / 100.;
             }
+            continue;
+        }
+
+        //////////////////////////////////////////////////////////////////////
+        // resource management flags
+
+        if (!strcmp(flag, "-s") || !strcmp(flag, "--slots")) {
+            if (i == argc)
+                missing("--slots");
+            FLAG_slots = atoi(argv[i++]);
+            continue;
+        }
+
+        if (!strcmp(flag, "--decay-delay")) {
+            if (i == argc)
+                missing("--decay-delay");
+            int n = atoi(argv[i++]);
+            if (!(0 <= n && n <= 31536000))
+                error("--decay-delay INT must be between 1 and 31536000");
+            FLAG_decay_delay = n;
+            continue;
+        }
+
+        if (!strcmp(flag, "--decay-growth")) {
+            if (i == argc)
+                missing("--decay-growth");
+            float n = atof(argv[i++]);
+            if (!(isnormal(n) && n > 0))
+                error("--decay-growth FLOAT must be greater than 0");
+            FLAG_decay_growth = n;
             continue;
         }
 

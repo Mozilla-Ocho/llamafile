@@ -65,7 +65,8 @@ main(int argc, char* argv[])
 
     // we must disable the llama.cpp logger
     // otherwise pthread_cancel() will cause deadlocks
-    FLAG_log_disable = true;
+    if (!llamafile_has(argv, "--verbose"))
+        FLAG_log_disable = true;
 
     // load model
     llama_model_params mparams = {

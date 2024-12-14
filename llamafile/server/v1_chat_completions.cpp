@@ -652,6 +652,9 @@ Client::v1_chat_completions()
         }
     }
     choice["finish_reason"] = finish_reason;
+    SLOG("predicted %d tokens finished on %s", //
+         completion_tokens,
+         finish_reason);
 
     // finalize response
     cleanup_slot(this);

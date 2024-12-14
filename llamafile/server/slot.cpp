@@ -79,9 +79,10 @@ Slot::describe_error(int err)
     }
 }
 
-Slot::Slot(llama_model* model) : model_(model)
+Slot::Slot(int id, llama_model* model) : id_(id), model_(model)
 {
     dll_init(&elem_);
+    last_used_ = time(0);
 }
 
 Slot::~Slot()

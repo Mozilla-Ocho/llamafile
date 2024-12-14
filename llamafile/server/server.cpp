@@ -128,14 +128,19 @@ Server::accept(unsigned* out_ip)
 
     // set name
     char name[17];
+    int port = ntohs(clientaddr.sin_port);
     unsigned ip = ntohl(clientaddr.sin_addr.s_addr);
-    snprintf(name,
-             sizeof(name),
-             "%hhu.%hhu.%hhu.%hhu",
-             ip >> 24,
-             ip >> 16,
-             ip >> 8,
-             ip);
+    if (ip == 0x7f000001) {
+        snprintf(name, sizeof(name), "%hu", port);
+    } else {
+        snprintf(name,
+                 sizeof(name),
+                 "%hhu.%hhu.%hhu.%hhu",
+                 ip >> 24,
+                 ip >> 16,
+                 ip >> 8,
+                 ip);
+    }
     set_thread_name(name);
 
     // keep sockets open
