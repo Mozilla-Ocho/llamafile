@@ -13,6 +13,12 @@ THIRD_PARTY_SQLITE_HDRS =					\
 o/$(MODE)/third_party/sqlite/sqlite3.a:				\
 		o/$(MODE)/third_party/sqlite/sqlite3.o		\
 
+o/$(MODE)/third_party/sqlite/sqlite-csv.a:		\
+		o/$(MODE)/third_party/sqlite/sqlite-csv.o	\
+
+o/$(MODE)/third_party/sqlite/sqlite-vec.a:		\
+		o/$(MODE)/third_party/sqlite/sqlite-vec.o	\
+
 o/$(MODE)/third_party/sqlite/shell:				\
 		o/$(MODE)/third_party/sqlite/shell.o		\
 		o/$(MODE)/third_party/sqlite/sqlite3.o		\
@@ -61,3 +67,5 @@ o/$(MODE)/third_party/sqlite/sqlite3.o:				\
 o/$(MODE)/third_party/sqlite:					\
 		o/$(MODE)/third_party/sqlite/shell		\
 		o/$(MODE)/third_party/sqlite/sqlite3.a		\
+		o/$(MODE)/third_party/sqlite/sqlite-csv.a		\
+		o/$(MODE)/third_party/sqlite/sqlite-vec.a		\

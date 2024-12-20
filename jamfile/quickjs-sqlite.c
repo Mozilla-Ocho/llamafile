@@ -1,8 +1,8 @@
 #include "third_party/sqlite/sqlite3.h"
 #include "third_party/quickjs/quickjs.h"
 #include "third_party/quickjs/cutils.h"
-#include "embedfile/sqlite-vec.h"
-#include "embedfile/sqlite-csv.h"
+#include "third_party/sqlite/sqlite-vec.h"
+#include "third_party/sqlite/sqlite-csv.h"
 #include <assert.h>
 
 

@@ -1,10 +1,14 @@
 DESCRIPTION
 
-  SQLite is the world's most popular database
+  SQLite is the world's most popular database, along with other community SQLite extensions.
 
 ORIGIN
 
   https://www.sqlite.org/2024/sqlite-amalgamation-3470100.zip
+
+  https://sqlite.org/src/file/ext/misc/csv.c
+
+  https://github.com/asg017/sqlite-vec
 
 LICENSE
 
@@ -14,3 +18,4 @@ LOCAL CHANGES
 
   - Renamed <zlib.h> to <third_party/zlib/zlib.h>
   - Mangled some quoted includes to not confuse mkdeps
+  - For sqlite-csv: Eemoved dynamic linking code in favor of static linking

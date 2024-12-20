@@ -92,10 +92,8 @@ o/$(MODE)/jamfile/jamfile:					\
 		o/$(MODE)/third_party/sqlite/sqlite3.a \
 		o/$(MODE)/jamfile/quickjs-sqlite.a \
 		o/$(MODE)/jamfile/quickjs-llamafile.a \
-		o/$(MODE)/embedfile/sqlite-csv.a \
-		o/$(MODE)/embedfile/sqlite-vec.a \
-		o/$(MODE)/embedfile/sqlite-lines.a \
-		o/$(MODE)/embedfile/sqlite-lembed.a
+		o/$(MODE)/third_party/sqlite/sqlite-csv.a	\
+		o/$(MODE)/third_party/sqlite/sqlite-vec.a	
 
 $(LLAMA_CPP_JAMFILE_OBJS): private CCFLAGS += -DSQLITE_CORE
 
