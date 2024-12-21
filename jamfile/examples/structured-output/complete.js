@@ -1,4 +1,4 @@
-/// <reference types="./embedfile/js_builtins/types.d.ts"/>
+/// <reference types="../../jamfile.d.ts"/>
 
 import { yellow } from "jamfile:color";
 import {CompletionModel} from "jamfile:completionmodel";
