@@ -704,6 +704,8 @@ Client::dispatcher()
     if (p1 == "flagz")
         return flagz();
 
+#if 0
+    // TODO: implement frontend for database
     if (p1 == "db/chats" || p1 == "db/chats/")
         return db_chats();
     if (p1.starts_with("db/chat/")) {
@@ -721,6 +723,7 @@ Client::dispatcher()
         if (id != -1)
             return db_messages(id);
     }
+#endif
 
     // serve static endpoints
     int infd;

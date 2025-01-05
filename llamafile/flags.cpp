@@ -52,6 +52,7 @@ bool FLAG_recompile = false;
 bool FLAG_tinyblas = false;
 bool FLAG_trace = false;
 bool FLAG_unsecure = false;
+bool FLAG_v2 = false;
 const char *FLAG_chat_template = "";
 const char *FLAG_db = nullptr;
 const char *FLAG_db_startup_sql = "PRAGMA journal_mode=WAL;"
@@ -160,6 +161,11 @@ void llamafile_get_flags(int argc, char **argv) {
         //////////////////////////////////////////////////////////////////////
         // chatbot flags
 
+        if (!strcmp(flag, "--v2")) {
+            FLAG_v2 = true;
+            continue;
+        }
+
         if (!strcmp(flag, "--ascii")) {
             FLAG_ascii = true;
             continue;
@@ -214,6 +220,9 @@ void llamafile_get_flags(int argc, char **argv) {
 
         //////////////////////////////////////////////////////////////////////
         // server flags
+
+        if (!strcmp(flag, "--server"))
+            continue;
 
         if (!strcmp(flag, "-l") || !strcmp(flag, "--listen")) {
             if (i == argc)

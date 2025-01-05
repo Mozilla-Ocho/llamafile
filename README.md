@@ -164,6 +164,17 @@ ChatCompletionMessage(content='There once was a programmer named Mike\nWho wrote
 
 </details>
 
+## New v2 Server
+
+We have a new server that has a better web gui. It also implements
+OpenAI API compatible endpoints, including embeddings. It's designed to
+be more reliable. It's better able to recycle context windows across
+multiple slots. To try it, run:
+
+```
+llamafile --server --v2 --help
+llamafile --server --v2
+```
 
 ## Other example llamafiles
 

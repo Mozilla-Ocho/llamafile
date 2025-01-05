@@ -57,7 +57,7 @@ struct Server
 extern Server* g_server;
 
 int
-create_listening_socket(const char*);
+create_listening_socket(const char*, unsigned*, int*);
 
 } // namespace server
 } // namespace lf

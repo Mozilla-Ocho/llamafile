@@ -23,6 +23,7 @@ extern bool FLAG_tinyblas;
 extern bool FLAG_trace;
 extern bool FLAG_trap;
 extern bool FLAG_unsecure;
+extern bool FLAG_v2;
 extern const char *FLAG_chat_template;
 extern const char *FLAG_db;
 extern const char *FLAG_db_startup_sql;

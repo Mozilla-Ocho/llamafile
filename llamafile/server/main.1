@@ -3,19 +3,18 @@
 .Os Mozilla Ocho
 .Sh NAME
 .Nm llamafiler
-.Nd fast reliable embedding server
+.Nd fast reliable large language model server
 .Sh SYNOPSIS
 .Nm
 .Fl m Ar model.gguf
 .Op flags...
 .Sh DESCRIPTION
 .Nm
-is a brand new HTTP server for Large Language Models (LLMs). To date,
-its development has been focused on doing fewer things really well, and
-right now that's serving embeddings. It offers you 3.4x the performance,
-stronger security, client request prioritization, request preemption, as
-well as request isolation that helps ensure software bugs won't cause
-the whole server to crash.
+llamafiler is an HTTP server for Large Language Models (LLMs). It
+includes a web GUI for both chatbot and text completion. It can be your
+OpenAI API compatible embeddings / completions / chat completions
+server. It's able to more intelligently recycle context windows across
+multiple slots serving multiple clients.
 .Sh OPTIONS
 The following options are available:
 .Bl -tag -width indent

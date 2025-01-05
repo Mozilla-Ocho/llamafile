@@ -42,21 +42,21 @@ print_listening_url(unsigned ip, int port)
 }
 
 int
-create_listening_socket(const char* hostport)
+create_listening_socket(const char* hostport, unsigned* out_ip, int* out_port)
 {
     // parse hostname:port
     char* p;
-    char* host;
-    char* port;
     char addr[128];
+    const char* host;
+    const char* port;
     strlcpy(addr, hostport, sizeof(addr));
     if ((p = strrchr(addr, ':'))) {
         *p = '\0';
         host = addr;
         port = p + 1;
     } else {
-        host = NULL;
-        port = addr;
+        host = addr;
+        port = "8080";
     }
 
     // turn listen address names into numbers
@@ -103,14 +103,21 @@ create_listening_socket(const char* hostport)
         exit(1);
     }
     struct sockaddr_in* in = (struct sockaddr_in*)ai->ai_addr;
+    if (out_port)
+        *out_port = ntohs(in->sin_port);
     if (ntohl(in->sin_addr.s_addr) == INADDR_ANY) {
         int i;
         uint32_t* hostips;
-        for (hostips = GetHostIps(), i = 0; hostips[i]; ++i)
+        for (hostips = GetHostIps(), i = 0; hostips[i]; ++i) {
             print_listening_url(hostips[i], ntohs(in->sin_port));
+            if (out_ip)
+                *out_ip = hostips[i];
+        }
         free(hostips);
     } else {
         print_listening_url(ntohl(in->sin_addr.s_addr), ntohs(in->sin_port));
+        if (out_ip)
+            *out_ip = ntohl(in->sin_addr.s_addr);
     }
 
     freeaddrinfo(ai);

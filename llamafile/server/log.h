@@ -19,15 +19,18 @@
 #include <libc/intrin/kprintf.h>
 
 #define SLOG(FMT, ...) \
-    kprintf("%s %s:%d %s " FMT "\n", \
-            get_log_timestamp(), \
-            __FILE__, \
-            __LINE__, \
-            get_thread_name(), \
-            ##__VA_ARGS__)
+    (!lf::server::g_log_disable && (kprintf("%s %s:%d %s " FMT "\n", \
+                                            get_log_timestamp(), \
+                                            __FILE__, \
+                                            __LINE__, \
+                                            get_thread_name(), \
+                                            ##__VA_ARGS__), \
+                                    0))
 
 namespace lf {
 namespace server {
+
+extern bool g_log_disable;
 
 const char*
 get_thread_name(void);

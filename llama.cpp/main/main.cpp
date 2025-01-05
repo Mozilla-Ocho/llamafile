@@ -27,6 +27,7 @@
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/llava/llava.h"
 #include "llama.cpp/server/server.h"
+#include "llamafile/server/prog.h"
 
 static llama_context           ** g_ctx;
 static llama_model             ** g_model;
@@ -150,9 +151,11 @@ enum Program {
     SERVER,
     CHATBOT,
     EMBEDDING,
+    LLAMAFILER,
 };
 
 enum Program determine_program(char *argv[]) {
+    bool v2 = false;
     enum Program prog = UNKNOWN;
     for (int i = 0; argv[i]; ++i) {
         if (!strcmp(argv[i], "--cli")) {
@@ -163,16 +166,18 @@ enum Program determine_program(char *argv[]) {
             prog = SERVER;
         } else if (!strcmp(argv[i], "--embedding")) {
             prog = EMBEDDING;
+        } else if (!strcmp(argv[i], "--v2")) {
+            v2 = true;
         }
+    }
+    if (prog == SERVER && v2) {
+        prog = LLAMAFILER;
     }
     return prog;
 }
 
 int main(int argc, char ** argv) {
-
-    mallopt(M_GRANULARITY, 2 * 1024 * 1024);
-    mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
-    mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);
+    llamafile_check_cpu();
 
     if (llamafile_has(argv, "--version")) {
         puts("llamafile v" LLAMAFILE_VERSION_STRING);
@@ -182,15 +187,23 @@ int main(int argc, char ** argv) {
     if (llamafile_has(argv, "-h") ||
         llamafile_has(argv, "-help") ||
         llamafile_has(argv, "--help")) {
-        llamafile_help("/zip/llama.cpp/main/main.1.asc");
+        if (llamafile_has(argv, "--v2")) {
+            llamafile_help("/zip/llamafile/server/main.1.asc");
+        } else {
+            llamafile_help("/zip/llama.cpp/main/main.1.asc");
+        }
         __builtin_unreachable();
     }
 
-    llamafile_check_cpu();
+    enum Program prog = determine_program(argv);
+    if (prog == LLAMAFILER)
+        return lf::server::main(argc, argv);
+
+    mallopt(M_GRANULARITY, 2 * 1024 * 1024);
+    mallopt(M_MMAP_THRESHOLD, 16 * 1024 * 1024);
+    mallopt(M_TRIM_THRESHOLD, 128 * 1024 * 1024);
     ShowCrashReports();
     argc = cosmo_args("/zip/.args", &argv);
-
-    enum Program prog = determine_program(argv);
 
     if (prog == SERVER)
         return server_cli(argc, argv);

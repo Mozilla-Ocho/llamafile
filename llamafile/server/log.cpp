@@ -23,6 +23,8 @@
 namespace lf {
 namespace server {
 
+bool g_log_disable;
+
 static thread_local char g_thread_name[128];
 
 const char*

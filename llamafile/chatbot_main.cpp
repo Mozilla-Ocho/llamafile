@@ -107,6 +107,7 @@ bool is_base_model() {
 }
 
 int main(int argc, char **argv) {
+    signal(SIGPIPE, SIG_IGN);
 
     // print logo
     logo(argv);
@@ -147,7 +148,7 @@ int main(int argc, char **argv) {
     if (g_params.n_ctx < g_params.n_batch)
         g_params.n_batch = g_params.n_ctx;
 
-    bool want_server = !llamafile_has(argv, "--chat");
+    bool want_server = !llamafile_has(argv, "--chat") && !llamafile_has(argv, "--v2");
     if (want_server) {
         print_ephemeral("launching server...");
         pthread_t thread;
