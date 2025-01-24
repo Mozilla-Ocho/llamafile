@@ -366,6 +366,13 @@ disable the WIN32 interop feature:
 sudo sh -c "echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop"
 ```
 
+In Windows 11 with WSL 2 the location of the interop flag has changed, as such
+the following command should be used instead:
+
+```sh
+sudo sh -c "echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop-late"
+```
+
 In the instance of getting a `Permission Denied` on disabling interop
 through CLI, it can be permanently disabled by adding the following in
 `/etc/wsl.conf`
