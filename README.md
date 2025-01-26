@@ -367,7 +367,7 @@ sudo sh -c "echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop"
 ```
 
 In Windows 11 with WSL 2 the location of the interop flag has changed, as such
-the following command be required instead/addition:
+the following command be required instead/additionally:
 
 ```sh
 sudo sh -c "echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop-late"
