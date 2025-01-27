@@ -67,6 +67,27 @@ extern const uint32_t qjsc_fmt_size;
 extern const uint8_t qjsc_assert[];
 extern const uint32_t qjsc_assert_size;
 
+// pre-compiled JS bytecode for jamfile:toml
+extern const uint8_t qjsc_toml[];
+extern const uint32_t qjsc_toml_size;
+
+// pre-compiled JS bytecode for jamfile:yaml
+extern const uint8_t qjsc_yaml[];
+extern const uint32_t qjsc_yaml_size;
+
+// pre-compiled JS bytecode for jamfile:frontmatter
+extern const uint8_t qjsc_frontmatter[];
+extern const uint32_t qjsc_frontmatter_size;
+
+// pre-compiled JS bytecode for jamfile:marked
+extern const uint8_t qjsc_marked[];
+extern const uint32_t qjsc_marked_size;
+
+
+
+// pre-compiled JS bytecode for jamfile:linkedom
+extern const uint8_t qjsc_linkedom[];
+extern const uint32_t qjsc_linkedom_size;
 
 static JSCFunctionListEntry argv0;
 
@@ -238,6 +259,11 @@ JSModuleDef *jama_module_loader(JSContext *ctx,
       {"jamfile:cli",    (uint8_t *) qjsc_cli,     qjsc_cli_size     },
       {"jamfile:fmt",    (uint8_t *) qjsc_fmt,     qjsc_fmt_size     },
       {"jamfile:zod",    (uint8_t *) qjsc_zod,     qjsc_zod_size     },
+      {"jamfile:yaml",    (uint8_t *) qjsc_yaml,     qjsc_yaml_size     },
+      {"jamfile:toml",        (uint8_t *) qjsc_toml,        qjsc_toml_size        },
+      {"jamfile:frontmatter", (uint8_t *) qjsc_frontmatter, qjsc_frontmatter_size },
+      {"jamfile:marked",      (uint8_t *) qjsc_marked,      qjsc_marked_size      },
+      {"jamfile:linkedom",    (uint8_t *) qjsc_linkedom,    qjsc_linkedom_size    },
     };
     JSModuleDef *m;
 

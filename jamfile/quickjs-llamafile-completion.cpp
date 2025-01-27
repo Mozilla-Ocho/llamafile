@@ -265,11 +265,84 @@ static JSValue completion_model_detokenize(JSContext *ctx, JSValue this_val, int
   return rv;
 }
 
+static JSValue completion_model_size_getter(JSContext *ctx, JSValue this_val) {
+  struct llama_context * context = (struct llama_context *) JS_GetOpaque2(ctx, this_val, jama_completionmodel_class_id);
+  struct llama_model * model = (struct llama_model *) llama_get_model(context);
+  return JS_NewBigUint64(ctx, llama_model_size(model));
+}
+
+static JSValue completion_model_nparams_getter(JSContext *ctx, JSValue this_val) {
+  struct llama_context * context = (struct llama_context *) JS_GetOpaque2(ctx, this_val, jama_completionmodel_class_id);
+  struct llama_model * model = (struct llama_model *) llama_get_model(context);
+  return JS_NewBigUint64(ctx, llama_model_n_params(model));
+}
+static JSValue completion_model_n_vocab(JSContext *ctx, JSValue this_val) {
+  struct llama_context * context = (struct llama_context *) JS_GetOpaque2(ctx, this_val, jama_completionmodel_class_id);
+  struct llama_model * model = (struct llama_model *) llama_get_model(context);
+  return JS_NewUint32(ctx, llama_n_vocab(model));
+}
+static JSValue completion_model_n_ctx(JSContext *ctx, JSValue this_val) {
+  struct llama_context * context = (struct llama_context *) JS_GetOpaque2(ctx, this_val, jama_completionmodel_class_id);
+  return JS_NewUint32(ctx, llama_n_ctx(context));
+}
+static JSValue completion_model_n_layer(JSContext *ctx, JSValue this_val) {
+  struct llama_context * context = (struct llama_context *) JS_GetOpaque2(ctx, this_val, jama_completionmodel_class_id);
+  struct llama_model * model = (struct llama_model *) llama_get_model(context);
+  return JS_NewUint32(ctx, llama_n_layer(model));
+}
+static JSValue completion_model_description(JSContext *ctx, JSValue this_val) {
+  struct llama_context * context = (struct llama_context *) JS_GetOpaque2(ctx, this_val, jama_completionmodel_class_id);
+  struct llama_model * model = (struct llama_model *) llama_get_model(context);
+  // TODO handle longer descriptions
+  char buf[1024];
+  int32_t n = llama_model_desc(model, buf, sizeof(buf));
+  return JS_NewStringLen(ctx, buf, n);
+}
+
+static JSValue completion_model_metadata_getter(JSContext *ctx, JSValue this_val) {
+  struct llama_context * context = (struct llama_context *) JS_GetOpaque2(ctx, this_val, jama_completionmodel_class_id);
+  struct llama_model * model = (struct llama_model *) llama_get_model(context);
+  JSValue entries = JS_NewArray(ctx);
+  JSValue global = JS_GetGlobalObject(ctx);
+  JSValue Map = JS_GetPropertyStr(ctx, global, "Map");
+
+  int32_t n = llama_model_meta_count(model);
+  for(int i = 0; i < n; i++) {
+    // TODO limited to 1024 chars, dynamically allocate memory for key/values
+    char buf[1024];
+    JSValue entry = JS_NewArray(ctx);
+    int32_t keyLength = llama_model_meta_key_by_index(model, i, buf, sizeof(buf));
+    JS_SetPropertyUint32(ctx, entry, 0, JS_NewStringLen(ctx, buf, keyLength < sizeof(buf) ? keyLength : sizeof(buf)));
+
+    int32_t valueLength = llama_model_meta_val_str_by_index(model, i, buf, sizeof(buf));
+    JS_SetPropertyUint32(ctx, entry, 1, JS_NewStringLen(ctx, buf, valueLength < sizeof(buf) ? valueLength : sizeof(buf)));
+    
+    JS_SetPropertyUint32(ctx, entries, i, entry);
+    
+
+  }
+
+  JSValue rv = JS_CallConstructor(ctx, Map, 1, &entries);
+
+
+  JS_FreeValue(ctx, entries);
+  JS_FreeValue(ctx, Map);
+  JS_FreeValue(ctx, global);
+
+  return rv;
+}
 
 static const JSCFunctionListEntry js_completionmodel_database_proto_funcs[] = {
   JS_CFUNC_DEF("complete", 2, completion_model_complete ),
   JS_CFUNC_DEF("tokenize", 1, completion_model_tokenize ),
   JS_CFUNC_DEF("detokenize", 1, completion_model_detokenize ),
+  JS_CGETSET_DEF("size", completion_model_size_getter, NULL),
+  JS_CGETSET_DEF("metadata", completion_model_metadata_getter, NULL),
+  JS_CGETSET_DEF("nParams", completion_model_nparams_getter, NULL),
+  JS_CGETSET_DEF("nContext", completion_model_n_ctx, NULL),
+  JS_CGETSET_DEF("nLayer", completion_model_n_layer, NULL),
+  JS_CGETSET_DEF("description", completion_model_description, NULL),
+
 
 };
 

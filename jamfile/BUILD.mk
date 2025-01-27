@@ -61,6 +61,33 @@ o/$(MODE)/jamfile/zod.gen.c: jamfile/js_builtins/zod.js o/$(mode)/third_party/qu
 	o/$(mode)/third_party/quickjs/qjsc -m -o $@ $<
 o/$(MODE)/jamfile/zod.gen.o: o/$(MODE)/jamfile/zod.gen.c
 
+# jamfile:yaml bytecode
+o/$(MODE)/jamfile/yaml.gen.c: jamfile/js_builtins/yaml.js o/$(mode)/third_party/quickjs/qjsc
+	o/$(mode)/third_party/quickjs/qjsc -m -o $@ $<
+o/$(MODE)/jamfile/yaml.gen.o: o/$(MODE)/jamfile/yaml.gen.c
+
+
+# jamfile:toml bytecode
+o/$(MODE)/jamfile/toml.gen.c: jamfile/js_builtins/toml.js o/$(mode)/third_party/quickjs/qjsc
+	o/$(mode)/third_party/quickjs/qjsc -m -o $@ $<
+o/$(MODE)/jamfile/toml.gen.o: o/$(MODE)/jamfile/toml.gen.c
+
+
+# jamfile:frontmatter bytecode
+o/$(MODE)/jamfile/frontmatter.gen.c: jamfile/js_builtins/frontmatter.js o/$(mode)/third_party/quickjs/qjsc
+	o/$(mode)/third_party/quickjs/qjsc -m -M jamfile:toml -M jamfile:yaml -o $@ $<
+o/$(MODE)/jamfile/frontmatter.gen.o: o/$(MODE)/jamfile/frontmatter.gen.c
+
+# jamfile:marked bytecode
+o/$(MODE)/jamfile/marked.gen.c: jamfile/js_builtins/marked.js o/$(mode)/third_party/quickjs/qjsc
+	o/$(mode)/third_party/quickjs/qjsc -m -o $@ $<
+o/$(MODE)/jamfile/marked.gen.o: o/$(MODE)/jamfile/marked.gen.c
+
+# jamfile:linkedom bytecode
+o/$(MODE)/jamfile/linkedom.gen.c: jamfile/js_builtins/linkedom.js o/$(mode)/third_party/quickjs/qjsc
+	o/$(mode)/third_party/quickjs/qjsc -m -o $@ $<
+o/$(MODE)/jamfile/linkedom.gen.o: o/$(MODE)/jamfile/linkedom.gen.c
+
 # include the raw contents of the jamfile.d.ts into jamfile for the `jamfile types` command
 o/$(MODE)/jamfile/jamfile-types.c: jamfile/jamfile.d.ts
 	xxd --include $< > $@
@@ -73,6 +100,11 @@ o/$(MODE)/jamfile/jamfile.a: \
 	o/$(MODE)/jamfile/zod.gen.o		\
 	o/$(MODE)/jamfile/assert.gen.o		\
 	o/$(MODE)/jamfile/colors.gen.o		\
+	o/$(MODE)/jamfile/toml.gen.o		\
+	o/$(MODE)/jamfile/yaml.gen.o		\
+	o/$(MODE)/jamfile/frontmatter.gen.o		\
+	o/$(MODE)/jamfile/marked.gen.o		\
+	o/$(MODE)/jamfile/linkedom.gen.o		\
 	o/$(MODE)/jamfile/quickjs-sqlite.o		\
 	o/$(MODE)/jamfile/quickjs-llamafile.o		\
 	o/$(MODE)/jamfile/quickjs-llamafile-completion.o		\

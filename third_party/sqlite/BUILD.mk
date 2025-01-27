@@ -9,12 +9,17 @@ THIRD_PARTY_SQLITE_SRCS =					\
 
 THIRD_PARTY_SQLITE_HDRS =					\
 	third_party/sqlite/sqlite3.h				\
+	third_party/sqlite/sqlite-vec.h				\
+	third_party/sqlite/sqlite-csv.h				\
 
 o/$(MODE)/third_party/sqlite/sqlite3.a:				\
 		o/$(MODE)/third_party/sqlite/sqlite3.o		\
 
 o/$(MODE)/third_party/sqlite/sqlite-csv.a:		\
 		o/$(MODE)/third_party/sqlite/sqlite-csv.o	\
+
+o/$(MODE)/third_party/sqlite/sqlite-vec.o: \
+	private CFLAGS += -DSQLITE_CORE
 
 o/$(MODE)/third_party/sqlite/sqlite-vec.a:		\
 		o/$(MODE)/third_party/sqlite/sqlite-vec.o	\
