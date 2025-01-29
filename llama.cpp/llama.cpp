@@ -5427,7 +5427,7 @@ static void llm_load_vocab(
                          t.first == "<|im_end|>" ||
                          t.first == "<|end|>" ||
                          t.first == "<end_of_turn>" ||
-                         t.first == "<|endoftext|>" 
+                         t.first == "<|endoftext|>"
                         )
                    ) {
                     vocab.special_eot_id = t.second;
