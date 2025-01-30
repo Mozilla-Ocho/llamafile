@@ -205,7 +205,7 @@ class HighlightTypescript extends Highlighter {
           this.push("span", "comment");
           this.append("/*");
           this.state = HighlightTypescript.SLASH_STAR;
-        } else if (expect_ == HighlightTypescript.EXPECT_VALUE) {
+        } else if (this.expect == HighlightTypescript.EXPECT_VALUE) {
           this.expect = HighlightTypescript.EXPECT_OPERATOR;
           this.push("span", "string");
           this.append('/');
