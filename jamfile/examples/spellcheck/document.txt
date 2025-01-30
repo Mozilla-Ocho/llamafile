@@ -1,0 +1,6 @@
+The first spell ceckers were "verifiers" instead of "correctors." They
+offered no suggestions for incorrectly spelled words. This was helpful
+for typos but it was not so helpfl for logical or phonetic errors. The
+challenge the developers faced was the difficulty in offering useful
+suggestions for misspelled words. This requires reducing words to a
+sceletal form and applying pattern-matching algorithms.
