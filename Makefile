@@ -45,6 +45,7 @@ install:	llamafile/zipalign.1					\
 		o/$(MODE)/llama.cpp/llama-bench/llama-bench		\
 		o/$(MODE)/llama.cpp/perplexity/perplexity		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize		\
+		o/$(MODE)/stable-diffusion.cpp/main			\
 		o/$(MODE)/whisper.cpp/main				\
 		o/$(MODE)/llamafile/server/main
 	mkdir -p $(PREFIX)/bin
