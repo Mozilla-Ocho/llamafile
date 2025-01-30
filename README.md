@@ -294,6 +294,11 @@ curl -L -o mistral.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1
 Windows users may need to change `./llamafile.exe` to `.\llamafile.exe`
 when running the above command.
 
+Here's an example how to use external weights file that is stored localy on Windows computer:
+
+```sh
+.\llamafile.exe -m "c:\AI\models\bartowski\Llama-3.2-3B-Instruct-GGUF\Llama-3.2-3B-Instruct-Q8_0.gguf"
+```
 
 ## Gotchas and troubleshooting
 
