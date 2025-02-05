@@ -668,7 +668,7 @@ llamafile -m sha256-00e1317cbf74d901080d7100f57580ba8dd8de57203072dc6f668324ba54
 
 ## Technical details
 
-Here is a succinct overview of the tricks we used to create the fattest
+Here is a succinct overview of the tricks we used to create the fastest
 executable format ever. The long story short is llamafile is a shell
 script that launches itself and runs inference on embedded weights in
 milliseconds without needing to be copied or installed. What makes that
