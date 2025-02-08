@@ -189,6 +189,65 @@ node index.js
 
     `system_prompt`: Change the system prompt (initial prompt of all slots), this is useful for chat applications. [See more](#change-system-prompt-on-runtime)
 
+### Examples 
+
+**CODE COMPLETION**
+
+You can use the completions endpoint for Code Completion (Fill-In-the Middle or FIM Completion) with the following prompt syntax:
+
+<details>
+<summary>Curl API Client Example</summary>
+  
+```bash
+curl 'http://127.0.0.1:8081/completion' \
+-X POST -H "Content-Type: application/json" \
+-H "Authorization: Bearer no-key" --data-binary \
+'{
+  "model": "LlaMA_CPP",
+  "stream": false,
+  "prompt": "<|fim_prefix|>[CODE_BEFORE_CURSOR]<|fim_suffix|>[CODE_AFTER_CURSOR]<|fim_middle|>",
+  "temperature": 0.1,
+  "n_predict": 512,
+  "cache_prompt": true,
+  "stop": ["<|fim_middle|>", "\n\n", "<|endoftext|>"]
+}'
+```
+</details>
+
+<details>
+  <summary>Javascript API Client Example</summary>
+  
+  ```typescript
+  const generateCompletion = async (prefix: string, suffix: string) => {
+    try {
+      const response = await fetch('http://127.0.0.1:8080/completion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer no-key',
+        },
+        body: JSON.stringify({
+          model: 'LlaMA_CPP',
+          stream: false,
+          prompt: `<|fim_prefix|>${prefix}<|fim_suffix|>${suffix}<|fim_middle|>`,
+          temperature: 0.1,
+          max_new_tokens: 512,
+          do_sample: false,
+          stop: ['<|fim_middle|>', '\n\n', '<|endoftext|>'],
+        }),
+      });
+      const data = await response.json();
+    } catch (error) {
+      console.error('Completion error:', error);
+      return null;
+    }
+  };
+  
+  const completionResult = await generateCompletion('[YOUR_PREFIX', 'YOUR_SUFFIX');
+  ```
+</details>
+
+
 ### Result JSON:
 
 * Note: When using streaming mode (`stream`) only `content` and `stop` will be returned until end of completion.
@@ -274,12 +333,12 @@ Notice that each `probs` is an array of length `n_probs`.
 
     ```python
     import openai
-
+    
     client = openai.OpenAI(
         base_url="http://localhost:8080/v1", # "http://<Your api-server IP>:port"
         api_key = "sk-no-key-required"
     )
-
+    
     completion = client.chat.completions.create(
     model="gpt-3.5-turbo",
     messages=[
@@ -287,7 +346,7 @@ Notice that each `probs` is an array of length `n_probs`.
         {"role": "user", "content": "Write a limerick about python exceptions"}
     ]
     )
-
+    
     print(completion.choices[0].message)
     ```
     ... or raw HTTP requests:
