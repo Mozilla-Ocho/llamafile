@@ -13,6 +13,8 @@ o/$(MODE)/llama.cpp/main/main:					\
 		o/$(MODE)/llama.cpp/main/embedding.o		\
 		o/$(MODE)/llamafile/server/server.a		\
 		o/$(MODE)/llama.cpp/server/server.a		\
+		o/$(MODE)/llama.cpp/localscore/localscore.a			\
+		o/$(MODE)/third_party/mbedtls/mbedtls.a		\
 		o/$(MODE)/llama.cpp/llava/llava.a		\
 		o/$(MODE)/llama.cpp/llama.cpp.a			\
 		o/$(MODE)/llamafile/highlight/highlight.a	\

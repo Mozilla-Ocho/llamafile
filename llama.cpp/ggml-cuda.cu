@@ -17266,6 +17266,18 @@ GGML_CALL int ggml_backend_cuda_get_device_count() {
     return ggml_cuda_info().device_count;
 }
 
+GGML_CALL void ggml_backend_cuda_get_device_properties(int device, struct ggml_cuda_device_properties * properties) {
+    cudaDeviceProp prop;
+    CUDA_CHECK(cudaGetDeviceProperties(&prop, device));
+
+    strncpy(properties->name, prop.name, sizeof(properties->name) - 1);
+    properties->totalGlobalMem = prop.totalGlobalMem;
+    properties->multiProcessorCount = prop.multiProcessorCount;
+    properties->major = prop.major;
+    properties->minor = prop.minor;
+    snprintf(properties->compute, sizeof(properties->compute), "%d.%d", prop.major, prop.minor);
+}
+
 GGML_CALL void ggml_backend_cuda_get_device_description(int device, char * description, size_t description_size) {
     cudaDeviceProp prop;
     CUDA_CHECK(cudaGetDeviceProperties(&prop, device));

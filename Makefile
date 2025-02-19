@@ -43,6 +43,7 @@ install:	llamafile/zipalign.1					\
 		o/$(MODE)/llama.cpp/imatrix/imatrix			\
 		o/$(MODE)/llama.cpp/quantize/quantize			\
 		o/$(MODE)/llama.cpp/llama-bench/llama-bench		\
+		o/$(MODE)/llama.cpp/localscore/localscore		\
 		o/$(MODE)/llama.cpp/perplexity/perplexity		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize		\
 		o/$(MODE)/whisper.cpp/main				\
@@ -54,6 +55,7 @@ install:	llamafile/zipalign.1					\
 	$(INSTALL) o/$(MODE)/llama.cpp/imatrix/imatrix $(PREFIX)/bin/llamafile-imatrix
 	$(INSTALL) o/$(MODE)/llama.cpp/quantize/quantize $(PREFIX)/bin/llamafile-quantize
 	$(INSTALL) o/$(MODE)/llama.cpp/llama-bench/llama-bench $(PREFIX)/bin/llamafile-bench
+	$(INSTALL) o/$(MODE)/llama.cpp/localscore/localscore $(PREFIX)/bin/localscore
 	$(INSTALL) build/llamafile-convert $(PREFIX)/bin/llamafile-convert
 	$(INSTALL) build/llamafile-upgrade-engine $(PREFIX)/bin/llamafile-upgrade-engine
 	$(INSTALL) o/$(MODE)/llama.cpp/perplexity/perplexity $(PREFIX)/bin/llamafile-perplexity

@@ -27,6 +27,7 @@
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/llava/llava.h"
 #include "llama.cpp/server/server.h"
+#include "llama.cpp/localscore/localscore.h"
 #include "llamafile/server/prog.h"
 
 static llama_context           ** g_ctx;
@@ -152,6 +153,7 @@ enum Program {
     CHATBOT,
     EMBEDDING,
     LLAMAFILER,
+    LOCALSCORE
 };
 
 enum Program determine_program(char *argv[]) {
@@ -168,6 +170,8 @@ enum Program determine_program(char *argv[]) {
             prog = EMBEDDING;
         } else if (!strcmp(argv[i], "--v2")) {
             v2 = true;
+        } else if (!strcmp(argv[i], "--localscore")) {
+            prog = LOCALSCORE;
         }
     }
     if (prog == SERVER && v2) {
@@ -219,6 +223,10 @@ int main(int argc, char ** argv) {
     if (prog == EMBEDDING) {
         int embedding_cli(int, char **);
         return embedding_cli(argc, argv);
+    }
+
+    if (prog == LOCALSCORE) {
+        return localscore_cli(argc, argv);
     }
 
     launch_sigint_thread();

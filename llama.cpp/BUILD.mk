@@ -28,6 +28,7 @@ include llama.cpp/imatrix/BUILD.mk
 include llama.cpp/quantize/BUILD.mk
 include llama.cpp/perplexity/BUILD.mk
 include llama.cpp/llama-bench/BUILD.mk
+include llama.cpp/localscore/BUILD.mk
 
 $(LLAMA_CPP_SRCS_OBJS): private				\
 		CCFLAGS +=				\
@@ -93,4 +94,5 @@ o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/imatrix		\
 		o/$(MODE)/llama.cpp/quantize		\
 		o/$(MODE)/llama.cpp/perplexity		\
-		o/$(MODE)/llama.cpp/llama-bench
+		o/$(MODE)/llama.cpp/llama-bench		\
+		o/$(MODE)/llama.cpp/localscore 		\
