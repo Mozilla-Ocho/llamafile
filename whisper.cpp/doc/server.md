@@ -1,10 +1,12 @@
-# whisper.cpp http server
+# whisperfile http server
 
 Simple http server. WAV Files are passed to the inference model via http requests.
 
 https://github.com/ggerganov/whisper.cpp/assets/1991296/e983ee53-8741-4eb5-9048-afe5e4594b8f
 
 ## Usage
+
+Download the latest release (e.g. `whisperfile-0.9.0`), a model (e.g. `whisper-tiny.en-q5_1.bin`) and then:
 
 ```
 ./whisperfile-0.9.0 -m whisper-tiny.en-q5_1.bin
