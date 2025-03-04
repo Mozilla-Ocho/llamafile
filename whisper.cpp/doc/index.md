@@ -11,3 +11,4 @@ by Georgi Gerganov, et al.
 - [Packaging](packaging.md)
 - [Using GPUs](gpu.md)
 - [Speech Translation](translate.md)
+- [Server](server.md)
