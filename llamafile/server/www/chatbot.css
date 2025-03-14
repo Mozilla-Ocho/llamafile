@@ -45,6 +45,7 @@ p {
 .chat-header h1 {
   font-size: 2rem;
   color: #212529;
+  word-break: break-word;
 }
 
 .chat-header img {
@@ -172,27 +173,71 @@ ul li:first-child {
   background-color: transparent;
 }
 
-.chat-input:focus {
+.chat-input:focus,
+#completions-input:focus {
   border-color: #86b7fe;
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
-.send-button {
-  padding: 0.75rem 1.5rem;
-  background: #0d6efd;
+.chat-input-container button,
+.menu-trigger,
+.completions-content button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s;
+  transition: color 0.2s;
 }
 
-.send-button:hover {
+.chat-input-button-container {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-end;
+  gap: 0.5em;
+}
+
+.chat-input-button-container button img,
+.menu-trigger img,
+.completions-controls img {
+  width: 24px;
+  height: 24px;
+}
+
+.chat-input-button-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-input-button-row button,
+.menu-trigger,
+.completions-controls button {
+  padding: 0.5rem .5rem;
+  background: #9299a0;
+}
+
+.chat-input-button-row button:hover,
+.menu-trigger:hover,
+.completions-controls button:hover {
+  background: #5c636a;
+}
+
+.send-button,
+button.complete-button {
+  padding: 0.75rem 1.5rem;
+  background: #0d6efd;
+  font-size: 1rem;
+}
+
+.send-button:hover,
+button.complete-button:hover {
   background: #0b5ed7;
 }
 
-.send-button:disabled {
+.send-button:disabled,
+button.complete-button:disabled {
   background: #6c757d;
   cursor: not-allowed;
 }
@@ -200,12 +245,7 @@ ul li:first-child {
 .stop-button {
   padding: 0.75rem 1.5rem;
   background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
   font-size: 1rem;
-  transition: background-color 0.2s;
 }
 
 .stop-button:hover {
@@ -266,37 +306,6 @@ ul li:first-child {
   width: 16px;
   height: 16px;
   display: block;
-}
-
-.redo-button {
-  padding: 0.5rem .5rem;
-  background: #6c757d;
-  color: white;
-  padding: 8px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 20px;
-  transition: color 0.2s;
-}
-
-.redo-button:hover {
-  background: #5c636a;
-}
-
-.settings-button {
-  padding: 0.5rem .5rem;
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s;
-}
-
-.settings-button:hover {
-  background: #5c636a;
 }
 
 .settings-modal {
@@ -464,44 +473,12 @@ ul li:first-child {
   font-size: 1rem;
   font-family: inherit;
   resize: none;
+  outline: none ;
 }
 
 .completions-controls {
   display: flex;
   gap: 0.5rem;
-}
-
-.complete-button {
-  padding: 0.75rem 1.5rem;
-  background: #0d6efd;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s;
-}
-
-.complete-button:hover {
-  background: #0b5ed7;
-}
-
-.upload-button {
-  padding: 0.5rem .5rem;
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.upload-button img {
-  vertical-align: middle;
-}
-
-.upload-button:hover {
-  background: #5c636a;
 }
 
 .mode-dropdown {
@@ -527,20 +504,7 @@ ul li:first-child {
 .menu-dropdown {
   position: relative;
   display: inline-block;
-}
-
-.menu-trigger {
-  padding: 0.5rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: #666;
-  transition: color 0.2s;
-}
-
-.menu-trigger:hover {
-  color: #000;
+  align-self: flex-start;
 }
 
 .menu {
