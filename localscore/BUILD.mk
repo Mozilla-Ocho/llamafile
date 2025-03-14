@@ -18,7 +18,8 @@ LOCALSCORE_OBJS =					\
 	$(LOCALSCORE_SRCS_CPP:%.cpp=o/$(MODE)/%.o)
 
 # Build the library
-o/$(MODE)/localscore/localscore.a: $(LOCALSCORE_OBJS)
+o/$(MODE)/localscore/localscore.a: 		\
+		$(LOCALSCORE_OBJS)				\
 
 # Any specific compiler flags needed
 $(LOCALSCORE_OBJS): private				\

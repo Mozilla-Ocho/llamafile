@@ -23,6 +23,7 @@ o/$(MODE)/llama.cpp/main/main:					\
 		o/$(MODE)/llamafile/server/main.1.asc.zip.o	\
 		$(LLAMA_CPP_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)	\
 		$(LLAMAFILE_SERVER_ASSETS:%=o/$(MODE)/%.zip.o)	\
+		$(THIRD_PARTY_MBEDTLS_A_CERTS:%=o/$(MODE)/%.zip.o) \
 
 $(LLAMA_CPP_MAIN_OBJS): llama.cpp/main/BUILD.mk
 
