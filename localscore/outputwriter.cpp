@@ -89,6 +89,7 @@ std::string json_printer::format_value(const std::string & field, const std::str
 }
 
 void json_printer::print_header(const cmd_params & params, AcceleratorInfo accelerator_info, RuntimeInfo runtime_info, SystemInfo sys_info, ModelInfo model_info) {
+    // TODO we really should use jart's JSON.
     writer->write("{\n");
     
     // Print RuntimeInfo object
@@ -152,13 +153,13 @@ int markdown_printer::get_field_width(const std::string & field) {
         return -30;
     }
     if (field == "t/s") {
-        return 15; // [jart]
+        return 15;
     }
     if (field == "cpu_info") {
-        return test::cpu_info.size(); // [jart]
+        return test::cpu_info.size();
     }
     if (field == "model_filename") {
-        return 40; // [jart]
+        return 40;
     }
     if (field == "size" || field == "params") {
         return 10;
@@ -222,13 +223,11 @@ int markdown_printer::calculate_total_width() const {
 void markdown_printer::print_header(const cmd_params & params, AcceleratorInfo accelerator_info, RuntimeInfo runtime_info, SystemInfo sys_info, ModelInfo model_info) {
     fields.emplace_back("test");
     fields.emplace_back("run number");
-    fields.emplace_back("avg time"); // [jart]
+    fields.emplace_back("avg time");
     fields.emplace_back("power");
     fields.emplace_back("tokens processed");
     fields.emplace_back("pp t/s");
     fields.emplace_back("tg t/s");
-    // fields.emplace_back("pp t/s/watt");
-    // fields.emplace_back("tg t/s/watt");
     fields.emplace_back("ttft");
 
     int total_width = calculate_total_width();

@@ -116,7 +116,7 @@ void* update_t_gen_column(void* args) {
 
 std::string getUserConfirmation() {
     std::string user_input;
-    printf("\nDo you want to submit your results to the public database? (y/n): ");
+    printf("\nDo you want to submit your results to https://localscore.ai? The results will be public (y/n): ");
     std::getline(std::cin, user_input);
     
     // Convert to lowercase for case-insensitive comparison
@@ -192,29 +192,38 @@ static bool submitBenchmarkResults(const std::string& req_payload, const cmd_par
             usleep(wait_time * 1000000);
         }
 
-        Response response = POST("https://localscore.cjpais.com/api/results", req_payload, {
-            {"Content-Type", "application/json"}
-        });
+        try { 
+            // Response response = POST("https://localscore.ai/api/results", req_payload, {
+            Response response = POST("https://localscore.vercel.app/api/results", req_payload, {
+                {"Content-Type", "application/json"}
+            });
 
-        if (response.status == 200) {
-            std::pair<Json::Status, Json> json = Json::parse(response.body);
+            if (response.status == 200) {
+                std::pair<Json::Status, Json> json = Json::parse(response.body);
 
-            if (json.first != Json::success) {
-                printf("Error parsing response json\n");
-                continue;
-            }
-            if (!json.second.isObject()) {
-                printf("Response json is not an object\n");
-                continue;
-            }
+                if (json.first != Json::success) {
+                    printf("Error parsing response json\n");
+                    continue;
+                }
+                if (!json.second.isObject()) {
+                    printf("Response json is not an object\n");
+                    continue;
+                }
 
-            if (json.second["id"].isNumber()) {
-                printf("Result Link: https://localscore.cjpais.com/result/%d\n", 
-                       (int)json.second["id"].getNumber());
-                return true;
+                if (json.second["id"].isNumber()) {
+                    // printf("Result Link: https://localscore.ai/result/%d\n", 
+                    printf("Result Link: https://localscore.vercel.app/result/%d\n", 
+                        (int)json.second["id"].getNumber());
+                    return true;
+                }
+            } else {
+                printf("Error submitting results to the public database. Status: %d\n", response.status);
+                if (attempt < max_retries - 1) {
+                    continue;
+                }
             }
-        } else {
-            printf("Error submitting results to the public database. Status: %d\n", response.status);
+        } catch (const std::exception& e) {
+            printf("Error submitting results: %s\n", e.what());
             if (attempt < max_retries - 1) {
                 continue;
             }
@@ -254,14 +263,27 @@ static void acceleratorSelector(cmd_params* params) {
     }
 }
 
-static void displayResults(Json data) {
+struct LocalScoreResultsSummary {
+    double avg_prompt_tps;
+    double avg_gen_tps;
+    double avg_ttft_ms;
+    double performance_score;
+};
+
+static LocalScoreResultsSummary getResultsSummary(Json data) {
+    LocalScoreResultsSummary rs = {
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    };
+
     if (data["results"].isArray()) {
         std::vector<Json> results = data["results"].getArray();
         
         double total_prompt_tps = 0.0;
         double total_gen_tps = 0.0;
         double total_ttft_ms = 0.0;
-        double total_power_watts = 0.0;
         int valid_count = 0;
 
         for (const auto & result : results) {
@@ -271,16 +293,14 @@ static void displayResults(Json data) {
                 // Check if all required fields exist and are numbers
                 if (!result.contains("prompt_tps") || 
                     !result.contains("gen_tps") || 
-                    !result.contains("ttft_ms") || 
-                    !result.contains("power_watts")) {
+                    !result.contains("ttft_ms")) {
                     valid_entry = false;
                 } else {
                     // Get a non-const reference to access the values
                     auto& obj = const_cast<Json&>(result);
                     if (!obj["prompt_tps"].isNumber() ||
                         !obj["gen_tps"].isNumber() ||
-                        !obj["ttft_ms"].isNumber() ||
-                        !obj["power_watts"].isNumber()) {
+                        !obj["ttft_ms"].isNumber()) {
                         valid_entry = false;
                     }
                 }
@@ -290,36 +310,36 @@ static void displayResults(Json data) {
                     total_prompt_tps += obj["prompt_tps"].getNumber();
                     total_gen_tps += obj["gen_tps"].getNumber();
                     total_ttft_ms += obj["ttft_ms"].getNumber();
-                    total_power_watts += obj["power_watts"].getNumber();
                     valid_count++;
                 }
             }
         }
 
         if (valid_count > 0) {
-            double avg_prompt_tps = total_prompt_tps / valid_count;
-            double avg_gen_tps = total_gen_tps / valid_count;
-            double avg_ttft_ms = total_ttft_ms / valid_count;
-
+            rs.avg_prompt_tps = total_prompt_tps / valid_count;
+            rs.avg_gen_tps = total_gen_tps / valid_count;
+            rs.avg_ttft_ms = total_ttft_ms / valid_count;
 
             // calculate the geometric mean of the performance values for a score
-            double score = pow(avg_prompt_tps * avg_gen_tps * (1000 / avg_ttft_ms), 1.0 / 3.0) * 10;
-            // printf("\n\033[1;35mYour LocalScore:\n\n", score);
-            printf("\n\033[1;35m");
-            ascii_display::print_logo();
-            printf("\n");
-            ascii_display::printLargeNumber((int)score);
-            printf("\033[0m\n");
-            printf("\033[32mToken Generation: \t \033[1;32m%.2f\033[0m \033[3;32mtok/s\033[0m\n", avg_gen_tps);
-            printf("\033[36mPrompt Processing: \t \033[1;36m%.2f\033[0m \033[3;36mtok/s\033[0m\n", avg_prompt_tps);
-            printf("\033[33mTime to First Token:\t \033[1;33m%.2f\033[0m \033[3;33mms\033[0m\n", avg_ttft_ms);
-            printf("\033[0m");
-        } else {
-            printf("No valid results found in the array\n");
+            double score = pow(rs.avg_prompt_tps * rs.avg_gen_tps * (1000 / rs.avg_ttft_ms), 1.0 / 3.0) * 10;
+
+            rs.performance_score = score;
         }
-    } else {
-        printf("Results is not an array\n");
     }
+
+    return rs;
+}
+
+static void displayResults(LocalScoreResultsSummary results_summary) {
+    printf("\n\033[1;35m");
+    ascii_display::print_logo();
+    printf("\n");
+    ascii_display::printLargeNumber((int)results_summary.performance_score);
+    printf("\033[0m\n");
+    printf("\033[32mToken Generation: \t \033[1;32m%.2f\033[0m \033[3;32mtok/s\033[0m\n", results_summary.avg_gen_tps);
+    printf("\033[36mPrompt Processing: \t \033[1;36m%.2f\033[0m \033[3;36mtok/s\033[0m\n", results_summary.avg_prompt_tps);
+    printf("\033[33mTime to First Token:\t \033[1;33m%.2f\033[0m \033[3;33mms\033[0m\n", results_summary.avg_ttft_ms);
+    printf("\033[0m");
 }
 
 struct SystemData {
@@ -447,8 +467,21 @@ void process_and_submit_results(const std::string& req_payload, const cmd_params
         printf("Invalid JSON results\n");
         exit(1);
     }
-    displayResults(data);
-    submitBenchmarkResults(req_payload, params);
+    LocalScoreResultsSummary rs = getResultsSummary(data);
+    displayResults(rs);
+
+    Json results_summary;
+    results_summary.setObject();
+    results_summary["avg_prompt_tps"] = rs.avg_prompt_tps;
+    results_summary["avg_gen_tps"] = rs.avg_gen_tps;
+    results_summary["avg_ttft_ms"] = rs.avg_ttft_ms;
+    results_summary["performance_score"] = rs.performance_score;
+
+    data["results_summary"] = results_summary;
+
+    const std::string payload = data.toString();
+    // printf("Submitting results\n Payload: %s\n", payload.c_str());
+    submitBenchmarkResults(payload, params);
 }
 
 int localscore_cli(int argc, char** argv) {

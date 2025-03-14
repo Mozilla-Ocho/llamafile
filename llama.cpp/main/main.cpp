@@ -27,7 +27,7 @@
 #include "llama.cpp/ggml-metal.h"
 #include "llama.cpp/llava/llava.h"
 #include "llama.cpp/server/server.h"
-#include "llama.cpp/localscore/localscore.h"
+#include "localscore/localscore.h"
 #include "llamafile/server/prog.h"
 
 static llama_context           ** g_ctx;

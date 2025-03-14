@@ -16,6 +16,7 @@ include llamafile/BUILD.mk
 include llama.cpp/BUILD.mk
 include stable-diffusion.cpp/BUILD.mk
 include whisper.cpp/BUILD.mk
+include localscore/BUILD.mk
 
 # the root package is `o//` by default
 # building a package also builds its sub-packages
@@ -24,6 +25,7 @@ o/$(MODE)/:	o/$(MODE)/llamafile					\
 		o/$(MODE)/llama.cpp					\
 		o/$(MODE)/stable-diffusion.cpp				\
 		o/$(MODE)/whisper.cpp					\
+		o/$(MODE)/localscore					\
 		o/$(MODE)/third_party					\
 		o/$(MODE)/depend.test
 
@@ -43,7 +45,7 @@ install:	llamafile/zipalign.1					\
 		o/$(MODE)/llama.cpp/imatrix/imatrix			\
 		o/$(MODE)/llama.cpp/quantize/quantize			\
 		o/$(MODE)/llama.cpp/llama-bench/llama-bench		\
-		o/$(MODE)/llama.cpp/localscore/localscore		\
+		o/$(MODE)/localscore/localscore		\
 		o/$(MODE)/llama.cpp/perplexity/perplexity		\
 		o/$(MODE)/llama.cpp/llava/llava-quantize		\
 		o/$(MODE)/whisper.cpp/main				\
@@ -55,7 +57,7 @@ install:	llamafile/zipalign.1					\
 	$(INSTALL) o/$(MODE)/llama.cpp/imatrix/imatrix $(PREFIX)/bin/llamafile-imatrix
 	$(INSTALL) o/$(MODE)/llama.cpp/quantize/quantize $(PREFIX)/bin/llamafile-quantize
 	$(INSTALL) o/$(MODE)/llama.cpp/llama-bench/llama-bench $(PREFIX)/bin/llamafile-bench
-	$(INSTALL) o/$(MODE)/llama.cpp/localscore/localscore $(PREFIX)/bin/localscore
+	$(INSTALL) o/$(MODE)/localscore/localscore $(PREFIX)/bin/localscore
 	$(INSTALL) build/llamafile-convert $(PREFIX)/bin/llamafile-convert
 	$(INSTALL) build/llamafile-upgrade-engine $(PREFIX)/bin/llamafile-upgrade-engine
 	$(INSTALL) o/$(MODE)/llama.cpp/perplexity/perplexity $(PREFIX)/bin/llamafile-perplexity

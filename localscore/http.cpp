@@ -478,11 +478,19 @@ Response SendHttpRequest(const std::string& url_str, uint64_t method,
 
     std::unique_ptr<SSLContext> ssl_ctx;
     if (usessl) {
-        ssl_ctx = SetupSSL(sock, url.host);
+        try {
+            ssl_ctx = SetupSSL(sock, url.host);
+        } catch (const std::exception& e) {
+            printf("Error setting up SSL: %s\n", e.what());
+            close(sock);
+            return Response();
+        }
     }
 
     SendRequest(request, sock, ssl_ctx.get());
-    return DecodeHttpResponse(sock, ssl_ctx.get());
+    Response resp = DecodeHttpResponse(sock, ssl_ctx.get());
+    close(sock);
+    return resp;
 }
 
 Response GET(const std::string& url_str, const Headers& headers) {
