@@ -1,6 +1,6 @@
 # whisperfile http server
 
-Simple http server. WAV Files are passed to the inference model via http requests.
+Simple http server. WAV Files are passed to the inference model via http requests. MP3, FLAC, and OGG files are automatically converted to WAV format via miniaudio.
 
 https://github.com/ggerganov/whisper.cpp/assets/1991296/e983ee53-8741-4eb5-9048-afe5e4594b8f
 
@@ -45,11 +45,10 @@ options:
   -oved D,   --ov-e-device DNAME [CPU    ] the OpenVINO device used for encode inference
   --host HOST,                   [127.0.0.1] Hostname/ip-adress for the server
   --port PORT,                   [8080   ] Port number for the server
-  --convert,                     [false  ] Convert audio to WAV, requires ffmpeg on the server
 ```
 
 > [!WARNING]
-> **Do not run the server example with administrative privileges and ensure it's operated in a sandbox environment, especially since it involves risky operations like accepting user file uploads and using ffmpeg for format conversions. Always validate and sanitize inputs to guard against potential security threats.**
+> **Do not run the server example with administrative privileges and ensure it's operated in a sandbox environment, especially since it involves risky operations like accepting user file uploads. Always validate and sanitize inputs to guard against potential security threats.**
 
 ## request examples
 
