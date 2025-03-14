@@ -46,6 +46,7 @@ namespace server {
 struct V1ChatCompletionParams
 {
     bool stream = false;
+    bool stream_include_usage = false;
     long max_tokens = -1;
     long seed = _rand64();
     double top_p = 1;
@@ -276,6 +277,26 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
         if (!stream.isBool())
             return send_error(400, "stream field must be boolean");
         params->stream = stream.getBool();
+
+        // stream_options: object|null
+        //
+        // Options for the streaming response.
+        Json& stream_options = json["stream_options"];
+        if (!stream_options.isNull()) {
+            if (!stream_options.isObject())
+                return send_error(400, "stream_options field must be object");
+
+            // include_usage: bool|null
+            //
+            // Include usage also for streaming responses. The actual usage will be reported before
+            // the [DONE] message, but all chunks contain an empty usage field.
+            Json& include_usage = stream_options["include_usage"];
+            if (!include_usage.isNull()) {
+                if (!include_usage.isBool())
+                    return send_error(400, "include_usage field must be boolean");
+                params->stream_include_usage = include_usage.getBool();
+            }
+        }
     }
 
     // max_tokens: integer|null
@@ -570,6 +591,8 @@ Client::v1_chat_completions()
             return false;
         choice["delta"]["role"] = "assistant";
         choice["delta"]["content"] = "";
+        if (params->stream_include_usage)
+            response->json["usage"] = nullptr;
     }
 
     // prefill time
@@ -661,6 +684,12 @@ Client::v1_chat_completions()
     if (params->stream) {
         choice["delta"]["content"] = "";
         response->json["created"] = timespec_real().tv_sec;
+        if (params->stream_include_usage) {
+            Json& usage = response->json["usage"];
+            usage["prompt_tokens"] = prompt_tokens;
+            usage["completion_tokens"] = completion_tokens;
+            usage["total_tokens"] = completion_tokens + prompt_tokens;
+        }
         response->content = make_event(response->json);
         choice.getObject().erase("delta");
         if (!send_response_chunk(response->content))
