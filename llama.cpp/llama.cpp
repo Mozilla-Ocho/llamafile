@@ -19294,7 +19294,7 @@ static int32_t llama_chat_apply_template_internal(
         if (add_ass) {
             ss << "[|assistant|]";
         }
-    } else if (tmpl == "granite" || tmpl == "granitemoe" || tmpl_contains("<|start_of_role|>")) {
+    } else if (tmpl == "granite" || tmpl == "granitemoe" || tmpl_contains("<|start_of_role|>") || tmpl_contains("Granite")) {
         // IBM Granite template
         for (const auto & message : chat) {
             std::string role(message->role);
