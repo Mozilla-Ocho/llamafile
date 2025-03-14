@@ -699,6 +699,8 @@ Client::dispatcher()
         return v1_completions();
     if (p1 == "v1/chat/completions")
         return v1_chat_completions();
+    if (p1 == "v1/models")
+        return v1_models();
     if (p1 == "slotz")
         return slotz();
     if (p1 == "flagz")
