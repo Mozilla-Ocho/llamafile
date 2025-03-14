@@ -62,9 +62,22 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
-function createMessageElement(content, role) {
+function wrapMessageElement(messageElement, role) {
+  const wrapper = document.createElement("div");
+  wrapper.appendChild(messageElement);
+  if (role == "assistant") {
+    const controlContainer = document.createElement("div");
+    controlContainer.appendChild(createCopyButton(() => messageElement.textContent, () => messageElement.innerHTML));
+    controlContainer.classList.add("message-controls");
+    wrapper.appendChild(controlContainer);
+  }
+  wrapper.classList.add("message-wrapper", role);
+  return wrapper;
+}
+
+function createMessageElement(content) {
   const messageDiv = document.createElement("div");
-  messageDiv.classList.add("message", role);
+  messageDiv.classList.add("message");
   let hdom = new HighlightDom(messageDiv);
   const high = new RenderMarkdown(hdom);
   high.feed(content);
@@ -105,6 +118,7 @@ async function handleChatStream(response) {
   const decoder = new TextDecoder();
   let buffer = "";
   let currentMessageElement = null;
+  let currentMessageWrapper = null;
   let messageAppended = false;
   let finishReason = null;
   let hdom = null;
@@ -144,8 +158,9 @@ async function handleChatStream(response) {
             }
 
             if (content && !messageAppended) {
-              currentMessageElement = createMessageElement("", "assistant");
-              chatMessages.appendChild(currentMessageElement);
+              currentMessageElement = createMessageElement("");
+              currentMessageWrapper = wrapMessageElement(currentMessageElement, "assistant");
+              chatMessages.appendChild(currentMessageWrapper);
               hdom = new HighlightDom(currentMessageElement);
               high = new RenderMarkdown(hdom);
               messageAppended = true;
@@ -220,8 +235,8 @@ async function sendMessage() {
   abortController = new AbortController();
 
   // add user message to chat
-  const userMessageElement = createMessageElement(message, "user");
-  chatMessages.appendChild(userMessageElement);
+  const userMessageElement = createMessageElement(message);
+  chatMessages.appendChild(wrapMessageElement(userMessageElement, "user"));
   scrollToBottom();
 
   // update chat history
@@ -253,16 +268,16 @@ async function sendMessage() {
         chatHistory.push({ role: "assistant", content: lastMessage });
     } else {
       console.error("sendMessage() failed due to server error", response);
-      chatMessages.appendChild(createMessageElement(
-        `Server replied with error code ${response.status} ${response.statusText}`,
+      chatMessages.appendChild(wrapMessageElement(createMessageElement(
+        `Server replied with error code ${response.status} ${response.statusText}`),
         "system"));
       cleanupAfterMessage();
     }
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error("sendMessage() failed due to unexpected exception", error);
-      chatMessages.appendChild(createMessageElement(
-        "There was an error processing your request.",
+      chatMessages.appendChild(wrapMessageElement(createMessageElement(
+        "There was an error processing your request."),
         "system"));
     }
     cleanupAfterMessage();
@@ -449,8 +464,8 @@ function startChat(history) {
   for (let i = 0; i < chatHistory.length; i++) {
     if (flagz.no_display_prompt && chatHistory[i].role == "system")
       continue;
-    chatMessages.appendChild(createMessageElement(chatHistory[i].content,
-                                                  chatHistory[i].role));
+    chatMessages.appendChild(wrapMessageElement(createMessageElement(chatHistory[i].content),
+      chatHistory[i].role));
   }
   scrollToBottom();
 }

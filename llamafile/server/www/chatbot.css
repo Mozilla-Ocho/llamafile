@@ -96,26 +96,73 @@ ul li:first-child {
 }
 
 .message {
-  margin-bottom: 1rem;
   padding: 0.75rem;
   border-radius: 8px;
-  max-width: 80%;
   word-wrap: break-word;
+  background: var(--message-background);
 }
 
-.message.user {
-  background: #e9ecef;
+.message-wrapper.user {
+  --message-background: #e9ecef;
   margin-left: auto;
+  max-width: 80%;
 }
 
-.message.assistant {
-  background: #f8f9fa;
+.message-wrapper.assistant {
+  margin-right: auto;
+  /* Not needed because of the message controls */
+  margin-bottom: 0;
+  max-width: 90%;
+}
+
+.message-wrapper.system {
+  --message-background: #f8e3fa;
   margin-right: auto;
 }
 
-.message.system {
-  background: #f8e3fa;
-  margin-right: auto;
+.message-wrapper {
+  position: relative;
+  overflow: visible;
+  margin-bottom: 1rem;
+}
+
+.message-controls {
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.message-wrapper.user .message-controls {
+  right: 0;
+}
+
+.message-controls button, .copy-button {
+  position: static;
+  padding: 0.25rem;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  background: white;
+  transition: all 0.1s;
+  cursor: pointer;
+  box-sizing: content-box;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.message-controls button:hover,
+.message-controls button:focus,
+.copy-button:hover,
+.copy-button:focus {
+  border-color: #aaa;
+}
+
+.message-controls button img, .copy-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .message img {
@@ -264,12 +311,15 @@ button.complete-button:disabled {
 
 .message pre {
   margin: 1rem auto;
-  background: #fefefe;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
   padding: 0.5rem;
   border-radius: 4px;
   overflow-x: auto;
   position: relative;
   white-space: pre-wrap;
+  min-height: 1.5rem;
+  box-sizing: content-box;
 }
 
 .message blockquote {
@@ -289,27 +339,14 @@ button.complete-button:disabled {
   margin-left: 1rem;
 }
 
-.copy-button {
+pre .copy-button {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  padding: 0.25rem;
-  background: #fff;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.2s;
   z-index: 1;
 }
 
-.copy-button:hover {
-  opacity: 1;
-}
-
 .copy-button svg {
-  width: 16px;
-  height: 16px;
   display: block;
 }
 

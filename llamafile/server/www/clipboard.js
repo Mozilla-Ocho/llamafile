@@ -37,6 +37,7 @@ function createCopyButton(textProviderFunction, htmlProviderFunction) {
   const copyButton = document.createElement('button');
   copyButton.className = 'copy-button';
   copyButton.innerHTML = clipboardIcon;
+  copyButton.title = "Copy to clipboard";
   copyButton.addEventListener('click', async function () {
     try {
       await copyTextToClipboard(textProviderFunction(), htmlProviderFunction ? htmlProviderFunction() : null);
