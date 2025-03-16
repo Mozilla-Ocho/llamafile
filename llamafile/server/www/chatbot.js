@@ -68,11 +68,42 @@ function wrapMessageElement(messageElement, role) {
   if (role == "assistant") {
     const controlContainer = document.createElement("div");
     controlContainer.appendChild(createCopyButton(() => messageElement.textContent, () => messageElement.innerHTML));
+    controlContainer.appendChild(infoButton());
     controlContainer.classList.add("message-controls");
     wrapper.appendChild(controlContainer);
   }
   wrapper.classList.add("message-wrapper", role);
   return wrapper;
+}
+
+function infoButton(container, stats) {
+  let button = container?.querySelector("#stats");
+  if (!button) {
+    button = document.createElement("button");
+    button.id = "stats";
+    button.innerText = "i";
+    button.style.fontFamily = "monospace";
+  }
+  button.style.display = stats ? "" : "none";
+  if (stats) {
+    const parts = [];
+    const promptDurationMs = stats.firstContentTime - stats.startTime;
+    const responseDurationMs = stats.endTime - stats.firstContentTime;
+    if (promptDurationMs > 0 && stats.promptTokenCount > 0) {
+      const tokensPerSecond = (stats.promptTokenCount / (promptDurationMs / 1000)).toFixed(2);
+      const durationString = promptDurationMs >= 1000 ? `${(promptDurationMs / 1000).toFixed(2)}s` : `${promptDurationMs}ms`;
+      parts.push(`Processed ${stats.promptTokenCount} input tokens in ${durationString} (${tokensPerSecond} tokens/s)`);
+    }
+    if (responseDurationMs > 0 && stats.reponseTokenCount > 0) {
+      const tokensPerSecond = (stats.reponseTokenCount / (responseDurationMs / 1000)).toFixed(2);
+      const durationString = responseDurationMs >= 1000 ? `${(responseDurationMs / 1000).toFixed(2)}s` : `${promptDurationMs}ms`;
+      parts.push(`Generated ${stats.reponseTokenCount} tokens in ${durationString} (${tokensPerSecond} tokens/s)`)
+    } else {
+      parts.push("Incomplete");
+    }
+    button.title = parts.join("\n");
+  }
+  return button;
 }
 
 function createMessageElement(content) {
@@ -126,6 +157,13 @@ async function handleChatStream(response) {
   streamingMessageContent = [];
   const prefillStatus = document.getElementById('prefill-status');
   const progressBar = prefillStatus.querySelector('.progress-bar');
+  const stats = {
+    startTime: Date.now(),      // Timestamp when the request started
+    firstContentTime: null, // Timestamp when the first content was received
+    endTime: null,        // Timestamp when the response was fully received
+    promptTokenCount: 0,  // Number of tokens in the prompt
+    reponseTokenCount: 0   // Number of tokens in the response
+  };
 
   try {
     while (true) {
@@ -154,7 +192,11 @@ async function handleChatStream(response) {
               prefillStatus.style.display = "flex";
               progressBar.style.width = `${parsed.x_prefill_progress * 100}%`;
             } else {
-              prefillStatus.style.display = "none";
+              if (content && !stats.firstContentTime) {
+                // Finished parsing the prompt
+                stats.firstContentTime = Date.now();
+                prefillStatus.style.display = "none";
+              }
             }
 
             if (content && !messageAppended) {
@@ -171,6 +213,11 @@ async function handleChatStream(response) {
               high.feed(content);
               scrollToBottom();
             }
+            if (parsed.usage) {
+              stats.endTime = Date.now()
+              stats.promptTokenCount = parsed.usage.prompt_tokens
+              stats.reponseTokenCount = parsed.usage.completion_tokens
+            }
           } catch (e) {
             console.error("Error parsing JSON:", e);
           }
@@ -186,6 +233,9 @@ async function handleChatStream(response) {
     }
   } finally {
     if (messageAppended) {
+      stats.firstContentTime = stats.firstContentTime ?? Date.now();
+      stats.endTime = stats.endTime ?? Date.now();
+      infoButton(currentMessageWrapper, stats);
       high.flush();
       // we don't supply max_tokens, so "length" can
       // only mean that we ran out of context window
@@ -257,7 +307,10 @@ async function sendMessage() {
         top_p: settings.top_p,
         presence_penalty: settings.presence_penalty,
         frequency_penalty: settings.frequency_penalty,
-        stream: true
+        stream: true,
+        stream_options: {
+          include_usage: true
+        }
       }),
       signal: abortController.signal
     });
