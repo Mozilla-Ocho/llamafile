@@ -51,7 +51,7 @@
 
 using jt::Json;
 
-const std::string BASE_LOCALSCORE_URL = "https://localscore.vercel.app";
+const std::string BASE_LOCALSCORE_URL = "https://www.localscore.ai";
 
 const std::string test::build_commit = LLAMA_COMMIT;
 const int         test::build_number = LLAMA_BUILD_NUMBER;
@@ -183,7 +183,11 @@ static bool submitBenchmarkResults(const std::string& req_payload, const cmd_par
         return false;
     }
 
-    printf("\nSubmitting results...\n");
+    if (params.verbose) {
+        printf("Submitting results...\n Payload: %s\n", req_payload.c_str());
+    } else {
+        printf("\nSubmitting results...\n");
+    }
     
     // Implement retry with exponential backoff
     for (int attempt = 0; attempt < max_retries; attempt++) {
@@ -481,7 +485,7 @@ void process_and_submit_results(const std::string& req_payload, const cmd_params
     data["results_summary"] = results_summary;
 
     const std::string payload = data.toString();
-    // printf("Submitting results\n Payload: %s\n", payload.c_str());
+
     submitBenchmarkResults(payload, params);
 }
 
