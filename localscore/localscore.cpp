@@ -51,6 +51,8 @@
 
 using jt::Json;
 
+const std::string BASE_LOCALSCORE_URL = "https://localscore.vercel.app";
+
 const std::string test::build_commit = LLAMA_COMMIT;
 const int         test::build_number = LLAMA_BUILD_NUMBER;
 const bool        test::cuda         = false; // !!ggml_cpu_has_cuda(); // [jart]
@@ -193,8 +195,7 @@ static bool submitBenchmarkResults(const std::string& req_payload, const cmd_par
         }
 
         try { 
-            // Response response = POST("https://localscore.ai/api/results", req_payload, {
-            Response response = POST("https://localscore.vercel.app/api/results", req_payload, {
+            Response response = POST(BASE_LOCALSCORE_URL + "/api/results", req_payload, {
                 {"Content-Type", "application/json"}
             });
 
@@ -211,8 +212,8 @@ static bool submitBenchmarkResults(const std::string& req_payload, const cmd_par
                 }
 
                 if (json.second["id"].isNumber()) {
-                    // printf("Result Link: https://localscore.ai/result/%d\n", 
-                    printf("Result Link: https://localscore.vercel.app/result/%d\n", 
+                    printf("Result Link: %s/result/%d\n",
+                        BASE_LOCALSCORE_URL.c_str(),
                         (int)json.second["id"].getNumber());
                     return true;
                 }
