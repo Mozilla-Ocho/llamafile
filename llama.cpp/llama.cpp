@@ -1957,6 +1957,7 @@ struct llama_hparams {
     uint32_t n_layer;
     uint32_t n_rot;
     uint32_t n_swa = 0; // sliding window attention (SWA)
+    uint32_t n_swa_pattern = 1; // by default, all layers use non-sliding-window attention
     uint32_t n_embd_head_k; // dimension of keys (d_k). d_q is assumed to be the same, but there are n_head q heads, and only n_head_kv k-v heads
     uint32_t n_embd_head_v; // dimension of values (d_v) aka n_embd_head
     uint32_t n_expert = 0;
@@ -2025,6 +2026,7 @@ struct llama_hparams {
         if (this->n_layer       != other.n_layer)       return true;
         if (this->n_rot         != other.n_rot)         return true;
         if (this->n_swa         != other.n_swa)         return true;
+        if (this->n_swa_pattern != other.n_swa_pattern) return true;
         if (this->n_embd_head_k != other.n_embd_head_k) return true;
         if (this->n_embd_head_v != other.n_embd_head_v) return true;
         if (this->n_expert      != other.n_expert)      return true;
@@ -4809,6 +4811,8 @@ static void llm_load_hparams(
         case LLM_ARCH_GEMMA2:
             {
                 hparams.n_swa = 4096; // default value of gemma 2
+                hparams.n_swa_pattern = 2;
+
                 ml.get_key(LLM_KV_ATTENTION_SLIDING_WINDOW, hparams.n_swa, false);
                 ml.get_key(LLM_KV_ATTENTION_LAYERNORM_RMS_EPS, hparams.f_norm_rms_eps);
                 ml.get_key(LLM_KV_ATTN_LOGIT_SOFTCAPPING, hparams.f_attn_logit_softcapping, false);
@@ -4824,12 +4828,12 @@ static void llm_load_hparams(
             } break;
             case LLM_ARCH_GEMMA3:
             {
-                hparams.n_swa = 1024;
+                hparams.n_swa_pattern = 6;
 
                 hparams.rope_freq_base_train_swa = 10000.0f;
                 hparams.rope_freq_scale_train_swa = 1.0f;
 
-                ml.get_key(LLM_KV_ATTENTION_SLIDING_WINDOW, hparams.n_swa, false);
+                ml.get_key(LLM_KV_ATTENTION_SLIDING_WINDOW, hparams.n_swa);
                 ml.get_key(LLM_KV_ATTENTION_LAYERNORM_RMS_EPS, hparams.f_norm_rms_eps);
 
                 switch (hparams.n_layer) {
@@ -11811,7 +11815,8 @@ struct llm_build_context {
 
         for (int il = 0; il < n_layer; ++il) {
             // (il % 2) layers use SWA
-            struct ggml_tensor * KQ_mask_l = (il % 2 == 0) ? KQ_mask_swa : KQ_mask;
+            const bool is_swa = il % hparams.n_swa_pattern < (hparams.n_swa_pattern - 1);
+            struct ggml_tensor * KQ_mask_l = is_swa ? KQ_mask_swa : KQ_mask;
 
             // norm
             cur = llm_build_norm(ctx0, inpL, hparams,
@@ -11944,7 +11949,7 @@ struct llm_build_context {
         struct ggml_tensor * KQ_mask_swa = build_inp_KQ_mask_swa(true);
 
         for (int il = 0; il < n_layer; ++il) {
-            const bool is_swa = il % 6 < 5;
+            const bool is_swa = il % hparams.n_swa_pattern < (hparams.n_swa_pattern - 1);
 
             const float freq_base_l  = is_swa ? hparams.rope_freq_base_train_swa : cparams.rope_freq_base;
             const float freq_scale_l = is_swa ? hparams.rope_freq_scale_train_swa : cparams.rope_freq_scale;
