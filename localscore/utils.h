@@ -12,6 +12,8 @@
 #include <array>
 #include <cstdio>
 #include <stdexcept>
+#include <string.h>
+#include <stdarg.h>
 
 namespace utils {
 
@@ -85,6 +87,80 @@ namespace utils {
             result += buffer.data();
         }
         return result;
+    }
+
+    inline void print_centered(FILE *stream, int width, char decoration_char, const char *format, ...) {
+        char buffer[1024]; // Adjust size as needed
+        
+        // Handle variable arguments
+        va_list args;
+        va_start(args, format);
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        
+        const char *text = buffer;
+        
+        // Calculate the visible length (excluding ANSI escape codes)
+        int visible_length = 0;
+        const char *ptr = text;
+        while (*ptr) {
+            if (*ptr == '\033') {
+                // Skip the escape sequence
+                ptr++;
+                if (*ptr == '[') {
+                    ptr++;
+                    while (*ptr && !isalpha(*ptr)) {
+                        ptr++;
+                    }
+                    if (*ptr) ptr++; // Skip the final character of the sequence
+                    continue;
+                }
+            }
+            visible_length++;
+            ptr++;
+        }
+        
+        // Need at least 2 spaces to separate text from decorations
+        int remaining_width = width - visible_length - 2;
+        
+        // Not enough space for decorations and spaces
+        if (remaining_width < 2) {
+            fprintf(stream, "%s\n", text);
+            return;
+        }
+        
+        // Calculate how many decoration characters on each side
+        int decoration_count = remaining_width / 2;
+        
+        // Calculate padding to truly center everything
+        int total_decorated_length = visible_length + 2 + (decoration_count * 2);
+        int padding = (width - total_decorated_length) / 2;
+        
+        // Print left padding
+        for (int i = 0; i < padding; i++) {
+            fprintf(stream, " ");
+        }
+        
+        // Print left decorations
+        for (int i = 0; i < decoration_count; i++) {
+            fprintf(stream, "%c", decoration_char);
+        }
+        
+        // Print text with spaces
+        fprintf(stream, " %s ", text);
+        
+        // Print right decorations
+        for (int i = 0; i < decoration_count; i++) {
+            fprintf(stream, "%c", decoration_char);
+        }
+        
+        // Add extra padding on right if needed
+        int right_padding = width - total_decorated_length - padding;
+        for (int i = 0; i < right_padding; i++) {
+            fprintf(stream, " ");
+        }
+        
+        fprintf(stream, "\n");
     }
 
 } // namespace utils

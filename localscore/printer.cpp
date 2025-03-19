@@ -1,6 +1,6 @@
 #include <cassert>
 
-#include "outputwriter.h"
+#include "printer.h"
 #include "utils.h"
 
 #include "llama.cpp/string.h"

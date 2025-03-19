@@ -33,7 +33,7 @@
 #include "system.h"
 #include "cmd.h"
 #include "benchmark.h"
-#include "outputwriter.h"
+#include "printer.h"
 
 #include "localscore.h"
 

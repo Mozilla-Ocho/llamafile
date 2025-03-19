@@ -158,10 +158,12 @@ void get_runtime_info(RuntimeInfo* info) {
     strncpy(info->llamafile_version, LLAMAFILE_VERSION_STRING, MAX_STRING_LENGTH - 1);
     strncpy(info->llama_commit, LLAMA_COMMIT, MAX_STRING_LENGTH - 1);
 
-    fprintf(stderr, "\033[0;35m\n===== llamafile bench runtime information =====\n\n");
+    fprintf(stderr, "\033[0;35m\n");  // Sets purple color
+    utils::print_centered(stderr, 70, '=', "\033[1mLocalScore Runtime Information\033[0;35m");
+    fprintf(stderr, "\n");
     fprintf(stderr, "%-20s \033[1m%s\033[22m\n", "llamafile version:", info->llamafile_version);
     fprintf(stderr, "%-20s %s\n", "llama.cpp commit:", info->llama_commit);
-    fprintf(stderr, "\n===============================================\n\n\033[0m");
+    fprintf(stderr, "\n======================================================================\n\n\033[0m");
 }
 
 double get_mem_gb() {
@@ -192,14 +194,15 @@ void get_sys_info(SystemInfo* info) {
 
     info->ram_gb = get_mem_gb();
 
-    fprintf(stderr, "===== system information =====\n\n");
+    utils::print_centered(stderr, 70, '=', "\033[1mSystem Information\033[0m");
+    fprintf(stderr, "\n");
     fprintf(stderr, "%-20s %s\n", "Kernel Type:", info->kernel_type);
     fprintf(stderr, "%-20s %s\n", "Kernel Release:", info->kernel_release);
     fprintf(stderr, "%-20s %s\n", "Version:", info->version);
     fprintf(stderr, "%-20s %s\n", "System Architecture:", info->system_architecture);
     fprintf(stderr, "%-20s %s\n", "CPU:", info->cpu);
     fprintf(stderr, "%-20s %.2f GiB\n", "RAM:", info->ram_gb);
-    fprintf(stderr, "\n===============================\n\n");
+    fprintf(stderr, "\n======================================================================\n\n");
 }
 
 void get_accelerator_info(AcceleratorInfo* info, cmd_params * params) {
@@ -222,15 +225,20 @@ void get_accelerator_info(AcceleratorInfo* info, cmd_params * params) {
                 }
 
                 if (i == params->main_gpu) {
-                    fprintf(stderr, "\033[0;32m===== Active GPU (GPU %d) information =====\n\n", i);
+                    fprintf(stderr, "\033[0;32m");  // Sets green color
+                    utils::print_centered(stderr, 70, '=', "\033[1mActive GPU (GPU %d) Information\033[0;32m", i);
+                    fprintf(stderr, "\n");
                 } else {
-                    fprintf(stderr, "\033[0;90m===== GPU %d information =====\n\n", i);
+                    fprintf(stderr, "\033[0;90m");  // Sets gray color
+                    utils::print_centered(stderr, 70, '=', "GPU %d Information", i);
+                    fprintf(stderr, "\n");
                 }
+
                 fprintf(stderr, "%-26s %s\n", "GPU Name:", props.name);
                 fprintf(stderr, "%-26s %.2f GiB\n", "VRAM:", props.totalGlobalMem / 1073741824.0);
                 fprintf(stderr, "%-26s %d\n", "Streaming Multiprocessors:", props.multiProcessorCount);
                 fprintf(stderr, "%-26s %.1f\n", "CUDA Capability:", atof(props.compute));
-                fprintf(stderr, "\n============================\n\n\033[0m");
+                fprintf(stderr, "\n======================================================================\n\n\033[0m");
             }
         }
 
@@ -260,6 +268,7 @@ void get_accelerator_info(AcceleratorInfo* info, cmd_params * params) {
             info->capability = props.metal_version;
             strncpy(info->manufacturer, "Apple", MAX_STRING_LENGTH - 1);
 
+
             fprintf(stderr, "\033[0;32m===== GPU information =====\n\n");
             fprintf(stderr, "%-26s %s\n", "GPU Name:", props.name);
             fprintf(stderr, "%-26s %.2f GiB\n", "VRAM:", props.memory);
@@ -267,7 +276,7 @@ void get_accelerator_info(AcceleratorInfo* info, cmd_params * params) {
             fprintf(stderr, "%-26s %d\n", "Metal Version:", props.metal_version);
             fprintf(stderr, "%-26s %d\n", "GPU Family:", props.gpu_family);
             fprintf(stderr, "%-26s %d\n", "Common GPU Family:", props.gpu_family_common);
-            fprintf(stderr, "\n============================\n\n\033[0m");
+            fprintf(stderr, "\n======================================================================\n\n\033[0m");
         }
     } else {
         #ifdef __x86_64__
@@ -302,7 +311,7 @@ void list_available_accelerators() {
     } else {
         fprintf(stderr, "No Accelerator support available\n");
     }
-    fprintf(stderr, "\n========================================================\n\033[0m");
+    fprintf(stderr, "\n======================================================================\n\033[0m");
 }
 
 void get_model_info(ModelInfo *info, llama_model *model) {
