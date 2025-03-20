@@ -915,48 +915,7 @@ class RenderMarkdown extends Highlighter {
     this.tick2 = 0;
   }
 
-  static COPY_BUTTON = null;
-
-  static makeCopyButton() {
-    if (!RenderMarkdown.COPY_BUTTON) {
-      RenderMarkdown.COPY_BUTTON = document.createElement('button');
-      RenderMarkdown.COPY_BUTTON.className = 'copy-button';
-      RenderMarkdown.COPY_BUTTON.innerHTML =
-        `<svg xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24" fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-         </svg>`;
-    }
-    return RenderMarkdown.COPY_BUTTON.cloneNode(true);
-  }
-
   setupCodeBlock(pre) {
-    const copyButton = RenderMarkdown.makeCopyButton();
-    copyButton.addEventListener('click', function() {
-      try {
-        copyTextToClipboard(pre.innerText);
-        const originalInnerHTML = copyButton.innerHTML;
-        copyButton.innerHTML =
-          `<svg xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none"
-                stroke="green"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-             <polyline points="20 6 9 17 4 12"></polyline>
-           </svg>`;
-        setTimeout(() => {
-          copyButton.innerHTML = originalInnerHTML;
-        }, 2000);
-      } catch (err) {
-        console.error('Failed to copy text:', err);
-      }
-    });
-    pre.appendChild(copyButton);
+    pre.appendChild(createCopyButton(() => pre.innerText));
   }
 }

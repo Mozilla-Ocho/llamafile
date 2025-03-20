@@ -62,9 +62,79 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
-function createMessageElement(content, role) {
+function wrapMessageElement(messageElement, role) {
+  const wrapper = document.createElement("div");
+  wrapper.appendChild(messageElement);
+  if (role == "assistant") {
+    const controlContainer = wrapper.appendChild(document.createElement("div"));
+    controlContainer.appendChild(createCopyButton(() => messageElement.textContent, () => messageElement.innerHTML));
+    controlContainer.appendChild(infoButton(wrapper));
+    controlContainer.classList.add("message-controls");
+  }
+  wrapper.classList.add("message-wrapper", role);
+  return wrapper;
+}
+
+function infoButton(container, stats) {
+  let button = container?.querySelector("#stats");
+  let statsElement = container?.querySelector("#info-container");
+  if (!button) {
+    button = document.createElement("button");
+    button.id = "stats";
+    button.innerText = "i";
+    button.style.fontFamily = "monospace";
+
+    statsElement = document.createElement("div");
+    statsElement.id = "info-container";
+    statsElement.className = "hidden";
+    container.append(statsElement);
+    button.addEventListener("click", () => {
+      const show = !button.classList.contains("toggled");
+      statsElement.classList.toggle("hidden", !show);
+      button.classList.toggle("toggled", show);
+      if (show)
+        requestAnimationFrame(() => scrollIntoViewIfNeeded(statsElement, container.parentElement));
+    });
+  }
+  button.style.display = stats ? "" : "none";
+  if (stats) {
+    const parts = [];
+    const promptDurationMs = stats.firstContentTime - stats.startTime;
+    const responseDurationMs = stats.endTime - stats.firstContentTime;
+    if (promptDurationMs > 0 && stats.promptTokenCount > 0) {
+      const tokensPerSecond = (stats.promptTokenCount / (promptDurationMs / 1000)).toFixed(2);
+      const durationString = promptDurationMs >= 1000 ? `${(promptDurationMs / 1000).toFixed(2)}s` : `${promptDurationMs}ms`;
+      parts.push(`Processed ${stats.promptTokenCount} input tokens in ${durationString} (${tokensPerSecond} tokens/s)`);
+    }
+    if (responseDurationMs > 0 && stats.reponseTokenCount > 0) {
+      const tokensPerSecond = (stats.reponseTokenCount / (responseDurationMs / 1000)).toFixed(2);
+      const durationString = responseDurationMs >= 1000 ? `${(responseDurationMs / 1000).toFixed(2)}s` : `${promptDurationMs}ms`;
+      parts.push(`Generated ${stats.reponseTokenCount} tokens in ${durationString} (${tokensPerSecond} tokens/s)`)
+    } else {
+      parts.push("Incomplete");
+    }
+    button.title = parts.join("\n");
+    statsElement.innerHTML = "";
+    parts.forEach(part => statsElement.appendChild(wrapInSpan(part + " ")));
+  }
+  return button;
+}
+
+function scrollIntoViewIfNeeded(elem, container) {
+  let rectElem = elem.getBoundingClientRect(), rectContainer = container.getBoundingClientRect();
+  if (rectElem.bottom > rectContainer.bottom) elem.scrollIntoView(false);
+  if (rectElem.top < rectContainer.top) elem.scrollIntoView();
+}
+
+function wrapInSpan(innerText) {
+  const span = document.createElement("span");
+  span.innerText = innerText;
+  return span;
+}
+
+function createMessageElement(content) {
   const messageDiv = document.createElement("div");
-  messageDiv.classList.add("message", role);
+  messageDiv.classList.add("message");
   let hdom = new HighlightDom(messageDiv);
   const high = new RenderMarkdown(hdom);
   high.feed(content);
@@ -73,8 +143,10 @@ function createMessageElement(content, role) {
 }
 
 function scrollToBottom() {
-  if (!disableAutoScroll)
-    document.getElementById("bottom").scrollIntoView({behavior: "instant"});
+  if (!disableAutoScroll) {
+    document.getElementById("bottom").scrollIntoView({ behavior: "instant" });
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 }
 
 function onChatInput() {
@@ -96,15 +168,16 @@ function cleanupAfterMessage() {
 }
 
 function onWheel(e) {
-  if (e.deltaY < 0)
+  if (e.deltaY == undefined || e.deltaY < 0)
     disableAutoScroll = true;
 }
 
-async function handleChatStream(response) {
+async function handleChatStream(response, stats) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let currentMessageElement = null;
+  let currentMessageWrapper = null;
   let messageAppended = false;
   let finishReason = null;
   let hdom = null;
@@ -140,12 +213,17 @@ async function handleChatStream(response) {
               prefillStatus.style.display = "flex";
               progressBar.style.width = `${parsed.x_prefill_progress * 100}%`;
             } else {
-              prefillStatus.style.display = "none";
+              if (content && !stats.firstContentTime) {
+                // Finished parsing the prompt
+                stats.firstContentTime = Date.now();
+                prefillStatus.style.display = "none";
+              }
             }
 
             if (content && !messageAppended) {
-              currentMessageElement = createMessageElement("", "assistant");
-              chatMessages.appendChild(currentMessageElement);
+              currentMessageElement = createMessageElement("");
+              currentMessageWrapper = wrapMessageElement(currentMessageElement, "assistant");
+              chatMessages.appendChild(currentMessageWrapper);
               hdom = new HighlightDom(currentMessageElement);
               high = new RenderMarkdown(hdom);
               messageAppended = true;
@@ -155,6 +233,11 @@ async function handleChatStream(response) {
               streamingMessageContent.push(content);
               high.feed(content);
               scrollToBottom();
+            }
+            if (parsed.usage) {
+              stats.endTime = Date.now()
+              stats.promptTokenCount = parsed.usage.prompt_tokens
+              stats.reponseTokenCount = parsed.usage.completion_tokens
             }
           } catch (e) {
             console.error("Error parsing JSON:", e);
@@ -171,6 +254,9 @@ async function handleChatStream(response) {
     }
   } finally {
     if (messageAppended) {
+      stats.firstContentTime = stats.firstContentTime ?? Date.now();
+      stats.endTime = stats.endTime ?? Date.now();
+      infoButton(currentMessageWrapper, stats);
       high.flush();
       // we don't supply max_tokens, so "length" can
       // only mean that we ran out of context window
@@ -220,8 +306,8 @@ async function sendMessage() {
   abortController = new AbortController();
 
   // add user message to chat
-  const userMessageElement = createMessageElement(message, "user");
-  chatMessages.appendChild(userMessageElement);
+  const userMessageElement = createMessageElement(message);
+  chatMessages.appendChild(wrapMessageElement(userMessageElement, "user"));
   scrollToBottom();
 
   // update chat history
@@ -229,6 +315,13 @@ async function sendMessage() {
 
   const settings = loadSettings();
   try {
+    const stats = {
+      startTime: Date.now(),      // Timestamp when the request started
+      firstContentTime: null, // Timestamp when the first content was received
+      endTime: null,        // Timestamp when the response was fully received
+      promptTokenCount: 0,  // Number of tokens in the prompt
+      reponseTokenCount: 0   // Number of tokens in the response
+    };
     const response = await fetch("/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -242,27 +335,30 @@ async function sendMessage() {
         top_p: settings.top_p,
         presence_penalty: settings.presence_penalty,
         frequency_penalty: settings.frequency_penalty,
-        stream: true
+        stream: true,
+        stream_options: {
+          include_usage: true
+        }
       }),
       signal: abortController.signal
     });
     if (response.ok) {
-      await handleChatStream(response);
+      await handleChatStream(response, stats);
       const lastMessage = streamingMessageContent.join("");
       if (lastMessage)
         chatHistory.push({ role: "assistant", content: lastMessage });
     } else {
       console.error("sendMessage() failed due to server error", response);
-      chatMessages.appendChild(createMessageElement(
-        `Server replied with error code ${response.status} ${response.statusText}`,
+      chatMessages.appendChild(wrapMessageElement(createMessageElement(
+        `Server replied with error code ${response.status} ${response.statusText}`),
         "system"));
       cleanupAfterMessage();
     }
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error("sendMessage() failed due to unexpected exception", error);
-      chatMessages.appendChild(createMessageElement(
-        "There was an error processing your request.",
+      chatMessages.appendChild(wrapMessageElement(createMessageElement(
+        "There was an error processing your request."),
         "system"));
     }
     cleanupAfterMessage();
@@ -439,7 +535,7 @@ function updateModelInfo() {
     document.getElementById("model-completions").textContent = modelName;
   }
   if (!flagz.nologo) {
-    document.getElementById("logo").style.display = "inline-block";
+    document.querySelectorAll(".logo").forEach(logo => logo.style.display = "inline-block");
   }
 }
 
@@ -449,8 +545,8 @@ function startChat(history) {
   for (let i = 0; i < chatHistory.length; i++) {
     if (flagz.no_display_prompt && chatHistory[i].role == "system")
       continue;
-    chatMessages.appendChild(createMessageElement(chatHistory[i].content,
-                                                  chatHistory[i].role));
+    chatMessages.appendChild(wrapMessageElement(createMessageElement(chatHistory[i].content),
+      chatHistory[i].role));
   }
   scrollToBottom();
 }
@@ -748,6 +844,7 @@ async function chatbot() {
   redoButton.addEventListener("click", onRedo);
   chatInput.addEventListener("input", onChatInput);
   chatInput.addEventListener("keydown", onKeyDown);
+  chatMessages.addEventListener("touchmove", onWheel);
   document.addEventListener("wheel", onWheel);
   document.addEventListener("dragenter", onDragBegin);
   document.addEventListener("dragover", onDragBegin);
