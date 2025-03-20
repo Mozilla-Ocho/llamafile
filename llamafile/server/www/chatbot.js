@@ -117,8 +117,10 @@ function createMessageElement(content) {
 }
 
 function scrollToBottom() {
-  if (!disableAutoScroll)
-    document.getElementById("bottom").scrollIntoView({behavior: "instant"});
+  if (!disableAutoScroll) {
+    document.getElementById("bottom").scrollIntoView({ behavior: "instant" });
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 }
 
 function onChatInput() {
@@ -140,7 +142,7 @@ function cleanupAfterMessage() {
 }
 
 function onWheel(e) {
-  if (e.deltaY < 0)
+  if (e.deltaY == undefined || e.deltaY < 0)
     disableAutoScroll = true;
 }
 
@@ -507,7 +509,7 @@ function updateModelInfo() {
     document.getElementById("model-completions").textContent = modelName;
   }
   if (!flagz.nologo) {
-    document.getElementById("logo").style.display = "inline-block";
+    document.querySelectorAll(".logo").forEach(logo => logo.style.display = "inline-block");
   }
 }
 
@@ -816,6 +818,7 @@ async function chatbot() {
   redoButton.addEventListener("click", onRedo);
   chatInput.addEventListener("input", onChatInput);
   chatInput.addEventListener("keydown", onKeyDown);
+  chatMessages.addEventListener("touchmove", onWheel);
   document.addEventListener("wheel", onWheel);
   document.addEventListener("dragenter", onDragBegin);
   document.addEventListener("dragover", onDragBegin);

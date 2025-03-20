@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+html {
+  --small-spacing: 0.5rem;
+  --medium-spacing: 0.75rem;
+  --large-spacing: 1.0rem;
+}
+
 html,
 body {
   height: 100%;
@@ -19,7 +25,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 1rem;
+  padding: var(--large-spacing);
 }
 
 p {
@@ -38,7 +44,7 @@ p {
 }
 
 .chat-header {
-  padding: 1rem;
+  padding: var(--large-spacing);
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
   border-radius: 12px 12px 0 0;
@@ -60,7 +66,7 @@ p {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: var(--large-spacing);
   position: relative;
 }
 
@@ -96,7 +102,7 @@ ul li:first-child {
 }
 
 .message {
-  padding: 0.75rem;
+  padding: var(--medium-spacing);
   border-radius: 8px;
   word-wrap: break-word;
   background: var(--message-background);
@@ -106,6 +112,7 @@ ul li:first-child {
   --message-background: #e9ecef;
   margin-left: auto;
   max-width: 80%;
+  width: max-content;
 }
 
 .message-wrapper.assistant {
@@ -171,15 +178,15 @@ ul li:first-child {
 }
 
 .chat-input-container {
-  padding: 1rem;
+  padding: var(--large-spacing);
   border-top: 1px solid #e9ecef;
   display: flex;
-  gap: 0.5rem;
+  gap: var(--small-spacing);
 }
 
 .chat-input {
   flex: 1;
-  padding: 0.75rem;
+  padding: var(--medium-spacing);
   border: 1px solid #dee2e6;
   border-radius: 6px;
   font-size: 1rem;
@@ -242,13 +249,16 @@ ul li:first-child {
   border-radius: 6px;
   cursor: pointer;
   transition: color 0.2s;
+  box-sizing: content-box;
+  min-width: 24px;
+  min-height: 24px;
 }
 
 .chat-input-button-container {
   display: flex;
   flex-direction: column;
   align-self: flex-end;
-  gap: 0.5em;
+  gap: var(--small-spacing);
 }
 
 .chat-input-button-container button img,
@@ -260,32 +270,32 @@ ul li:first-child {
 
 .chat-input-button-row {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--small-spacing);
 }
 
 .chat-input-button-row button,
 .menu-trigger,
-.completions-controls button {
-  padding: 0.5rem .5rem;
+.completions-controls .settings-button {
+  padding: var(--small-spacing);
   background: #9299a0;
 }
 
 .chat-input-button-row button:hover,
 .menu-trigger:hover,
-.completions-controls button:hover {
+.completions-controls settings-button:hover {
   background: #5c636a;
 }
 
 .send-button,
 button.complete-button {
   padding: 0.75rem 1.5rem;
-  background: #0d6efd;
+  background-color: #0d6efd;
   font-size: 1rem;
 }
 
 .send-button:hover,
 button.complete-button:hover {
-  background: #0b5ed7;
+  background-color: #0b5ed7;
 }
 
 .send-button:disabled,
@@ -296,12 +306,12 @@ button.complete-button:disabled {
 
 .stop-button {
   padding: 0.75rem 1.5rem;
-  background: #dc3545;
+  background-color: #dc3545;
   font-size: 1rem;
 }
 
 .stop-button:hover {
-  background: #bb2d3b;
+  background-color: #bb2d3b;
 }
 
 .stop-button:disabled {
@@ -341,8 +351,8 @@ button.complete-button:disabled {
 
 pre .copy-button {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: var(--small-spacing);
+  right: var(--small-spacing);
   z-index: 1;
 }
 
@@ -368,7 +378,10 @@ pre .copy-button {
   padding: 20px;
   border-radius: 8px;
   max-width: 500px;
-  width: 90%;
+  width: calc(100% - var(--large-spacing));
+  max-height: calc(100% - var(--large-spacing));
+  display: flex;
+  flex-direction: column;
 }
 
 .settings-header {
@@ -376,6 +389,12 @@ pre .copy-button {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+}
+
+.settings-content {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
 }
 
 .settings-header button {
@@ -503,13 +522,13 @@ pre .copy-button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  padding: var(--large-spacing);
 }
 
 #completions-input {
   flex: 1;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: var(--large-spacing);
+  margin-bottom: var(--large-spacing);
   border: 1px solid #dee2e6;
   border-radius: 6px;
   font-size: 1rem;
@@ -520,7 +539,7 @@ pre .copy-button {
 
 .completions-controls {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--small-spacing);
 }
 
 .mode-dropdown {
@@ -685,4 +704,76 @@ pre .copy-button {
 .ooc {
   vertical-align: middle;
   margin-left: 0.2rem;
+}
+
+@media (max-width: 768px) {
+  html {
+    --large-spacing: 0.5rem;
+    --medium-spacing: 0.45rem;
+    --small-spacing: 0.4rem;
+  }
+
+  body {
+    padding: 0;
+    background: white;
+  }
+
+  .chat-container {
+    border-radius: 0;
+    box-shadow: none;
+    height: 100%;
+  }
+
+  .chat-header h1 {
+    font-size: 1rem;
+  }
+
+  .chat-header img.logo {
+    width: calc(24px + 2* 0.25rem);
+    height: calc(24px + 2* 0.25rem);
+  }
+
+  .message-wrapper.user {
+    max-width: 90%;
+  }
+
+  .message-wrapper.assistant {
+    max-width: 100%;
+  }
+
+  .chat-input {
+    line-height: 1.25;
+  }
+
+  .chat-input-button-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .chat-input-button-row {
+    display: contents;
+  }
+
+  .chat-input-container .send-button,
+  .chat-input-container .stop-button {
+    padding: 0.25rem;
+    font-size: 0;
+    color: transparent !important;
+    background-size: 24px;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .chat-input-container .send-button {
+    background-image: url('./send.svg');
+  }
+
+  .chat-input-container .stop-button {
+    background-image: url('./stop.svg');
+  }
+
+  .completions-controls .complete-button,
+  .completions-controls .stop-button {
+    padding: var(--small-spacing) var(--large-spacing);
+  }
 }
