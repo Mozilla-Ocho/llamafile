@@ -172,7 +172,7 @@ function onWheel(e) {
     disableAutoScroll = true;
 }
 
-async function handleChatStream(response) {
+async function handleChatStream(response, stats) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -185,13 +185,6 @@ async function handleChatStream(response) {
   streamingMessageContent = [];
   const prefillStatus = document.getElementById('prefill-status');
   const progressBar = prefillStatus.querySelector('.progress-bar');
-  const stats = {
-    startTime: Date.now(),      // Timestamp when the request started
-    firstContentTime: null, // Timestamp when the first content was received
-    endTime: null,        // Timestamp when the response was fully received
-    promptTokenCount: 0,  // Number of tokens in the prompt
-    reponseTokenCount: 0   // Number of tokens in the response
-  };
 
   try {
     while (true) {
@@ -322,6 +315,13 @@ async function sendMessage() {
 
   const settings = loadSettings();
   try {
+    const stats = {
+      startTime: Date.now(),      // Timestamp when the request started
+      firstContentTime: null, // Timestamp when the first content was received
+      endTime: null,        // Timestamp when the response was fully received
+      promptTokenCount: 0,  // Number of tokens in the prompt
+      reponseTokenCount: 0   // Number of tokens in the response
+    };
     const response = await fetch("/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -343,7 +343,7 @@ async function sendMessage() {
       signal: abortController.signal
     });
     if (response.ok) {
-      await handleChatStream(response);
+      await handleChatStream(response, stats);
       const lastMessage = streamingMessageContent.join("");
       if (lastMessage)
         chatHistory.push({ role: "assistant", content: lastMessage });
