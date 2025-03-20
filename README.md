@@ -15,8 +15,8 @@ framework that collapses all the complexity of LLMs down to
 a single-file executable (called a "llamafile") that runs
 locally on most computers, with no installation.<br/><br/>
 
-<a href="https://future.mozilla.org"><img src="llamafile/mozilla-logo-bw-rgb.png" width="150"></a><br/>
-llamafile is a Mozilla Builders project.<br/><br/>
+<a href="https://builders.mozilla.org/"><img src="llamafile/mozilla-logo-bw-rgb.png" width="150"></a><br/>
+llamafile is a <a href="https://builders.mozilla.org/">Mozilla Builders</a> project.<br/><br/>
 
 ## Quickstart
 
