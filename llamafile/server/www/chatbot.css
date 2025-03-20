@@ -33,6 +33,10 @@ p {
   box-sizing: border-box;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .chat-container {
   width: 100%;
   max-width: 960px;
@@ -170,6 +174,28 @@ ul li:first-child {
 .message-controls button img, .copy-button svg {
   width: 16px;
   height: 16px;
+}
+
+.message-controls button.toggled {
+  box-shadow: inset 0 0 2px 1px rgba(0, 0, 0, 0.2);
+}
+
+.message-wrapper #info-container {
+  font-size: 0.75rem;
+  background: #f5f5f5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  width: max-content;
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: top;
+}
+.message-wrapper:not(:last-child) #info-container {
+  margin-bottom: var(--large-spacing);
+}
+
+.message-wrapper span {
+  display: inline-block;
 }
 
 .message img {

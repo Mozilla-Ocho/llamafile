@@ -66,11 +66,10 @@ function wrapMessageElement(messageElement, role) {
   const wrapper = document.createElement("div");
   wrapper.appendChild(messageElement);
   if (role == "assistant") {
-    const controlContainer = document.createElement("div");
+    const controlContainer = wrapper.appendChild(document.createElement("div"));
     controlContainer.appendChild(createCopyButton(() => messageElement.textContent, () => messageElement.innerHTML));
-    controlContainer.appendChild(infoButton());
+    controlContainer.appendChild(infoButton(wrapper));
     controlContainer.classList.add("message-controls");
-    wrapper.appendChild(controlContainer);
   }
   wrapper.classList.add("message-wrapper", role);
   return wrapper;
@@ -78,11 +77,24 @@ function wrapMessageElement(messageElement, role) {
 
 function infoButton(container, stats) {
   let button = container?.querySelector("#stats");
+  let statsElement = container?.querySelector("#info-container");
   if (!button) {
     button = document.createElement("button");
     button.id = "stats";
     button.innerText = "i";
     button.style.fontFamily = "monospace";
+
+    statsElement = document.createElement("div");
+    statsElement.id = "info-container";
+    statsElement.className = "hidden";
+    container.append(statsElement);
+    button.addEventListener("click", () => {
+      const show = !button.classList.contains("toggled");
+      statsElement.classList.toggle("hidden", !show);
+      button.classList.toggle("toggled", show);
+      if (show)
+        requestAnimationFrame(() => scrollIntoViewIfNeeded(statsElement, container.parentElement));
+    });
   }
   button.style.display = stats ? "" : "none";
   if (stats) {
@@ -102,8 +114,22 @@ function infoButton(container, stats) {
       parts.push("Incomplete");
     }
     button.title = parts.join("\n");
+    statsElement.innerHTML = "";
+    parts.forEach(part => statsElement.appendChild(wrapInSpan(part + " ")));
   }
   return button;
+}
+
+function scrollIntoViewIfNeeded(elem, container) {
+  let rectElem = elem.getBoundingClientRect(), rectContainer = container.getBoundingClientRect();
+  if (rectElem.bottom > rectContainer.bottom) elem.scrollIntoView(false);
+  if (rectElem.top < rectContainer.top) elem.scrollIntoView();
+}
+
+function wrapInSpan(innerText) {
+  const span = document.createElement("span");
+  span.innerText = innerText;
+  return span;
 }
 
 function createMessageElement(content) {
