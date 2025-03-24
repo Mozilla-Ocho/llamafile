@@ -50,5 +50,8 @@ remove_old_image_atoms(const std::vector<Atom>&);
 int
 count_tokens(const std::vector<Atom>&);
 
+bool
+ends_with_incomplete_utf8(const std::string& str);
+
 } // namespace server
 } // namespace lf

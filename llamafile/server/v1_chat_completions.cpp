@@ -78,7 +78,7 @@ struct V1ChatCompletionState
 {
     std::string prompt;
     std::vector<Atom> atoms;
-    std::string piece;
+    std::string piece = "";
 };
 
 struct V1ChatCompletionResponse
@@ -658,19 +658,23 @@ Client::v1_chat_completions()
             finish_reason = "stop";
             break;
         }
-        state->piece =
+        state->piece +=
           llamafile_token_to_piece(slot_->ctx_, id, DONT_RENDER_SPECIAL_TOKENS);
         if (!state->piece.empty()) {
             if (params->stream) {
-                char* p = append_http_response_message(obuf_.p, 200);
-                choice["delta"]["content"] = state->piece;
-                response->json["created"] = timespec_real().tv_sec;
-                response->content = make_event(response->json);
-                choice.getObject().erase("delta");
-                if (!send_response_chunk(response->content))
-                    return false;
+                if (!ends_with_incomplete_utf8(state->piece)) {
+                    char* p = append_http_response_message(obuf_.p, 200);
+                    choice["delta"]["content"] = state->piece;
+                    response->json["created"] = timespec_real().tv_sec;
+                    response->content = make_event(response->json);
+                    choice.getObject().erase("delta");
+                    if (!send_response_chunk(response->content))
+                        return false;
+                    state->piece.clear();
+                }
             } else {
                 response->content += state->piece;
+                state->piece.clear();
             }
         }
     }
