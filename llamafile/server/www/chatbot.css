@@ -187,8 +187,19 @@ ul li:first-child {
   border-radius: 4px;
   width: max-content;
   max-width: 100%;
-  display: inline-block;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   vertical-align: top;
+}
+
+/* Add media query for small screens */
+@media screen and (max-width: 576px) {
+  .message-wrapper #info-container {
+    margin-top: .25rem;
+  }
 }
 .message-wrapper:not(:last-child) #info-container {
   margin-bottom: var(--large-spacing);
