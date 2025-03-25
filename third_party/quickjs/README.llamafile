@@ -1,0 +1,15 @@
+DESCRIPTION
+
+  A small and embeddable Javascript engine
+
+ORIGIN
+
+  https://github.com/quickjs-ng/quickjs/releases/tag/v0.7.0
+
+LICENSE
+
+  MIT
+
+LOCAL CHANGES
+
+  - Expose js_print() function in quickjs-libc.h

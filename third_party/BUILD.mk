@@ -1,5 +1,6 @@
 include third_party/double-conversion/BUILD.mk
 include third_party/mbedtls/BUILD.mk
+include third_party/quickjs/BUILD.mk
 include third_party/sqlite/BUILD.mk
 include third_party/stb/BUILD.mk
 
