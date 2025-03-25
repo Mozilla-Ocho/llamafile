@@ -1,0 +1,13 @@
+```
+./make -j8
+ ./make o//embedfile/embedfile
+ ./o/embedfile/embedfile --version
+ ./o/embedfile/embedfile
+```
+
+
+```
+EMBEDFILE_MODEL_PATH=$PWD/models/mxbai-embed-xsmall-v1-f16.gguf ./o/embedfile/embedfile backfill tmp.smol.db nyt_headlines headline
+
+./o/embedfile/embedfile backfill tmp.smol.db nyt_headlines headline
+```
