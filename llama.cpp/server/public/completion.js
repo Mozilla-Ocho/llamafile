@@ -7,6 +7,20 @@ const paramDefaults = {
 
 let generation_settings = null;
 
+// Returns a new URL that starts with `urlPrefix` and ends with `path`. The
+// `path` must not begin with a slash. This is more robust than `new URL(path,
+// urlPrefix)` because it preserves the prefix's entire path, even when the
+// prefix has no trailing slash.
+function buildUrl(urlPrefix, path) {
+  if (path.startsWith('/')) {
+    throw new Error("path must not have a leading slash");
+  }
+  const base = new URL(urlPrefix);
+  if (!base.pathname.endsWith('/')) {
+    base.pathname += '/';
+  }
+  return new URL(path, base);
+}
 
 // Completes the prompt as a generator. Recommended for most use cases.
 //
@@ -28,7 +42,7 @@ export async function* llama(prompt, params = {}, config = {}) {
 
   const completionParams = { ...paramDefaults, ...params, prompt };
 
-  const response = await fetch(`${url_prefix}/completion`, {
+  const response = await fetch(buildUrl(url_prefix, 'completion'), {
     method: 'POST',
     body: JSON.stringify(completionParams),
     headers: {
@@ -196,7 +210,7 @@ export const llamaComplete = async (params, controller, callback) => {
 export const llamaModelInfo = async (config = {}) => {
   if (!generation_settings) {
     const url_prefix = config.url_prefix || "";
-    const props = await fetch(`${url_prefix}/props`).then(r => r.json());
+    const props = await fetch(buildUrl(url_prefix, 'props')).then(r => r.json());
     generation_settings = props.default_generation_settings;
   }
   return generation_settings;
