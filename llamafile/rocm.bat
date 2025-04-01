@@ -19,6 +19,24 @@
 ::
 :: TODO(jart): How do we get this to not depend on VCRUNTIME140?
 
+mkdir build\release 2>nul
+
+for %%f in (
+   llama.cpp\ggml-cuda.cu
+   llama.cpp\ggml-cuda.h
+   llama.cpp\ggml-impl.h
+   llama.cpp\ggml-alloc.h
+   llama.cpp\ggml-common.h
+   llama.cpp\ggml-backend.h
+   llama.cpp\ggml-backend-impl.h
+   llama.cpp\ggml.h
+   llamafile\tinyblas.h
+   llamafile\tinyblas.cu
+   llamafile\llamafile.h
+) do copy %%f build\release
+
+cd build\release
+
 "%HIP_PATH_57%\bin\clang++.exe" ^
   -fuse-ld=lld ^
   -shared ^

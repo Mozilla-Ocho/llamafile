@@ -35,6 +35,15 @@ struct ggml_cgraph;
 extern "C" {
 #endif
 
+struct ggml_metal_device_properties {
+    char name[256];
+    float memory;
+    int core_count;
+    int metal_version;
+    int gpu_family;
+    int gpu_family_common;
+};
+
 void ggml_metal_link(const struct ggml_backend_api *);
 
 //
@@ -55,6 +64,10 @@ GGML_API void ggml_backend_metal_set_n_cb(ggml_backend_t backend, int n_cb);
 GGML_API void ggml_backend_metal_set_abort_callback(ggml_backend_t backend, ggml_abort_callback abort_callback, void * user_data);
 
 GGML_API GGML_CALL ggml_backend_buffer_type_t ggml_backend_metal_buffer_type(void);
+
+GGML_API void ggml_backend_metal_get_device_properties(ggml_backend_t backend, struct ggml_metal_device_properties * properties);
+
+GGML_API void ggml_backend_metal_get_device_memory_usage(ggml_backend_t backend, float * used, float * total);
 
 // helper to check if the device supports a specific family
 // ideally, the user code should be doing these checks

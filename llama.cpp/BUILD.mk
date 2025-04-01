@@ -93,4 +93,4 @@ o/$(MODE)/llama.cpp: 					\
 		o/$(MODE)/llama.cpp/imatrix		\
 		o/$(MODE)/llama.cpp/quantize		\
 		o/$(MODE)/llama.cpp/perplexity		\
-		o/$(MODE)/llama.cpp/llama-bench
+		o/$(MODE)/llama.cpp/llama-bench		\

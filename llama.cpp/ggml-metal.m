@@ -304,6 +304,10 @@ struct ggml_backend_metal_context {
     id<MTLDevice>       device;
     id<MTLCommandQueue> queue;
 
+    int family;
+    int family_common;
+    int metal_version;
+
     dispatch_queue_t d_queue;
 
     struct ggml_metal_kernel kernels[GGML_METAL_KERNEL_TYPE_COUNT];
@@ -507,6 +511,7 @@ static struct ggml_backend_metal_context * ggml_metal_init(int n_cb) {
         for (int i = MTLGPUFamilyApple1 + 20; i >= MTLGPUFamilyApple1; --i) {
             if ([ctx->device supportsFamily:i]) {
                 GGML_METAL_LOG_INFO("%s: GPU family: MTLGPUFamilyApple%d  (%d)\n", __func__, i - (int) MTLGPUFamilyApple1 + 1, i);
+                ctx->family = i - MTLGPUFamilyApple1 + 1;
                 break;
             }
         }
@@ -514,6 +519,7 @@ static struct ggml_backend_metal_context * ggml_metal_init(int n_cb) {
         for (int i = MTLGPUFamilyCommon1 + 5; i >= MTLGPUFamilyCommon1; --i) {
             if ([ctx->device supportsFamily:i]) {
                 GGML_METAL_LOG_INFO("%s: GPU family: MTLGPUFamilyCommon%d (%d)\n", __func__, i - (int) MTLGPUFamilyCommon1 + 1, i);
+                ctx->family_common = i - MTLGPUFamilyCommon1 + 1;
                 break;
             }
         }
@@ -521,6 +527,7 @@ static struct ggml_backend_metal_context * ggml_metal_init(int n_cb) {
         for (int i = MTLGPUFamilyMetal3 + 5; i >= MTLGPUFamilyMetal3; --i) {
             if ([ctx->device supportsFamily:i]) {
                 GGML_METAL_LOG_INFO("%s: GPU family: MTLGPUFamilyMetal%d  (%d)\n", __func__, i - (int) MTLGPUFamilyMetal3 + 3, i);
+                ctx->metal_version = i - MTLGPUFamilyMetal3 + 3;
                 break;
             }
         }
@@ -3365,6 +3372,27 @@ void ggml_backend_metal_set_abort_callback(ggml_backend_t backend, ggml_abort_ca
 
     ctx->abort_callback = abort_callback;
     ctx->abort_callback_data = user_data;
+}
+
+void ggml_backend_metal_get_device_properties(ggml_backend_t backend, struct ggml_metal_device_properties * properties) {
+    GGML_ASSERT(ggml_backend_is_metal(backend));
+
+    struct ggml_backend_metal_context * ctx = (struct ggml_backend_metal_context *)backend->context;
+    
+    strncpy(properties->name, [ctx->device name].UTF8String, sizeof(ctx->device.name));
+    properties->memory = ctx->device.recommendedMaxWorkingSetSize / 1073741824.0 ; // TODO is this what i want? mb? 1024*1024*1024 is bytes to gb
+    properties->gpu_family = ctx->family;
+    properties->gpu_family_common = ctx->family_common;
+    properties->metal_version = ctx->metal_version;
+}
+
+void ggml_backend_metal_get_device_memory_usage(ggml_backend_t backend, float * used, float * total) {
+    GGML_ASSERT(ggml_backend_is_metal(backend));
+
+    struct ggml_backend_metal_context * ctx = (struct ggml_backend_metal_context *)backend->context;
+
+    *used = (float)ctx->device.currentAllocatedSize / 1024.0 / 1024.0;
+    *total = (float)ctx->device.recommendedMaxWorkingSetSize / 1024.0 / 1024.0;
 }
 
 bool ggml_backend_metal_supports_family(ggml_backend_t backend, int family) {
