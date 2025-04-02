@@ -20,6 +20,15 @@ extern "C" {
 
 #define GGML_CUDA_MAX_DEVICES       16
 
+struct ggml_cuda_device_properties {
+    char name[256];
+    size_t totalGlobalMem;
+    int multiProcessorCount;
+    int major;
+    int minor;
+    char compute[8];
+};
+
 GGML_API GGML_CALL bool ggml_cuda_link(const struct ggml_backend_api * backend_api);
 
 // backend API
@@ -37,6 +46,7 @@ GGML_API GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_split_buffer_typ
 GGML_API GGML_CALL ggml_backend_buffer_type_t ggml_backend_cuda_host_buffer_type(void);
 
 GGML_API GGML_CALL int  ggml_backend_cuda_get_device_count(void);
+GGML_API GGML_CALL void ggml_backend_cuda_get_device_properties(int device, struct ggml_cuda_device_properties * properties);
 GGML_API GGML_CALL void ggml_backend_cuda_get_device_description(int device, char * description, size_t description_size);
 GGML_API GGML_CALL void ggml_backend_cuda_get_device_memory(int device, size_t * free, size_t * total);
 

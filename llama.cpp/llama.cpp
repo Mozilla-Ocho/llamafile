@@ -17565,6 +17565,10 @@ enum llama_pooling_type llama_pooling_type(const struct llama_context * ctx) {
     return ctx->cparams.pooling_type;
 }
 
+int32_t llama_model_quant_str(const struct llama_model * model, char * buf, size_t buf_size) {
+    return snprintf(buf, buf_size, "%s", llama_model_ftype_name(model->ftype).c_str());
+}
+
 int32_t llama_n_vocab(const struct llama_model * model) {
     return model->hparams.n_vocab;
 }

@@ -25,9 +25,14 @@ cd build\release
 nvcc --shared ^
      --use_fast_math ^
      -gencode arch=compute_60,code=sm_60 ^
+     -gencode arch=compute_61,code=sm_61 ^
      -gencode arch=compute_70,code=sm_70 ^
+     -gencode arch=compute_75,code=sm_75 ^
      -gencode arch=compute_80,code=sm_80 ^
+     -gencode arch=compute_86,code=sm_86 ^
+     -gencode arch=compute_89,code=sm_89 ^
      -gencode arch=compute_90,code=sm_90 ^
+     -gencode arch=compute_120,code=sm_120 ^
      --forward-unknown-to-host-compiler ^
      -Xcompiler="/nologo /EHsc /O2 /GR /MT" ^
      -DNDEBUG ^
@@ -39,7 +44,7 @@ nvcc --shared ^
      -DK_QUANTS_PER_ITERATION=2 ^
      -DGGML_CUDA_PEER_MAX_BATCH_SIZE=128 ^
      -DGGML_MINIMIZE_CODE_SIZE ^
-     -DGGML_USE_TINYBLAS ^
+     -DGGML_USE_CUBLAS ^
      -o ggml-cuda.dll ^
      ggml-cuda.cu ^
-     -lcuda
+     -lcuda -lcublas
