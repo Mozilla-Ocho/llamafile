@@ -419,7 +419,8 @@
         throw new Error("already running");
       }
       controller.value = new AbortController();
-      for await (const chunk of llama(prompt, llamaParams, { controller: controller.value, url_prefix: new URL('.', document.baseURI).origin })) {
+
+      for await (const chunk of llama(prompt, llamaParams, { controller: controller.value, url_prefix: document.baseURI })) {
         const data = chunk.data;
 
         if (data.stop) {
