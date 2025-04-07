@@ -164,7 +164,7 @@ This data helps build a comprehensive database of hardware performance for LLM i
 
 ## Troubleshooting
 
-Check out the [Troubleshooting](doc/Troubleshooting.md) doc for common issues and solutions.
+Check out the [Troubleshooting](https://github.com/Mozilla-Ocho/llamafile/blob/main/localscore/doc/troubleshooting.md) doc for common issues and solutions.
 
 ## Contributing
 
