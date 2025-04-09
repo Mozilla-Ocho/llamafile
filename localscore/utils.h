@@ -188,7 +188,7 @@ namespace utils {
 
     inline bool should_use_color() {
         const char* no_color = getenv("NO_COLOR");
-        if (no_color != NULL && no_color[0] != '\0') {
+        if (no_color != NULL && no_color[0] != '0' && no_color[0] != '\0') {
             return false;
         }
         return true;
