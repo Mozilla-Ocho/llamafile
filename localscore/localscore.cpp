@@ -336,12 +336,18 @@ static LocalScoreResultsSummary getResultsSummary(Json data) {
     return rs;
 }
 
-static void displayResults(LocalScoreResultsSummary results_summary) {
+static void displayResults(LocalScoreResultsSummary results_summary, bool plaintext) {
+
     printf("\n\033[1;35m");
-    ascii_display::print_logo();
-    printf("\n");
-    ascii_display::printLargeNumber((int)results_summary.performance_score);
+    if (!plaintext) {
+        ascii_display::print_logo();
+        printf("\n");
+        ascii_display::printLargeNumber((int)results_summary.performance_score);
+    } else {
+        printf("LocalScore: \t\t %d", (int)results_summary.performance_score);
+    }
     printf("\033[0m\n");
+
     printf("\033[32mToken Generation: \t \033[1;32m%.2f\033[0m \033[3;32mtok/s\033[0m\n", results_summary.avg_gen_tps);
     printf("\033[36mPrompt Processing: \t \033[1;36m%.2f\033[0m \033[3;36mtok/s\033[0m\n", results_summary.avg_prompt_tps);
     printf("\033[33mTime to First Token:\t \033[1;33m%.2f\033[0m \033[3;33mms\033[0m\n", results_summary.avg_ttft_ms);
@@ -474,7 +480,7 @@ void process_and_submit_results(const std::string& req_payload, const cmd_params
         exit(1);
     }
     LocalScoreResultsSummary rs = getResultsSummary(data);
-    displayResults(rs);
+    displayResults(rs, params.plaintext);
 
     Json results_summary;
     results_summary.setObject();

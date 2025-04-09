@@ -28,6 +28,7 @@ struct cmd_params {
     ggml_numa_strategy numa;
     int reps;
     bool verbose;
+    bool plaintext;
     send_results_mode send_results;
     output_formats output_format;
 
