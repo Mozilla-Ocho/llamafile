@@ -26,6 +26,7 @@ static const cmd_params cmd_params_defaults = {
     /* numa          */ GGML_NUMA_STRATEGY_DISABLED,
     /* reps          */ 1,
     /* verbose       */ false,
+    /* plaintext     */ false,
     /* send_results  */ SEND_ASK,
     /* output_format */ CONSOLE,
 };
@@ -126,6 +127,8 @@ cmd_params parse_cmd_params(int argc, char ** argv) {
             }
         } else if (arg == "-v" || arg == "--verbose") {
             params.verbose = true;
+        } else if (arg == "--plaintext") {
+            params.plaintext = true;
         } else if (arg == "-y" || arg == "--send-results") {
             params.send_results = SEND_YES;
         } else if (arg == "-n" || arg == "--no-send-results") {
@@ -186,13 +189,14 @@ void print_usage(int /* argc */, char ** argv) {
     printf("\n");
     printf("options:\n");
     printf("  -h, --help\n");
-    printf("  -m, --model <filename>                     (default: %s)\n", cmd_params_defaults.model.c_str());
+    printf("  -m, --model <filename>\n");
     printf("  -c, --cpu                                  disable GPU acceleration (alias for --gpu=disabled)\n");
     printf("  -g, --gpu <auto|amd|apple|nvidia|disabled> (default: \"auto\")\n");
     printf("  -i, --gpu-index <i>                        select GPU by index (default: %d)\n", cmd_params_defaults.main_gpu);
     printf("  --list-gpus                                list available GPUs and exit\n");
     printf("  -o, --output <csv|json|console>            (default: %s)\n", output_format_str(cmd_params_defaults.output_format));
-    printf("  -v, --verbose                              verbose output (default: %s)\n", cmd_params_defaults.verbose ? "yes" : "no");
+    printf("  -v, --verbose                              verbose output (default: %s)\n", cmd_params_defaults.verbose ? "on" : "off");
+    printf("  --plaintext                                plaintext output (default: %s)\n", cmd_params_defaults.plaintext ? "on" : "off");
     printf("  -y, --send-results                         send results without confirmation\n");
     printf("  -n, --no-send-results                      disable sending results\n");
     printf("  -e, --extended                             run 4 reps (shortcut for --reps=4)\n");

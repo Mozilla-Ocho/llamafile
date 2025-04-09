@@ -34,6 +34,7 @@
 #include "cmd.h"
 #include "benchmark.h"
 #include "printer.h"
+#include "utils.h"
 
 #include "localscore.h"
 
@@ -336,16 +337,43 @@ static LocalScoreResultsSummary getResultsSummary(Json data) {
     return rs;
 }
 
-static void displayResults(LocalScoreResultsSummary results_summary) {
-    printf("\n\033[1;35m");
-    ascii_display::print_logo();
-    printf("\n");
-    ascii_display::printLargeNumber((int)results_summary.performance_score);
-    printf("\033[0m\n");
-    printf("\033[32mToken Generation: \t \033[1;32m%.2f\033[0m \033[3;32mtok/s\033[0m\n", results_summary.avg_gen_tps);
-    printf("\033[36mPrompt Processing: \t \033[1;36m%.2f\033[0m \033[3;36mtok/s\033[0m\n", results_summary.avg_prompt_tps);
-    printf("\033[33mTime to First Token:\t \033[1;33m%.2f\033[0m \033[3;33mms\033[0m\n", results_summary.avg_ttft_ms);
-    printf("\033[0m");
+static void displayResults(LocalScoreResultsSummary results_summary, bool plaintext) {
+
+    printf("\n%s", utils::color_str("\033[1;35m"));
+    if (!plaintext) {
+        ascii_display::print_logo();
+        printf("\n");
+        ascii_display::printLargeNumber((int)results_summary.performance_score);
+    } else {
+        printf("LocalScore: \t\t %d", (int)results_summary.performance_score);
+    }
+    printf("%s\n", utils::color_str("\033[0m"));
+
+    printf("%sToken Generation: \t %s%.2f%s %stok/s%s\n", 
+           utils::color_str("\033[32m"), 
+           utils::color_str("\033[1;32m"), 
+           results_summary.avg_gen_tps,
+           utils::color_str("\033[0m"), 
+           utils::color_str("\033[3;32m"), 
+           utils::color_str("\033[0m"));
+           
+    printf("%sPrompt Processing: \t %s%.2f%s %stok/s%s\n", 
+           utils::color_str("\033[36m"), 
+           utils::color_str("\033[1;36m"), 
+           results_summary.avg_prompt_tps,
+           utils::color_str("\033[0m"), 
+           utils::color_str("\033[3;36m"), 
+           utils::color_str("\033[0m"));
+           
+    printf("%sTime to First Token:\t %s%.2f%s %sms%s\n", 
+           utils::color_str("\033[33m"), 
+           utils::color_str("\033[1;33m"), 
+           results_summary.avg_ttft_ms,
+           utils::color_str("\033[0m"), 
+           utils::color_str("\033[3;33m"), 
+           utils::color_str("\033[0m"));
+           
+    printf("%s", utils::color_str("\033[0m"));
 }
 
 struct SystemData {
@@ -474,7 +502,7 @@ void process_and_submit_results(const std::string& req_payload, const cmd_params
         exit(1);
     }
     LocalScoreResultsSummary rs = getResultsSummary(data);
-    displayResults(rs);
+    displayResults(rs, params.plaintext);
 
     Json results_summary;
     results_summary.setObject();

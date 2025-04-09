@@ -158,12 +158,12 @@ void get_runtime_info(RuntimeInfo* info) {
     strncpy(info->llamafile_version, LLAMAFILE_VERSION_STRING, MAX_STRING_LENGTH - 1);
     strncpy(info->llama_commit, LLAMA_COMMIT, MAX_STRING_LENGTH - 1);
 
-    fprintf(stderr, "\033[0;35m\n");  // Sets purple color
-    utils::print_centered(stderr, 70, '=', "\033[1mLocalScore Runtime Information\033[0;35m");
+    fprintf(stderr, "%s\n", utils::color_str("\033[0;35m"));  // Sets purple color
+    utils::print_centered(stderr, 70, '=', "%sLocalScore Runtime Information%s", utils::color_str("\033[1m"), utils::color_str("\033[0;35m"));
     fprintf(stderr, "\n");
-    fprintf(stderr, "%-20s \033[1m%s\033[22m\n", "llamafile version:", info->llamafile_version);
+    fprintf(stderr, "%-20s %s%s%s\n", "llamafile version:", utils::color_str("\033[1m"), info->llamafile_version, utils::color_str("\033[22m"));
     fprintf(stderr, "%-20s %s\n", "llama.cpp commit:", info->llama_commit);
-    fprintf(stderr, "\n======================================================================\n\n\033[0m");
+    fprintf(stderr, "\n======================================================================\n\n%s", utils::color_str("\033[0m"));
 }
 
 double get_mem_gb() {
@@ -194,7 +194,7 @@ void get_sys_info(SystemInfo* info) {
 
     info->ram_gb = get_mem_gb();
 
-    utils::print_centered(stderr, 70, '=', "\033[1mSystem Information\033[0m");
+    utils::print_centered(stderr, 70, '=', "%sSystem Information%s", utils::color_str("\033[1m"), utils::color_str("\033[0m"));
     fprintf(stderr, "\n");
     fprintf(stderr, "%-20s %s\n", "Kernel Type:", info->kernel_type);
     fprintf(stderr, "%-20s %s\n", "Kernel Release:", info->kernel_release);
@@ -232,11 +232,11 @@ void get_accelerator_info(AcceleratorInfo* info, cmd_params * params) {
                 }
 
                 if (i == params->main_gpu) {
-                    fprintf(stderr, "\033[0;32m");  // Sets green color
-                    utils::print_centered(stderr, 70, '=', "\033[1mActive GPU (GPU %d) Information\033[0;32m", i);
+                    fprintf(stderr, "%s", utils::color_str("\033[0;32m"));  // Sets green color
+                    utils::print_centered(stderr, 70, '=', "%sActive GPU (GPU %d) Information%s", utils::color_str("\033[1m"), i, utils::color_str("\033[0;32m"));
                     fprintf(stderr, "\n");
                 } else {
-                    fprintf(stderr, "\033[0;90m");  // Sets gray color
+                    fprintf(stderr, "%s", utils::color_str("\033[0;90m"));  // Sets gray color
                     utils::print_centered(stderr, 70, '=', "GPU %d Information", i);
                     fprintf(stderr, "\n");
                 }
@@ -245,7 +245,7 @@ void get_accelerator_info(AcceleratorInfo* info, cmd_params * params) {
                 fprintf(stderr, "%-26s %.1f GiB\n", "VRAM:", rounded_memory_gb);
                 fprintf(stderr, "%-26s %d\n", "Streaming Multiprocessors:", props.multiProcessorCount);
                 fprintf(stderr, "%-26s %.1f\n", "CUDA Capability:", atof(props.compute));
-                fprintf(stderr, "\n======================================================================\n\n\033[0m");
+                fprintf(stderr, "\n======================================================================\n\n%s", utils::color_str("\033[0m"));
             }
         }
 
@@ -276,14 +276,14 @@ void get_accelerator_info(AcceleratorInfo* info, cmd_params * params) {
             strncpy(info->manufacturer, "Apple", MAX_STRING_LENGTH - 1);
 
 
-            fprintf(stderr, "\033[0;32m===== GPU information =====\n\n");
+            fprintf(stderr, "%s===== GPU information =====\n\n", utils::color_str("\033[0;32m"));
             fprintf(stderr, "%-26s %s\n", "GPU Name:", props.name);
             fprintf(stderr, "%-26s %.1f GiB\n", "VRAM:", info->total_memory_gb);
             fprintf(stderr, "%-26s %d\n", "Core Count:", props.core_count);
             fprintf(stderr, "%-26s %d\n", "Metal Version:", props.metal_version);
             fprintf(stderr, "%-26s %d\n", "GPU Family:", props.gpu_family);
             fprintf(stderr, "%-26s %d\n", "Common GPU Family:", props.gpu_family_common);
-            fprintf(stderr, "\n======================================================================\n\n\033[0m");
+            fprintf(stderr, "\n======================================================================\n\n%s", utils::color_str("\033[0m"));
         }
     } else {
         #ifdef __x86_64__
@@ -306,7 +306,7 @@ void list_available_accelerators() {
             fprintf(stderr, "Apple Metal\n");
         } else if (llamafile_has_cuda()) {
             int count = ggml_backend_cuda_get_device_count();
-            fprintf(stderr, "\n\033[0;32m==================== Available GPUs ====================\n\n");
+            fprintf(stderr, "\n%s==================== Available GPUs ====================\n\n", utils::color_str("\033[0;32m"));
             for (int i = 0; i < count; i++) {
                 struct ggml_cuda_device_properties props;
                 ggml_backend_cuda_get_device_properties(i, &props);
@@ -318,7 +318,7 @@ void list_available_accelerators() {
     } else {
         fprintf(stderr, "No Accelerator support available\n");
     }
-    fprintf(stderr, "\n======================================================================\n\033[0m");
+    fprintf(stderr, "\n======================================================================\n%s", utils::color_str("\033[0m"));
 }
 
 void get_model_info(ModelInfo *info, llama_model *model) {
