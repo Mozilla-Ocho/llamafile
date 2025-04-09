@@ -11,6 +11,7 @@
 #include <memory>
 #include <array>
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 #include <string.h>
 #include <stdarg.h>
@@ -185,6 +186,20 @@ namespace utils {
         return round(value * multiplier) / multiplier;
     }
 
+    inline bool should_use_color() {
+        const char* no_color = getenv("NO_COLOR");
+        if (no_color != NULL && no_color[0] != '\0') {
+            return false;
+        }
+        return true;
+    }
+
+    inline const char* color_str(const char* color_code) {
+        if (should_use_color()) {
+            return color_code;
+        }
+        return "";
+    }
 
 } // namespace utils
 
