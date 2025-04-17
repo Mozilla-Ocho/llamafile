@@ -98,6 +98,7 @@ extern "C" {
         LLAMA_VOCAB_PRE_TYPE_BLOOM          = 23,
         LLAMA_VOCAB_PRE_TYPE_GPT3_FINNISH   = 24,
         LLAMA_VOCAB_PRE_TYPE_EXAONE         = 25,
+        LLAMA_VOCAB_PRE_TYPE_GPT4O          = 26,
     };
 
     enum llama_rope_type {
