@@ -1945,9 +1945,11 @@ enum e_model {
     MODEL_770M,
     MODEL_780M,
     MODEL_0_5B,
+    MODEL_0_6B,
     MODEL_1B,
     MODEL_1_3B,
     MODEL_1_4B,
+    MODEL_1_7B,
     MODEL_2B,
     MODEL_2_8B,
     MODEL_3B,
@@ -1965,6 +1967,7 @@ enum e_model {
     MODEL_16B,
     MODEL_20B,
     MODEL_30B,
+    MODEL_32B,
     MODEL_34B,
     MODEL_35B,
     MODEL_40B,
@@ -1983,6 +1986,8 @@ enum e_model {
     MODEL_10B_128x3_66B,
     MODEL_57B_A14B,
     MODEL_27B,
+    MODEL_30B_A3B,
+    MODEL_235B_A22B
 };
 
 static const size_t kiB = 1024;
@@ -4378,9 +4383,11 @@ static const char * llama_model_type_name(e_model type) {
         case MODEL_770M:          return "770M";
         case MODEL_780M:          return "780M";
         case MODEL_0_5B:          return "0.5B";
+        case MODEL_0_6B:          return "0.6B";
         case MODEL_1B:            return "1B";
         case MODEL_1_3B:          return "1.3B";
         case MODEL_1_4B:          return "1.4B";
+        case MODEL_1_7B:          return "1.7B";
         case MODEL_2B:            return "2B";
         case MODEL_2_8B:          return "2.8B";
         case MODEL_3B:            return "3B";
@@ -4398,6 +4405,7 @@ static const char * llama_model_type_name(e_model type) {
         case MODEL_16B:           return "16B";
         case MODEL_20B:           return "20B";
         case MODEL_30B:           return "30B";
+        case MODEL_32B:           return "32B";
         case MODEL_34B:           return "34B";
         case MODEL_35B:           return "35B";
         case MODEL_40B:           return "40B";
@@ -4416,6 +4424,8 @@ static const char * llama_model_type_name(e_model type) {
         case MODEL_10B_128x3_66B: return "10B+128x3.66B";
         case MODEL_57B_A14B:      return "57B.A14B";
         case MODEL_27B:           return "27B";
+        case MODEL_30B_A3B:       return "30B.A3B";
+        case MODEL_235B_A22B:     return "235B.A22B";
         default:                  return "?B";
     }
 }
@@ -4762,6 +4772,10 @@ static void llm_load_hparams(
             {
                 ml.get_key(LLM_KV_ATTENTION_LAYERNORM_RMS_EPS, hparams.f_norm_rms_eps);
                 switch (hparams.n_layer) {
+                    case 28: model.type = hparams.n_embd == 1024 ? e_model::MODEL_0_6B : e_model::MODEL_1_7B; break;
+                    case 36: model.type = hparams.n_embd == 2560 ? e_model::MODEL_4B : e_model::MODEL_8B; break;
+                    case 40: model.type = e_model::MODEL_14B; break;
+                    case 64: model.type = e_model::MODEL_32B; break;
                     default: model.type = e_model::MODEL_UNKNOWN;
                 }
             } break;
@@ -4771,6 +4785,8 @@ static void llm_load_hparams(
 
                 ml.get_key(LLM_KV_ATTENTION_LAYERNORM_RMS_EPS, hparams.f_norm_rms_eps);
                 switch (hparams.n_layer) {
+                    case 48: model.type = e_model::MODEL_30B_A3B; break;
+                    case 94: model.type = e_model::MODEL_235B_A22B; break;
                     default: model.type = e_model::MODEL_UNKNOWN;
                 }
             } break;
