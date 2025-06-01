@@ -215,10 +215,24 @@ inline std::string format_chat(const struct llama_model * model, const std::stri
 
     for (size_t i = 0; i < messages.size(); ++i) {
         auto &curr_msg = messages[i];
-        str[i*2 + 0]    = json_value(curr_msg, "role",    std::string(""));
-        str[i*2 + 1]    = json_value(curr_msg, "content", std::string(""));
-        alloc_size     += str[i*2 + 1].length();
-        chat[i].role    = str[i*2 + 0].c_str();
+        str[i*2 + 0] = json_value(curr_msg, "role", std::string(""));
+
+        // Handle content as string or array
+        std::string content;
+        if (curr_msg.contains("content") && curr_msg["content"].is_array()) {
+            for (auto &part : curr_msg["content"]) {
+                if (part.contains("type") && part["type"] == "text" && part.contains("text") && part["text"].is_string()) {
+                    content += part["text"].get<std::string>();
+                }
+                // TODO: handle image_url data (?)
+            }
+        } else {
+            content = json_value(curr_msg, "content", std::string(""));
+        }
+
+        str[i*2 + 1] = content;
+        alloc_size += str[i*2 + 1].length();
+        chat[i].role = str[i*2 + 0].c_str();
         chat[i].content = str[i*2 + 1].c_str();
     }
 
