@@ -244,12 +244,41 @@ Client::get_v1_chat_completions_params(V1ChatCompletionParams* params)
             return send_error(400, "message must have string role");
         if (!is_legal_role(message["role"].getString()))
             return send_error(400, "message role not system user assistant");
-        if (!message["content"].isString())
-            return send_error(400, "message must have string content");
-        if (message["content"].getString().empty())
-            return send_error(400, "message must not have empty content");
-        params->messages.emplace_back(message["role"].getString(),
-                                      message["content"].getString());
+
+        // Accept string or array for content
+        if (message["content"].isString()) {
+            if (message["content"].getString().empty())
+                return send_error(400, "message must not have empty content");
+            params->messages.emplace_back(message["role"].getString(),
+                                          message["content"].getString());
+        } else if (message["content"].isArray()) {
+            std::string combined_content;
+            std::vector<Json>& content_array = message["content"].getArray();
+            if (content_array.empty())
+                return send_error(400, "message content array must not be empty");
+            for (Json& part : content_array) {
+                if (!part.isObject() || !part["type"].isString())
+                    return send_error(400, "content array items must be objects with type");
+                std::string type = part["type"].getString();
+                if (type == "text") {
+                    if (!part["text"].isString())
+                        return send_error(400, "text part must have string text");
+                    combined_content += part["text"].getString();
+                } else if (type == "image_url") {
+                    if (!part["image_url"].isObject() || !part["image_url"]["url"].isString())
+                        return send_error(400, "image_url part must have url string");
+                    // TODO collect image data (?)
+                    // std::string image_url = part["image_url"]["url"].getString();
+                } else {
+                    return send_error(400, "unsupported content part type");
+                }
+            }
+            if (combined_content.empty())
+                return send_error(400, "message must not have empty content");
+            params->messages.emplace_back(message["role"].getString(), combined_content);
+        } else {
+            return send_error(400, "message content must be string or array");
+        }
     }
 
     // n: integer|null
