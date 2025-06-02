@@ -14409,7 +14409,7 @@ static ggml_cuda_device_info ggml_cuda_init() {
 
         cudaDeviceProp prop;
         CUDA_CHECK(cudaGetDeviceProperties(&prop, id));
-        GGML_CUDA_LOG_INFO("  Device %%d: %%s, compute capability %%d.%%d, VMM: %%s\n");
+        GGML_CUDA_LOG_INFO("  Device %d: %s, compute capability %d.%d, VMM: %s\n", id, prop.name, prop.major, prop.minor, (device_vmm ? "yes" : "no"));
 
         info.default_tensor_split[id] = total_vram;
         total_vram += prop.totalGlobalMem;

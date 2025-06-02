@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <set>
@@ -10,6 +12,7 @@
 #include <condition_variable>
 #include <unordered_map>
 #include <iostream> // [jart]
+#include <sstream>
 
 #include "llama.cpp/json.h"
 #include "llama.cpp/llava/clip.h"
@@ -206,20 +209,56 @@ inline bool verify_custom_template(const std::string & tmpl) {
 }
 
 // Format given chat. If tmpl is empty, we take the template from model metadata
-inline std::string format_chat(const struct llama_model * model, const std::string & tmpl, const std::vector<json> & messages)
+inline std::string format_chat(const struct llama_model * model, const std::string & tmpl, const std::vector<json> & messages, std::string * images)
 {
     size_t alloc_size = 0;
     // vector holding all allocated string to be passed to llama_chat_apply_template
-    std::vector<std::string> str(messages.size() * 2);
-    std::vector<llama_chat_message> chat(messages.size());
-
+    std::vector<std::string> str;
+    std::vector<llama_chat_message> chat;
+    int image_id = 1;
+    json images_data = json::array();
     for (size_t i = 0; i < messages.size(); ++i) {
         auto &curr_msg = messages[i];
-        str[i*2 + 0]    = json_value(curr_msg, "role",    std::string(""));
-        str[i*2 + 1]    = json_value(curr_msg, "content", std::string(""));
-        alloc_size     += str[i*2 + 1].length();
-        chat[i].role    = str[i*2 + 0].c_str();
-        chat[i].content = str[i*2 + 1].c_str();
+        auto role = json_value(curr_msg, "role", std::string(""));
+        auto tmp = json_value(curr_msg, "content", json::array());
+        if (tmp.is_array()) {
+            for (auto &item : tmp) {
+                auto type = json_value(item, "type", std::string(""));
+                if (type == "text") {
+                    str.push_back(role);
+                    auto content = json_value(item, "text", std::string(""));
+                    alloc_size += content.length();
+                    str.push_back(content);
+                    llama_chat_message msg;
+                    msg.role    = strdup(role.c_str());
+                    msg.content = strdup(content.c_str());
+                    chat.push_back(msg);
+                } else if (type == "image_url") {
+                    auto image_url = json_value(item, "image_url", json::object());
+                    if (image_url.is_object()) {
+                        auto url = json_value(image_url, "url", std::string(""));
+                        std::vector<std::string> parts;
+                        std::istringstream f(url);
+                        std::string s;
+                        while (getline(f, s, ',')) {
+                            parts.push_back(s);
+                        }
+                        if (parts.size()>0) {
+                            images_data.emplace_back(json::object({{"data", parts[1]}, {"id", image_id++}}));
+                        }
+                    }
+                }
+            }
+        } else {
+            str.push_back(role);
+            auto content = json_value(curr_msg, "content", std::string(""));
+            alloc_size += content.length();
+            str.push_back(content);
+            llama_chat_message msg;
+            msg.role    = strdup(role.c_str());
+            msg.content = strdup(content.c_str());
+            chat.push_back(msg);
+        }
     }
 
     const char * ptr_tmpl = tmpl.empty() ? nullptr : tmpl.c_str();
@@ -236,7 +275,10 @@ inline std::string format_chat(const struct llama_model * model, const std::stri
 
     std::string formatted_chat(buf.data(), res);
     LOG_VERBOSE("formatted_chat", {{"text", formatted_chat.c_str()}});
-
+    if (image_id > 1) {
+        images = new std::string(images_data.dump());
+        LOG_VERBOSE("images_chat", {{"text", images->c_str()}});
+    }
     return formatted_chat;
 }
 
