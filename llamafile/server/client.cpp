@@ -784,7 +784,7 @@ Client::dispatcher()
     should_send_error_if_canceled_ = false;
     if (!send(std::string_view(obuf_.p, p - obuf_.p)))
         return false;
-    char buf[512];
+    char buf[16384];
     size_t i, chunk;
     for (i = 0; i < size; i += chunk) {
         chunk = size - i;
